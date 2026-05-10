@@ -1,0 +1,382 @@
+import { Language } from './types';
+
+export const APP_VERSION = 'vector_core_v0.2.8';
+
+export const NATIVE_LANG_NAMES: Record<Language, string> = {
+  zh: '中文',
+  en: 'English',
+  ja: '日本語',
+  ko: '한국어',
+  fr: 'Français',
+  es: 'Español',
+  de: 'Deutsch',
+};
+
+export const PERSONAS: string[] = [
+  'Marcus Aurelius',
+  'Elon Musk',
+  'Naval Ravikant',
+  'Laozi',
+  'Natalie Goldberg',
+  'Bruce Lee',
+  'Albert Camus',
+  'Carl Jung',
+];
+
+export const GUIDING_STAR_DEFAULTS: Record<Language, string[]> = {
+  zh: [
+    '马可·奥勒留',
+    '马斯克',
+    '纳瓦尔·拉维坎特',
+    '老子',
+    '娜塔莉·戈德堡',
+    '李小龙',
+    '加缪',
+    '荣格',
+  ],
+  en: [
+    'Marcus Aurelius',
+    'Elon Musk',
+    'Naval Ravikant',
+    'Laozi',
+    'Natalie Goldberg',
+    'Bruce Lee',
+    'Albert Camus',
+    'Carl Jung',
+  ],
+  ja: [
+    'マルクス・アウレリウス',
+    'イーロン・マスク',
+    'ナヴァル・ラヴィカント',
+    '老子',
+    'ナタリー・ゴールドバーグ',
+    'ブルース・リー',
+    'カミュ',
+    'ユング',
+  ],
+  ko: [
+    '마르쿠스 아우렐리우스',
+    '일론 머스크',
+    '나발 라비칸트',
+    '노자',
+    '나탈리 골드버그',
+    '이소룡',
+    '카뮈',
+    '융',
+  ],
+  fr: [
+    'Marc Aurèle',
+    'Elon Musk',
+    'Naval Ravikant',
+    'Lao-Tseu',
+    'Natalie Goldberg',
+    'Bruce Lee',
+    'Albert Camus',
+    'Carl Jung',
+  ],
+  es: [
+    'Marco Aurelio',
+    'Elon Musk',
+    'Naval Ravikant',
+    'Lao-Tse',
+    'Natalie Goldberg',
+    'Bruce Lee',
+    'Albert Camus',
+    'Carl Jung',
+  ],
+  de: [
+    'Mark Aurel',
+    'Elon Musk',
+    'Naval Ravikant',
+    'Laotse',
+    'Natalie Goldberg',
+    'Bruce Lee',
+    'Albert Camus',
+    'Carl Jung',
+  ],
+};
+
+export { TRANSLATIONS } from './i18n/translations';
+
+// Phase 4 §4.a-1 — the cyberpunk `MOCK_ENTRIES` fixture (formerly here)
+// was retired and replaced with `services/sampleEntries.ts::getSampleEntries`.
+// The new sample set demonstrates the actual product value (a real
+// reflection + a Morning Star reply + a Memoir teaser) instead of
+// fictional system-init logs that confused first-day users.
+
+export const PRESET_PRINCIPLES: Record<Language, { source: string; text: string }[]> = {
+  zh: [
+    { source: '卡尔·荣格', text: '向外看的人在做梦，向内看的人已觉醒。' },
+    { source: '阿尔贝·加缪', text: '对未来的真正慷慨，是把一切献给现在。' },
+    {
+      source: '马可·奥勒留',
+      text: '你拥有掌控自己内心的力量，而不是外部事件。意识到这一点，你将找到力量。',
+    },
+    { source: '弗里德里希·尼采', text: '知道为什么而活的人，便能生存。' },
+    {
+      source: '维克多·弗兰克尔',
+      text: '在刺激与反应之间，有一个空间。在那个空间里，我们有选择反应的自由和力量。',
+    },
+    { source: '苏格拉底', text: '未经省察的人生没有价值。' },
+    { source: '老子', text: '知人者智，自知者明。胜人者有力，自胜者强。' },
+    { source: '让-保罗·萨特', text: '人是不被注定的，人就是他自己所造就的。' },
+    { source: '阿图尔·叔本华', text: '一个人只有在独处时才能成为自己。' },
+    { source: '赫尔曼·黑塞', text: '真理只能体验，无法传授。' },
+    { source: '斯宾诺莎', text: '不要哭泣，不要愤怒，去理解。' },
+    { source: '庄子', text: '大知闲闲，小知间间；大言炎炎，小言詹詹。' },
+    {
+      source: '伊壁鸠鲁',
+      text: '不要破坏你所拥有的，去渴望你所没有的；记住，你现在拥有的曾经也是你所渴望的。',
+    },
+    { source: '蒙田', text: '世界上最伟大的事，是懂得如何属于自己。' },
+    { source: '塞内卡', text: '我们往往被想象中的事物吓倒，而不是被现实中的事物吓倒。' },
+    { source: '罗洛·梅', text: '自由是人在面对命运时的自我意识。' },
+    {
+      source: '爱比克泰德',
+      text: '我们无法选择外部环境，但我们总能选择我们对外部环境的应对方式。',
+    },
+    { source: '克尔凯郭尔', text: '生活只能向后理解，但必须向前度过。' },
+    { source: '叔本华', text: '生命是一团欲望，欲望不满足便痛苦，满足便无聊。' },
+    { source: '德尔斐神庙', text: '认识你自己。' },
+    { source: '王阳明', text: '破山中贼易，破心中贼难。' },
+    { source: '艾里希·弗洛姆', text: '爱首先不是一种与特定个人的关系，它是一种态度。' },
+    { source: '梭罗', text: '最富有的时候，你的生活也是最贫穷的。' },
+    { source: '罗素', text: '须知参差多态，乃是幸福本源。' },
+    { source: '博尔赫斯', text: '时间是一条载我向前的河流，但我就是这条河流。' },
+    { source: '泰戈尔', text: '不要着急，最好的总会在最不经意的时候出现。' },
+    { source: '纪伯伦', text: '你的灵魂常常是战场，你的理性与你的欲望在其中交战。' },
+    { source: '黑格尔', text: '凡是合乎理性的东西都是现实的；凡是现实的东西都是合乎理性的。' },
+    { source: '毛姆', text: '满地都是六便士，他却抬头看见了月亮。' },
+    { source: '海德格尔', text: '向死而生。' },
+  ],
+  en: [
+    { source: 'Carl Jung', text: 'Who looks outside, dreams; who looks inside, awakes.' },
+    {
+      source: 'Albert Camus',
+      text: 'Real generosity towards the future lies in giving all to the present.',
+    },
+    {
+      source: 'Marcus Aurelius',
+      text: 'You have power over your mind - not outside events. Realize this, and you will find strength.',
+    },
+    {
+      source: 'Friedrich Nietzsche',
+      text: 'He who has a why to live for can bear almost any how.',
+    },
+    {
+      source: 'Viktor Frankl',
+      text: 'Between stimulus and response there is a space. In that space is our power to choose our response.',
+    },
+    { source: 'Socrates', text: 'The unexamined life is not worth living.' },
+    { source: 'Laozi', text: 'Knowing others is intelligence; knowing yourself is true wisdom.' },
+    { source: 'Jean-Paul Sartre', text: 'Man is nothing else but what he makes of himself.' },
+    { source: 'Arthur Schopenhauer', text: 'A man can be himself only so long as he is alone.' },
+    { source: 'Hermann Hesse', text: 'Truth is lived, not taught.' },
+    {
+      source: 'Baruch Spinoza',
+      text: 'I have striven not to laugh at human actions, not to weep at them, nor to hate them, but to understand them.',
+    },
+    { source: 'Zhuangzi', text: 'Great wisdom is generous; petty wisdom is contentious.' },
+    { source: 'Epicurus', text: 'Do not spoil what you have by desiring what you have not.' },
+    {
+      source: 'Michel de Montaigne',
+      text: 'The greatest thing in the world is to know how to belong to oneself.',
+    },
+    { source: 'Seneca', text: 'We suffer more often in imagination than in reality.' },
+    {
+      source: 'Rollo May',
+      text: "Freedom is man's capacity to take a hand in his own development.",
+    },
+    {
+      source: 'Epictetus',
+      text: 'We cannot choose our external circumstances, but we can always choose how we respond to them.',
+    },
+    {
+      source: 'Søren Kierkegaard',
+      text: 'Life can only be understood backwards; but it must be lived forwards.',
+    },
+    {
+      source: 'Arthur Schopenhauer',
+      text: 'Life swings like a pendulum backward and forward between pain and boredom.',
+    },
+    { source: 'Delphic Maxim', text: 'Know thyself.' },
+    {
+      source: 'Wang Yangming',
+      text: 'It is easy to defeat the thief in the mountain, but difficult to defeat the thief in your heart.',
+    },
+    {
+      source: 'Erich Fromm',
+      text: 'Love is not a resting place, it is a moving, growing, working together.',
+    },
+    { source: 'Henry David Thoreau', text: 'Fault-finders will find faults even in paradise.' },
+    { source: 'Bertrand Russell', text: 'The variety of life is the source of happiness.' },
+    {
+      source: 'Jorge Luis Borges',
+      text: 'Time is a river which sweeps me along, but I am the river.',
+    },
+    {
+      source: 'Rabindranath Tagore',
+      text: 'Let your life lightly dance on the edges of Time like dew on the tip of a leaf.',
+    },
+    { source: 'Kahlil Gibran', text: 'Your soul is oftentimes a battlefield.' },
+    { source: 'Hegel', text: 'What is rational is real and what is real is rational.' },
+    {
+      source: 'Somerset Maugham',
+      text: "He was looking at the moon and didn't see the sixpence at his feet.",
+    },
+    { source: 'Martin Heidegger', text: 'Being-towards-death.' },
+  ],
+  ja: [],
+  ko: [],
+  fr: [],
+  es: [],
+  de: [],
+};
+
+export const LIFE_PRINCIPLES: Record<Language, { year: number; text: string; date?: string }[]> = {
+  zh: [
+    { year: 2023, date: '2023.01.15', text: '永远做个忠于自我的自由选择者。' },
+    { year: 2023, date: '2023.02.28', text: '没有一个人和你看到一模一样的世界。' },
+    { year: 2023, date: '2023.04.10', text: '别说服情绪，说服行动。' },
+    { year: 2023, date: '2023.05.22', text: '生活过得更多比更好重要。' },
+    { year: 2023, date: '2023.07.05', text: '“向死而生”是最有效的长期主义。' },
+    { year: 2023, date: '2023.08.18', text: '勇气，希望，耐心，专注是你成长路上最好的伙伴。' },
+    { year: 2023, date: '2023.09.30', text: '想清楚，说明白，做正确要一直修炼。' },
+    { year: 2023, date: '2023.11.11', text: '你想成长任何环境都是你的训练场。' },
+    { year: 2023, date: '2023.12.05', text: '愿自觉无知能撑住你对于生最后的希望。' },
+    { year: 2023, date: '2023.12.28', text: '重要的是在众多不确定中找到可控的最优解。' },
+    {
+      year: 2024,
+      date: '2024.01.20',
+      text: '请务必选择真实，纯粹，这是探寻你自己道路的必要要素。',
+    },
+    { year: 2024, date: '2024.03.05', text: '独处时请深刻，群居时请温柔。' },
+    { year: 2024, date: '2024.04.18', text: '真正的换位思考是穿上对方的鞋子体会他的来时路。' },
+    { year: 2024, date: '2024.05.30', text: '主动选择，然后选择专注，坚持，记录，创造。' },
+    {
+      year: 2024,
+      date: '2024.07.12',
+      text: '确定要做的事，无论大小，多少，好坏都要给自己一个交代。',
+    },
+    { year: 2024, date: '2024.08.25', text: '在动中积蓄 于沉静中创造。' },
+    { year: 2024, date: '2024.09.15', text: '不要把命运的馈赠当做筹码，要学会感悟命运的召唤。' },
+    {
+      year: 2024,
+      date: '2024.10.28',
+      text: '想不通的时候，多反过来想想。相信有时没有正反，好坏，对错。',
+    },
+    { year: 2024, date: '2024.11.11', text: '永远紧闭抱怨之口。智慧不够，心态不稳，要慢慢练。' },
+    { year: 2024, date: '2024.12.20', text: '物净，事尽，心静。' },
+    {
+      year: 2025,
+      date: '2025.01.05',
+      text: '冲突的价值在于明确标准，底线，然后筛选，而后进或退。',
+    },
+    { year: 2025, date: '2025.01.18', text: '爱不是他人赋予的救赎，而是自己内心秩序的副产品。' },
+    { year: 2025, date: '2025.02.02', text: '若情感让你为难 请用良知做决策。' },
+    { year: 2025, date: '2025.02.15', text: '松弛感是努力到力竭后的自我掌控。' },
+    { year: 2025, date: '2025.03.01', text: '当你没有办法平静的面对自己，请离自己远一点。' },
+    { year: 2025, date: '2025.03.20', text: '没有感受到绝对偏爱的自我想象就是自我的精神虐杀。' },
+    {
+      year: 2025,
+      date: '2025.04.10',
+      text: '掌控自我 = 掌控(思维+情绪+行动) - (偏见+短视+混乱)。',
+    },
+    { year: 2025, date: '2025.05.05', text: '让人安心是一种高级的领导。' },
+    { year: 2025, date: '2025.06.18', text: '知其白，守其黑，为天下式。' },
+    { year: 2025, date: '2025.07.01', text: '知行，知止。' },
+  ],
+  en: [
+    { year: 2023, date: '2023.01.15', text: 'Always be a free chooser true to yourself.' },
+    { year: 2023, date: '2023.02.28', text: 'No one sees the exact same world as you.' },
+    { year: 2023, date: '2023.04.10', text: "Don't persuade emotions, persuade actions." },
+    { year: 2023, date: '2023.05.22', text: 'Living more is more important than living better.' },
+    {
+      year: 2023,
+      date: '2023.07.05',
+      text: '“Living towards death” is the most effective long-termism.',
+    },
+    {
+      year: 2023,
+      date: '2023.08.18',
+      text: 'Courage, hope, patience, and focus are your best partners.',
+    },
+    {
+      year: 2023,
+      date: '2023.09.30',
+      text: 'Thinking clearly, explaining plainly, and doing correctly.',
+    },
+    {
+      year: 2023,
+      date: '2023.11.11',
+      text: 'If you want to grow, any environment is your training ground.',
+    },
+    {
+      year: 2023,
+      date: '2023.12.05',
+      text: 'May the awareness of ignorance sustain your final hope.',
+    },
+    {
+      year: 2023,
+      date: '2023.12.28',
+      text: 'Find the controllable optimal solution among uncertainties.',
+    },
+    {
+      year: 2024,
+      date: '2024.01.20',
+      text: 'Choose truth and purity; they are necessary for your path.',
+    },
+    { year: 2024, date: '2024.03.05', text: 'Be profound when alone, be gentle when in a group.' },
+    {
+      year: 2024,
+      date: '2024.04.18',
+      text: "True empathy is putting on the other person's shoes.",
+    },
+    {
+      year: 2024,
+      date: '2024.05.30',
+      text: 'Choose actively, then focus, persist, record, and create.',
+    },
+    { year: 2024, date: '2024.07.12', text: 'Whatever you do, give yourself an account.' },
+    { year: 2024, date: '2024.08.25', text: 'Accumulate in motion, create in stillness.' },
+    {
+      year: 2024,
+      date: '2024.09.15',
+      text: "Don't treat fate's gifts as chips; sense fate's call.",
+    },
+    { year: 2024, date: '2024.10.28', text: 'When stuck, think about it the other way around.' },
+    { year: 2024, date: '2024.11.11', text: 'Always keep the mouth of complaint closed.' },
+    { year: 2024, date: '2024.12.20', text: 'Clean objects, finished tasks, quiet heart.' },
+    { year: 2025, date: '2025.01.05', text: 'Conflict clarifies standards, then filter and move.' },
+    { year: 2025, date: '2025.01.18', text: "Love is a byproduct of one's own inner order." },
+    { year: 2025, date: '2025.02.02', text: 'If emotions make it difficult, use your conscience.' },
+    {
+      year: 2025,
+      date: '2025.02.15',
+      text: 'Relaxation is self-control after working to exhaustion.',
+    },
+    { year: 2025, date: '2025.03.01', text: 'When you cannot face yourself calmly, stay away.' },
+    {
+      year: 2025,
+      date: '2025.03.20',
+      text: 'Self-imagination without preference is self-slaughter.',
+    },
+    {
+      year: 2025,
+      date: '2025.04.10',
+      text: 'Mastering self = Mastering (Thinking+Emotion+Action).',
+    },
+    {
+      year: 2025,
+      date: '2025.05.05',
+      text: 'Making people feel at ease is high-level leadership.',
+    },
+    { year: 2025, date: '2025.06.18', text: 'Know the white, keep the black, be the pattern.' },
+    { year: 2025, date: '2025.07.01', text: 'Know action, know when to stop.' },
+  ],
+  ja: [],
+  ko: [],
+  fr: [],
+  es: [],
+  de: [],
+};

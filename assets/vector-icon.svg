@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">VECTOR</title>
+  <desc id="desc">VECTOR local-first life design journal icon</desc>
+  <rect width="512" height="512" rx="96" fill="#030303"/>
+  <path d="M96 96h320v320H96z" fill="none" stroke="#0e7490" stroke-width="10" opacity=".45"/>
+  <path d="M128 352 224 160l64 128 48-96 48 160" fill="none" stroke="#06b6d4" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="224" cy="160" r="18" fill="#ec4899"/>
+  <circle cx="288" cy="288" r="14" fill="#f8fafc"/>
+  <path d="M128 384h256" stroke="#67e8f9" stroke-width="12" stroke-linecap="round" opacity=".7"/>
+</svg>

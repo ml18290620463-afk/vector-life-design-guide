@@ -1,0 +1,524 @@
+@import 'tailwindcss';
+
+/*
+ * Phase 4 §W4.2 — self-host Inter and JetBrains Mono in latin +
+ * latin-ext only. Wins:
+ *   1. Production CSP already bans `fonts.googleapis.com` /
+ *      `fonts.gstatic.com` (server.ts only allows 'self' fonts), so
+ *      the previous <link href="googleapis"> in index.html was a
+ *      no-op rendered as the system fallback. Self-hosting lets the
+ *      designed type actually ship.
+ *   2. Removes a 3rd-party round trip from the critical render path
+ *      (saves ~200 ms median on first paint per Lighthouse).
+ *   3. PWA precache (W3.2) now includes the woff2 files, so the
+ *      offline shell renders with the right type instead of the
+ *      system fallback after the SW kicks in.
+ *
+ * Subset selection rationale: we only ship `latin` + `latin-ext`
+ * because the i18n fallback chain (`PingFang SC`, `Microsoft YaHei`)
+ * already handles CJK via system fonts. Pulling cyrillic / greek /
+ * vietnamese / cyrillic-ext for a journaling app whose primary
+ * users are zh/en speakers would bloat the precache by ~4×.
+ *
+ * Each `latin/latin-ext` woff2 weights ~16 kB gzip; total cost for
+ * 4 Inter weights + 3 JetBrains weights ≈ 220 kB on disk, served
+ * via cache-first runtime caching after first load.
+ */
+/*
+ * Phase 4.5 §D — ship only the `latin` subsets. The `latin-ext`
+ * subsets cover Czech / Polish / Vietnamese diacritics that the
+ * vast majority of our zh+en target users never see; loading
+ * them adds 4 extra woff2 fetches at VeryHigh priority on the
+ * FCP critical path for almost zero visible benefit. Users who
+ * do hit a latin-ext glyph will see the system fallback chain
+ * (PingFang SC, Microsoft YaHei) render the codepoint correctly
+ * — no missing glyphs, just slightly different metrics for that
+ * one character.
+ *
+ * Tradeoff accepted: 4 woff2 + ~80 KB transfer saved on every
+ * cold load vs ~95% of users never noticing.
+ */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-500.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
+
+@theme {
+  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, monospace;
+
+  /*
+   * Product palette — dark cosmos (2026)
+   * 背景底色 / 主背景层 / 深蓝层 · 主副弱文字 · 科技主色 / 青能量 / 弱发光青 / 克制强调
+   */
+  --color-space-bg: #050b14;
+  --color-space-layer: #081525;
+  --color-space-deep: #0d2138;
+  --color-space-text: #eef4fa;
+  --color-space-text-secondary: #9aaabd;
+  --color-space-text-muted: #53687f;
+  /*
+   * Cover 文案墙（深色）— 字色 + 透明度带
+   * 普通 18–28% · 稍重要 30–40% · 重点句 45%
+   */
+  --color-cover-type-quiet: #53687f;
+  --color-cover-type-mid: #73859a;
+  --color-cover-type-strong: #8fa2b8;
+  --opacity-cover-type-quiet-min: 0.18;
+  --opacity-cover-type-quiet-max: 0.28;
+  --opacity-cover-type-mid-min: 0.3;
+  --opacity-cover-type-mid-max: 0.4;
+  --opacity-cover-type-strong: 0.45;
+
+  /* Cover hero + status + CTA（深色封面专项，见设计原则：90% 低温静默 / 10% 高能秩序） */
+  --color-cover-hero-title: #f1f6fa;
+  --color-cover-hero-subtitle: #f7faff;
+  --color-cover-hero-rule: #2aa6bd;
+  --color-cover-status-title: #5eeaf2;
+  --color-cover-status-body: #8fa2b8;
+  --color-cover-status-rule: #1b6d82;
+  --color-cover-cta-border: #2ccbda;
+  --color-cover-cta-bg: rgba(5, 13, 24, 0.72);
+  --color-cover-cta-icon: #9df6fa;
+  --color-cover-cta-label: #6eeaf2;
+  --color-cover-cta-hover-glow: #00c8e8;
+  /* 神秘感紫：仅轨迹线 / 少量粒子 / 极少数关键词，不用玫红粉紫 */
+  --color-cover-orbit-violet: #7b6dff;
+  --color-cover-keyword-violet: #8a7cff;
+  --color-tech-primary: #3fe7f2;
+  --color-tech-cyan-energy: #00c8e8;
+  --color-tech-cyan-glow: #87f3f7;
+  --color-tech-accent-violet: #7b6dff;
+
+  /* Vector Core - High-End Technical Theme Tokens */
+  --color-archive-bg: #f4f7f9;
+  --color-archive-surface: rgba(255, 255, 255, 0.85);
+  --color-archive-border: rgba(15, 23, 42, 0.08);
+  --color-archive-border-strong: rgba(15, 23, 42, 0.15);
+  --color-archive-text-main: #0f172a;
+  --color-archive-text-muted: #334155;
+  --color-archive-text-dim: #64748b;
+  --color-archive-accent: #0891b2;
+  --color-archive-accent-light: #22d3ee;
+  --color-archive-electric: #4f46e5;
+  --color-archive-danger: #f43f5e;
+  --color-archive-success: #10b981;
+  --color-tech-indigo: #7b6dff;
+  --color-vector-magenta: #c85f72;
+  --color-vector-alert: #c85f72;
+
+  /*
+   * Phase 3 §3.a-2 — design-token migration tier 1.
+   *
+   * These tokens absorb the high-frequency raw hex literals that
+   * previously lived inline in CoverScreen.tsx (and a handful of
+   * other surfaces). Tailwind 4's `@theme` auto-generates `bg-…`,
+   * `text-…`, `border-…`, `shadow-…` utilities for every token,
+   * so consumers write `bg-vector-magenta-bright/10` instead of
+   * `bg-[#FF2ECC]/10` and the lint-tokens scoreboard
+   * (`npm run lint:tokens`) shrinks accordingly.
+   *
+   * Naming convention:
+   *   `--color-vector-<hue>-<role>` where <role> ∈
+   *   {bright, brand, deep, pure, mid, strong, light}.
+   *
+   * Dark UI cyan / violet accents align with --color-tech-*.
+   */
+  --color-vector-cyan-brand: #00c8e8;
+  --color-vector-cyan-pure: #3fe7f2;
+  --color-vector-cyan-neon: #87f3f7;
+  --color-vector-magenta-bright: #7b6dff;
+  --color-vector-blue-deep: #5e9ac4;
+  --color-vector-fog-light: #f0f4f7;
+  --color-vector-ink-strong: #1a202c;
+  --color-vector-ink-deep: #050505;
+  --color-vector-night-deep: #081525;
+  --color-vector-onyx: #030303;
+  --color-vector-teal-online: #11bfaf;
+  --color-vector-fog-paper: #f0f9fa;
+  --color-vector-navy-deep: #0d2138;
+  --color-vector-ice-pale: #eaf4ff;
+  --color-vector-paper-cream: #faf9f6;
+  --color-vector-paper-white: #fcfdfe;
+  --color-vector-night-navy: #0d2138;
+  --color-vector-night-blue: #050b14;
+  --color-vector-night-slate: #0a1524;
+  --color-vector-slate-mid: #4a5568;
+  --color-vector-slate-soft: #718096;
+  --color-vector-slate-chrome: #6e8198;
+}
+
+:root {
+  --background: #050b14;
+  --foreground: #eef4fa;
+  --accent: #3fe7f2;
+  --accent-secondary: #7b6dff;
+  --vector-magenta: #c85f72;
+  --vector-alert: #c85f72;
+  --text-muted: #9aaabd;
+  --text-dim: #53687f;
+  --grid-color: rgba(0, 200, 232, 0.035);
+  --grid-color-alt: rgba(123, 109, 255, 0.035);
+}
+
+/*
+ * Phase 3 §3.a-2 — bespoke neon glow utilities used by CoverScreen
+ * + future Master/Onboarding migrations. Each utility carries its
+ * exact rgba value so the consumers can write `shadow-glow-magenta-soft`
+ * instead of `shadow-[0_0_10px_rgba(255,46,204,0.1)]` and
+ * `npm run lint:tokens` shrinks accordingly.
+ */
+@utility shadow-glow-magenta-soft {
+  box-shadow: 0 0 10px rgba(123, 109, 255, 0.14);
+}
+@utility shadow-glow-magenta {
+  box-shadow: 0 0 15px rgba(123, 109, 255, 0.14);
+}
+@utility shadow-glow-magenta-strong {
+  box-shadow: 0 0 15px rgba(123, 109, 255, 0.22);
+}
+@utility text-glow-magenta {
+  text-shadow: 0 0 10px rgba(123, 109, 255, 0.32);
+}
+@utility shadow-glow-cyan-400 {
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+}
+@utility drop-shadow-glow-vector-magenta {
+  filter: drop-shadow(0 0 5px rgba(200, 95, 114, 0.5));
+}
+@utility shadow-glow-cyan-neon-soft {
+  box-shadow: 0 0 15px rgba(63, 231, 242, 0.14);
+}
+@utility shadow-glow-cyan-neon {
+  box-shadow: 0 0 25px rgba(63, 231, 242, 0.26);
+}
+@utility shadow-glow-vector-magenta {
+  box-shadow: 0 0 10px rgba(200, 95, 114, 0.1);
+}
+@utility shadow-glow-vector-magenta-strong {
+  box-shadow: 0 0 20px rgba(200, 95, 114, 0.4);
+}
+@utility shadow-glow-vector-magenta-soft {
+  box-shadow: 0 0 8px rgba(200, 95, 114, 0.2);
+}
+@utility shadow-glow-indigo-500 {
+  box-shadow: 0 0 20px rgba(123, 109, 255, 0.2);
+}
+@utility shadow-glow-cyan-400-soft {
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.05);
+}
+@utility shadow-paper-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+@utility shadow-inset-glow-cyan-soft {
+  box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.02);
+}
+@utility shadow-inset-glow-vector-cyan-brand {
+  box-shadow: inset 0 0 30px rgba(0, 200, 232, 0.06);
+}
+@utility shadow-inset-glow-cyan-400-deep {
+  box-shadow: inset 0 0 40px rgba(34, 211, 238, 0.03);
+}
+@utility shadow-inset-glow-rose-soft {
+  box-shadow: inset 0 0 20px rgba(244, 63, 94, 0.1);
+}
+@utility shadow-inset-glow-rose-deep {
+  box-shadow: inset 0 0 40px rgba(244, 63, 94, 0.1);
+}
+@utility shadow-glow-cyan-neon-bright {
+  box-shadow: 0 0 50px rgba(135, 243, 247, 0.12);
+}
+@utility shadow-glow-cyan-500-bright {
+  box-shadow: 0 0 20px rgba(0, 200, 232, 0.45);
+}
+@utility shadow-glow-cyan-400-mid {
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+}
+@utility shadow-glow-indigo-strong {
+  box-shadow: 0 0 20px rgba(123, 109, 255, 0.24);
+}
+@utility shadow-glow-indigo-soft {
+  box-shadow: 0 0 30px rgba(123, 109, 255, 0.12);
+}
+@utility shadow-glow-rose-soft {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.1);
+}
+@utility shadow-glow-rose-strong {
+  box-shadow: 0 0 30px rgba(244, 63, 94, 0.2);
+}
+@utility drop-shadow-glow-indigo {
+  filter: drop-shadow(0 0 5px rgba(123, 109, 255, 0.32));
+}
+@utility drop-shadow-glow-rose {
+  filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3));
+}
+@utility shadow-glow-rose-mid {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
+}
+@utility shadow-inset-glow-cyan-mid {
+  box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.1);
+}
+@utility shadow-glow-cyan-card {
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.1);
+}
+@utility shadow-glow-cyan-mid {
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+@utility shadow-glow-cyan-strong {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.3);
+}
+@utility shadow-glow-cyan-thin {
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+}
+@utility shadow-glow-cyan-400-strong {
+  box-shadow: 0 0 25px rgba(34, 211, 238, 0.2);
+}
+@utility shadow-glow-green-bright {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+}
+@utility shadow-glow-green-mid {
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+}
+@utility shadow-glow-green-strong {
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.3);
+}
+@utility shadow-glow-green-thin {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+}
+@utility shadow-elevation-modal-light {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+}
+@utility shadow-elevation-modal-cyan {
+  box-shadow: 0 20px 50px rgba(0, 122, 140, 0.3);
+}
+
+/*
+ * Phase 3 §3.a-2 — SpaceTimeBackground star-river grid.
+ * Three stacked linear-gradients (horizon glow + 1px H + 1px V grid),
+ * one variant per theme. Centralised here so the component stays
+ * literal-free; the rgba inlined below is the canonical source of
+ * truth for the grid effect.
+ */
+@utility bg-spacetime-grid-light {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 122, 140, 0.03) 30%,
+      rgba(0, 122, 140, 0.08) 100%
+    ),
+    linear-gradient(90deg, rgba(0, 122, 140, 0.02) 1px, transparent 1px),
+    linear-gradient(rgba(0, 122, 140, 0.02) 1px, transparent 1px);
+}
+@utility bg-spacetime-grid-dark {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(18, 216, 255, 0.03) 30%,
+      rgba(99, 102, 241, 0.05) 100%
+    ),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+}
+
+@utility neon-glow-magenta {
+  text-shadow:
+    0 0 12px rgba(200, 95, 114, 0.4),
+    0 0 25px rgba(200, 95, 114, 0.1);
+}
+
+@utility neon-glow-alert {
+  text-shadow:
+    0 0 12px rgba(200, 95, 114, 0.4),
+    0 0 25px rgba(200, 95, 114, 0.1);
+}
+
+@utility neon-border-magenta {
+  box-shadow:
+    0 0 10px rgba(200, 95, 114, 0.15),
+    inset 0 0 5px rgba(200, 95, 114, 0.05);
+}
+
+@utility neon-border-alert {
+  box-shadow:
+    0 0 10px rgba(200, 95, 114, 0.15),
+    inset 0 0 5px rgba(200, 95, 114, 0.05);
+}
+
+@utility tech-border {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+html.light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --accent: #0891b2;
+  --accent-secondary: #0e7490;
+  --text-muted: #64748b;
+  --grid-color: rgba(8, 145, 178, 0.05);
+  --grid-color-alt: rgba(15, 23, 42, 0.02);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
+  background-image:
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(var(--grid-color) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-attachment: fixed;
+}
+
+html.light body {
+  background-image: radial-gradient(circle at 2px 2px, var(--grid-color) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Research Archive Glass */
+.archive-glass {
+  @apply backdrop-blur-xl;
+  background: var(--color-archive-surface);
+  border: 1px solid var(--color-archive-border);
+}
+
+.light .archive-glass {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 122, 140, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+/* Research Archive Components */
+.archive-card {
+  @apply border transition-all duration-300;
+  background: var(--color-archive-surface);
+  border-color: var(--color-archive-border);
+}
+
+.light .archive-card {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 122, 140, 0.1);
+}
+
+.light .archive-card:hover {
+  border-color: rgba(0, 122, 140, 0.3);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 30px rgba(0, 122, 140, 0.05);
+}
+
+.archive-input {
+  @apply w-full border text-sm p-3 rounded-sm outline-none transition-all duration-300 font-sans;
+  background: var(--color-archive-surface);
+  border-color: var(--color-archive-border);
+  color: var(--color-archive-text-main);
+}
+
+.light .archive-input {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(0, 122, 140, 0.15);
+}
+
+.light .archive-input:focus {
+  background: white;
+  border-color: var(--color-archive-accent);
+  box-shadow: 0 0 0 3px rgba(0, 122, 140, 0.05);
+}
+
+.archive-label {
+  @apply text-[10px] font-mono uppercase tracking-widest mb-1 block;
+  color: var(--color-archive-text-dim);
+}
+
+.light .archive-label {
+  color: var(--color-archive-text-muted);
+}
+
+/* Typography Enhancements */
+.light h1,
+.light h2,
+.light h3 {
+  color: var(--color-archive-text-main);
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.light p {
+  line-height: 1.7;
+  color: var(--color-archive-text-muted);
+}
+
+.light .font-mono {
+  color: var(--color-archive-accent);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-secondary);
+}
+
+/* Keyboard focus must always be visible. Tailwind's default outline can be
+ * invisible against the cyan / dark theme, so we force a high-contrast
+ * indicator on every focusable element when navigated by keyboard
+ * (`:focus-visible` does not fire on mouse clicks). Animations are also
+ * suppressed for users who prefer reduced motion. */
+:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@utility clip-path-polygon {
+  clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+}
+
+/* Container Query Support for improved responsiveness */
+.responsive-container {
+  container-type: inline-size;
+  width: 100%;
+}
+
+@container (min-width: 480px) {
+  .archive-card {
+    padding: 1.5rem;
+  }
+}
+
+@container (min-width: 768px) {
+  .archive-card {
+    padding: 2rem;
+  }
+}

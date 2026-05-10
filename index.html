@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>VECTOR // 矢量人生设计指南</title>
+    <meta name="description" content="VECTOR 是一个本地优先、加密存储的矢量人生启航日志。" />
+    <meta name="theme-color" content="#050b14" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/assets/vector-icon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- Open Graph / Twitter card so social shares get a recognizable
+         preview instead of the raw URL. og:image is referenced as an
+         absolute URL once a canonical host is configured; relative paths
+         work for self-hosted previews and most modern crawlers. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="VECTOR // 矢量人生设计指南" />
+    <meta
+      property="og:description"
+      content="Local-first life design journal · Zero-knowledge encryption · Morning Star reflection"
+    />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="VECTOR // 矢量人生设计指南" />
+    <meta
+      name="twitter:description"
+      content="Local-first life design journal · Zero-knowledge encryption · Morning Star reflection"
+    />
+    <meta name="twitter:image" content="/og.png" />
+
+    <!-- Phase 4 §W4.2 — Inter + JetBrains Mono are self-hosted via
+         @fontsource (imported at the top of index.css) so the strict
+         production CSP (fontSrc 'self') can actually serve them.
+         No more 3rd-party Google Fonts request from the critical
+         path.
+
+         Phase 4.5 §D — the previous hand-rolled stylesheet link
+         (rel=stylesheet href=/index.css) was a dev-mode artefact:
+         in production vite already injects the hashed equivalent
+         when index.tsx does import "./index.css". Keeping the
+         manual link meant the browser tried to fetch the unhashed
+         path on every cold load (returning the SPA fallback HTML →
+         silently failing to apply any styles for ~50 ms), AND it
+         landed AFTER the JS modules in the parsed head, slowing
+         render-blocking CSS dispatch.
+
+         Phase 4.5 §D — the vite plugin `vector-hoist-stylesheet`
+         in vite.config.ts now relocates the auto-injected hashed
+         stylesheet link to BEFORE the entry script tag, so the
+         browser's preload scanner dispatches the render-blocking
+         CSS request first instead of after every modulepreload. -->
+    <style>
+      /* Tiny critical-path style block. Anything that fights flash-
+         of-unstyled-content on the cover screen lives here so the
+         browser can paint a recognisable shell before the hashed
+         CSS bundle finishes loading. */
+      body {
+        overflow-x: hidden;
+        background: #030303; /* matches manifest background_color */
+        color: #f3f4f6;
+      }
+
+      .font-mono {
+        font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
+      }
+
+      .font-sans,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      p,
+      div,
+      span {
+        font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
