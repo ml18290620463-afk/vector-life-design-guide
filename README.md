@@ -30,18 +30,13 @@
 
 ## 源码仓库与线上演示
 
-推送到真实远程仓库或接入演示环境后，请把占位符 **`YOUR_ORG` / `YOUR_REPO`** 换成你的 GitHub（或 GitLab 等）路径，并保证 **`package.json` → `repository.url`** 与远程一致。
-
 | 类型 | 链接 |
 |------|------|
-| **源码（Git）** | `https://github.com/YOUR_ORG/YOUR_REPO`（占位符，替换后即为「最新代码」入口） |
-| **线上演示** | *暂无收录——部署完成后在此写入公网 URL（例如 `https://vector.example.com`），并与运维书签同步。* |
+| **源码（Git）** | [github.com/ml18290620463-afk/vector-life-design-guide](https://github.com/ml18290620463-afk/vector-life-design-guide) |
+| **克隆** | `git clone https://github.com/ml18290620463-afk/vector-life-design-guide.git` |
+| **线上演示** | *暂无——完整应用需 Node 服务端（AI 代理等）。可自行 Docker / 云主机部署；纯静态托管无法代替服务端。* |
 
-**一次性对齐步骤**
-
-1. 在托管平台创建空仓库，本地执行：`git remote add origin https://github.com/YOUR_ORG/YOUR_REPO.git`（地址以平台为准）。
-2. 编辑根目录 [`package.json`](./package.json)，将 `repository.url` 改为 `git+https://github.com/<所有者>/<仓库>.git`（与 `git remote get-url origin` 对应）。
-3. 若有对外演示站点，在本节表格「线上演示」填写 URL；可选同时在 `package.json` 增加 `"homepage": "https://你的演示域名"`，便于 npm 与文档聚合展示。
+`package.json` 中的 `repository.url` / `homepage` 已与上述仓库对齐。
 
 ## 环境要求
 

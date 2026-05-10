@@ -7,8 +7,9 @@
   "author": "VECTOR Life Design Guide contributors",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_ORG/YOUR_REPO.git"
+    "url": "git+https://github.com/ml18290620463-afk/vector-life-design-guide.git"
   },
+  "homepage": "https://github.com/ml18290620463-afk/vector-life-design-guide#readme",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
