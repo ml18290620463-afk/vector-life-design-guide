@@ -31,6 +31,15 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
     if (kind === 'key') return showing ? 'Hide recovery key' : 'Show recovery key';
     return showing ? (t.hidePassword ?? 'Hide password') : (t.showPassword ?? 'Show password');
   };
+  const inputShellClass =
+    'relative group overflow-hidden border backdrop-blur-md [border-radius:1.35rem_2.1rem_1.55rem_2.25rem/1.05rem_1.55rem_1.7rem_1.25rem]';
+  const inputTone =
+    theme === 'light'
+      ? 'border-cyan-500/18 bg-white/42 shadow-[inset_0_0_22px_rgba(6,182,212,0.045),0_0_18px_rgba(6,182,212,0.045)]'
+      : 'border-cyan-200/16 bg-black/18 shadow-[inset_0_0_24px_rgba(34,211,238,0.045),0_0_20px_rgba(34,211,238,0.05)]';
+  const inputClass = `relative z-10 w-full border-0 bg-transparent py-4 pl-5 pr-14 font-mono text-sm tracking-[0.16em] outline-none transition-all focus:outline-none focus:ring-0 focus-visible:outline-none ${theme === 'light' ? 'text-slate-900 placeholder:text-slate-400/60' : 'text-cyan-100 placeholder:text-cyan-200/42'}`;
+  const iconButtonClass =
+    'absolute right-4 top-1/2 z-20 -translate-y-1/2 text-cyan-700 transition-colors hover:text-cyan-300';
 
   return (
     <motion.div
@@ -59,14 +68,17 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
           >
             {t.recoveryKeyTitle}
           </label>
-          <div className="relative group">
+          <div className={`${inputShellClass} ${inputTone}`}>
+            <div className="pointer-events-none absolute -inset-x-5 -inset-y-3 bg-[radial-gradient(circle_at_18%_36%,rgba(125,249,255,0.1),transparent_34%),linear-gradient(100deg,transparent,rgba(34,211,238,0.055),transparent)] blur-md" />
+            <div className="pointer-events-none absolute inset-x-6 top-2 h-px bg-gradient-to-r from-transparent via-cyan-100/18 to-transparent" />
             <input
               id="recovery-key-input"
               type={recovery.showKey ? 'text' : 'password'}
               value={recovery.recoveryInput}
               onChange={(e) => recovery.setRecoveryInput(e.target.value)}
               aria-label={t.recoveryKeyTitle}
-              className={`w-full border p-3 font-mono text-sm focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-400' : 'bg-cyan-950/20 border-cyan-900/40 text-cyan-100 focus:border-cyan-500/50'}`}
+              data-suppress-focus-ring="true"
+              className={inputClass}
               placeholder="XXXX-XXXX-XXXX-XXXX..."
             />
             <button
@@ -74,7 +86,7 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
               onClick={recovery.toggleShowKey}
               aria-label={showHideLabel(recovery.showKey, 'key')}
               aria-pressed={recovery.showKey}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
+              className={iconButtonClass}
             >
               {recovery.showKey ? (
                 <Minimize className="w-4 h-4" />
@@ -92,14 +104,17 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
           >
             {t.newPassword}
           </label>
-          <div className="relative group">
+          <div className={`${inputShellClass} ${inputTone}`}>
+            <div className="pointer-events-none absolute -inset-x-5 -inset-y-3 bg-[radial-gradient(circle_at_18%_36%,rgba(125,249,255,0.1),transparent_34%),linear-gradient(100deg,transparent,rgba(34,211,238,0.055),transparent)] blur-md" />
+            <div className="pointer-events-none absolute inset-x-6 top-2 h-px bg-gradient-to-r from-transparent via-cyan-100/18 to-transparent" />
             <input
               id="recovery-new-input"
               type={recovery.showNewPassword ? 'text' : 'password'}
               value={recovery.newPassword}
               onChange={(e) => recovery.setNewPassword(e.target.value)}
               aria-label={t.newPassword}
-              className={`w-full border p-3 font-mono text-sm focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-400' : 'bg-cyan-950/20 border-cyan-900/40 text-cyan-100 focus:border-cyan-500/50'}`}
+              data-suppress-focus-ring="true"
+              className={inputClass}
               placeholder="••••••••"
             />
             <button
@@ -107,7 +122,7 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
               onClick={recovery.toggleShowNewPassword}
               aria-label={showHideLabel(recovery.showNewPassword, 'password')}
               aria-pressed={recovery.showNewPassword}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
+              className={iconButtonClass}
             >
               {recovery.showNewPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -125,14 +140,17 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
           >
             {t.confirmPassword}
           </label>
-          <div className="relative group">
+          <div className={`${inputShellClass} ${inputTone}`}>
+            <div className="pointer-events-none absolute -inset-x-5 -inset-y-3 bg-[radial-gradient(circle_at_18%_36%,rgba(125,249,255,0.1),transparent_34%),linear-gradient(100deg,transparent,rgba(34,211,238,0.055),transparent)] blur-md" />
+            <div className="pointer-events-none absolute inset-x-6 top-2 h-px bg-gradient-to-r from-transparent via-cyan-100/18 to-transparent" />
             <input
               id="recovery-confirm-input"
               type={recovery.showNewPassword ? 'text' : 'password'}
               value={recovery.confirmNewPassword}
               onChange={(e) => recovery.setConfirmNewPassword(e.target.value)}
               aria-label={t.confirmPassword}
-              className={`w-full border p-3 font-mono text-sm focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-400' : 'bg-cyan-950/20 border-cyan-900/40 text-cyan-100 focus:border-cyan-500/50'}`}
+              data-suppress-focus-ring="true"
+              className={inputClass}
               placeholder="••••••••"
             />
             <button
@@ -140,7 +158,7 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
               onClick={recovery.toggleShowNewPassword}
               aria-label={showHideLabel(recovery.showNewPassword, 'password')}
               aria-pressed={recovery.showNewPassword}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
+              className={iconButtonClass}
             >
               {recovery.showNewPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -165,8 +183,13 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
 
       <button
         onClick={recovery.submitRecovery}
-        className={`w-full py-4 font-mono text-xs tracking-widest transition-all ${theme === 'light' ? 'bg-slate-900 text-white hover:bg-cyan-600' : 'bg-cyan-500 text-black hover:bg-cyan-400 font-bold'}`}
+        className={`relative w-full overflow-hidden py-4 font-mono text-xs font-bold tracking-widest transition-all [border-radius:1.5rem_2.4rem_1.8rem_2.6rem/1.1rem_1.7rem_1.9rem_1.35rem] ${
+          theme === 'light'
+            ? 'border border-cyan-500/24 bg-cyan-50/70 text-cyan-900 shadow-[0_0_24px_rgba(6,182,212,0.08)] hover:bg-cyan-100/80'
+            : 'border border-cyan-200/22 bg-[linear-gradient(100deg,rgba(0,200,232,0.18),rgba(0,0,0,0.18),rgba(34,211,238,0.12))] text-cyan-50 shadow-[0_0_28px_rgba(0,220,255,0.12),inset_0_0_22px_rgba(34,211,238,0.06)] hover:border-cyan-100/36 hover:text-white'
+        }`}
       >
+        <span className="pointer-events-none absolute inset-x-10 top-1 h-px bg-gradient-to-r from-transparent via-cyan-100/30 to-transparent" />
         {t.confirmAction}
       </button>
     </motion.div>

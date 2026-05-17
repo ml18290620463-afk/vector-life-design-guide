@@ -8,38 +8,32 @@ describe('MasterLockCardChrome', () => {
     expect((container.firstChild as HTMLElement).getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('renders all four cyber corner accents', () => {
+  it('renders a layered set of fluid edge glints instead of mechanical corners', () => {
     const { container } = render(<MasterLockCardChrome theme="dark" />);
-    // Each corner has a unique combination of border-{l,r}-2 + border-{t,b}-2.
-    const corners = [
-      container.querySelector('.absolute.top-0.left-0.w-4.h-4.border-l-2.border-t-2'),
-      container.querySelector('.absolute.top-0.right-0.w-4.h-4.border-r-2.border-t-2'),
-      container.querySelector('.absolute.bottom-0.left-0.w-4.h-4.border-l-2.border-b-2'),
-      container.querySelector('.absolute.bottom-0.right-0.w-4.h-4.border-r-2.border-b-2'),
-    ];
-    for (const corner of corners) {
-      expect(corner).not.toBeNull();
-    }
+    const glints = container.querySelectorAll('[data-testid="fluid-glint"]');
+    expect(glints).toHaveLength(5);
+    expect(container.innerHTML).toContain('w-[42%]');
+    expect(container.innerHTML).toContain('h-[46%]');
   });
 
-  it('renders 10 twinkling stars (deterministic count)', () => {
+  it('does not render the retired top-right animated stars', () => {
     const { container } = render(<MasterLockCardChrome theme="dark" />);
     const stars = container.querySelectorAll('.absolute.w-0\\.5.h-0\\.5.bg-white.rounded-full');
-    expect(stars.length).toBe(10);
+    expect(stars.length).toBe(0);
   });
 
-  it('renders the indigo halo only in the dark theme', () => {
+  it('does not render the retired top-right indigo halo', () => {
     const { container, rerender } = render(<MasterLockCardChrome theme="dark" />);
-    expect(container.querySelector('[class*="bg-indigo-500/20"]')).not.toBeNull();
+    expect(container.querySelector('[class*="bg-indigo-500/20"]')).toBeNull();
     rerender(<MasterLockCardChrome theme="light" />);
     expect(container.querySelector('[class*="bg-indigo-500/20"]')).toBeNull();
   });
 
-  it('switches the corner accent palette between themes', () => {
+  it('switches the fluid glint palette between themes', () => {
     const { container, rerender } = render(<MasterLockCardChrome theme="dark" />);
-    expect(container.querySelector('.border-cyan-500\\/50')).not.toBeNull();
+    expect(container.innerHTML).toContain('border-cyan-200/40');
     rerender(<MasterLockCardChrome theme="light" />);
-    expect(container.querySelector('.border-cyan-400')).not.toBeNull();
+    expect(container.innerHTML).toContain('border-cyan-400/60');
   });
 
   it('memoises — same theme twice produces identical DOM length', () => {

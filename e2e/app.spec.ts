@@ -13,9 +13,10 @@ test('renders the cover experience', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: 'VECTOR' })).toBeVisible();
-  await expect(page.getByText(/矢量人生|VECTOR LIFE/i).first()).toBeVisible();
-  await expect(page.getByText(/记录 \|\| 此刻|Record \|\| Now/i).first()).toBeVisible();
-  await expect(page.getByText(/抵达未来|Reach the future/i).first()).toBeVisible();
+  await expect(page.getByText(/矢量空间|VECTOR LIFE/i).first()).toBeVisible();
+  await expect(
+    page.getByText(/记录 \|\| 过去·此刻 ⇌ 未来|Record \|\| Past · Now ⇌ Future/i).first(),
+  ).toBeVisible();
   await expect(page.getByTestId('cover-initialize')).toBeVisible();
   await expect(page.getByText(/起航|Launch/i).first()).toBeVisible();
 });
@@ -48,7 +49,7 @@ test('completes onboarding and creates a journal entry', async ({ page }) => {
   // a localised piece of copy injected by `useDiaryData.seedDefaults`,
   // not a button — adding a testid would require threading it through
   // multiple components for one assertion.
-  await expect(page.getByText('矢量人生启航日志').first()).toBeVisible();
+  await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
 
   await page.getByTestId('dashboard-new-entry').click();
   await page.getByTestId('editor-title').fill('E2E 自动化航迹');

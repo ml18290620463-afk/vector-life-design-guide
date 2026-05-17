@@ -5,6 +5,8 @@ import { canTransitionAppState, getAllowedAppStateTransitions } from './appState
 describe('appStateMachine', () => {
   it('allows the main app navigation flow', () => {
     expect(canTransitionAppState(AppState.COVER, AppState.ONBOARDING)).toBe(true);
+    expect(canTransitionAppState(AppState.COVER, AppState.LOGIN)).toBe(true);
+    expect(canTransitionAppState(AppState.LOGIN, AppState.DASHBOARD)).toBe(true);
     expect(canTransitionAppState(AppState.ONBOARDING, AppState.DASHBOARD)).toBe(true);
     expect(canTransitionAppState(AppState.DASHBOARD, AppState.EDITOR)).toBe(true);
     expect(canTransitionAppState(AppState.EDITOR, AppState.DASHBOARD)).toBe(true);

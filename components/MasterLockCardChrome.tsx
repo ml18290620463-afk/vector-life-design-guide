@@ -1,96 +1,24 @@
-import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
+import React from 'react';
 import type { Theme } from '../types';
-import { createSeededRandom } from '../lib/random';
 
 interface MasterLockCardChromeProps {
   theme: Theme;
 }
 
 /**
- * Decorative chrome that wraps the MasterLock card: corner ripples,
- * twinkling stars, neon glow, paper grain, document-fold gradient and
- * cyberpunk corner accents.
+ * Decorative chrome that wraps the MasterLock card: water-like edge
+ * glints, neon glow, paper grain and document-fold gradient.
  *
  * Pulled out of `MasterLock.tsx` as part of Phase 2 §2.i. Pure
  * decoration with `aria-hidden="true"` so screen readers skip it.
  * Memoised: the chrome only re-renders when `theme` changes.
  */
 export const MasterLockCardChrome: React.FC<MasterLockCardChromeProps> = React.memo(({ theme }) => {
-  // Seeded so the same panel always shows the same starscape (and
-  // unrelated re-renders never reshuffle them).
-  const cornerStars = useMemo(
-    () =>
-      Array.from({ length: 10 }, (_, i) => {
-        const random = createSeededRandom(`master-corner-${i}`);
-        return {
-          top: `${random() * 60}%`,
-          right: `${random() * 60}%`,
-          duration: 2.5 + random() * 2,
-          delay: random() * 4,
-        };
-      }),
-    [],
-  );
-
   return (
     <div aria-hidden="true">
-      {/* Cyberpunk Space-Time Ripples (Enhanced with Star-field & Rose) */}
-      <div className="absolute top-0 right-0 w-40 h-40 pointer-events-none z-40 overflow-hidden">
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            initial={{ scale: 0, opacity: 0.8 }}
-            animate={{ scale: 3, opacity: 0 }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              delay: i * 2.5,
-              ease: 'linear',
-            }}
-            className={`absolute top-0 right-0 w-24 h-24 border-2 rounded-full -translate-y-1/2 translate-x-1/2 ${
-              i === 1 && theme === 'dark'
-                ? 'border-indigo-500/60 shadow-[0_0_30px_rgba(99,102,241,0.3),0_0_60px_rgba(99,102,241,0.1)]'
-                : theme === 'light'
-                  ? 'border-cyan-500/20'
-                  : 'border-cyan-400/40 shadow-[0_0_15px_rgba(34,211,238,0.4)]'
-            }`}
-          />
-        ))}
-
-        {/* Twinkling Stars in Background */}
-        <div className="absolute inset-0 z-5">
-          {cornerStars.map((star, i) => (
-            <motion.div
-              key={i}
-              animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-              transition={{ duration: star.duration, repeat: Infinity, delay: star.delay }}
-              className="absolute w-0.5 h-0.5 bg-white rounded-full opacity-60"
-              style={{ top: star.top, right: star.right }}
-            />
-          ))}
-        </div>
-
-        {/* Spatial Tech Glow (Neon Cyan & Rose Mix) */}
-        <div
-          className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full -translate-y-1/2 translate-x-1/2 opacity-60 z-10 ${theme === 'light' ? 'bg-cyan-200' : 'bg-cyan-500/40'}`}
-        />
-        {theme === 'dark' && (
-          <motion.div
-            animate={{ opacity: [0.2, 0.6, 0.2], scale: [1, 1.2, 1] }}
-            transition={{ duration: 3, repeat: Infinity }}
-            className="absolute top-0 right-0 w-24 h-24 blur-[40px] rounded-full -translate-y-1/4 translate-x-1/4 z-11 bg-indigo-500/20 shadow-[0_0_40px_rgba(99,102,241,0.2)]"
-          />
-        )}
-
-        {/* Corner Plate Overlay */}
-        <div
-          className={`absolute top-0 right-0 w-0 h-0 border-t-[50px] border-r-[50px] border-t-transparent z-40 ${theme === 'light' ? 'border-r-white/90' : 'border-r-black/80'}`}
-        />
-        <div
-          className={`absolute top-0 right-0 w-px h-[70px] rotate-45 origin-top-right z-50 ${theme === 'light' ? 'bg-cyan-500/40' : 'bg-cyan-400/60 shadow-[0_0_10px_rgba(34,211,238,0.8)]'}`}
-        />
-      </div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_8%,rgba(188,255,255,0.22),transparent_18%),radial-gradient(circle_at_84%_12%,rgba(123,109,255,0.18),transparent_24%),linear-gradient(115deg,rgba(255,255,255,0.1),transparent_18%,transparent_58%,rgba(0,200,232,0.08)_70%,transparent_88%)] opacity-70" />
+      <div className="pointer-events-none absolute -left-24 top-12 h-[2px] w-[42%] -rotate-[8deg] bg-gradient-to-r from-transparent via-cyan-100/60 to-transparent shadow-[0_0_20px_rgba(125,211,252,0.55)]" />
+      <div className="pointer-events-none absolute right-10 top-4 h-24 w-40 -rotate-12 rounded-full bg-cyan-200/8 blur-2xl" />
 
       {/* Background Pattern & Paper Grain */}
       <div
@@ -105,18 +33,30 @@ export const MasterLockCardChrome: React.FC<MasterLockCardChromeProps> = React.m
         className={`absolute inset-0 opacity-[0.03] pointer-events-none ${theme === 'light' ? 'bg-[linear-gradient(135deg,transparent_45%,#000_50%,transparent_55%)]' : 'bg-[linear-gradient(135deg,transparent_45%,#fff_50%,transparent_55%)]'}`}
       />
 
-      {/* Cyber Accents */}
+      {/* Fluid Edge Glints */}
       <div
-        className={`absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 ${theme === 'light' ? 'border-cyan-400' : 'border-cyan-500/50'}`}
+        data-testid="fluid-glint"
+        className={`absolute -left-9 top-[10%] h-36 w-56 -rotate-[7deg] rounded-[67%_33%_72%_28%/38%_58%_42%_62%] border-l border-t shadow-[0_0_24px_rgba(103,232,249,0.18)] ${theme === 'light' ? 'border-cyan-400/60' : 'border-cyan-200/40'} opacity-75`}
       />
       <div
-        className={`absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 ${theme === 'light' ? 'border-cyan-400' : 'border-cyan-500/50'}`}
+        data-testid="fluid-glint"
+        className={`absolute left-[38%] top-[3%] h-14 w-[42%] rotate-[2deg] rounded-[72%_28%_63%_37%/44%_56%_38%_62%] border-t shadow-[0_0_22px_rgba(103,232,249,0.16)] ${theme === 'light' ? 'border-cyan-400/55' : 'border-cyan-200/34'} opacity-70`}
       />
       <div
-        className={`absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 ${theme === 'light' ? 'border-cyan-400' : 'border-cyan-500/50'}`}
+        data-testid="fluid-glint"
+        className={`absolute -right-8 top-[18%] h-[46%] w-32 rotate-[4deg] rounded-[34%_66%_55%_45%/46%_38%_62%_54%] border-r shadow-[0_0_26px_rgba(103,232,249,0.16)] ${theme === 'light' ? 'border-cyan-400/55' : 'border-cyan-200/32'} opacity-70`}
       />
       <div
-        className={`absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 ${theme === 'light' ? 'border-cyan-400' : 'border-cyan-500/50'}`}
+        data-testid="fluid-glint"
+        className={`absolute bottom-[2%] left-[7%] h-24 w-[36%] rotate-[3deg] rounded-[58%_42%_70%_30%/36%_64%_42%_58%] border-b shadow-[0_0_24px_rgba(103,232,249,0.14)] ${theme === 'light' ? 'border-cyan-400/55' : 'border-cyan-200/30'} opacity-65`}
+      />
+      <div
+        data-testid="fluid-glint"
+        className={`absolute bottom-[7%] right-[13%] h-28 w-48 -rotate-[5deg] rounded-[42%_58%_36%_64%/60%_40%_66%_34%] border-b border-r shadow-[0_0_24px_rgba(103,232,249,0.16)] ${theme === 'light' ? 'border-cyan-400/60' : 'border-cyan-200/36'} opacity-72`}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[18%] top-[12%] h-px w-[48%] -rotate-[4deg] bg-gradient-to-r from-transparent via-cyan-100/42 to-transparent shadow-[0_0_18px_rgba(125,211,252,0.38)]"
       />
     </div>
   );

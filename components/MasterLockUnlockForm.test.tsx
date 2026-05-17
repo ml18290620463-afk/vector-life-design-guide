@@ -37,7 +37,7 @@ describe('MasterLockUnlockForm', () => {
     render(<MasterLockUnlockForm {...baseProps} />);
     expect(screen.getByLabelText('Enter master password')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Show password' })).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Forgot password?' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Forgot password? Use private key' })).not.toBeNull();
   });
 
   it('routes input changes through onPasswordChange', () => {
@@ -114,7 +114,7 @@ describe('MasterLockUnlockForm', () => {
   it('routes the forgot-password click to onForgotPassword', () => {
     const onForgotPassword = vi.fn();
     render(<MasterLockUnlockForm {...baseProps} onForgotPassword={onForgotPassword} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Forgot password?' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Forgot password? Use private key' }));
     expect(onForgotPassword).toHaveBeenCalledTimes(1);
   });
 });

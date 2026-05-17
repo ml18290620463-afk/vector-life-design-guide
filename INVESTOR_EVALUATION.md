@@ -1,7 +1,7 @@
 # VECTOR 产品深度评估报告（投资人视角 · 通俗版）
 
 > **报告人**：投资人 + 工程师 + 设计师三栖视角
-> **被评估对象**：VECTOR 矢量人生启航日志 v1.0.5（截至 2026-05-03，本地 33 commits 待 push）
+> **被评估对象**：VECTOR 矢量空间启航日志 v1.0.5（截至 2026-05-03，本地 33 commits 待 push）
 > **评估方法**：源码 100% 自读、test 自跑、commit history 全审、UI 通过代码层信号反推（**无法实际运行 + 真人测试**，这是最大局限）
 > **对比基线**：[EVALUATION.md](EVALUATION.md) 之前给出 **6.6/10**
 > **配套文档**：[EVALUATION.md](EVALUATION.md)（技术维度评分）+ [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)（评估导览）+ 本文（投资人视角）

@@ -1,7 +1,7 @@
 import { TranslationDictionary } from '../translations';
 
 export const zh = {
-  appTitle: '矢量人生启航日志',
+  appTitle: '矢量空间启航日志',
   commander: '记录者',
   settings: '系统校准',
   settingsTitle: '认知切片 / 逻辑自检',
@@ -206,8 +206,8 @@ export const zh = {
   title: '标题',
   date: '日期',
   status: '状态',
-  vectorLife: '矢量人生',
-  brandNarrative: '记录 || 此刻 → 抵达未来',
+  vectorLife: '矢量空间',
+  brandNarrative: '记录 || 过去·此刻 ⇌ 未来',
   enterNow: '进入现在',
   principlesLibrary: '公理圣殿 // 存在之锚',
   addPrinciple: '刻录新原则',
@@ -372,7 +372,7 @@ export const zh = {
   requirementSpecial: '特殊符号',
   wipeDataSettings: '清空所有数据',
   protocolAuthenticated: '协议已验证',
-  vectorsOfLife: '此致，矢量人生...',
+  vectorsOfLife: '此致，矢量空间...',
   reflectionZone: '复盘与反思',
   saveReflection: '保存反思',
   reflectionSaved: '反思已存档',

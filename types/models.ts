@@ -272,6 +272,7 @@ export interface DiaryEntry {
 export enum AppState {
   COVER = 'COVER', // New Landing Page (Includes Fragments)
   ONBOARDING = 'ONBOARDING', // Initial Setup
+  LOGIN = 'LOGIN', // Returning-user password gate
   DASHBOARD = 'DASHBOARD',
   EDITOR = 'EDITOR',
   VIEWER = 'VIEWER',

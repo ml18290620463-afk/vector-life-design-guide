@@ -197,7 +197,7 @@ everything else is feature-flag-gated or dead-code-eliminated).
   now do too). `e2e/seedHelpers.ts` + `e2e/app.spec.ts`
   refactored — every selector is now testid-anchored. The only
   surviving i18n locator is the assertion that the seeded
-  `矢量人生启航日志` default entry renders, because that's a
+  `矢量空间启航日志` default entry renders, because that's a
   localised piece of copy injected by `useDiaryData.seedDefaults`
   and the test SHOULD fail if the localisation breaks. New
   `docs/e2e-conventions.md` documents the selector hierarchy.

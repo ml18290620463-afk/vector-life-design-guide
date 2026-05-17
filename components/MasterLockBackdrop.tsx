@@ -11,6 +11,20 @@ interface MasterLockBackdropProps {
 const FIXED_STAR_COUNT = 60;
 const TWINKLING_STAR_COUNT = 20;
 
+const buildStarPosition = (seed: string, index: number) => {
+  const random = createSeededRandom(seed);
+  const column = index % 5;
+  const row = Math.floor(index / 5) % 4;
+  const left = (column + random() * 0.94) * 20 + (random() - 0.5) * 8;
+  const top = (row + random() * 0.92) * 25 + (random() - 0.5) * 10;
+
+  return {
+    random,
+    left: `${Math.max(1, Math.min(99, left))}%`,
+    top: `${Math.max(1, Math.min(99, top))}%`,
+  };
+};
+
 /**
  * Fullscreen starfield decoration sitting behind the MasterLock card.
  * Pulled out of MasterLock.tsx as part of Phase 2 §2.i so the unlock
@@ -32,11 +46,15 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
   const fixedStars = useMemo(
     () =>
       Array.from({ length: FIXED_STAR_COUNT }, (_, i) => {
-        const random = createSeededRandom(`master-fixed-${i}`);
+        const { random, left, top } = buildStarPosition(`master-fixed-${i}`, i);
+        const size = 0.6 + random() * 1.2;
         return {
-          left: `${random() * 100}%`,
-          top: `${random() * 100}%`,
-          opacity: random() * 0.5,
+          left,
+          top,
+          width: `${size}px`,
+          height: `${size}px`,
+          opacity: 0.05 + random() * 0.38,
+          filter: random() > 0.72 ? 'blur(1px)' : 'none',
         };
       }),
     [],
@@ -45,12 +63,20 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
   const twinklingStars = useMemo(
     () =>
       Array.from({ length: TWINKLING_STAR_COUNT }, (_, i) => {
-        const random = createSeededRandom(`master-twinkle-${i}`);
+        const { random, left, top } = buildStarPosition(`master-twinkle-${i}`, i + 7);
+        const size = 1.4 + random() * 2.6;
+        const peakOpacity = 0.36 + random() * 0.54;
         return {
-          left: `${random() * 100}%`,
-          top: `${random() * 100}%`,
-          duration: 2 + random() * 4,
-          delay: random() * 5,
+          left,
+          top,
+          width: `${size}px`,
+          height: `${size}px`,
+          duration: 3.2 + random() * 5.8,
+          delay: random() * 8,
+          repeatDelay: random() * 6,
+          peakOpacity,
+          x: (random() - 0.5) * 12,
+          y: (random() - 0.5) * 10,
         };
       }),
     [],
@@ -58,10 +84,62 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
 
   return (
     <div className="absolute inset-0 pointer-events-none" aria-hidden>
+      <div className="absolute inset-0 bg-[#020708]" />
       {/* Nebula Gradients */}
       <div
-        className={`absolute inset-0 opacity-40 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_5%,_transparent),transparent_50%)]' : 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-cyan-500)_15%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_8%,_transparent),transparent_50%)]'}`}
+        className={`absolute inset-0 opacity-70 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_5%,_transparent),transparent_50%)]' : 'bg-[radial-gradient(circle_at_12%_22%,rgba(0,215,255,0.14),transparent_42%),radial-gradient(circle_at_82%_28%,rgba(79,70,229,0.2),transparent_42%),linear-gradient(120deg,rgba(0,32,35,0.72),rgba(0,0,0,0.92)_48%,rgba(0,5,9,1))]'} `}
       />
+
+      <div className="absolute -right-[18vw] top-[8vh] h-[72vw] max-h-[980px] w-[72vw] max-w-[980px]">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <motion.div
+            key={`spacetime-ripple-${i}`}
+            animate={
+              reduceMotion
+                ? { opacity: 0.18 }
+                : {
+                    opacity: [0.04, i === 1 ? 0.34 : 0.2, 0.05],
+                    scale: [0.98, 1.04, 0.99],
+                  }
+            }
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : {
+                    duration: 7 + i * 1.5,
+                    repeat: Infinity,
+                    delay: i * 0.5,
+                    ease: 'easeInOut',
+                  }
+            }
+            className={`absolute rounded-full border ${
+              i % 2 === 0
+                ? 'border-cyan-300/20 shadow-[0_0_34px_rgba(34,211,238,0.14)]'
+                : 'border-indigo-400/24 shadow-[0_0_44px_rgba(99,102,241,0.18)]'
+            }`}
+            style={{
+              inset: `${i * 9}%`,
+            }}
+          />
+        ))}
+        <div className="absolute inset-[28%] rounded-full bg-[radial-gradient(circle,rgba(91,210,255,0.18),rgba(61,75,230,0.1)_45%,transparent_70%)] blur-2xl" />
+      </div>
+
+      <div className="absolute left-[8vw] top-[12vh] h-[42vw] max-h-[560px] w-[42vw] max-w-[560px] opacity-55">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={`soft-ripple-${i}`}
+            animate={reduceMotion ? { opacity: 0.12 } : { opacity: [0.02, 0.14, 0.03] }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { duration: 9 + i * 2, repeat: Infinity, delay: i * 1.1 }
+            }
+            className="absolute rounded-full border border-cyan-300/14"
+            style={{ inset: `${i * 15}%` }}
+          />
+        ))}
+      </div>
 
       {/* Fixed Stars */}
       <div className="absolute inset-0">
@@ -83,8 +161,10 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
               reduceMotion
                 ? { opacity: 0.4, scale: 1 }
                 : {
-                    opacity: [0, 0.8, 0],
-                    scale: [0.5, 1, 0.5],
+                    opacity: [0, star.peakOpacity, 0],
+                    scale: [0.35, 1, 0.45],
+                    x: [0, star.x, 0],
+                    y: [0, star.y, 0],
                   }
             }
             transition={
@@ -94,10 +174,17 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
                     duration: star.duration,
                     repeat: Infinity,
                     delay: star.delay,
+                    repeatDelay: star.repeatDelay,
                   }
             }
-            className={`absolute w-[2px] h-[2px] rounded-full blur-[1px] ${theme === 'light' ? 'bg-cyan-600' : 'bg-cyan-300'}`}
-            style={{ left: star.left, top: star.top }}
+            className={`absolute rounded-full blur-[1px] ${theme === 'light' ? 'bg-cyan-600' : 'bg-cyan-300'}`}
+            style={{
+              left: star.left,
+              top: star.top,
+              width: star.width,
+              height: star.height,
+              opacity: star.peakOpacity,
+            }}
           />
         ))}
       </div>
@@ -117,6 +204,7 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
         }
         className={`absolute inset-0 ${theme === 'light' ? 'bg-[url("https://www.transparenttextures.com/patterns/natural-paper.png")] opacity-5' : 'bg-[url("https://www.transparenttextures.com/patterns/dark-matter.png")] opacity-10'}`}
       />
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-black/42 to-transparent" />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-# VECTOR: 矢量人生启航日志
+# VECTOR: 矢量空间启航日志
 
 > **VECTOR 是一个本地优先、零知识的反思日记 PWA。**
 > 你写日记 + 选一位「启明星」（古今圣贤的 AI 化身：马斯克、加缪、老子……）+ 收到一封视角独到的回信。
@@ -30,11 +30,11 @@
 
 ## 源码仓库与线上演示
 
-| 类型 | 链接 |
-|------|------|
+| 类型            | 链接                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **源码（Git）** | [github.com/ml18290620463-afk/vector-life-design-guide](https://github.com/ml18290620463-afk/vector-life-design-guide) |
-| **克隆** | `git clone https://github.com/ml18290620463-afk/vector-life-design-guide.git` |
-| **线上演示** | *暂无——完整应用需 Node 服务端（AI 代理等）。可自行 Docker / 云主机部署；纯静态托管无法代替服务端。* |
+| **克隆**        | `git clone https://github.com/ml18290620463-afk/vector-life-design-guide.git`                                          |
+| **线上演示**    | _暂无——完整应用需 Node 服务端（AI 代理等）。可自行 Docker / 云主机部署；纯静态托管无法代替服务端。_                    |
 
 `package.json` 中的 `repository.url` / `homepage` 已与上述仓库对齐。
 

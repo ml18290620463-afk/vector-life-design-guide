@@ -976,22 +976,13 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           ></span>
         </div>
         <p
-          className={`cover-enter cover-enter--2b relative z-10 mx-auto mb-10 flex max-w-[min(88vw,560px)] items-center justify-center gap-2 px-4 text-center text-sm font-semibold leading-relaxed tracking-[0.16em] md:gap-3 md:text-lg md:tracking-[0.2em] ${theme === 'light' ? 'text-vector-ink-strong/88' : 'text-[color:var(--color-cover-status-body)]'}`}
+          className={`cover-enter cover-enter--2b relative z-10 mx-auto mb-10 flex max-w-[min(90vw,720px)] items-center justify-center px-4 text-center text-sm font-semibold leading-relaxed tracking-[0.12em] md:text-lg md:tracking-[0.18em] ${theme === 'light' ? 'text-vector-ink-strong/88' : 'text-[color:var(--color-cover-status-body)]'}`}
           aria-label={t.brandNarrative}
         >
           <span
             className={`${theme === 'light' ? 'text-vector-cyan-brand/90' : 'text-cyan-100/78 drop-shadow-[0_0_10px_rgba(0,200,232,0.18)]'}`}
           >
-            {language === 'zh' ? '记录 || 此刻' : 'Record || Now'}
-          </span>
-          <span
-            aria-hidden="true"
-            className={`cover-narrative-arrow h-px w-8 md:w-14 ${theme === 'light' ? 'bg-gradient-to-r from-vector-cyan-brand/45 via-[#7b6dff]/38 to-[#7b6dff]/12' : 'bg-gradient-to-r from-cyan-200/38 via-[#7b6dff]/62 to-[#7b6dff]/16 shadow-[0_0_12px_rgba(123,109,255,0.26)]'}`}
-          ></span>
-          <span
-            className={`${theme === 'light' ? 'text-[#4f46e5]' : 'text-[#d7d2ff] drop-shadow-[0_0_12px_rgba(123,109,255,0.28)]'}`}
-          >
-            {language === 'zh' ? '抵达未来' : 'Reach the future'}
+            {language === 'zh' ? '记录 || 过去·此刻 ⇌ 未来' : 'Record || Past · Now ⇌ Future'}
           </span>
         </p>
 

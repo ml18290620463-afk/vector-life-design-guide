@@ -27,7 +27,7 @@ describe('MasterLockHeader', () => {
     render(
       <MasterLockHeader {...baseProps} isRecoveryMode onBackFromRecovery={onBackFromRecovery} />,
     );
-    fireEvent.click(screen.getByText(/返回解锁/));
+    fireEvent.click(screen.getByRole('button', { name: /返回解锁/ }));
     expect(onBackFromRecovery).toHaveBeenCalled();
   });
 

@@ -1,4 +1,4 @@
-# PROJECT_OVERVIEW — VECTOR 矢量人生启航日志
+# PROJECT_OVERVIEW — VECTOR 矢量空间启航日志
 
 > One-document tour for evaluators. Read top-to-bottom in 15 minutes
 > for a full picture, or jump to any section.

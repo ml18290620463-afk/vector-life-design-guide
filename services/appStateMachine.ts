@@ -1,8 +1,9 @@
 import { AppState } from '../types';
 
 const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
-  [AppState.COVER]: [AppState.ONBOARDING, AppState.DASHBOARD],
+  [AppState.COVER]: [AppState.ONBOARDING, AppState.LOGIN, AppState.DASHBOARD],
   [AppState.ONBOARDING]: [AppState.COVER, AppState.DASHBOARD],
+  [AppState.LOGIN]: [AppState.COVER, AppState.DASHBOARD],
   [AppState.DASHBOARD]: [AppState.COVER, AppState.EDITOR, AppState.VIEWER, AppState.ARCHIVE],
   [AppState.EDITOR]: [AppState.COVER, AppState.DASHBOARD],
   [AppState.VIEWER]: [AppState.COVER, AppState.DASHBOARD],

@@ -66,7 +66,7 @@ test.describe('@visual post-onboarding surfaces', () => {
   test('dashboard renders the launchpad header + filter bar', async ({ page }) => {
     test.setTimeout(60_000);
     await seedOnboardedApp(page);
-    await expect(page.getByText('矢量人生启航日志').first()).toBeVisible();
+    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
     // Let any post-onboarding fade-in settle before the snapshot.
     await page.waitForTimeout(700);
     await expect(page).toHaveScreenshot('dashboard-default.png', {
@@ -79,7 +79,7 @@ test.describe('@visual post-onboarding surfaces', () => {
   test('settings panel renders open over the dashboard', async ({ page }) => {
     test.setTimeout(60_000);
     await seedOnboardedApp(page);
-    await expect(page.getByText('矢量人生启航日志').first()).toBeVisible();
+    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
     await page
       .getByTitle(/认知切片|cognitive|logic|settings/i)
       .first()
@@ -96,7 +96,7 @@ test.describe('@visual post-onboarding surfaces', () => {
   test('master-lock vault-unlock modal renders in flight', async ({ page }) => {
     test.setTimeout(60_000);
     await seedOnboardedApp(page);
-    await expect(page.getByText('矢量人生启航日志').first()).toBeVisible();
+    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
 
     // Onboarding leaves the vault unlocked for the rest of the
     // session. To reach the vault-unlock modal (the MasterLock

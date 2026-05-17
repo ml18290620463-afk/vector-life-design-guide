@@ -69,7 +69,7 @@ test.describe('Backup import modal', () => {
       .first()
       .click();
     await page.getByRole('button', { name: /留下判断|start/i }).click();
-    await expect(page.getByText('矢量人生启航日志').first()).toBeVisible();
+    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
 
     // Open the settings panel and trigger the hidden file input directly,
     // then confirm via the new in-app modal (no window.confirm anymore).

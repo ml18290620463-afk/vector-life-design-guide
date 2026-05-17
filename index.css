@@ -490,6 +490,10 @@ html.light body {
   border-radius: 2px;
 }
 
+[data-suppress-focus-ring='true']:focus-visible {
+  outline: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

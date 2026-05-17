@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
+import { Check, Globe } from 'lucide-react';
 import { Language, Theme } from '../types';
-import { TRANSLATIONS } from '../constants';
+import { NATIVE_LANG_NAMES, TRANSLATIONS } from '../constants';
 import { useLockoutTimer } from '../hooks/useLockoutTimer';
 import { useRecoveryFlow } from '../hooks/useRecoveryFlow';
 import { useBiometricAuth } from '../hooks/useBiometricAuth';
@@ -18,6 +19,7 @@ interface MasterLockProps {
   theme?: Theme;
   passwordHash: string;
   passwordSalt: string | null;
+  onSetLanguage: (language: Language) => void;
   onUnlock: (password: string) => void;
   onResetPassword?: (password: string) => void;
   onCancel?: () => void;
@@ -51,11 +53,13 @@ export const MasterLock: React.FC<MasterLockProps> = ({
   theme = 'dark',
   passwordHash,
   passwordSalt,
+  onSetLanguage,
   onUnlock,
   onResetPassword,
   onCancel,
 }) => {
   const t = TRANSLATIONS[language];
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const lockout = useLockoutTimer({
     maxAttempts: MAX_ATTEMPTS,
     lockoutDurationMs: LOCKOUT_DURATION_MS,
@@ -97,14 +101,63 @@ export const MasterLock: React.FC<MasterLockProps> = ({
     >
       <MasterLockBackdrop theme={theme} />
 
-      <div className="relative w-full max-w-[340px] md:max-w-[380px] perspective-[3000px] z-10 transition-all duration-500 my-auto">
+      <div className="relative z-10 my-auto w-full max-w-[760px] perspective-[3000px] transition-all duration-500">
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute -inset-10 opacity-80 blur-2xl [border-radius:37%_63%_48%_52%/12%_18%_82%_88%] ${
+            theme === 'light'
+              ? 'bg-cyan-300/14'
+              : 'bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.34),transparent_30%),radial-gradient(circle_at_92%_20%,rgba(123,109,255,0.28),transparent_36%),linear-gradient(135deg,rgba(0,230,255,0.12),rgba(0,0,0,0)_52%)]'
+          }`}
+        />
+        <svg
+          aria-hidden="true"
+          data-testid="organic-lock-silhouette"
+          viewBox="0 0 820 690"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute -inset-6 h-[calc(100%+3rem)] w-[calc(100%+3rem)] overflow-visible opacity-85 blur-[0.2px]"
+        >
+          <defs>
+            <linearGradient id="lock-organic-edge" x1="8%" y1="2%" x2="92%" y2="96%">
+              <stop offset="0%" stopColor="rgba(190,255,255,0.9)" />
+              <stop offset="34%" stopColor="rgba(34,211,238,0.42)" />
+              <stop offset="64%" stopColor="rgba(99,102,241,0.36)" />
+              <stop offset="100%" stopColor="rgba(103,232,249,0.78)" />
+            </linearGradient>
+            <filter id="lock-edge-glow" x="-12%" y="-12%" width="124%" height="124%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <path
+            d="M78 48C153 14 253 24 327 28C433 33 502 11 598 30C682 47 746 69 779 123C814 178 788 249 795 318C804 403 825 477 775 544C723 613 619 627 520 636C410 646 325 668 226 635C131 603 57 541 39 458C20 375 53 308 41 231C27 149 16 76 78 48Z"
+            fill="none"
+            stroke="url(#lock-organic-edge)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#lock-edge-glow)"
+          />
+          <path
+            d="M108 62C185 37 273 47 359 48C468 50 552 31 653 58C731 79 766 129 774 191"
+            fill="none"
+            stroke="rgba(190,255,255,0.42)"
+            strokeWidth="1"
+            strokeLinecap="round"
+          />
+          <path
+            d="M68 441C103 549 212 613 346 626C466 638 593 619 707 575"
+            fill="none"
+            stroke="rgba(34,211,238,0.3)"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+          />
+        </svg>
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          whileHover={{
-            x: [0, -0.8, 0.8, -0.8, 0.8, 0],
-            y: [0, 0.4, -0.4, 0.4, 0, 0],
-            transition: { duration: 0.3 },
-          }}
           animate={
             verify.isSuccess
               ? {
@@ -120,9 +173,9 @@ export const MasterLock: React.FC<MasterLockProps> = ({
               : {
                   opacity: 1,
                   scale: 1,
-                  y: [0, -10, 0],
-                  rotateY: [-1.2, 1.2, -1.2],
-                  rotateX: [0.5, -0.5, 0.5],
+                  y: 0,
+                  rotateY: 0,
+                  rotateX: 0,
                 }
           }
           transition={
@@ -136,14 +189,60 @@ export const MasterLock: React.FC<MasterLockProps> = ({
               : {
                   opacity: { duration: 0.4 },
                   scale: { duration: 0.4 },
-                  y: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
-                  rotateY: { duration: 12, repeat: Infinity, ease: 'easeInOut' },
-                  rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut' },
                 }
           }
-          className={`relative w-full p-5 sm:p-6 border transition-all duration-1000 group rounded-sm ${theme === 'light' ? 'bg-vector-paper-cream shadow-[0_40px_100px_color-mix(in_srgb,_black_15%,_transparent)] border-slate-200' : 'bg-neutral-950 border border-white/[0.08] shadow-[0_0_100px_color-mix(in_srgb,_var(--color-cyan-500)_10%,_transparent)]'} ${verify.isSuccess ? 'pointer-events-none' : ''}`}
+          className={`group relative min-h-[610px] w-full overflow-hidden border p-7 transition-all duration-1000 [border-radius:4.8rem_7.2rem_5.9rem_6.8rem/3.3rem_4.5rem_6.5rem_5.3rem] sm:p-10 ${theme === 'light' ? 'border-cyan-500/10 bg-white/82 shadow-[0_38px_100px_color-mix(in_srgb,_black_16%,_transparent)]' : 'border-cyan-200/10 bg-[radial-gradient(circle_at_16%_12%,rgba(80,255,245,0.14),transparent_24%),linear-gradient(135deg,rgba(0,20,24,0.76),rgba(0,0,0,0.76)_46%,rgba(2,10,24,0.82))] shadow-[0_30px_90px_rgba(0,0,0,0.56),0_0_110px_rgba(0,220,255,0.13),inset_0_1px_0_rgba(190,255,255,0.1),inset_14px_0_60px_rgba(25,255,240,0.065),inset_-16px_-18px_78px_rgba(79,70,229,0.1)]'} ${verify.isSuccess ? 'pointer-events-none' : ''}`}
         >
           <MasterLockCardChrome theme={theme} />
+          <div className="absolute right-7 top-7 z-50 font-mono uppercase tracking-widest">
+            <button
+              type="button"
+              onClick={() => setShowLanguageMenu((prev) => !prev)}
+              aria-expanded={showLanguageMenu}
+              aria-label={language === 'zh' ? '选择语言' : 'Select language'}
+              className={`flex items-center gap-2 px-3 py-2 text-[9px] backdrop-blur-md transition-all ${
+                theme === 'light'
+                  ? 'bg-white/42 text-cyan-700 hover:bg-white/62 hover:text-cyan-900'
+                  : 'bg-black/16 text-cyan-300/85 hover:bg-black/28 hover:text-cyan-100'
+              }`}
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>{language.toUpperCase()}</span>
+            </button>
+
+            {showLanguageMenu && (
+              <div
+                className={`absolute right-0 mt-2 w-32 border p-1 text-[9px] shadow-[0_16px_48px_rgba(0,0,0,0.4)] backdrop-blur-md ${
+                  theme === 'light'
+                    ? 'border-cyan-500/20 bg-white/90 text-cyan-700'
+                    : 'border-cyan-500/25 bg-black/72 text-cyan-500'
+                }`}
+              >
+                {(Object.keys(NATIVE_LANG_NAMES) as Language[]).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => {
+                      onSetLanguage(lang);
+                      setShowLanguageMenu(false);
+                    }}
+                    className={`flex w-full items-center justify-between gap-2 px-2 py-2 text-left transition-all ${
+                      language === lang
+                        ? theme === 'light'
+                          ? 'bg-cyan-500/12 text-cyan-700'
+                          : 'bg-cyan-400/16 text-cyan-100'
+                        : theme === 'light'
+                          ? 'text-slate-500 hover:bg-cyan-500/8 hover:text-cyan-700'
+                          : 'text-cyan-700 hover:bg-cyan-400/8 hover:text-cyan-200'
+                    }`}
+                  >
+                    <span>{NATIVE_LANG_NAMES[lang]}</span>
+                    {language === lang && <Check className="h-3 w-3" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <MasterLockHeader
             theme={theme}

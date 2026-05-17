@@ -7,7 +7,6 @@ import { useCustomPersonas } from './hooks/useCustomPersonas';
 import { useMemoryStore } from './hooks/useMemoryStore';
 import { useLetterStore } from './hooks/useLetterStore';
 import { generateSecureId } from './services/idGenerator';
-import { maybeRehashOnUnlock } from './services/passwordRehash';
 import { MigrationImportWizard } from './components/MigrationImportWizard';
 import { TrustedDevicesPanel } from './components/TrustedDevicesPanel';
 import { useTrustedDevices } from './hooks/useTrustedDevices';
@@ -29,7 +28,7 @@ import { useAppStore } from './stores/appStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Phase 4.5 §D — code-split everything that is NOT visible on the
-// initial Cover screen. Lazy-loading Dashboard / MasterLock /
+// initial Cover screen. Lazy-loading Dashboard / Onboarding /
 // Onboarding / CommandPalette trims the entry chunk by ~120 kB
 // gzip and brings mobile FCP from 3.6 s → ~1.5 s on slow 4G.
 //
@@ -56,11 +55,11 @@ const SpaceTimeBackground = lazy(() =>
 const Dashboard = lazy(() =>
   import('./components/Dashboard').then((module) => ({ default: module.Dashboard })),
 );
-const MasterLock = lazy(() =>
-  import('./components/MasterLock').then((module) => ({ default: module.MasterLock })),
-);
 const Onboarding = lazy(() =>
   import('./components/Onboarding').then((module) => ({ default: module.Onboarding })),
+);
+const MasterLock = lazy(() =>
+  import('./components/MasterLock').then((module) => ({ default: module.MasterLock })),
 );
 const CommandPalette = lazy(() =>
   import('./components/CommandPalette').then((module) => ({ default: module.CommandPalette })),
@@ -255,14 +254,7 @@ const App: React.FC = () => {
   // --- Handlers ---
 
   const handleStartFromCover = () => {
-    if (!loading && !passwordHash) {
-      // If no password is set, force onboarding even if they have guiding stars from an incomplete setup
-      setAppState(AppState.ONBOARDING);
-    } else if (passwordHash && !isUnlocked) {
-      setAppState(AppState.DASHBOARD);
-    } else {
-      setAppState(AppState.DASHBOARD);
-    }
+    setAppState(passwordHash ? AppState.LOGIN : AppState.ONBOARDING);
   };
 
   const handleOnboardingComplete = async (
@@ -291,13 +283,19 @@ const App: React.FC = () => {
     void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed', err));
   };
 
-  const handleUnlock = (password: string) => {
+  const handleReturningUserUnlock = (password: string) => {
     setMasterPassword(password);
     setIsUnlocked(true);
-    // prettier-ignore
-    void maybeRehashOnUnlock({ password, passwordSalt, storedHash: passwordHash, savePasswordHash });
+    setAppState(AppState.DASHBOARD);
     // prettier-ignore
     void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed', err));
+  };
+
+  const handleRecoveryPasswordReset = async (password: string) => {
+    await handleSetPassword(password);
+    setAppState(AppState.DASHBOARD);
+    // prettier-ignore
+    void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed after recovery reset', err));
   };
 
   const handleSetPassword = async (password: string) => {
@@ -553,95 +551,96 @@ const App: React.FC = () => {
             </Suspense>
           )}
 
-          {appState === AppState.DASHBOARD &&
-            (passwordHash && !isUnlocked ? (
-              <Suspense fallback={<ScreenLoader language={language} />}>
-                <MasterLock
-                  language={language}
-                  theme={theme}
-                  onUnlock={handleUnlock}
-                  onResetPassword={handleSetPassword}
-                  onCancel={() => setAppState(AppState.COVER)}
-                  onWipeData={handleWipeData}
-                  passwordHash={passwordHash}
-                  passwordSalt={passwordSalt}
-                />
-              </Suspense>
-            ) : (
-              <Suspense fallback={<ScreenLoader language={language} />}>
-                <Dashboard
-                  entries={entries}
-                  currentUser={currentUser}
-                  isGuest={userId === 'guest'}
-                  language={language}
-                  onSetLanguage={(lang: Language) => setLanguage(lang)}
-                  theme={theme}
-                  onSetTheme={(t: Theme) => setTheme(t)}
-                  onSelectEntry={handleSelectEntry}
-                  onUpdateEntry={updateEntry}
-                  onBulkUpdateEntries={bulkUpdateEntries}
-                  onNewEntry={() => setAppState(AppState.EDITOR)}
-                  onOpenArchive={() => setAppState(AppState.ARCHIVE)}
-                  onReplayIntro={() => setAppState(AppState.COVER)}
-                  onWipeData={handleWipeData}
-                  onCreateMaterialEntry={(material, isArchived) => {
-                    addEntry({
-                      title: material.name,
-                      content: `[Attachment: ${material.name}]`,
-                      tags: ['upload', 'material', material.type],
-                      attachment: material,
-                      isArchived,
-                    });
-                  }}
-                  isUnlocked={isUnlocked}
-                  passwordHash={passwordHash}
-                  passwordSalt={passwordSalt}
-                  onSetPassword={handleSetPassword}
-                  onClearPassword={handleClearPassword}
-                  onImportBackup={importBackup}
-                  guidingStars={guidingStars}
-                  onSaveGuidingStars={saveGuidingStars}
-                  selectedStars={selectedStars}
-                  onSaveSelectedStars={saveSelectedStars}
-                  customPersonas={customPersonas}
-                  onAddCustomPersona={addCustomPersona}
-                  onReplaceCustomPersonas={replaceCustomPersonas}
-                  memories={memories}
-                  onReplaceMemories={replaceMemories}
-                  pendingLetters={pendingLetters}
-                  onReplaceLetters={replaceLetters}
-                  onOpenMigrationImport={() => setShowMigrationImport(true)}
-                  deviceFingerprint={deviceIdentity?.fingerprint ?? null}
-                  onRegenerateDeviceKeys={handleRegenerateDeviceKeys}
-                  onUnlockSigningKey={handleUnlockSigningKey}
-                  onOpenTrustedDevices={() => setShowTrustedDevices(true)}
-                  onOpenMemoirMemories={(id) => setMemoirIdForMemories(id)}
-                  onOpenMemoirLetters={(id) => setMemoirIdForLetters(id)}
-                  onOpenComposerWithSeed={handleOpenComposerWithSeed}
-                  {...billing.licensePropsForDashboard}
-                  onMintEntry={async (payload) => {
-                    // Phase 4.5 §A — pre-mint the id outside the
-                    // useDiaryData reducer so the letter-delivery
-                    // sweep can record `PendingLetter.replyEntryId`
-                    // atomically. `addEntry` honours `data.id` when
-                    // present (W4.5 widening) and falls back to a
-                    // mint when not.
-                    const id = generateSecureId();
-                    await addEntry({ ...payload, id });
-                    return id;
-                  }}
-                  containers={containers}
-                  onAddContainer={addContainer}
-                  onDeleteContainer={deleteContainer}
-                  isScanning={isScanning}
-                  scanProgress={scanProgress}
-                  onTriggerScan={triggerScan}
-                  lastScanSummary={lastScanSummary}
-                  syncStatus={syncStatus}
-                  loading={loading}
-                />
-              </Suspense>
-            ))}
+          {appState === AppState.LOGIN && passwordHash && (
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <MasterLock
+                language={language}
+                onSetLanguage={(lang: Language) => setLanguage(lang)}
+                theme={theme}
+                passwordHash={passwordHash}
+                passwordSalt={passwordSalt}
+                onUnlock={handleReturningUserUnlock}
+                onResetPassword={handleRecoveryPasswordReset}
+                onCancel={() => setAppState(AppState.COVER)}
+              />
+            </Suspense>
+          )}
+
+          {appState === AppState.DASHBOARD && (
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <Dashboard
+                entries={entries}
+                currentUser={currentUser}
+                isGuest={userId === 'guest'}
+                language={language}
+                onSetLanguage={(lang: Language) => setLanguage(lang)}
+                theme={theme}
+                onSetTheme={(t: Theme) => setTheme(t)}
+                onSelectEntry={handleSelectEntry}
+                onUpdateEntry={updateEntry}
+                onBulkUpdateEntries={bulkUpdateEntries}
+                onNewEntry={() => setAppState(AppState.EDITOR)}
+                onOpenArchive={() => setAppState(AppState.ARCHIVE)}
+                onReplayIntro={() => setAppState(AppState.COVER)}
+                onWipeData={handleWipeData}
+                onCreateMaterialEntry={(material, isArchived) => {
+                  addEntry({
+                    title: material.name,
+                    content: `[Attachment: ${material.name}]`,
+                    tags: ['upload', 'material', material.type],
+                    attachment: material,
+                    isArchived,
+                  });
+                }}
+                isUnlocked={isUnlocked}
+                passwordHash={passwordHash}
+                passwordSalt={passwordSalt}
+                onSetPassword={handleSetPassword}
+                onClearPassword={handleClearPassword}
+                onImportBackup={importBackup}
+                guidingStars={guidingStars}
+                onSaveGuidingStars={saveGuidingStars}
+                selectedStars={selectedStars}
+                onSaveSelectedStars={saveSelectedStars}
+                customPersonas={customPersonas}
+                onAddCustomPersona={addCustomPersona}
+                onReplaceCustomPersonas={replaceCustomPersonas}
+                memories={memories}
+                onReplaceMemories={replaceMemories}
+                pendingLetters={pendingLetters}
+                onReplaceLetters={replaceLetters}
+                onOpenMigrationImport={() => setShowMigrationImport(true)}
+                deviceFingerprint={deviceIdentity?.fingerprint ?? null}
+                onRegenerateDeviceKeys={handleRegenerateDeviceKeys}
+                onUnlockSigningKey={handleUnlockSigningKey}
+                onOpenTrustedDevices={() => setShowTrustedDevices(true)}
+                onOpenMemoirMemories={(id) => setMemoirIdForMemories(id)}
+                onOpenMemoirLetters={(id) => setMemoirIdForLetters(id)}
+                onOpenComposerWithSeed={handleOpenComposerWithSeed}
+                {...billing.licensePropsForDashboard}
+                onMintEntry={async (payload) => {
+                  // Phase 4.5 §A — pre-mint the id outside the
+                  // useDiaryData reducer so the letter-delivery
+                  // sweep can record `PendingLetter.replyEntryId`
+                  // atomically. `addEntry` honours `data.id` when
+                  // present (W4.5 widening) and falls back to a
+                  // mint when not.
+                  const id = generateSecureId();
+                  await addEntry({ ...payload, id });
+                  return id;
+                }}
+                containers={containers}
+                onAddContainer={addContainer}
+                onDeleteContainer={deleteContainer}
+                isScanning={isScanning}
+                scanProgress={scanProgress}
+                onTriggerScan={triggerScan}
+                lastScanSummary={lastScanSummary}
+                syncStatus={syncStatus}
+                loading={loading}
+              />
+            </Suspense>
+          )}
 
           {appState === AppState.VIEWER && selectedEntry && (
             <Suspense fallback={<ScreenLoader language={language} />}>
