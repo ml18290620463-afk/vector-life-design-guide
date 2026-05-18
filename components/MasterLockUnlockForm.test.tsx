@@ -37,7 +37,9 @@ describe('MasterLockUnlockForm', () => {
     render(<MasterLockUnlockForm {...baseProps} />);
     expect(screen.getByLabelText('Enter master password')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Show password' })).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Forgot password? Use private key' })).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Forgot password? Use recovery credential' }),
+    ).not.toBeNull();
   });
 
   it('routes input changes through onPasswordChange', () => {
@@ -111,10 +113,22 @@ describe('MasterLockUnlockForm', () => {
     );
   });
 
+  it('shows a decrypting CTA and blocks repeat submits while verification is running', () => {
+    render(<MasterLockUnlockForm {...baseProps} password="correct" isDecrypting />);
+    const button = screen.getByRole('button', { name: 'DECRYPTING...' });
+    expect(button.getAttribute('disabled')).not.toBeNull();
+    expect(button.textContent).toContain('DECRYPTING...');
+    expect((screen.getByLabelText('Enter master password') as HTMLInputElement).disabled).toBe(
+      true,
+    );
+  });
+
   it('routes the forgot-password click to onForgotPassword', () => {
     const onForgotPassword = vi.fn();
     render(<MasterLockUnlockForm {...baseProps} onForgotPassword={onForgotPassword} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Forgot password? Use private key' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Forgot password? Use recovery credential' }),
+    );
     expect(onForgotPassword).toHaveBeenCalledTimes(1);
   });
 });

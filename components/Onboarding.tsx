@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Check,
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   Download,
   Eye,
@@ -54,6 +55,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
   onSetLanguage,
   theme = 'dark',
   onComplete,
+  onCancel,
 }) => {
   const t = TRANSLATIONS[language];
   const [password, setPassword] = useState('');
@@ -67,6 +69,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
   const [credentialExportStatus, setCredentialExportStatus] = useState<
     'idle' | 'rendering' | 'success' | 'error'
   >('idle');
+  const [issueFlash, setIssueFlash] = useState(false);
   const credentialCardRef = useRef<HTMLDivElement | null>(null);
 
   const getPasswordStrength = (pass: string) => {
@@ -100,24 +103,24 @@ export const Onboarding: React.FC<OnboardingProps> = ({
   const accessPassCopy = useMemo(() => {
     const copy = {
       zh: {
-        title: 'VECTOR 空间通行证',
-        detector: '意识中心初步校准完成',
-        issued: '通行证已签发。请保存图片，放在离线位置。',
+        title: 'VECTOR 离线凭证',
+        detector: '恢复私钥',
+        issued: '请保存这张离线凭证，用于忘记密令时恢复。',
         localTitle: '本地存储',
         localBody: '所有记录默认保存在你的设备中。',
         encryptionTitle: '加密保护',
-        encryptionBody: '密码用于加密本地数据，系统不保存明文。',
-        keyTitle: '私钥用途',
-        keyBody: '忘记密码时，用它验证身份并重设入口。',
-        keyLabel: '加密恢复私钥',
+        encryptionBody: '密令用于加密本地数据，系统不保存明文。',
+        keyTitle: '用途',
+        keyBody: '忘记密令时，用它验证身份并重设入口。',
+        keyLabel: '恢复私钥',
         keyLevel: '级别：仅限离线',
         usageTitle: '使用方法：',
         usageBody:
-          '当你忘记密码或需要恢复入口时，选择“无法访问/重设密码”，输入本私钥完成验证。请离线保存，勿截图上传公开平台，勿发送给任何人。',
+          '当你忘记密码时，选择“忘记密码？使用恢复私钥”，输入这份恢复私钥完成验证。请离线保存，勿上传公开平台，勿发送给任何人。',
         ownerLabel: '归属',
         ownerValue: '只属于你',
-        saveReminder: '保存 PNG 后，把它放在离线位置。VECTOR 不会替你找回这枚私钥。',
-        exportSuccess: '通行凭证 PNG 已保存。',
+        saveReminder: '保存后放在安全位置。VECTOR 不会替你找回。',
+        exportSuccess: '离线凭证已保存。',
       },
       en: {
         title: 'VECTOR Space Access Pass',
@@ -270,6 +273,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         requirementLower: string;
         requirementNumber: string;
         requirementSpecial: string;
+        requirementMatch: string;
         forging: string;
         regenerate: string;
         startCalibrate: string;
@@ -297,43 +301,44 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     > = {
       zh: {
         title: '接入 VECTOR 意识中心',
-        subtitle: '成功接入矢量空间，VECTOR 将开始初步校准，并签发只属于你的离线私钥。',
+        subtitle: '设置密令，领取专属私钥。',
         calibrated: '初步校准完成',
         calibrating: '初步校准',
-        passwordConfirmed: '密码已确认',
+        passwordConfirmed: '密令已确认',
         accessLocked: '接入密令已锁定',
-        keyIssued: '私钥已签发',
+        keyIssued: '恢复私钥',
         plaintextNotStored: '明文不会被系统保存',
-        ownership: '凭证归属',
+        ownership: '归属',
         belongsToVessel: '只属于这艘意识小船',
-        reissue: '重新签发',
+        reissue: '重新生成',
         passwordLabel: '设置接入密令',
         confirmLabel: '再次确认密令',
-        requirementLength: '长度稳定',
-        requirementUpper: '大写识别',
-        requirementLower: '小写识别',
+        requirementLength: '密令长度',
+        requirementUpper: '大写信号',
+        requirementLower: '小写信号',
         requirementNumber: '数字锚点',
-        requirementSpecial: '符号通过',
-        forging: '校准中，私钥生成中',
-        regenerate: '重新校准私钥',
-        startCalibrate: '开始校准 · 签发通行证',
-        waitingCalibration: '等待密令校准',
-        savedTitle: '凭证已离线保存',
-        generatedTitle: '校准凭证已生成',
-        savedBody: '本地归属已确认。VECTOR 不保存明文。',
-        generatedBody: '唯一恢复凭证。请离线保存后进入。',
+        requirementSpecial: '符号校验',
+        requirementMatch: '一致校准',
+        forging: '正在生成',
+        regenerate: '重新生成',
+        startCalibrate: '完成校准，签发恢复私钥',
+        waitingCalibration: '确认密令，签发私钥',
+        savedTitle: '离线凭证已保存',
+        generatedTitle: '恢复私钥已签发',
+        savedBody: '请妥善保管，忘记密令时会用到。',
+        generatedBody: '请保存离线副本，用于找回入口。',
         savingPng: '正在保存 PNG',
-        savePng: '保存通行凭证 PNG',
-        savedReady: '凭证已保存，可进入 VECTOR',
+        savePng: '保存离线凭证',
+        savedReady: '已保存，可进入',
         pngError: 'PNG 生成失败，请重试。',
-        savePngFirst: '请先保存 PNG 通行凭证',
-        readyStatus: '校准完成，可进入',
-        confirmBackupStatus: '确认凭证已离线保存',
-        savePngStatus: '保存通行凭证 PNG',
-        issueFirstStatus: '先完成初步校准',
+        savePngFirst: '请先保存离线凭证',
+        readyStatus: '可以进入',
+        confirmBackupStatus: '离线凭证已保存',
+        savePngStatus: '保存离线凭证后可进入',
+        issueFirstStatus: '先生成恢复私钥',
         enter: '进入 VECTOR 意识中心',
-        locked: '等待凭证',
-        copyKey: '复制私钥凭证',
+        locked: '暂不可进入',
+        copyKey: '复制恢复私钥',
         hidePassword: '隐藏密码',
         showPassword: '显示密码',
         selectLanguage: '选择语言',
@@ -353,30 +358,31 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         reissue: 'Re-Issue',
         passwordLabel: 'Set access code',
         confirmLabel: 'Confirm access code',
-        requirementLength: 'Stable length',
+        requirementLength: '8+ characters',
         requirementUpper: 'Uppercase detected',
         requirementLower: 'Lowercase detected',
         requirementNumber: 'Number anchor',
         requirementSpecial: 'Symbol passed',
+        requirementMatch: 'Consistency calibration',
         forging: 'Calibrating, forging key',
         regenerate: 'Recalibrate key',
-        startCalibrate: 'Calibrate · Issue pass',
+        startCalibrate: 'Start calibration · Issue',
         waitingCalibration: 'Awaiting code calibration',
-        savedTitle: 'Credential saved offline',
-        generatedTitle: 'Calibration credential generated',
-        savedBody: 'Local ownership confirmed. VECTOR stores no plaintext.',
-        generatedBody: 'Your only recovery credential. Save it offline before entering.',
+        savedTitle: 'Pass archived offline',
+        generatedTitle: 'Offline key issued',
+        savedBody: 'Ownership confirmed. No plaintext enters VECTOR.',
+        generatedBody: 'Your only recovery key. Save it to enter.',
         savingPng: 'Saving PNG',
-        savePng: 'Save PNG access pass',
-        savedReady: 'Credential saved. Ready to enter VECTOR',
+        savePng: 'Save offline pass',
+        savedReady: 'Archived. Ready to enter',
         pngError: 'PNG export failed. Please try again.',
-        savePngFirst: 'Please save the PNG access pass first',
+        savePngFirst: 'Please save the offline pass first',
         readyStatus: 'Calibration complete',
-        confirmBackupStatus: 'Confirm offline credential',
-        savePngStatus: 'Save PNG access pass',
+        confirmBackupStatus: 'Confirm offline pass',
+        savePngStatus: 'Save offline pass',
         issueFirstStatus: 'Complete initial calibration first',
         enter: 'Enter VECTOR Mindspace',
-        locked: 'Waiting for credential',
+        locked: 'Waiting for recovery key',
         copyKey: 'Copy private key',
         hidePassword: 'Hide password',
         showPassword: 'Show password',
@@ -397,22 +403,23 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         reissue: '再発行',
         passwordLabel: 'アクセスコードを設定',
         confirmLabel: 'アクセスコードを再確認',
-        requirementLength: '長さ安定',
+        requirementLength: '8文字以上',
         requirementUpper: '大文字検出',
         requirementLower: '小文字検出',
         requirementNumber: '数字アンカー',
         requirementSpecial: '記号通過',
+        requirementMatch: '整合性校正',
         forging: '校正中、秘密鍵を生成中',
         regenerate: '秘密鍵を再校正',
         startCalibrate: '校正開始 · パス発行',
         waitingCalibration: 'コード校正待ち',
-        savedTitle: '証明書をオフライン保存済み',
-        generatedTitle: '校正証明書を生成',
-        savedBody: 'ローカル所有を確認。VECTOR は平文を保存しません。',
-        generatedBody: '唯一の復旧証明書です。オフライン保存後に入ってください。',
+        savedTitle: '通行パスを保存済み',
+        generatedTitle: 'オフライン秘密鍵を発行',
+        savedBody: '所有を確認。平文は保存されません。',
+        generatedBody: '唯一の復旧証明書です。保存後に入れます。',
         savingPng: 'PNG を保存中',
-        savePng: '通行パス PNG を保存',
-        savedReady: '証明書を保存しました。VECTOR に入れます',
+        savePng: 'オフラインパスを保存',
+        savedReady: '保存済み。入れます',
         pngError: 'PNG 生成に失敗しました。もう一度お試しください。',
         savePngFirst: '先に通行パス PNG を保存してください',
         readyStatus: '校正完了、入場可能',
@@ -441,22 +448,23 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         reissue: '재발급',
         passwordLabel: '접속 암호 설정',
         confirmLabel: '접속 암호 재확인',
-        requirementLength: '길이 안정',
+        requirementLength: '8자 이상',
         requirementUpper: '대문자 인식',
         requirementLower: '소문자 인식',
         requirementNumber: '숫자 앵커',
         requirementSpecial: '기호 통과',
+        requirementMatch: '일관성 보정',
         forging: '보정 중, 개인키 생성 중',
         regenerate: '개인키 재보정',
         startCalibrate: '보정 시작 · 통행증 발급',
         waitingCalibration: '암호 보정 대기',
-        savedTitle: '증명서 오프라인 저장됨',
-        generatedTitle: '보정 증명서 생성됨',
-        savedBody: '로컬 소유가 확인되었습니다. VECTOR는 원문을 저장하지 않습니다.',
-        generatedBody: '유일한 복구 증명서입니다. 오프라인 저장 후 들어가세요.',
+        savedTitle: '통행증 오프라인 보관됨',
+        generatedTitle: '오프라인 개인키 발급됨',
+        savedBody: '소유 확인. 원문은 시스템에 저장되지 않습니다.',
+        generatedBody: '유일한 복구 증명서입니다. 저장 후 들어갈 수 있습니다.',
         savingPng: 'PNG 저장 중',
-        savePng: '통행증 PNG 저장',
-        savedReady: '증명서 저장 완료. VECTOR에 들어갈 수 있음',
+        savePng: '오프라인 통행증 저장',
+        savedReady: '보관 완료. 입장 가능',
         pngError: 'PNG 생성 실패. 다시 시도하세요.',
         savePngFirst: '먼저 통행증 PNG를 저장하세요',
         readyStatus: '보정 완료, 진입 가능',
@@ -485,23 +493,23 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         reissue: 'Réémettre',
         passwordLabel: 'Définir le code d’accès',
         confirmLabel: 'Confirmer le code',
-        requirementLength: 'Longueur stable',
+        requirementLength: '8 caractères min.',
         requirementUpper: 'Majuscule détectée',
         requirementLower: 'Minuscule détectée',
         requirementNumber: 'Ancre numérique',
         requirementSpecial: 'Symbole validé',
+        requirementMatch: 'Calibration cohérence',
         forging: 'Calibration, génération de clé',
         regenerate: 'Recalibrer la clé',
         startCalibrate: 'Calibrer · Émettre le pass',
         waitingCalibration: 'En attente du code',
-        savedTitle: 'Justificatif sauvegardé hors ligne',
-        generatedTitle: 'Justificatif de calibration généré',
-        savedBody: 'Appartenance locale confirmée. VECTOR ne stocke pas le clair.',
-        generatedBody:
-          'Votre seul justificatif de récupération. Enregistrez-le hors ligne avant d’entrer.',
+        savedTitle: 'Pass archivé hors ligne',
+        generatedTitle: 'Clé hors ligne émise',
+        savedBody: 'Appartenance confirmée. Aucun clair dans VECTOR.',
+        generatedBody: 'Votre seul justificatif de récupération. Enregistrez-le pour entrer.',
         savingPng: 'Enregistrement du PNG',
-        savePng: 'Enregistrer le pass PNG',
-        savedReady: 'Justificatif sauvegardé. Prêt pour VECTOR',
+        savePng: 'Enregistrer le pass hors ligne',
+        savedReady: 'Archivé. Prêt à entrer',
         pngError: 'Échec de génération PNG. Réessayez.',
         savePngFirst: 'Veuillez d’abord enregistrer le pass PNG',
         readyStatus: 'Calibration terminée',
@@ -530,23 +538,23 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         reissue: 'Reemitir',
         passwordLabel: 'Definir código de acceso',
         confirmLabel: 'Confirmar código de acceso',
-        requirementLength: 'Longitud estable',
+        requirementLength: '8 caracteres mín.',
         requirementUpper: 'Mayúscula detectada',
         requirementLower: 'Minúscula detectada',
         requirementNumber: 'Ancla numérica',
         requirementSpecial: 'Símbolo validado',
+        requirementMatch: 'Calibración coherente',
         forging: 'Calibrando, generando clave',
         regenerate: 'Recalibrar clave',
         startCalibrate: 'Calibrar · Emitir pase',
         waitingCalibration: 'Esperando calibración',
-        savedTitle: 'Credencial guardada sin conexión',
-        generatedTitle: 'Credencial de calibración generada',
-        savedBody: 'Propiedad local confirmada. VECTOR no guarda texto claro.',
-        generatedBody:
-          'Tu única credencial de recuperación. Guárdala sin conexión antes de entrar.',
+        savedTitle: 'Pase archivado sin conexión',
+        generatedTitle: 'Clave sin conexión emitida',
+        savedBody: 'Propiedad confirmada. VECTOR no guarda texto claro.',
+        generatedBody: 'Tu única credencial de recuperación. Guárdala para entrar.',
         savingPng: 'Guardando PNG',
-        savePng: 'Guardar pase PNG',
-        savedReady: 'Credencial guardada. Listo para entrar en VECTOR',
+        savePng: 'Guardar pase sin conexión',
+        savedReady: 'Archivado. Listo para entrar',
         pngError: 'No se pudo generar el PNG. Inténtalo de nuevo.',
         savePngFirst: 'Primero guarda el pase PNG',
         readyStatus: 'Calibración completa',
@@ -575,23 +583,23 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         reissue: 'Neu ausstellen',
         passwordLabel: 'Zugangscode festlegen',
         confirmLabel: 'Zugangscode bestätigen',
-        requirementLength: 'Länge stabil',
+        requirementLength: 'Mind. 8 Zeichen',
         requirementUpper: 'Großbuchstabe erkannt',
         requirementLower: 'Kleinbuchstabe erkannt',
         requirementNumber: 'Zahlenanker',
         requirementSpecial: 'Symbol bestätigt',
+        requirementMatch: 'Konsistenzkalibrierung',
         forging: 'Kalibrierung, Schlüssel wird erzeugt',
         regenerate: 'Schlüssel neu kalibrieren',
         startCalibrate: 'Kalibrieren · Pass ausstellen',
         waitingCalibration: 'Warte auf Codekalibrierung',
-        savedTitle: 'Nachweis offline gespeichert',
-        generatedTitle: 'Kalibrierungsnachweis erzeugt',
-        savedBody: 'Lokales Eigentum bestätigt. VECTOR speichert keinen Klartext.',
-        generatedBody:
-          'Dein einziger Wiederherstellungsnachweis. Vor dem Eintritt offline speichern.',
+        savedTitle: 'Pass offline gesichert',
+        generatedTitle: 'Offline-Schlüssel ausgestellt',
+        savedBody: 'Eigentum bestätigt. Kein Klartext in VECTOR.',
+        generatedBody: 'Dein einziger Wiederherstellungsnachweis. Speichern, dann eintreten.',
         savingPng: 'PNG wird gespeichert',
-        savePng: 'Pass-PNG speichern',
-        savedReady: 'Nachweis gespeichert. Bereit für VECTOR',
+        savePng: 'Offline-Pass speichern',
+        savedReady: 'Gesichert. Bereit',
         pngError: 'PNG-Erzeugung fehlgeschlagen. Bitte erneut versuchen.',
         savePngFirst: 'Bitte zuerst das Pass-PNG speichern',
         readyStatus: 'Kalibrierung abgeschlossen',
@@ -630,14 +638,53 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       label: onboardingCopy.requirementSpecial,
       met: /[^a-zA-Z0-9]/.test(password),
     },
+    {
+      label: onboardingCopy.requirementMatch,
+      met: Boolean(password && confirmPassword && password === confirmPassword),
+    },
   ];
   const calibrationProgress = getPasswordStrength(password);
+  const fulfilledCalibrationCount = calibrationRequirements.filter((req) => req.met).length;
+  const currentCalibrationIndex = calibrationRequirements.findIndex((req) => !req.met);
+  const currentCalibrationRequirement =
+    currentCalibrationIndex >= 0 ? calibrationRequirements[currentCalibrationIndex] : null;
+  const calibrationCtaLabel = (() => {
+    if (isForgingCredential) return onboardingCopy.forging;
+    if (recoveryKey) return onboardingCopy.regenerate;
+    if (isCredentialInputReady) return onboardingCopy.startCalibrate;
+    if (currentCalibrationRequirement?.label === onboardingCopy.requirementMatch) {
+      return language === 'zh' ? '等待一致校准' : onboardingCopy.waitingCalibration;
+    }
+    if (currentCalibrationRequirement) {
+      return language === 'zh'
+        ? `还需：${currentCalibrationRequirement.label}`
+        : `Need: ${currentCalibrationRequirement.label}`;
+    }
+    return onboardingCopy.waitingCalibration;
+  })();
+  const [calibrationSyncPulse, setCalibrationSyncPulse] = useState(false);
+  const previousCredentialReadyRef = useRef(false);
 
   useEffect(() => {
     setRecoveryKey('');
     setIsForgingCredential(false);
     setCredentialExportStatus('idle');
+    setIssueFlash(false);
   }, [password, confirmPassword]);
+
+  useEffect(() => {
+    if (isCredentialInputReady && !previousCredentialReadyRef.current) {
+      setCalibrationSyncPulse(true);
+      const timer = window.setTimeout(() => setCalibrationSyncPulse(false), 900);
+      previousCredentialReadyRef.current = true;
+      return () => window.clearTimeout(timer);
+    }
+    if (!isCredentialInputReady) {
+      previousCredentialReadyRef.current = false;
+      setCalibrationSyncPulse(false);
+    }
+    return undefined;
+  }, [isCredentialInputReady]);
 
   const generateRecoveryKey = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -664,10 +711,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     setError(null);
     setRecoveryKey('');
     setCredentialExportStatus('idle');
+    setIssueFlash(false);
     setIsForgingCredential(true);
     window.setTimeout(() => {
       generateRecoveryKey();
+      setIssueFlash(true);
       setIsForgingCredential(false);
+      window.setTimeout(() => setIssueFlash(false), 900);
     }, 1300);
   };
 
@@ -712,7 +762,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 backdrop-blur-xl transition-colors duration-700 md:overflow-hidden ${theme === 'light' ? 'bg-slate-900/40' : 'bg-black/95'}`}
+      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 backdrop-blur-xl transition-colors duration-700 md:overflow-hidden ${theme === 'light' ? 'bg-slate-900/40' : 'bg-[#02020a]'}`}
     >
       {/* Phase 4.5 §D — inline noise SVG (see lib/noiseTexture.ts). */}
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={NOISE_BG_STYLE}></div>
@@ -720,7 +770,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`relative w-full max-w-6xl overflow-hidden rounded-[30px] border p-0 shadow-[0_28px_90px_rgba(0,0,0,0.46)] transition-all duration-700 md:rounded-[42px] ${theme === 'light' ? 'border-cyan-400/12 bg-white/90 backdrop-blur-2xl' : 'border-cyan-300/18 bg-black'}`}
+        className={`relative w-full max-w-6xl overflow-hidden rounded-[30px] border p-0 shadow-[0_28px_90px_rgba(0,0,0,0.46),0_0_88px_rgba(104,82,255,0.08)] transition-all duration-700 md:rounded-[42px] ${theme === 'light' ? 'border-cyan-400/12 bg-white/90 backdrop-blur-2xl' : 'border-cyan-300/18 bg-[#02070b]'}`}
       >
         <div className="pointer-events-none absolute left-10 top-0 h-px w-44 bg-gradient-to-r from-transparent via-cyan-200/34 to-transparent" />
         <div className="pointer-events-none absolute right-16 bottom-0 h-px w-56 bg-gradient-to-r from-transparent via-cyan-300/24 to-transparent" />
@@ -735,9 +785,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             exit={{ opacity: 0, x: 20 }}
             className="relative flex min-h-[calc(100svh-24px)] flex-col overflow-hidden px-4 py-5 md:h-[calc(100vh-28px)] md:min-h-[640px] md:max-h-[820px] md:px-8 md:py-6"
           >
-            <div className="absolute inset-0 bg-[#011316]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_8%,rgba(98,240,255,0.13),transparent_18%),radial-gradient(circle_at_16%_26%,rgba(123,109,255,0.08),transparent_20%),radial-gradient(circle_at_76%_64%,rgba(34,211,238,0.07),transparent_28%),linear-gradient(180deg,rgba(0,18,24,0.04)_0%,rgba(0,20,28,0.34)_44%,rgba(0,7,10,0.98)_100%)]" />
-            <div className="absolute inset-0 opacity-[0.42]">
+            <div className="absolute inset-0 bg-[#020915]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_8%,rgba(126,239,255,0.15),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(139,92,246,0.16),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(100,80,255,0.14),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(168,85,247,0.10),transparent_32%),linear-gradient(180deg,rgba(4,20,36,0.14)_0%,rgba(7,18,42,0.52)_46%,rgba(0,5,12,0.92)_100%)]" />
+            <div className="absolute inset-0 opacity-[0.52]">
               <svg
                 aria-hidden="true"
                 viewBox="0 0 1000 700"
@@ -922,28 +972,42 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             </div>
             <motion.div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_56%,rgba(126,239,255,0.18),transparent_18%),radial-gradient(circle_at_58%_72%,rgba(134,239,172,0.13),transparent_24%)] mix-blend-screen"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_56%,rgba(126,239,255,0.18),transparent_18%),radial-gradient(circle_at_64%_70%,rgba(168,85,247,0.14),transparent_28%),radial-gradient(circle_at_34%_78%,rgba(134,239,172,0.10),transparent_24%)] mix-blend-screen"
               animate={{
-                opacity: calibrationProgress > 0 ? calibrationProgress / 920 : 0,
-                scale: isCredentialInputReady ? [1, 1.015, 1] : 1,
+                opacity: calibrationProgress > 0 ? 0.04 + calibrationProgress / 720 : 0.015,
+                scale: isCredentialInputReady
+                  ? [1, 1.02, 1]
+                  : 1 + fulfilledCalibrationCount * 0.004,
               }}
               transition={{
                 opacity: { duration: 0.5, ease: 'easeOut' },
                 scale: { duration: 3.2, repeat: isCredentialInputReady ? Infinity : 0 },
               }}
             />
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(126,239,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(126,239,255,0.01)_1px,transparent_1px)] bg-[size:72px_72px]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(126,239,255,0.1)_0_1px,transparent_2px),radial-gradient(circle_at_74%_10%,rgba(126,239,255,0.08)_0_1px,transparent_2px),radial-gradient(circle_at_46%_36%,rgba(123,109,255,0.08)_0_1px,transparent_2px)]" />
-            <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/18 via-transparent to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/72 via-black/24 to-transparent" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(126,239,255,0.014)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,0.012)_1px,transparent_1px)] bg-[size:72px_72px]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(126,239,255,0.12)_0_1px,transparent_2px),radial-gradient(circle_at_74%_10%,rgba(168,85,247,0.14)_0_1px,transparent_2px),radial-gradient(circle_at_46%_36%,rgba(123,109,255,0.12)_0_1px,transparent_2px)]" />
+            <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/10 via-transparent to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#01030a]/62 via-[#06091a]/18 to-transparent" />
+            {onCancel && (
+              <motion.button
+                type="button"
+                onClick={onCancel}
+                aria-label={language === 'zh' ? '返回首页' : 'Back to cover'}
+                className="absolute left-4 top-4 z-30 grid h-10 w-10 place-items-center rounded-full border border-cyan-300/14 bg-black/10 text-cyan-300/72 shadow-[0_0_18px_rgba(0,200,232,0.06),inset_0_0_16px_rgba(168,85,247,0.04)] backdrop-blur-md transition-all hover:border-cyan-200/34 hover:bg-cyan-300/8 hover:text-cyan-100 hover:shadow-[0_0_28px_rgba(0,200,232,0.12),0_0_22px_rgba(139,92,246,0.10)] md:left-6 md:top-6"
+                whileHover={{ x: -2, scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </motion.button>
+            )}
             <div className="absolute right-4 top-4 z-30 font-mono uppercase tracking-widest">
               <button
                 type="button"
                 onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-                className={`flex items-center gap-2 border px-3 py-2 text-[9px] backdrop-blur-md transition-all ${
+                className={`flex items-center gap-2 rounded-full px-3 py-2 text-[9px] opacity-45 backdrop-blur-md transition-all hover:opacity-100 ${
                   theme === 'light'
-                    ? 'border-cyan-500/20 bg-white/65 text-cyan-700 hover:border-cyan-500/40 hover:text-cyan-900'
-                    : 'border-cyan-500/25 bg-black/28 text-cyan-300 hover:border-cyan-400/45 hover:text-cyan-100'
+                    ? 'bg-white/36 text-cyan-700 hover:bg-white/58 hover:text-cyan-900'
+                    : 'bg-black/12 text-cyan-300 hover:bg-black/26 hover:text-cyan-100'
                 }`}
                 aria-expanded={showLanguageMenu}
                 aria-label={onboardingCopy.selectLanguage}
@@ -1025,22 +1089,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({
               </div>
 
               <div
-                className={`relative w-full overflow-hidden rounded-[26px] border border-cyan-300/18 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.10),transparent_34%),linear-gradient(135deg,rgba(2,24,28,0.88),rgba(0,7,12,0.78)_56%,rgba(3,22,31,0.9))] text-left shadow-[0_24px_90px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(184,251,255,0.08)] backdrop-blur-md transition-all duration-500 ${hasIssuedAccessPass ? 'p-3 md:p-4' : 'p-4 md:p-5'}`}
+                className={`relative w-full overflow-hidden rounded-[26px] border border-cyan-200/40 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.12),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.13),transparent_32%),linear-gradient(135deg,rgba(5,29,39,0.88),rgba(5,7,24,0.76)_56%,rgba(7,18,38,0.9))] text-left shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_18px_rgba(126,239,255,0.26),0_0_58px_rgba(34,211,238,0.16),0_0_110px_rgba(104,82,255,0.18),inset_0_0_32px_rgba(126,239,255,0.055),inset_0_1px_0_rgba(184,251,255,0.18)] backdrop-blur-md transition-all duration-500 ${hasIssuedAccessPass ? 'p-3 md:p-4' : 'p-4 md:p-5'}`}
               >
+                <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-cyan-100/12 shadow-[inset_0_0_28px_rgba(126,239,255,0.12)]" />
+                <div className="pointer-events-none absolute -inset-px rounded-[27px] bg-[linear-gradient(120deg,rgba(126,239,255,0.34),transparent_24%,rgba(168,85,247,0.22)_62%,rgba(126,239,255,0.24))] opacity-30 blur-[2px]" />
                 <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/45 to-transparent" />
                 <div className="pointer-events-none absolute -left-24 top-8 h-40 w-40 rounded-full bg-cyan-300/5 blur-2xl" />
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3 font-mono">
+                <div className="mb-3 flex flex-wrap items-center gap-3 font-mono">
                   <span className="text-[10px] uppercase tracking-[0.32em] text-cyan-500">
                     {hasIssuedAccessPass ? onboardingCopy.calibrated : onboardingCopy.calibrating}
                   </span>
-                  <div className="flex gap-1.5">
-                    {[20, 40, 60, 80, 100].map((lvl) => (
-                      <div
-                        key={lvl}
-                        className={`h-1 w-7 rounded-full transition-all duration-300 ${getPasswordStrength(password) >= lvl ? 'bg-cyan-300 shadow-glow-cyan-400' : 'bg-cyan-950/80'}`}
-                      />
-                    ))}
-                  </div>
                 </div>
 
                 {hasIssuedAccessPass ? (
@@ -1085,11 +1143,34 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                   </div>
                 ) : (
                   <>
-                    <div className="relative rounded-[30px] border border-cyan-300/12 bg-black/18 p-3 shadow-[inset_0_1px_0_rgba(184,251,255,0.04)] md:p-4">
-                      <div className="pointer-events-none absolute left-[13%] right-[13%] top-[96px] hidden h-px bg-cyan-400/16 md:block" />
+                    <div
+                      className={`relative overflow-hidden bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.05),transparent_34%),radial-gradient(circle_at_88%_96%,rgba(168,85,247,0.08),transparent_38%),rgba(0,3,12,0.08)] p-3 shadow-[inset_0_1px_0_rgba(184,251,255,0.035),0_0_30px_rgba(104,82,255,0.035)] md:p-5 ${
+                        calibrationSyncPulse ? 'calibration-module--syncing' : ''
+                      }`}
+                    >
+                      <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/16 to-transparent" />
+                      <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent" />
                       <motion.div
                         aria-hidden="true"
-                        className="pointer-events-none absolute left-[13%] right-[13%] top-[96px] hidden h-px origin-left bg-gradient-to-r from-transparent via-cyan-200 to-transparent shadow-[0_0_18px_rgba(126,239,255,0.42)] md:block"
+                        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_44%,rgba(126,239,255,0.13),transparent_22%),radial-gradient(circle_at_50%_94%,rgba(168,85,247,0.14),transparent_38%)]"
+                        animate={{
+                          opacity: 0.16 + fulfilledCalibrationCount * 0.08,
+                        }}
+                        transition={{ duration: 0.35 }}
+                      />
+                      {calibrationSyncPulse && (
+                        <motion.div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute left-1/2 top-[53%] h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-100/35 bg-cyan-200/10 shadow-[0_0_46px_rgba(126,239,255,0.28)]"
+                          initial={{ opacity: 0, scale: 0.35 }}
+                          animate={{ opacity: [0, 0.68, 0], scale: [0.35, 2.8, 4.6] }}
+                          transition={{ duration: 0.86, ease: 'easeOut' }}
+                        />
+                      )}
+                      <div className="pointer-events-none absolute left-[13%] right-[13%] top-[104px] hidden h-px bg-cyan-400/14 md:block" />
+                      <motion.div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-[13%] right-[13%] top-[104px] hidden h-px origin-left bg-gradient-to-r from-transparent via-cyan-200 to-transparent shadow-[0_0_18px_rgba(126,239,255,0.42)] md:block"
                         initial={false}
                         animate={{
                           scaleX: getPasswordStrength(password) / 100,
@@ -1098,12 +1179,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         transition={{ duration: 0.45, ease: 'easeOut' }}
                       />
 
-                      <div className="grid gap-4 md:grid-cols-[1fr_72px_1fr] md:items-end">
+                      <div className="relative z-10 grid gap-4 md:grid-cols-[1fr_72px_1fr] md:items-end">
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-mono uppercase tracking-widest text-cyan-500/80">
                             {onboardingCopy.passwordLabel}
                           </label>
-                          <div className="relative rounded-[999px] border border-cyan-300/16 bg-[radial-gradient(ellipse_at_28%_50%,rgba(126,239,255,0.08),transparent_62%),rgba(0,5,9,0.44)] shadow-[inset_0_0_28px_rgba(126,239,255,0.045),0_0_0_1px_rgba(0,200,232,0.04)] transition-all focus-within:border-cyan-300/46 focus-within:bg-black/46 focus-within:shadow-[inset_0_0_32px_rgba(126,239,255,0.08),0_0_24px_rgba(0,200,232,0.08)]">
+                          <div className="relative overflow-hidden rounded-[999px] border border-cyan-300/18 bg-[radial-gradient(ellipse_at_50%_50%,rgba(126,239,255,0.09),transparent_64%),radial-gradient(ellipse_at_86%_50%,rgba(168,85,247,0.08),transparent_52%),rgba(0,5,14,0.42)] shadow-[inset_0_0_28px_rgba(126,239,255,0.05),0_0_0_1px_rgba(104,82,255,0.04)] transition-all focus-within:border-cyan-200/50 focus-within:bg-black/38 focus-within:shadow-[inset_0_0_34px_rgba(126,239,255,0.09),0_0_26px_rgba(139,92,246,0.11)]">
+                            <span className="pointer-events-none absolute left-1/2 top-1/2 h-px w-0 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-cyan-200/45 to-transparent transition-all duration-500 focus-within:w-[84%]" />
                             <input
                               data-suppress-focus-ring="true"
                               data-testid="onboarding-password"
@@ -1112,7 +1194,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                               onChange={(e) => setPassword(e.target.value)}
                               disabled={isForgingCredential}
                               className="h-16 w-full rounded-[999px] border-0 bg-transparent px-6 pr-16 font-mono text-cyan-100 outline-none transition-all placeholder:text-cyan-900 focus:outline-none focus:ring-0 focus-visible:outline-none disabled:cursor-wait disabled:opacity-70"
-                              placeholder="******"
+                              placeholder="********"
                             />
                             <button
                               type="button"
@@ -1169,7 +1251,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                           <label className="text-[10px] font-mono uppercase tracking-widest text-cyan-500/80">
                             {onboardingCopy.confirmLabel}
                           </label>
-                          <div className="rounded-[999px] border border-cyan-300/16 bg-[radial-gradient(ellipse_at_28%_50%,rgba(126,239,255,0.08),transparent_62%),rgba(0,5,9,0.44)] shadow-[inset_0_0_28px_rgba(126,239,255,0.045),0_0_0_1px_rgba(0,200,232,0.04)] transition-all focus-within:border-cyan-300/46 focus-within:bg-black/46 focus-within:shadow-[inset_0_0_32px_rgba(126,239,255,0.08),0_0_24px_rgba(0,200,232,0.08)]">
+                          <div className="relative overflow-hidden rounded-[999px] border border-cyan-300/18 bg-[radial-gradient(ellipse_at_50%_50%,rgba(126,239,255,0.09),transparent_64%),radial-gradient(ellipse_at_86%_50%,rgba(168,85,247,0.08),transparent_52%),rgba(0,5,14,0.42)] shadow-[inset_0_0_28px_rgba(126,239,255,0.05),0_0_0_1px_rgba(104,82,255,0.04)] transition-all focus-within:border-cyan-200/50 focus-within:bg-black/38 focus-within:shadow-[inset_0_0_34px_rgba(126,239,255,0.09),0_0_26px_rgba(139,92,246,0.11)]">
+                            <span className="pointer-events-none absolute left-1/2 top-1/2 h-px w-0 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-cyan-200/45 to-transparent transition-all duration-500 focus-within:w-[84%]" />
                             <input
                               data-suppress-focus-ring="true"
                               data-testid="onboarding-password-confirm"
@@ -1178,75 +1261,267 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                               onChange={(e) => setConfirmPassword(e.target.value)}
                               disabled={isForgingCredential}
                               className="h-16 w-full rounded-[999px] border-0 bg-transparent px-6 font-mono text-cyan-100 outline-none transition-all placeholder:text-cyan-900 focus:outline-none focus:ring-0 focus-visible:outline-none disabled:cursor-wait disabled:opacity-70"
-                              placeholder="******"
+                              placeholder="********"
                             />
                           </div>
                         </div>
                       </div>
 
-                      <div className="relative mt-5">
-                        <div className="pointer-events-none absolute left-4 right-4 top-4 hidden h-px bg-cyan-900/55 md:block" />
+                      <div className="relative z-10 mt-7 px-1 pb-2 pt-4">
+                        <svg
+                          aria-hidden="true"
+                          className="pointer-events-none absolute left-[6%] right-[6%] top-3 hidden h-14 w-[88%] overflow-visible md:block"
+                          preserveAspectRatio="none"
+                          viewBox="0 0 100 36"
+                        >
+                          <g
+                            fill="none"
+                            stroke="rgba(126,239,255,0.16)"
+                            strokeLinecap="round"
+                            strokeWidth="0.32"
+                          >
+                            <path d="M18 18 C16 13, 14 10, 11 8" />
+                            <path d="M18 18 C15 22, 12 25, 8 27" />
+                            <path d="M37 16 C36 11, 33 9, 30 7" />
+                            <path d="M49 13 C52 9, 56 8, 60 7" />
+                            <path d="M62 18 C65 23, 68 25, 72 26" />
+                            <path d="M79 22 C81 28, 85 31, 89 33" />
+                            <path d="M86 17 C89 13, 93 11, 97 9" />
+                          </g>
+                          <motion.g
+                            fill="none"
+                            stroke="url(#calibration-dendrite-flow)"
+                            strokeLinecap="round"
+                            strokeWidth="0.42"
+                            initial={false}
+                            animate={{
+                              opacity: fulfilledCalibrationCount > 0 ? 0.72 : 0.08,
+                              pathLength:
+                                fulfilledCalibrationCount / calibrationRequirements.length,
+                            }}
+                            transition={{ duration: 0.7, ease: 'easeOut' }}
+                          >
+                            <path d="M18 18 C16 13, 14 10, 11 8" />
+                            <path d="M18 18 C15 22, 12 25, 8 27" />
+                            <path d="M37 16 C36 11, 33 9, 30 7" />
+                            <path d="M49 13 C52 9, 56 8, 60 7" />
+                            <path d="M62 18 C65 23, 68 25, 72 26" />
+                            <path d="M79 22 C81 28, 85 31, 89 33" />
+                            <path d="M86 17 C89 13, 93 11, 97 9" />
+                          </motion.g>
+                          <path
+                            d="M3 20 C 11 14, 17 17, 24 19 C 31 21, 34 14, 42 13 C 51 12, 54 18, 62 18 C 70 18, 75 24, 82 20 C 88 17, 91 11, 97 15"
+                            fill="none"
+                            stroke="rgba(8,145,178,0.26)"
+                            strokeLinecap="round"
+                            strokeWidth="0.55"
+                          />
+                          <motion.path
+                            d="M3 20 C 11 14, 17 17, 24 19 C 31 21, 34 14, 42 13 C 51 12, 54 18, 62 18 C 70 18, 75 24, 82 20 C 88 17, 91 11, 97 15"
+                            fill="none"
+                            stroke="url(#calibration-neural-flow)"
+                            strokeLinecap="round"
+                            strokeWidth="0.78"
+                            initial={false}
+                            animate={{
+                              pathLength:
+                                fulfilledCalibrationCount / calibrationRequirements.length,
+                              opacity: fulfilledCalibrationCount > 0 ? 0.92 : 0.12,
+                            }}
+                            transition={{ duration: 0.56, ease: 'easeOut' }}
+                          />
+                          <defs>
+                            <linearGradient
+                              id="calibration-neural-flow"
+                              x1="0"
+                              x2="1"
+                              y1="0"
+                              y2="0"
+                            >
+                              <stop offset="0%" stopColor="rgba(34,211,238,0.08)" />
+                              <stop offset="48%" stopColor="rgba(165,243,252,0.86)" />
+                              <stop offset="100%" stopColor="rgba(134,239,172,0.46)" />
+                            </linearGradient>
+                            <linearGradient
+                              id="calibration-dendrite-flow"
+                              x1="0"
+                              x2="1"
+                              y1="0"
+                              y2="1"
+                            >
+                              <stop offset="0%" stopColor="rgba(126,239,255,0.10)" />
+                              <stop offset="54%" stopColor="rgba(168,85,247,0.42)" />
+                              <stop offset="100%" stopColor="rgba(165,243,252,0.46)" />
+                            </linearGradient>
+                          </defs>
+                          <g fill="rgba(184,251,255,0.34)">
+                            {[11, 30, 60, 72, 89, 97].map((cx, index) => (
+                              <motion.circle
+                                key={cx}
+                                cx={cx}
+                                cy={[8, 7, 7, 26, 33, 9][index]}
+                                r="0.55"
+                                animate={{
+                                  opacity:
+                                    fulfilledCalibrationCount > index % 5
+                                      ? [0.24, 0.68, 0.32]
+                                      : 0.14,
+                                  scale:
+                                    fulfilledCalibrationCount > index % 5 ? [0.8, 1.35, 0.9] : 1,
+                                }}
+                                transition={{
+                                  duration: 2.8,
+                                  delay: index * 0.22,
+                                  repeat: fulfilledCalibrationCount > index % 5 ? Infinity : 0,
+                                  ease: 'easeInOut',
+                                }}
+                              />
+                            ))}
+                          </g>
+                        </svg>
+                        <div className="pointer-events-none absolute inset-x-3 top-1 hidden h-16 bg-[radial-gradient(circle_at_12%_52%,rgba(126,239,255,0.10),transparent_8%),radial-gradient(circle_at_28%_42%,rgba(126,239,255,0.08),transparent_8%),radial-gradient(circle_at_44%_54%,rgba(168,85,247,0.08),transparent_8%),radial-gradient(circle_at_61%_40%,rgba(126,239,255,0.08),transparent_8%),radial-gradient(circle_at_78%_54%,rgba(126,239,255,0.08),transparent_8%),radial-gradient(circle_at_94%_44%,rgba(134,239,172,0.08),transparent_8%)] blur-[1px] md:block" />
                         <div
-                          className="grid grid-cols-2 gap-2 md:grid-cols-5"
+                          className="grid grid-cols-6 gap-x-0"
                           aria-label={onboardingCopy.calibrating}
                         >
-                          {calibrationRequirements.map((req, index) => (
-                            <motion.div
-                              key={req.label}
-                              className={`relative flex min-h-12 items-center gap-2 rounded-full border px-3 text-[10px] font-mono transition-all ${
-                                req.met
-                                  ? 'border-green-300/32 bg-green-300/8 text-green-300 shadow-[0_0_20px_rgba(134,239,172,0.08)]'
-                                  : 'border-cyan-900/40 bg-black/16 text-cyan-800'
-                              }`}
-                              animate={
-                                req.met
-                                  ? {
-                                      y: [0, -1, 0],
-                                      boxShadow: [
-                                        '0 0 0 rgba(134,239,172,0)',
-                                        '0 0 22px rgba(134,239,172,0.18)',
-                                        '0 0 10px rgba(134,239,172,0.08)',
-                                      ],
-                                    }
-                                  : { y: 0, boxShadow: '0 0 0 rgba(0,0,0,0)' }
-                              }
-                              transition={{
-                                duration: 2.6,
-                                delay: index * 0.08,
-                                repeat: req.met ? Infinity : 0,
-                                repeatDelay: 2.2 + index * 0.22,
-                                ease: 'easeInOut',
-                              }}
-                            >
-                              <span
-                                className={`relative z-10 h-2.5 w-2.5 rounded-full border transition-all duration-300 ${
+                          {calibrationRequirements.map((req, index) => {
+                            const isCurrentRequirement = index === currentCalibrationIndex;
+
+                            return (
+                              <motion.div
+                                key={req.label}
+                                title={
+                                  index === 0
+                                    ? language === 'zh'
+                                      ? '8位及以上'
+                                      : '8+ chars'
+                                    : undefined
+                                }
+                                className={`group relative flex min-h-12 flex-col items-center justify-start gap-2 text-center text-[8px] font-mono transition-all sm:text-[9px] md:text-[10px] md:[&:nth-child(even)]:pt-3 ${
                                   req.met
-                                    ? 'border-green-200 bg-green-300 shadow-[0_0_16px_rgba(134,239,172,0.75)]'
-                                    : 'border-cyan-700 bg-cyan-950/60'
+                                    ? 'text-cyan-100'
+                                    : isCurrentRequirement
+                                      ? 'text-cyan-200'
+                                      : 'text-cyan-800'
                                 }`}
-                              />
-                              <span className="relative z-10">{req.label}</span>
-                            </motion.div>
-                          ))}
+                                animate={
+                                  calibrationSyncPulse && req.met
+                                    ? {
+                                        y: [0, -3, 0],
+                                        opacity: [0.9, 1, 0.94],
+                                        filter: [
+                                          'drop-shadow(0 0 0 rgba(126,239,255,0))',
+                                          'drop-shadow(0 0 16px rgba(126,239,255,0.42))',
+                                          'drop-shadow(0 0 6px rgba(126,239,255,0.14))',
+                                        ],
+                                      }
+                                    : req.met
+                                      ? {
+                                          y: [0, -1.5, 0],
+                                          opacity: [0.86, 1, 0.92],
+                                          filter: [
+                                            'drop-shadow(0 0 0 rgba(126,239,255,0))',
+                                            'drop-shadow(0 0 12px rgba(126,239,255,0.24))',
+                                            'drop-shadow(0 0 4px rgba(126,239,255,0.1))',
+                                          ],
+                                        }
+                                      : isCurrentRequirement
+                                        ? {
+                                            y: [0, -2, 0],
+                                            opacity: [0.76, 1, 0.82],
+                                            filter: [
+                                              'drop-shadow(0 0 4px rgba(34,211,238,0.10))',
+                                              'drop-shadow(0 0 16px rgba(34,211,238,0.34))',
+                                              'drop-shadow(0 0 5px rgba(34,211,238,0.12))',
+                                            ],
+                                          }
+                                        : {
+                                            y: 0,
+                                            filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))',
+                                          }
+                                }
+                                transition={{
+                                  duration: calibrationSyncPulse ? 0.7 : 2.6,
+                                  delay: calibrationSyncPulse ? index * 0.04 : index * 0.08,
+                                  repeat:
+                                    (req.met || isCurrentRequirement) && !calibrationSyncPulse
+                                      ? Infinity
+                                      : 0,
+                                  repeatDelay: 2.2 + index * 0.22,
+                                  ease: 'easeInOut',
+                                }}
+                              >
+                                <span
+                                  className={`relative z-10 h-3 w-3 rounded-full border transition-all duration-300 before:absolute before:left-1/2 before:top-1/2 before:h-7 before:w-7 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:blur-md before:content-[''] ${
+                                    req.met
+                                      ? 'border-cyan-100 bg-cyan-200 shadow-[0_0_18px_rgba(126,239,255,0.82)] before:bg-cyan-300/6'
+                                      : isCurrentRequirement
+                                        ? 'border-cyan-200 bg-cyan-400/16 shadow-[0_0_18px_rgba(34,211,238,0.38)] before:bg-cyan-200/12'
+                                        : 'border-cyan-700 bg-cyan-950/60 shadow-[0_0_8px_rgba(0,200,232,0.08)] before:bg-cyan-300/6'
+                                  }`}
+                                />
+                                <span className="relative z-10 whitespace-nowrap leading-none tracking-[0.04em] md:tracking-[0.08em]">
+                                  {req.label}
+                                </span>
+                                {index === 0 && (
+                                  <span className="pointer-events-none absolute -top-8 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/22 bg-black/68 px-3 py-1 text-[9px] tracking-[0.12em] text-cyan-100 opacity-0 shadow-[0_0_20px_rgba(0,200,232,0.10)] backdrop-blur-md transition-all duration-200 group-hover:-top-9 group-hover:opacity-100">
+                                    {language === 'zh' ? '8位及以上' : '8+ chars'}
+                                  </span>
+                                )}
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
 
-                    <button
+                    <motion.button
                       type="button"
                       onClick={handleGenerateCredential}
                       disabled={isForgingCredential || !isCredentialInputReady}
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-cyan-400/36 bg-cyan-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.2em] text-cyan-100 shadow-[0_0_26px_rgba(0,200,232,0.06)] transition-all hover:bg-cyan-400/18 disabled:cursor-not-allowed disabled:opacity-45 md:w-auto md:px-6"
+                      className="group relative mt-4 inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cyan-400/36 bg-cyan-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.2em] text-cyan-100 transition-all hover:bg-cyan-400/18 disabled:cursor-not-allowed disabled:border-cyan-400/20 disabled:bg-cyan-400/5 disabled:text-cyan-300/58 md:w-auto md:px-6"
+                      animate={{
+                        opacity: isCredentialInputReady || isForgingCredential ? 1 : 0.72,
+                        boxShadow:
+                          isCredentialInputReady || isForgingCredential
+                            ? [
+                                '0 0 20px rgba(0,200,232,0.08)',
+                                '0 0 38px rgba(126,239,255,0.26)',
+                                '0 0 20px rgba(0,200,232,0.08)',
+                              ]
+                            : [
+                                '0 0 12px rgba(0,200,232,0.04)',
+                                '0 0 20px rgba(0,200,232,0.09)',
+                                '0 0 12px rgba(0,200,232,0.04)',
+                              ],
+                      }}
+                      whileHover={isCredentialInputReady ? { scale: 1.015 } : undefined}
+                      whileTap={isCredentialInputReady ? { scale: 0.985 } : undefined}
+                      transition={{
+                        duration: isCredentialInputReady ? 2.5 : 3.6,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
                     >
-                      <Sparkles className="h-4 w-4" />
-                      {isForgingCredential
-                        ? onboardingCopy.forging
-                        : recoveryKey
-                          ? onboardingCopy.regenerate
-                          : isCredentialInputReady
-                            ? onboardingCopy.startCalibrate
-                            : onboardingCopy.waitingCalibration}
-                    </button>
+                      <motion.span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-[-36%] w-1/3 skew-x-[-18deg] bg-gradient-to-r from-transparent via-cyan-100/24 to-transparent"
+                        animate={{
+                          x: isCredentialInputReady || isForgingCredential ? ['0%', '430%'] : '0%',
+                          opacity: isCredentialInputReady || isForgingCredential ? [0, 0.85, 0] : 0,
+                        }}
+                        transition={{
+                          duration: 2.8,
+                          repeat: isCredentialInputReady || isForgingCredential ? Infinity : 0,
+                          repeatDelay: 1.2,
+                          ease: 'easeInOut',
+                        }}
+                      />
+                      <Sparkles className="relative z-10 h-4 w-4" />
+                      <span className="relative z-10">
+                        {calibrationCtaLabel}
+                      </span>
+                    </motion.button>
                   </>
                 )}
               </div>
@@ -1262,10 +1537,48 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                     >
                       <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/18 bg-[radial-gradient(circle_at_0%_0%,rgba(126,239,255,0.08),transparent_42%),rgba(0,5,9,0.58)] p-4 font-mono text-left shadow-[0_22px_70px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(184,251,255,0.08)] backdrop-blur-md">
                         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-green-200/40 to-transparent" />
+                        <AnimatePresence>
+                          {issueFlash && (
+                            <motion.div
+                              aria-hidden="true"
+                              className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-[radial-gradient(circle_at_center,rgba(134,239,172,0.16),rgba(0,0,0,0.18)_42%,transparent_68%)] backdrop-blur-[1px]"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: [0, 1, 0] }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.9, ease: 'easeOut' }}
+                            >
+                              <div className="rounded-full border border-green-200/34 bg-black/38 px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-green-200 shadow-[0_0_32px_rgba(134,239,172,0.22)]">
+                                {onboardingCopy.generatedTitle}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        <motion.div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute right-5 top-5 h-12 w-12 rounded-full border border-green-200/24"
+                          animate={{
+                            scale: hasIssuedAccessPass ? [1, 1.18, 1] : [1, 1.08, 1],
+                            opacity: hasIssuedAccessPass ? [0.45, 0.82, 0.45] : [0.26, 0.5, 0.26],
+                            boxShadow: hasIssuedAccessPass
+                              ? [
+                                  '0 0 14px rgba(134,239,172,0.08)',
+                                  '0 0 34px rgba(134,239,172,0.26)',
+                                  '0 0 14px rgba(134,239,172,0.08)',
+                                ]
+                              : [
+                                  '0 0 10px rgba(126,239,255,0.06)',
+                                  '0 0 22px rgba(126,239,255,0.12)',
+                                  '0 0 10px rgba(126,239,255,0.06)',
+                                ],
+                          }}
+                          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                        />
                         <div className="flex items-start gap-3 text-cyan-200">
-                          <Fingerprint className="mt-1 h-5 w-5 shrink-0 text-green-300" />
+                          <div className="relative mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-green-300/24 bg-green-300/6 shadow-[0_0_22px_rgba(134,239,172,0.1)]">
+                            <Fingerprint className="h-4 w-4 text-green-300" />
+                          </div>
                           <div>
-                            <div className="text-[10px] uppercase tracking-[0.34em] text-cyan-500">
+                            <div className="text-[10px] uppercase tracking-[0.34em] text-cyan-400">
                               {hasIssuedAccessPass
                                 ? onboardingCopy.savedTitle
                                 : onboardingCopy.generatedTitle}
@@ -1277,7 +1590,40 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                             </div>
                           </div>
                         </div>
-                        <div className="relative mt-3 rounded-[22px] border border-cyan-400/14 bg-[#031318]/72 p-3 text-center shadow-[inset_0_0_28px_rgba(126,239,255,0.045)]">
+                        <div className="mt-3 grid gap-2 text-[10px] uppercase tracking-[0.18em] md:grid-cols-3">
+                          {[
+                            [accessPassCopy.ownerLabel, accessPassCopy.ownerValue],
+                            [
+                              accessPassCopy.localTitle,
+                              language === 'zh' ? '仅保存在本设备' : 'This device only',
+                            ],
+                            [
+                              accessPassCopy.keyTitle,
+                              language === 'zh' ? '忘记密令时使用' : 'For lost access',
+                            ],
+                          ].map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-full border border-cyan-400/14 bg-cyan-400/5 px-3 py-2 text-center"
+                            >
+                              <span className="text-cyan-700">{label}</span>
+                              <span className="ml-2 text-cyan-100/78">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <motion.div
+                          className="relative mt-3 overflow-hidden rounded-[22px] border border-cyan-400/14 bg-[#031318]/72 p-3 text-center shadow-[inset_0_0_28px_rgba(126,239,255,0.045)]"
+                          animate={{
+                            borderColor: hasIssuedAccessPass
+                              ? 'rgba(134,239,172,0.28)'
+                              : 'rgba(34,211,238,0.18)',
+                            boxShadow: hasIssuedAccessPass
+                              ? 'inset 0 0 30px rgba(134,239,172,0.06), 0 0 26px rgba(134,239,172,0.08)'
+                              : 'inset 0 0 28px rgba(126,239,255,0.045), 0 0 18px rgba(0,200,232,0.04)',
+                          }}
+                          transition={{ duration: 0.5, ease: 'easeOut' }}
+                        >
+                          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/28 to-transparent" />
                           <div className="select-all break-all px-6 text-sm font-bold tracking-widest text-cyan-200 md:px-8 md:text-[15px]">
                             {recoveryKey}
                           </div>
@@ -1291,19 +1637,30 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                           >
                             <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
                           </button>
-                        </div>
+                        </motion.div>
                         {!hasIssuedAccessPass ? (
-                          <button
+                          <motion.button
                             type="button"
                             onClick={issueCredentialAsPng}
                             disabled={credentialExportStatus === 'rendering'}
-                            className="mt-3 inline-flex w-full items-center justify-center gap-3 rounded-full border border-cyan-400/40 bg-cyan-400/12 px-4 py-4 text-sm uppercase tracking-[0.18em] text-cyan-100 transition-all hover:bg-cyan-400/20"
+                            className="relative mt-3 inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-full border border-cyan-400/40 bg-cyan-400/12 px-4 py-4 text-sm uppercase tracking-[0.18em] text-cyan-100 transition-all hover:bg-cyan-400/20"
+                            animate={{
+                              boxShadow: [
+                                '0 0 16px rgba(0,200,232,0.08)',
+                                '0 0 30px rgba(126,239,255,0.18)',
+                                '0 0 16px rgba(0,200,232,0.08)',
+                              ],
+                            }}
+                            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
                           >
-                            <Download className="h-4 w-4" />
-                            {credentialExportStatus === 'rendering'
-                              ? onboardingCopy.savingPng
-                              : onboardingCopy.savePng}
-                          </button>
+                            <span className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/42 to-transparent" />
+                            <Download className="relative z-10 h-4 w-4" />
+                            <span className="relative z-10">
+                              {credentialExportStatus === 'rendering'
+                                ? onboardingCopy.savingPng
+                                : onboardingCopy.savePng}
+                            </span>
+                          </motion.button>
                         ) : (
                           <div
                             data-testid="onboarding-recovery-saved"
@@ -1315,11 +1672,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                             <span className="text-sm uppercase tracking-widest">
                               {onboardingCopy.savedReady}
                             </span>
-                          </div>
-                        )}
-                        {credentialExportStatus === 'success' && (
-                          <div className="mt-2 text-[10px] text-green-300">
-                            {accessPassCopy.exportSuccess}
                           </div>
                         )}
                         {credentialExportStatus === 'error' && (
@@ -1343,16 +1695,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({
           )}
 
           <div className="fixed bottom-3 left-4 right-4 z-40 flex items-end gap-3 md:absolute md:bottom-4 md:left-auto md:right-5">
-            <div className="hidden max-w-[260px] text-right font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-400/70 md:block">
-              {isAccessPassReady
-                ? onboardingCopy.readyStatus
-                : recoveryKey
-                  ? hasIssuedAccessPass
-                    ? onboardingCopy.confirmBackupStatus
-                    : onboardingCopy.savePngStatus
-                  : onboardingCopy.issueFirstStatus}
-            </div>
-
             <CyberButton
               data-testid="onboarding-next"
               onClick={handleNextStep}

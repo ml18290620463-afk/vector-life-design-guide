@@ -190,7 +190,7 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
         }`}
       >
         <span className="pointer-events-none absolute inset-x-10 top-1 h-px bg-gradient-to-r from-transparent via-cyan-100/30 to-transparent" />
-        {t.confirmAction}
+        {t.resetPassword}
       </button>
     </motion.div>
   );

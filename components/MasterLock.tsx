@@ -70,7 +70,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
     restrictedMessage: t.biometricRestricted || 'Environment Restricted',
     postSuccessHint:
       language === 'zh'
-        ? '生物识别仅确认为本人，仍需密码解锁数据'
+        ? '生物识别仅确认本人，仍需密令解锁数据'
         : 'Biometrics verified, but password still required for decryption',
     disabled: lockout.isLocked,
   });
@@ -181,17 +181,18 @@ export const MasterLock: React.FC<MasterLockProps> = ({
           transition={
             verify.isSuccess
               ? {
-                  duration: 2.2,
+                  duration: 1.36,
+                  delay: 0.48,
                   ease: 'circIn',
-                  skewX: { duration: 1.1, repeat: 1 },
-                  skewY: { duration: 1.1, repeat: 1 },
+                  skewX: { duration: 0.68, repeat: 1 },
+                  skewY: { duration: 0.68, repeat: 1 },
                 }
               : {
                   opacity: { duration: 0.4 },
                   scale: { duration: 0.4 },
                 }
           }
-          className={`group relative min-h-[610px] w-full overflow-hidden border p-7 transition-all duration-1000 [border-radius:4.8rem_7.2rem_5.9rem_6.8rem/3.3rem_4.5rem_6.5rem_5.3rem] sm:p-10 ${theme === 'light' ? 'border-cyan-500/10 bg-white/82 shadow-[0_38px_100px_color-mix(in_srgb,_black_16%,_transparent)]' : 'border-cyan-200/10 bg-[radial-gradient(circle_at_16%_12%,rgba(80,255,245,0.14),transparent_24%),linear-gradient(135deg,rgba(0,20,24,0.76),rgba(0,0,0,0.76)_46%,rgba(2,10,24,0.82))] shadow-[0_30px_90px_rgba(0,0,0,0.56),0_0_110px_rgba(0,220,255,0.13),inset_0_1px_0_rgba(190,255,255,0.1),inset_14px_0_60px_rgba(25,255,240,0.065),inset_-16px_-18px_78px_rgba(79,70,229,0.1)]'} ${verify.isSuccess ? 'pointer-events-none' : ''}`}
+          className={`group relative min-h-[650px] w-full overflow-hidden border p-7 transition-all duration-1000 [border-radius:4.8rem_7.2rem_5.9rem_6.8rem/3.3rem_4.5rem_6.5rem_5.3rem] sm:p-10 ${theme === 'light' ? 'border-cyan-500/10 bg-white/82 shadow-[0_38px_100px_color-mix(in_srgb,_black_16%,_transparent)]' : 'border-cyan-100/14 bg-[radial-gradient(circle_at_14%_12%,rgba(91,255,244,0.18),transparent_25%),radial-gradient(circle_at_84%_16%,rgba(139,92,246,0.22),transparent_33%),radial-gradient(circle_at_52%_72%,rgba(34,211,238,0.08),transparent_38%),linear-gradient(135deg,rgba(2,27,34,0.82),rgba(4,5,18,0.74)_48%,rgba(6,13,34,0.86))] shadow-[0_30px_90px_rgba(0,0,0,0.50),0_0_120px_rgba(104,82,255,0.14),0_0_100px_rgba(0,220,255,0.10),inset_0_1px_0_rgba(190,255,255,0.14),inset_16px_0_64px_rgba(25,255,240,0.085),inset_-22px_-18px_92px_rgba(139,92,246,0.16)]'} ${verify.isSuccess ? 'pointer-events-none shadow-[0_0_80px_rgba(126,239,255,0.24)]' : ''}`}
         >
           <MasterLockCardChrome theme={theme} />
           <div className="absolute right-7 top-7 z-50 font-mono uppercase tracking-widest">
@@ -200,10 +201,10 @@ export const MasterLock: React.FC<MasterLockProps> = ({
               onClick={() => setShowLanguageMenu((prev) => !prev)}
               aria-expanded={showLanguageMenu}
               aria-label={language === 'zh' ? '选择语言' : 'Select language'}
-              className={`flex items-center gap-2 px-3 py-2 text-[9px] backdrop-blur-md transition-all ${
+              className={`flex items-center gap-2 rounded-full px-3 py-2 text-[9px] opacity-42 backdrop-blur-md transition-all hover:opacity-100 ${
                 theme === 'light'
-                  ? 'bg-white/42 text-cyan-700 hover:bg-white/62 hover:text-cyan-900'
-                  : 'bg-black/16 text-cyan-300/85 hover:bg-black/28 hover:text-cyan-100'
+                  ? 'bg-white/34 text-cyan-700 hover:bg-white/58 hover:text-cyan-900'
+                  : 'bg-black/10 text-cyan-300/85 hover:bg-black/24 hover:text-cyan-100'
               }`}
             >
               <Globe className="h-3.5 w-3.5" />
@@ -270,7 +271,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
                 isSuccess={verify.isSuccess}
                 isRitualActive={verify.isRitualActive}
                 error={verify.error}
-                isDecrypting={false}
+                isDecrypting={verify.isVerifying}
                 lockout={{
                   isLocked: lockout.isLocked,
                   secondsRemaining: lockout.secondsRemaining,
@@ -282,6 +283,16 @@ export const MasterLock: React.FC<MasterLockProps> = ({
               />
             )}
           </div>
+          {!recovery.isRecoveryMode && (
+            <div className="pointer-events-none absolute bottom-6 left-8 right-8 flex items-center justify-center gap-2 text-center font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(160,200,240,0.65)] md:text-[10px]">
+              <span className="text-[#1D9E75]">●</span>
+              <span>端到端加密</span>
+              <span className="text-[#1D9E75]">●</span>
+              <span>数据仅存于本地</span>
+              <span className="text-[#1D9E75]">●</span>
+              <span>服务器零知识</span>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

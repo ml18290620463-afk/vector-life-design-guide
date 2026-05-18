@@ -24,7 +24,7 @@
 
 - 所有 AI Key 仅由服务端读取（`OPENROUTER_API_KEY` / `GEMINI_API_KEY`）
 - Morning Star 通过 `/api/morning-star` 服务端代理调用
-- 恢复凭证只保存校验指纹，不保存明文
+- 恢复私钥只保存校验指纹，不保存明文
 - 主密码校验支持 PBKDF2 verifier，并兼容旧 hash/旧恢复码
 - Argon2id 评估完成（[`docs/security/argon2-eval.md`](docs/security/argon2-eval.md) 决议 GO at OWASP_REC）
 

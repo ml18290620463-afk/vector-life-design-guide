@@ -400,13 +400,13 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
         className={`absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0 transition-opacity duration-1000 ${isWarping ? 'opacity-0' : theme === 'dark' ? 'opacity-[0.48]' : 'opacity-100'}`}
       >
         <div
-          className={`cover-nebula-a absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] rounded-full blur-[120px] mix-blend-screen animate-[nebula-drift_25s_infinite_alternate] ${theme === 'light' ? 'bg-cyan-200/20' : 'bg-cyan-950/06'}`}
+          className={`cover-nebula-a absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] rounded-full blur-[120px] mix-blend-screen animate-[nebula-drift_25s_infinite_alternate] ${theme === 'light' ? 'bg-cyan-200/20' : 'bg-cyan-950/04'}`}
         ></div>
         <div
-          className={`cover-nebula-b absolute bottom-[-20%] right-[-20%] w-[80vw] h-[80vw] rounded-full blur-[120px] mix-blend-screen animate-[nebula-drift_30s_infinite_alternate_reverse] ${theme === 'light' ? 'bg-blue-200/20' : 'bg-[#061f2e]/12'}`}
+          className={`cover-nebula-b absolute bottom-[-20%] right-[-20%] w-[80vw] h-[80vw] rounded-full blur-[120px] mix-blend-screen animate-[nebula-drift_30s_infinite_alternate_reverse] ${theme === 'light' ? 'bg-blue-200/20' : 'bg-[#061f2e]/08'}`}
         ></div>
         <div
-          className={`cover-nebula-c absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-screen motion-safe:animate-pulse ${theme === 'light' ? 'bg-cyan-100/10' : 'bg-[#082a38]/08'}`}
+          className={`cover-nebula-c absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-screen motion-safe:animate-pulse ${theme === 'light' ? 'bg-cyan-100/10' : 'bg-[#082a38]/05'}`}
         ></div>
         <div
           className={`pointer-events-none absolute inset-0 ${theme === 'light' ? '' : 'bg-[radial-gradient(ellipse_95%_60%_at_50%_108%,color-mix(in_srgb,var(--color-space-deep)_14%,transparent),transparent_55%)]'}`}
@@ -612,7 +612,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               ${
                 theme === 'light'
                   ? 'bg-[linear-gradient(transparent,color-mix(in_srgb,var(--color-vector-cyan-brand)_5%,transparent)_1px,transparent_1px),linear-gradient(90deg,transparent,color-mix(in_srgb,var(--color-vector-cyan-brand)_2%,transparent)_1px,transparent_1px)]'
-                  : 'bg-[linear-gradient(transparent,color-mix(in_srgb,var(--color-vector-cyan-pure)_10%,transparent)_1px,transparent_1px),linear-gradient(90deg,transparent,color-mix(in_srgb,var(--color-vector-cyan-pure)_5%,transparent)_1px,transparent_1px)]'
+                  : 'bg-[linear-gradient(transparent,color-mix(in_srgb,var(--color-vector-cyan-pure)_7%,transparent)_1px,transparent_1px),linear-gradient(90deg,transparent,color-mix(in_srgb,var(--color-vector-cyan-pure)_3%,transparent)_1px,transparent_1px)]'
               }
               ${isWarping ? 'opacity-0' : ''}
             `}
@@ -624,13 +624,13 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
       >
         <div className="mb-8 relative w-56 h-56 md:w-[19.5rem] md:h-[19.5rem] flex items-center justify-center [perspective:1000px] cover-enter cover-enter--3">
           <div
-            className={`cover-core-breath absolute inset-0 border rounded-full blur-[0.5px] ${theme === 'light' ? 'border-cyan-300/07 shadow-[0_0_10px_rgba(34,211,238,0.03)]' : 'border-[color:var(--color-cover-status-rule)]/25 shadow-[0_0_20px_rgba(0,200,232,0.08)]'}`}
+            className={`cover-core-breath ${isLaunchSliding ? 'cover-core-breath--launching' : ''} absolute inset-0 border rounded-full blur-[0.5px] ${theme === 'light' ? 'border-cyan-300/07 shadow-[0_0_10px_rgba(34,211,238,0.03)]' : 'border-[color:var(--color-cover-status-rule)]/25 shadow-[0_0_20px_rgba(0,200,232,0.08)]'}`}
           ></div>
           <div
-            className={`cover-core-breath absolute inset-[28px] rounded-full pointer-events-none ${theme === 'light' ? 'bg-[radial-gradient(circle,rgba(34,211,238,0.12)_0%,transparent_66%)]' : 'bg-[radial-gradient(circle,rgba(0,200,232,0.14)_0%,rgba(123,109,255,0.08)_42%,transparent_68%)]'}`}
+            className={`cover-core-breath ${isLaunchSliding ? 'cover-core-breath--launching' : ''} absolute inset-[28px] rounded-full pointer-events-none ${theme === 'light' ? 'bg-[radial-gradient(circle,rgba(34,211,238,0.12)_0%,transparent_66%)]' : 'bg-[radial-gradient(circle,rgba(0,200,232,0.14)_0%,rgba(123,109,255,0.08)_42%,transparent_68%)]'}`}
           ></div>
           <div
-            className={`cover-purple-aura absolute inset-[30px] rounded-full pointer-events-none mix-blend-screen ${theme === 'light' ? 'bg-[radial-gradient(circle,rgba(123,109,255,0.13)_0%,rgba(123,109,255,0.06)_42%,transparent_70%)]' : 'bg-[radial-gradient(circle,rgba(123,109,255,0.22)_0%,rgba(123,109,255,0.12)_40%,rgba(0,200,232,0.035)_58%,transparent_74%)]'}`}
+            className={`cover-purple-aura absolute inset-[30px] rounded-full pointer-events-none mix-blend-screen ${theme === 'light' ? 'bg-[radial-gradient(circle,rgba(123,109,255,0.13)_0%,rgba(123,109,255,0.06)_42%,transparent_70%)]' : 'bg-[radial-gradient(circle,rgba(123,109,255,0.16)_0%,rgba(123,109,255,0.08)_40%,rgba(0,200,232,0.025)_58%,transparent_74%)]'}`}
           ></div>
           {/* Layer 1 — outer grain track */}
           <div className="cover-orbit-grain absolute inset-[-14px] animate-[spin-z_200s_linear_infinite] max-md:[&>span:nth-child(odd)]:hidden pointer-events-none blur-[0.5px]">
@@ -955,7 +955,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   uses the real TTF — same heroic visual weight,
                   no paint delay. */}
         <h1
-          className={`cover-enter cover-enter--1 relative z-10 text-5xl sm:text-7xl md:text-9xl font-bold tracking-[0.08em] md:tracking-[0.12em] mb-2 max-md:mix-blend-normal md:mix-blend-plus-lighter [transform:scaleX(1.045)] ${theme === 'light' ? 'text-vector-ink-strong' : 'text-[color:var(--color-cover-hero-title)] md:drop-shadow-[0_2px_0_rgba(123,109,255,0.20)] md:[text-shadow:0_0_24px_rgba(0,200,232,0.10),0_8px_26px_rgba(0,0,0,0.34)]'}`}
+          className={`cover-enter cover-enter--1 relative z-10 text-5xl sm:text-7xl md:text-9xl font-bold tracking-[0.08em] md:tracking-[0.12em] mb-2 max-md:mix-blend-normal md:mix-blend-plus-lighter [transform:scaleX(1.045)] ${theme === 'light' ? 'text-vector-ink-strong' : 'text-[color:var(--color-cover-hero-title)] md:drop-shadow-[0_2px_0_rgba(123,109,255,0.22)] md:[text-shadow:0_0_20px_rgba(0,200,232,0.10),0_0_34px_rgba(123,109,255,0.12),0_8px_26px_rgba(0,0,0,0.34)]'}`}
           data-text="VECTOR"
         >
           VECTOR
@@ -976,7 +976,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           ></span>
         </div>
         <p
-          className={`cover-enter cover-enter--2b relative z-10 mx-auto mb-10 flex max-w-[min(90vw,720px)] items-center justify-center px-4 text-center text-sm font-semibold leading-relaxed tracking-[0.12em] md:text-lg md:tracking-[0.18em] ${theme === 'light' ? 'text-vector-ink-strong/88' : 'text-[color:var(--color-cover-status-body)]'}`}
+          className={`cover-enter cover-enter--2b relative z-10 mx-auto mb-3 flex max-w-[min(90vw,720px)] items-center justify-center px-4 text-center text-sm font-semibold leading-relaxed tracking-[0.12em] md:text-lg md:tracking-[0.18em] ${theme === 'light' ? 'text-vector-ink-strong/88' : 'text-[color:var(--color-cover-status-body)]'}`}
           aria-label={t.brandNarrative}
         >
           <span
@@ -985,9 +985,8 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             {language === 'zh' ? '记录 || 过去·此刻 ⇌ 未来' : 'Record || Past · Now ⇌ Future'}
           </span>
         </p>
-
         <div
-          className={`pointer-events-none absolute left-1/2 top-[56%] h-[44%] w-[82vw] max-w-[1080px] -translate-x-1/2 -translate-y-1/2 rounded-full ${theme === 'light' ? 'bg-white/26 blur-3xl' : 'bg-[radial-gradient(ellipse_at_center,rgba(5,11,20,0.88)_0%,rgba(5,11,20,0.56)_48%,transparent_76%)] blur-2xl'}`}
+          className={`pointer-events-none absolute left-1/2 top-[56%] h-[44%] w-[82vw] max-w-[1080px] -translate-x-1/2 -translate-y-1/2 rounded-full ${theme === 'light' ? 'bg-white/26 blur-3xl' : 'bg-[radial-gradient(ellipse_at_42%_48%,rgba(5,11,20,0.82)_0%,rgba(8,12,32,0.54)_44%,rgba(123,109,255,0.10)_66%,transparent_78%)] blur-2xl'}`}
         ></div>
 
         <button
@@ -995,14 +994,14 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           data-testid="cover-initialize"
           onClick={handleInitialize}
           aria-label={language === 'zh' ? '点击进入下一个界面' : 'Click to enter the next screen'}
-          className={`cover-launch-tunnel cover-enter cover-enter--4 group relative z-10 mt-8 flex w-[min(78vw,440px)] items-center justify-between gap-5 px-8 py-4 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${isLaunchSliding ? 'cover-launch-tunnel--active pointer-events-none' : ''} ${
+          className={`cover-launch-tunnel cover-enter cover-enter--4 group relative z-10 mt-8 flex w-[min(82vw,480px)] items-center justify-between gap-5 px-8 py-4 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${isLaunchSliding ? 'cover-launch-tunnel--active pointer-events-none' : ''} ${
             theme === 'light'
               ? 'rounded-full border border-vector-cyan-brand/28 bg-white/62 backdrop-blur-md text-vector-cyan-brand shadow-[0_18px_60px_rgba(20,184,230,0.15)] hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[inset_0_0_0_1px_rgba(0,122,140,0.12),0_20px_64px_rgba(20,184,230,0.18)] focus:ring-vector-cyan-brand/55 focus:ring-offset-white'
-              : 'rounded-full border border-[color:var(--color-cover-cta-border)]/58 bg-[rgba(5,13,24,0.52)] backdrop-blur-xl hover:-translate-y-0.5 shadow-[inset_0_1px_0_0_rgba(157,246,250,0.10),inset_0_-12px_28px_rgba(123,109,255,0.055),0_12px_32px_rgba(0,0,0,0.38),0_0_18px_rgba(0,200,232,0.16)] hover:shadow-[inset_0_1px_0_0_rgba(157,246,250,0.14),inset_0_-12px_28px_rgba(123,109,255,0.075),0_0_24px_rgba(0,200,232,0.34),0_0_12px_rgba(123,109,255,0.30)] focus:ring-[color:var(--color-cover-cta-hover-glow)]/55 focus:ring-offset-[var(--color-space-bg)]'
+              : 'rounded-full border border-[color:var(--color-cover-cta-border)]/46 bg-[rgba(5,13,24,0.46)] backdrop-blur-xl hover:-translate-y-0.5 shadow-[inset_0_1px_0_0_rgba(157,246,250,0.08),inset_0_-12px_28px_rgba(123,109,255,0.055),0_12px_32px_rgba(0,0,0,0.34),0_0_14px_rgba(0,200,232,0.10),0_0_18px_rgba(123,109,255,0.08)] hover:shadow-[inset_0_1px_0_0_rgba(157,246,250,0.12),inset_0_-12px_28px_rgba(123,109,255,0.075),0_0_20px_rgba(0,200,232,0.24),0_0_16px_rgba(123,109,255,0.22)] focus:ring-[color:var(--color-cover-cta-hover-glow)]/45 focus:ring-offset-[var(--color-space-bg)]'
           }`}
         >
           <span
-            className={`pointer-events-none absolute inset-0 rounded-full ${theme === 'light' ? 'opacity-60 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.16),transparent_70%)]' : 'opacity-100 bg-[radial-gradient(ellipse_at_center,rgba(123,109,255,0.14)_0%,rgba(0,200,232,0.08)_38%,transparent_72%)]'}`}
+            className={`pointer-events-none absolute inset-0 rounded-full ${theme === 'light' ? 'opacity-60 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.16),transparent_70%)]' : 'opacity-80 bg-[radial-gradient(ellipse_at_center,rgba(123,109,255,0.10)_0%,rgba(0,200,232,0.055)_38%,transparent_72%)]'}`}
           ></span>
           <span
             className={`cover-tunnel-lines pointer-events-none absolute inset-x-7 inset-y-2 rounded-full border-y ${theme === 'light' ? 'border-vector-cyan-brand/14' : 'border-cyan-200/14'}`}
@@ -1044,7 +1043,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             className={`cover-tunnel-wake pointer-events-none absolute left-10 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full opacity-0 blur-md ${theme === 'light' ? 'bg-vector-cyan-brand/18' : 'bg-[#7b6dff]/16'}`}
           ></span>
           <span
-            className={`pointer-events-none absolute -inset-px rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${theme === 'light' ? 'blur-md bg-cyan-200/32' : 'shadow-[0_0_22px_rgba(0,200,232,0.34),0_0_12px_rgba(123,109,255,0.28)]'}`}
+            className={`pointer-events-none absolute -inset-px rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${theme === 'light' ? 'blur-md bg-cyan-200/32' : 'shadow-[0_0_18px_rgba(0,200,232,0.24),0_0_10px_rgba(123,109,255,0.18)]'}`}
           ></span>
           <span
             className={`pointer-events-none absolute left-5 top-1/2 h-px w-16 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-r from-vector-cyan-brand/55 to-transparent' : 'bg-gradient-to-r from-[color:var(--color-cover-status-rule)] to-transparent'}`}
@@ -1073,12 +1072,12 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               />
             </span>
             <span
-              className={`cover-launch-label relative flex min-w-[108px] items-center justify-center text-[12px] md:text-sm font-mono uppercase tracking-[0.38em] md:tracking-[0.44em] ${theme === 'light' ? 'text-vector-cyan-brand/95' : 'text-[color:var(--color-cover-cta-label)]'}`}
+              className={`cover-launch-label relative flex min-w-[156px] items-center justify-center text-[12px] md:text-sm font-mono uppercase tracking-[0.28em] md:tracking-[0.34em] ${theme === 'light' ? 'text-vector-cyan-brand/95' : 'text-[color:var(--color-cover-cta-label)]'}`}
             >
               <span
                 className={`cover-label-pulse pointer-events-none absolute left-1/2 top-1/2 h-px w-20 -translate-x-1/2 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-vector-cyan-brand/24 to-transparent' : 'bg-gradient-to-r from-transparent via-[#7b6dff]/28 to-transparent'}`}
               ></span>
-              {language === 'zh' ? '起航' : 'Launch'}
+              {language === 'zh' ? '接入矢量空间' : 'Enter Vector Space'}
             </span>
           </span>
         </button>
@@ -1121,6 +1120,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 animation: core-breath 5.8s ease-in-out infinite;
                 will-change: opacity, filter, transform;
               }
+              .cover-core-breath--launching {
+                animation: cover-core-launch 0.72s cubic-bezier(0.16, 0.82, 0.2, 1) both;
+              }
               .cover-purple-aura {
                 animation: purple-aura-breath 6.4s ease-in-out infinite;
                 will-change: opacity, filter, transform;
@@ -1136,6 +1138,29 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               .cover-launch-tunnel {
                 isolation: isolate;
                 --launch-travel: min(calc(78vw - 112px), 328px);
+                animation: launch-system-breath 5.4s ease-in-out infinite;
+              }
+              .cover-launch-tunnel:hover,
+              .cover-launch-tunnel--active {
+                animation-play-state: paused;
+              }
+              .cover-launch-tunnel::before {
+                content: "";
+                position: absolute;
+                inset: -18px;
+                z-index: -1;
+                border-radius: 999px;
+                background: radial-gradient(ellipse at center, rgba(94, 234, 242, 0.16), transparent 68%);
+                opacity: 0.12;
+                filter: blur(18px);
+                transform: scaleX(0.72);
+                transition: opacity 0.38s ease, transform 0.48s ease, filter 0.48s ease;
+              }
+              .cover-launch-tunnel:hover::before,
+              .cover-launch-tunnel--active::before {
+                opacity: 0.46;
+                filter: blur(20px);
+                transform: scaleX(1.02) scaleY(1.16);
               }
               .cover-narrative-arrow {
                 position: relative;
@@ -1199,6 +1224,15 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               }
               .cover-launch-tunnel--active {
                 transform: translateY(-1px);
+              }
+              .cover-launch-tunnel--active::after {
+                content: "";
+                position: absolute;
+                inset: -42px;
+                z-index: -1;
+                border-radius: 999px;
+                border: 1px solid rgba(126, 239, 255, 0.34);
+                animation: launch-system-pulse 0.82s cubic-bezier(0.16, 0.82, 0.2, 1) forwards;
               }
               .cover-tunnel-lines::before,
               .cover-tunnel-lines::after {
@@ -1268,10 +1302,12 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 	              }
 	              @media (max-width: 767px) {
 	                .cover-fate-signal {
-	                  left: 22% !important;
-	                  top: 40% !important;
+	                  left: 10% !important;
+	                  top: 18% !important;
 	                  max-width: 76vw !important;
 	                  transform: none !important;
+	                  opacity: 0.1 !important;
+	                  filter: blur(1px) brightness(0.62) !important;
 	                }
 	                .cover-fate-signal span:last-child {
 	                  font-size: 13px !important;
@@ -1302,6 +1338,12 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 0%, 100% { opacity: 0.46; filter: blur(0.5px) brightness(0.92); transform: scale(0.985); }
                 48% { opacity: 0.86; filter: blur(0.35px) brightness(1.12); transform: scale(1.018); }
                 68% { opacity: 0.58; filter: blur(0.45px) brightness(1); transform: scale(1.002); }
+              }
+              @keyframes cover-core-launch {
+                0% { opacity: 0.56; filter: blur(0.4px) brightness(1); transform: scale(0.99); }
+                34% { opacity: 0.92; filter: blur(0.18px) brightness(1.18); transform: scale(1.028); }
+                72% { opacity: 0.48; filter: blur(1.4px) brightness(1.08); transform: scale(1.14); }
+                100% { opacity: 0.12; filter: blur(4px) brightness(0.82); transform: scale(1.34); }
               }
               @keyframes purple-aura-breath {
                 0%, 100% { opacity: 0.28; filter: blur(10px) saturate(1); transform: scale(0.96); }
@@ -1375,6 +1417,15 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               @keyframes launch-label-pulse {
                 0%, 100% { opacity: 0.22; transform: translate(-50%, -50%) scaleX(0.56); filter: blur(0.2px); }
                 48% { opacity: 0.52; transform: translate(-50%, -50%) scaleX(1); filter: blur(0.45px); }
+              }
+              @keyframes launch-system-breath {
+                0%, 100% { filter: brightness(1); }
+                50% { filter: brightness(1.06); }
+              }
+              @keyframes launch-system-pulse {
+                0% { opacity: 0.72; transform: scale(0.72); filter: blur(0); }
+                72% { opacity: 0.18; transform: scale(1.24); filter: blur(2px); }
+                100% { opacity: 0; transform: scale(1.36); filter: blur(5px); }
               }
               @keyframes launch-depth-breathe {
                 0%, 100% { opacity: 0.42; transform: scaleX(0.86); filter: blur(0.15px); }

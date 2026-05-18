@@ -39,7 +39,7 @@ describe('MasterLockRecoveryForm', () => {
     expect(screen.getByLabelText('Recovery Key')).not.toBeNull();
     expect(screen.getByLabelText('New Password')).not.toBeNull();
     expect(screen.getByLabelText('Confirm Password')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Reset Password' })).not.toBeNull();
   });
 
   it('routes input changes to the recovery setters', () => {
@@ -92,7 +92,7 @@ describe('MasterLockRecoveryForm', () => {
   it('submits via the bound recovery.submitRecovery callback', () => {
     const recovery = buildRecovery();
     render(<MasterLockRecoveryForm theme="dark" t={t} recovery={recovery} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Password' }));
     expect(recovery.submitRecovery).toHaveBeenCalledTimes(1);
   });
 });

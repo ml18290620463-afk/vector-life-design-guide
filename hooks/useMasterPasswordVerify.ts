@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { SecurityService } from '../services/securityService';
 import { useTimeoutManager } from './useTimeoutManager';
 
@@ -11,24 +11,21 @@ export interface UseMasterPasswordVerifyArgs {
   /** Called once the password has been verified. The parent decides
    *  what "unlocked" means (open Dashboard / decrypt session / etc.). */
   onUnlock: (password: string) => void;
-  /** Called whenever the auto-verify path consumes a failure attempt
-   *  (the parent's lockout timer typically counts these). The hook
-   *  itself never registers a failure on the auto-verify path —
-   *  see comment below. */
+  /** Kept for backward compatibility with older consumers. Explicit
+   *  submit is now the only verification path. */
   onAutoFailure?: () => void;
   /** Called whenever the Enter-key path consumes a failure attempt. */
   onEnterFailure?: () => void;
   /** Override `SecurityService.verifyPassword` for tests. */
   verifyPassword?: (password: string, salt: string, hash: string) => Promise<boolean>;
   /** Time the parent should display the success ritual before the
-   *  `onUnlock` callback fires. Defaults to 800 ms (auto-verify) /
-   *  500 ms (Enter key) — the original MasterLock UX. */
+   *  `onUnlock` callback fires. */
   autoUnlockDelayMs?: number;
   enterUnlockDelayMs?: number;
-  /** Debounce for the auto-verify path so we don't hash on every
-   *  keystroke. Defaults to 300 ms. */
+  /** Kept for backward compatibility. Passwords are no longer verified
+   *  while the user is still typing. */
   debounceMs?: number;
-  /** Minimum input length before auto-verify even tries. */
+  /** Minimum input length before explicit submit can verify. */
   minLength?: number;
 }
 
@@ -42,6 +39,8 @@ export interface MasterPasswordVerify {
    *  immediately, Enter-key path immediately too). Mutually exclusive
    *  with `error`. */
   isRitualActive: boolean;
+  /** True while a PBKDF2 / Argon2id verification pass is running. */
+  isVerifying: boolean;
   /** Transient error flag (auto-clears 2 s after Enter-key failure). */
   error: boolean;
   /** Submit the current `password` synchronously (used by the Enter
@@ -52,15 +51,12 @@ export interface MasterPasswordVerify {
 }
 
 /**
- * Owns MasterLock's "user types password → we hash + verify → unlock
+ * Owns MasterLock's "user submits password → we hash + verify → unlock
  * after a brief ritual" workflow:
  *
- *   - Auto-verifies on a 300 ms debounce so the user doesn't have to
- *     hit Enter (mirrors the original MasterLock UX).
- *   - Counts failures via the parent-supplied callbacks (so the
+ *   - Verifies only on explicit user intent: click "connect" or press Enter.
+ *   - Counts failures via the parent-supplied callback (so the
  *     lockout timer stays decoupled from the verifier).
- *   - Does NOT register a failure on the auto-verify path — the user
- *     might still be typing. Only the Enter-key path counts.
  *
  * Pulled out of `MasterLock.tsx` as part of Phase 2 §2.i.
  */
@@ -71,64 +67,31 @@ export const useMasterPasswordVerify = ({
   onUnlock,
   onEnterFailure,
   verifyPassword = SecurityService.verifyPassword.bind(SecurityService),
-  autoUnlockDelayMs = 800,
   enterUnlockDelayMs = 500,
-  debounceMs = 300,
   minLength = 4,
 }: UseMasterPasswordVerifyArgs): MasterPasswordVerify => {
   const { scheduleTimeout } = useTimeoutManager();
   const [password, setPassword] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [isRitualActive, setIsRitualActive] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState(false);
 
   const reset = useCallback(() => {
     setPassword('');
     setIsSuccess(false);
     setIsRitualActive(false);
+    setIsVerifying(false);
     setError(false);
   }, []);
 
-  // Auto-verify on debounce. Only the Enter-key path counts failures —
-  // the auto path is "best effort" and the user might still be typing.
-  useEffect(() => {
-    if (password.length < minLength || isRitualActive || disabled || isSuccess) return;
-
-    const timeout = setTimeout(async () => {
-      try {
-        const ok = await verifyPassword(password, passwordSalt || '', passwordHash);
-        if (ok) {
-          setIsRitualActive(true);
-          setError(false);
-          setIsSuccess(true);
-          scheduleTimeout(() => onUnlock(password), autoUnlockDelayMs);
-        }
-      } catch (e) {
-        console.error('MasterLock auto-verify error:', e);
-      }
-    }, debounceMs);
-
-    return () => clearTimeout(timeout);
-  }, [
-    autoUnlockDelayMs,
-    debounceMs,
-    disabled,
-    isRitualActive,
-    isSuccess,
-    minLength,
-    onUnlock,
-    password,
-    passwordHash,
-    passwordSalt,
-    scheduleTimeout,
-    verifyPassword,
-  ]);
-
   const submitNow = useCallback(async (): Promise<boolean> => {
-    if (password.length < minLength || isRitualActive || disabled || isSuccess) {
+    if (password.length < minLength || isRitualActive || isVerifying || disabled || isSuccess) {
       return false;
     }
     try {
+      setError(false);
+      setIsVerifying(true);
       const ok = await verifyPassword(password, passwordSalt || '', passwordHash);
       if (ok) {
         setIsRitualActive(true);
@@ -144,11 +107,14 @@ export const useMasterPasswordVerify = ({
       console.error('MasterLock Enter-key verify error:', err);
       setError(true);
       return false;
+    } finally {
+      setIsVerifying(false);
     }
   }, [
     disabled,
     enterUnlockDelayMs,
     isRitualActive,
+    isVerifying,
     isSuccess,
     minLength,
     onEnterFailure,
@@ -165,6 +131,7 @@ export const useMasterPasswordVerify = ({
     setPassword,
     isSuccess,
     isRitualActive,
+    isVerifying,
     error,
     submitNow,
     reset,

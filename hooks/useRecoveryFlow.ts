@@ -87,9 +87,7 @@ export const useRecoveryFlow = ({
     const cleanInput = recoveryInput.replace(/-/g, '').trim().toUpperCase();
 
     if (!(await SecurityService.verifyRecoveryKey(cleanInput, storedRecovery))) {
-      setResetError(
-        language === 'zh' ? '救急锚点验证失败' : 'Emergency Anchor verification failed',
-      );
+      setResetError(language === 'zh' ? '恢复私钥验证失败' : 'Recovery key verification failed');
       return;
     }
 
@@ -101,7 +99,7 @@ export const useRecoveryFlow = ({
     }
 
     if (cleanInput.length !== 32) {
-      setResetError(language === 'zh' ? '凭证长度异常' : 'Invalid credential length');
+      setResetError(language === 'zh' ? '恢复私钥长度异常' : 'Invalid recovery key length');
       return;
     }
 

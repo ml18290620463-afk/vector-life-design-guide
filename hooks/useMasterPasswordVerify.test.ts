@@ -25,50 +25,23 @@ describe('useMasterPasswordVerify', () => {
     expect(result.current.password).toBe('');
     expect(result.current.isSuccess).toBe(false);
     expect(result.current.isRitualActive).toBe(false);
+    expect(result.current.isVerifying).toBe(false);
     expect(result.current.error).toBe(false);
   });
 
-  it('does not trigger auto-verify until password length >= minLength', async () => {
+  it('does not verify while the user is still typing', async () => {
     const verifyPassword = vi.fn().mockResolvedValue(true);
     const { result } = renderHook(() =>
       useMasterPasswordVerify(baseArgs({ verifyPassword, minLength: 4 })),
     );
-    act(() => result.current.setPassword('ab'));
+    act(() => result.current.setPassword('correct'));
     await act(async () => {
       vi.advanceTimersByTime(500);
     });
     expect(verifyPassword).not.toHaveBeenCalled();
   });
 
-  it('auto-verify path fires onUnlock after the debounce + ritual delay', async () => {
-    const onUnlock = vi.fn();
-    const verifyPassword = vi.fn().mockResolvedValue(true);
-    const { result } = renderHook(() =>
-      useMasterPasswordVerify(
-        baseArgs({
-          onUnlock,
-          verifyPassword,
-          debounceMs: 100,
-          autoUnlockDelayMs: 50,
-        }),
-      ),
-    );
-    act(() => result.current.setPassword('correct'));
-    await act(async () => {
-      vi.advanceTimersByTime(100);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    expect(verifyPassword).toHaveBeenCalledWith('correct', 's', 'h');
-    expect(result.current.isRitualActive).toBe(true);
-    expect(result.current.isSuccess).toBe(true);
-    await act(async () => {
-      vi.advanceTimersByTime(60);
-    });
-    expect(onUnlock).toHaveBeenCalledWith('correct');
-  });
-
-  it('auto-verify path does NOT register a failure (user might still be typing)', async () => {
+  it('does not register a failure while the user is still typing', async () => {
     const onEnterFailure = vi.fn();
     const verifyPassword = vi.fn().mockResolvedValue(false);
     const { result } = renderHook(() =>
@@ -79,7 +52,7 @@ describe('useMasterPasswordVerify', () => {
       vi.advanceTimersByTime(60);
       await Promise.resolve();
     });
-    expect(verifyPassword).toHaveBeenCalled();
+    expect(verifyPassword).not.toHaveBeenCalled();
     expect(onEnterFailure).not.toHaveBeenCalled();
     expect(result.current.error).toBe(false);
   });
@@ -105,6 +78,30 @@ describe('useMasterPasswordVerify', () => {
     expect(result.current.error).toBe(false);
   });
 
+  it('exposes isVerifying while submitNow() is waiting on password verification', async () => {
+    let resolveVerify: (ok: boolean) => void = () => {};
+    const verifyPassword = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveVerify = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useMasterPasswordVerify(baseArgs({ verifyPassword })));
+    act(() => result.current.setPassword('correct'));
+
+    let pending: Promise<boolean> = Promise.resolve(false);
+    act(() => {
+      pending = result.current.submitNow();
+    });
+    expect(result.current.isVerifying).toBe(true);
+
+    await act(async () => {
+      resolveVerify(false);
+      await pending;
+    });
+    expect(result.current.isVerifying).toBe(false);
+  });
+
   it('Enter-key submitNow() on a correct password unlocks after the enterUnlockDelay', async () => {
     const onUnlock = vi.fn();
     const verifyPassword = vi.fn().mockResolvedValue(true);
@@ -124,7 +121,7 @@ describe('useMasterPasswordVerify', () => {
     expect(onUnlock).toHaveBeenCalledWith('correct');
   });
 
-  it('disabled=true short-circuits both paths', async () => {
+  it('disabled=true short-circuits explicit submit', async () => {
     const verifyPassword = vi.fn().mockResolvedValue(true);
     const { result } = renderHook(() =>
       useMasterPasswordVerify(baseArgs({ verifyPassword, disabled: true })),
