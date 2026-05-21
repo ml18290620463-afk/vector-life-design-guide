@@ -57,6 +57,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
   onComplete,
   onCancel,
 }) => {
+  const isLight = theme === 'light';
   const t = TRANSLATIONS[language];
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -653,12 +654,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     if (recoveryKey) return onboardingCopy.regenerate;
     if (isCredentialInputReady) return onboardingCopy.startCalibrate;
     if (currentCalibrationRequirement?.label === onboardingCopy.requirementMatch) {
-      return language === 'zh' ? '等待一致校准' : onboardingCopy.waitingCalibration;
+      return language === 'zh' ? '等待密令一致' : 'Waiting for matching code';
     }
     if (currentCalibrationRequirement) {
-      return language === 'zh'
-        ? `还需：${currentCalibrationRequirement.label}`
-        : `Need: ${currentCalibrationRequirement.label}`;
+      return language === 'zh' ? '等待密令完整' : 'Waiting for complete code';
     }
     return onboardingCopy.waitingCalibration;
   })();
@@ -762,7 +761,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 backdrop-blur-xl transition-colors duration-700 md:overflow-hidden ${theme === 'light' ? 'bg-slate-900/40' : 'bg-[#02020a]'}`}
+      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 backdrop-blur-xl transition-colors duration-700 md:overflow-hidden ${isLight ? 'bg-[radial-gradient(circle_at_18%_12%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(124,110,246,0.12),transparent_34%),linear-gradient(135deg,#f7fcff,#eef7fb_48%,#f7f3ff)]' : 'bg-[#02020a]'}`}
     >
       {/* Phase 4.5 §D — inline noise SVG (see lib/noiseTexture.ts). */}
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={NOISE_BG_STYLE}></div>
@@ -770,7 +769,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`relative w-full max-w-6xl overflow-hidden rounded-[30px] border p-0 shadow-[0_28px_90px_rgba(0,0,0,0.46),0_0_88px_rgba(104,82,255,0.08)] transition-all duration-700 md:rounded-[42px] ${theme === 'light' ? 'border-cyan-400/12 bg-white/90 backdrop-blur-2xl' : 'border-cyan-300/18 bg-[#02070b]'}`}
+        className={`relative w-full max-w-6xl overflow-hidden rounded-[30px] border p-0 transition-all duration-700 md:rounded-[42px] ${isLight ? 'border-cyan-500/16 bg-white/74 shadow-[0_28px_90px_rgba(33,80,120,0.16),inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-2xl' : 'border-cyan-300/18 bg-[#02070b] shadow-[0_28px_90px_rgba(0,0,0,0.46),0_0_88px_rgba(104,82,255,0.08)]'}`}
       >
         <div className="pointer-events-none absolute left-10 top-0 h-px w-44 bg-gradient-to-r from-transparent via-cyan-200/34 to-transparent" />
         <div className="pointer-events-none absolute right-16 bottom-0 h-px w-56 bg-gradient-to-r from-transparent via-cyan-300/24 to-transparent" />
@@ -785,8 +784,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             exit={{ opacity: 0, x: 20 }}
             className="relative flex min-h-[calc(100svh-24px)] flex-col overflow-hidden px-4 py-5 md:h-[calc(100vh-28px)] md:min-h-[640px] md:max-h-[820px] md:px-8 md:py-6"
           >
-            <div className="absolute inset-0 bg-[#020915]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_8%,rgba(126,239,255,0.15),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(139,92,246,0.16),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(100,80,255,0.14),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(168,85,247,0.10),transparent_32%),linear-gradient(180deg,rgba(4,20,36,0.14)_0%,rgba(7,18,42,0.52)_46%,rgba(0,5,12,0.92)_100%)]" />
+            <div className={`absolute inset-0 ${isLight ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(241,250,253,0.78)_46%,rgba(245,242,255,0.86))]' : 'bg-[#020915]'}`} />
+            <div className={`absolute inset-0 ${isLight ? 'bg-[radial-gradient(circle_at_48%_8%,rgba(34,211,238,0.16),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(124,110,246,0.10),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(0,175,200,0.10),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(124,110,246,0.08),transparent_32%)]' : 'bg-[radial-gradient(circle_at_48%_8%,rgba(126,239,255,0.15),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(139,92,246,0.16),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(100,80,255,0.14),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(168,85,247,0.10),transparent_32%),linear-gradient(180deg,rgba(4,20,36,0.14)_0%,rgba(7,18,42,0.52)_46%,rgba(0,5,12,0.92)_100%)]'}`} />
             <div className="absolute inset-0 opacity-[0.52]">
               <svg
                 aria-hidden="true"
@@ -986,14 +985,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             />
             <div className="absolute inset-0 bg-[linear-gradient(rgba(126,239,255,0.014)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,0.012)_1px,transparent_1px)] bg-[size:72px_72px]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(126,239,255,0.12)_0_1px,transparent_2px),radial-gradient(circle_at_74%_10%,rgba(168,85,247,0.14)_0_1px,transparent_2px),radial-gradient(circle_at_46%_36%,rgba(123,109,255,0.12)_0_1px,transparent_2px)]" />
-            <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/10 via-transparent to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#01030a]/62 via-[#06091a]/18 to-transparent" />
+            <div className={`absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b ${isLight ? 'from-white/42 via-transparent to-transparent' : 'from-black/10 via-transparent to-transparent'}`} />
+            <div className={`absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t ${isLight ? 'from-cyan-50/62 via-white/18 to-transparent' : 'from-[#01030a]/62 via-[#06091a]/18 to-transparent'}`} />
             {onCancel && (
               <motion.button
                 type="button"
                 onClick={onCancel}
                 aria-label={language === 'zh' ? '返回首页' : 'Back to cover'}
-                className="absolute left-4 top-4 z-30 grid h-10 w-10 place-items-center rounded-full border border-cyan-300/14 bg-black/10 text-cyan-300/72 shadow-[0_0_18px_rgba(0,200,232,0.06),inset_0_0_16px_rgba(168,85,247,0.04)] backdrop-blur-md transition-all hover:border-cyan-200/34 hover:bg-cyan-300/8 hover:text-cyan-100 hover:shadow-[0_0_28px_rgba(0,200,232,0.12),0_0_22px_rgba(139,92,246,0.10)] md:left-6 md:top-6"
+                className={`absolute left-4 top-4 z-30 grid h-10 w-10 place-items-center rounded-full border backdrop-blur-md transition-all md:left-6 md:top-6 ${isLight ? 'border-cyan-600/18 bg-white/62 text-cyan-700 shadow-[0_10px_28px_rgba(33,80,120,0.10)] hover:border-cyan-600/34 hover:bg-white hover:text-cyan-900' : 'border-cyan-300/14 bg-black/10 text-cyan-300/72 shadow-[0_0_18px_rgba(0,200,232,0.06),inset_0_0_16px_rgba(168,85,247,0.04)] hover:border-cyan-200/34 hover:bg-cyan-300/8 hover:text-cyan-100 hover:shadow-[0_0_28px_rgba(0,200,232,0.12),0_0_22px_rgba(139,92,246,0.10)]'}`}
                 whileHover={{ x: -2, scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
               >
@@ -1035,7 +1034,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                           onSetLanguage(lang);
                           setShowLanguageMenu(false);
                         }}
-                        className={`flex w-full items-center justify-between px-2 py-2 transition-all ${language === lang ? 'bg-cyan-400/16 text-cyan-100' : 'text-cyan-700 hover:bg-cyan-400/8 hover:text-cyan-200'}`}
+                        className={`flex w-full items-center justify-between px-2 py-2 transition-all ${
+                          language === lang
+                            ? isLight
+                              ? 'bg-cyan-500/12 text-cyan-800'
+                              : 'bg-cyan-400/16 text-cyan-100'
+                            : isLight
+                              ? 'text-slate-500 hover:bg-cyan-500/8 hover:text-cyan-800'
+                              : 'text-cyan-700 hover:bg-cyan-400/8 hover:text-cyan-200'
+                        }`}
                       >
                         <span>{NATIVE_LANG_NAMES[lang]}</span>
                         {language === lang && <Check className="h-3 w-3" />}
@@ -1080,16 +1087,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             <div className="relative z-20 mx-auto flex h-full w-full max-w-5xl flex-col justify-between gap-4 pb-20 text-center md:pb-0">
               <div className="flex flex-col items-center gap-1 pt-5 md:pt-7">
                 <div className="h-px w-24 bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent shadow-glow-cyan-400" />
-                <h2 className="text-xl font-mono uppercase tracking-widest text-cyan-50 md:text-[1.8rem]">
+                <h2 className={`text-xl font-mono uppercase tracking-widest md:text-[1.8rem] ${isLight ? 'text-slate-900' : 'text-cyan-50'}`}>
                   {onboardingCopy.title}
                 </h2>
-                <p className="max-w-2xl text-xs leading-relaxed tracking-wide text-cyan-100/72 md:text-sm">
+                <p className={`max-w-2xl text-xs leading-relaxed tracking-wide md:text-sm ${isLight ? 'text-slate-600' : 'text-cyan-100/72'}`}>
                   {onboardingCopy.subtitle}
                 </p>
               </div>
 
               <div
-                className={`relative w-full overflow-hidden rounded-[26px] border border-cyan-200/40 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.12),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.13),transparent_32%),linear-gradient(135deg,rgba(5,29,39,0.88),rgba(5,7,24,0.76)_56%,rgba(7,18,38,0.9))] text-left shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_18px_rgba(126,239,255,0.26),0_0_58px_rgba(34,211,238,0.16),0_0_110px_rgba(104,82,255,0.18),inset_0_0_32px_rgba(126,239,255,0.055),inset_0_1px_0_rgba(184,251,255,0.18)] backdrop-blur-md transition-all duration-500 ${hasIssuedAccessPass ? 'p-3 md:p-4' : 'p-4 md:p-5'}`}
+                className={`relative w-full overflow-hidden rounded-[26px] border text-left backdrop-blur-md transition-all duration-500 ${hasIssuedAccessPass ? 'p-3 md:p-4' : 'p-4 md:p-5'} ${isLight ? 'border-cyan-600/18 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.10),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(124,110,246,0.09),transparent_32%),rgba(255,255,255,0.78)] shadow-[0_22px_70px_rgba(33,80,120,0.13),inset_0_1px_0_rgba(255,255,255,0.72)]' : 'border-cyan-200/40 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.12),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.13),transparent_32%),linear-gradient(135deg,rgba(5,29,39,0.88),rgba(5,7,24,0.76)_56%,rgba(7,18,38,0.9))] shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_18px_rgba(126,239,255,0.26),0_0_58px_rgba(34,211,238,0.16),0_0_110px_rgba(104,82,255,0.18),inset_0_0_32px_rgba(126,239,255,0.055),inset_0_1px_0_rgba(184,251,255,0.18)]'}`}
               >
                 <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-cyan-100/12 shadow-[inset_0_0_28px_rgba(126,239,255,0.12)]" />
                 <div className="pointer-events-none absolute -inset-px rounded-[27px] bg-[linear-gradient(120deg,rgba(126,239,255,0.34),transparent_24%,rgba(168,85,247,0.22)_62%,rgba(126,239,255,0.24))] opacity-30 blur-[2px]" />
@@ -1518,9 +1525,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         }}
                       />
                       <Sparkles className="relative z-10 h-4 w-4" />
-                      <span className="relative z-10">
-                        {calibrationCtaLabel}
-                      </span>
+                      <span className="relative z-10">{calibrationCtaLabel}</span>
                     </motion.button>
                   </>
                 )}

@@ -84,10 +84,16 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
 
   return (
     <div className="absolute inset-0 pointer-events-none" aria-hidden>
-      <div className="absolute inset-0 bg-[#020708]" />
+      <div
+        className={`absolute inset-0 ${
+          theme === 'light'
+            ? 'bg-[linear-gradient(135deg,#f6fbff_0%,#eaf7fb_38%,#eef0ff_72%,#f9fbff_100%)]'
+            : 'bg-[#020708]'
+        }`}
+      />
       {/* Nebula Gradients */}
       <div
-        className={`absolute inset-0 opacity-70 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_5%,_transparent),transparent_50%)]' : 'bg-[radial-gradient(circle_at_12%_22%,rgba(0,215,255,0.14),transparent_42%),radial-gradient(circle_at_82%_28%,rgba(79,70,229,0.2),transparent_42%),linear-gradient(120deg,rgba(0,32,35,0.72),rgba(0,0,0,0.92)_48%,rgba(0,5,9,1))]'} `}
+        className={`absolute inset-0 opacity-70 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_18%_24%,rgba(16,185,210,0.20),transparent_42%),radial-gradient(circle_at_78%_28%,rgba(139,92,246,0.16),transparent_44%),radial-gradient(circle_at_54%_78%,rgba(34,211,238,0.12),transparent_48%)]' : 'bg-[radial-gradient(circle_at_12%_22%,rgba(0,215,255,0.14),transparent_42%),radial-gradient(circle_at_82%_28%,rgba(79,70,229,0.2),transparent_42%),linear-gradient(120deg,rgba(0,32,35,0.72),rgba(0,0,0,0.92)_48%,rgba(0,5,9,1))]'} `}
       />
 
       <div className="absolute -right-[18vw] top-[8vh] h-[72vw] max-h-[980px] w-[72vw] max-w-[980px]">
@@ -113,16 +119,26 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
                   }
             }
             className={`absolute rounded-full border ${
-              i % 2 === 0
-                ? 'border-cyan-300/20 shadow-[0_0_34px_rgba(34,211,238,0.14)]'
-                : 'border-indigo-400/24 shadow-[0_0_44px_rgba(99,102,241,0.18)]'
+              theme === 'light'
+                ? i % 2 === 0
+                  ? 'border-cyan-500/14 shadow-[0_0_34px_rgba(34,211,238,0.10)]'
+                  : 'border-violet-500/14 shadow-[0_0_44px_rgba(139,92,246,0.10)]'
+                : i % 2 === 0
+                  ? 'border-cyan-300/20 shadow-[0_0_34px_rgba(34,211,238,0.14)]'
+                  : 'border-indigo-400/24 shadow-[0_0_44px_rgba(99,102,241,0.18)]'
             }`}
             style={{
               inset: `${i * 9}%`,
             }}
           />
         ))}
-        <div className="absolute inset-[28%] rounded-full bg-[radial-gradient(circle,rgba(91,210,255,0.18),rgba(61,75,230,0.1)_45%,transparent_70%)] blur-2xl" />
+        <div
+          className={`absolute inset-[28%] rounded-full blur-2xl ${
+            theme === 'light'
+              ? 'bg-[radial-gradient(circle,rgba(91,210,255,0.16),rgba(139,92,246,0.10)_45%,transparent_70%)]'
+              : 'bg-[radial-gradient(circle,rgba(91,210,255,0.18),rgba(61,75,230,0.1)_45%,transparent_70%)]'
+          }`}
+        />
       </div>
 
       <div className="absolute left-[8vw] top-[12vh] h-[42vw] max-h-[560px] w-[42vw] max-w-[560px] opacity-55">
@@ -135,7 +151,7 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
                 ? { duration: 0 }
                 : { duration: 9 + i * 2, repeat: Infinity, delay: i * 1.1 }
             }
-            className="absolute rounded-full border border-cyan-300/14"
+            className={`absolute rounded-full border ${theme === 'light' ? 'border-cyan-500/12' : 'border-cyan-300/14'}`}
             style={{ inset: `${i * 15}%` }}
           />
         ))}
@@ -146,7 +162,7 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
         {fixedStars.map((star, i) => (
           <div
             key={`star-fix-${i}`}
-            className={`absolute w-px h-px rounded-full ${theme === 'light' ? 'bg-slate-400' : 'bg-white/40'}`}
+            className={`absolute w-px h-px rounded-full ${theme === 'light' ? 'bg-cyan-700/35' : 'bg-white/40'}`}
             style={star}
           />
         ))}
@@ -177,7 +193,7 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
                     repeatDelay: star.repeatDelay,
                   }
             }
-            className={`absolute rounded-full blur-[1px] ${theme === 'light' ? 'bg-cyan-600' : 'bg-cyan-300'}`}
+            className={`absolute rounded-full blur-[1px] ${theme === 'light' ? 'bg-cyan-500' : 'bg-cyan-300'}`}
             style={{
               left: star.left,
               top: star.top,
@@ -204,7 +220,13 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
         }
         className={`absolute inset-0 ${theme === 'light' ? 'bg-[url("https://www.transparenttextures.com/patterns/natural-paper.png")] opacity-5' : 'bg-[url("https://www.transparenttextures.com/patterns/dark-matter.png")] opacity-10'}`}
       />
-      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-black/42 to-transparent" />
+      <div
+        className={`absolute inset-x-0 bottom-0 h-1/2 ${
+          theme === 'light'
+            ? 'bg-gradient-to-t from-white/80 via-cyan-50/28 to-transparent'
+            : 'bg-gradient-to-t from-black via-black/42 to-transparent'
+        }`}
+      />
     </div>
   );
 };
