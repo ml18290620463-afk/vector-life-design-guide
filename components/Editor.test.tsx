@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Editor } from './Editor';
 import { clearEditorDraft } from '../services/editorDraft';
 
@@ -71,5 +71,68 @@ describe('Editor — Phase 4.5 F4 seed prop', () => {
       const titleInput = document.querySelector('input[type="text"]') as HTMLInputElement;
       expect(titleInput.value).toBe('');
     });
+  });
+
+  it('uses the release-depth markdown guide as the empty content placeholder', async () => {
+    render(<Editor {...baseProps} seed={{ reflectionDepth: 'release' }} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-content').getAttribute('placeholder')).toContain(
+        '## 发生了什么',
+      );
+    });
+    expect(screen.getByTestId('editor-content').getAttribute('placeholder')).toContain(
+      '- 现在我想记录的是哪件事？',
+    );
+  });
+
+  it('uses the sort-depth markdown guide as the empty content placeholder', async () => {
+    render(<Editor {...baseProps} seed={{ reflectionDepth: 'sort' }} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-content').getAttribute('placeholder')).toContain(
+        '## 事件（事实）',
+      );
+    });
+    expect(screen.getByTestId('editor-content').getAttribute('placeholder')).toContain(
+      '- 我做了什么 / 说了什么 / 没做什么？',
+    );
+  });
+
+  it('uses the clarity-depth markdown guide as the empty content placeholder', async () => {
+    render(<Editor {...baseProps} seed={{ reflectionDepth: 'clarity' }} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-content').getAttribute('placeholder')).toContain(
+        '## 关键片段',
+      );
+    });
+    expect(screen.getByTestId('editor-content').getAttribute('placeholder')).toContain(
+      '- 哪一刻之后，我的反应开始变化？',
+    );
+    expect(screen.getByTestId('editor-content').getAttribute('placeholder')).toContain(
+      '## 补充',
+    );
+  });
+
+  it('shows the record guide when the language guide button is clicked', async () => {
+    render(<Editor {...baseProps} seed={{ reflectionDepth: 'sort' }} />);
+    await waitFor(() => {
+      expect(screen.getByText('让语言抵达它该去的地方')).toBeDefined();
+    });
+    fireEvent.click(screen.getByText('让语言抵达它该去的地方'));
+    expect(screen.getByText('## 事件（事实）')).toBeDefined();
+    expect(screen.getByText('什么时候、在哪里、涉及谁？')).toBeDefined();
+    expect(screen.getByText('## 我的行动')).toBeDefined();
+    expect(screen.getByText('## 结果')).toBeDefined();
+  });
+
+  it('shows the clarity record guide when the language guide button is clicked', async () => {
+    render(<Editor {...baseProps} seed={{ reflectionDepth: 'clarity' }} />);
+    await waitFor(() => {
+      expect(screen.getByText('让语言抵达它该去的地方')).toBeDefined();
+    });
+    fireEvent.click(screen.getByText('让语言抵达它该去的地方'));
+    expect(screen.getByText('## 关键片段')).toBeDefined();
+    expect(screen.getByText('当时有哪些具体的话、动作或画面？')).toBeDefined();
+    expect(screen.getByText('## 相似经历')).toBeDefined();
+    expect(screen.getByText('## 补充')).toBeDefined();
   });
 });

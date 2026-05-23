@@ -1,11 +1,8 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Maximize, Minimize, Settings, Archive, Plus } from 'lucide-react';
-import { GeometricBoat } from './GeometricBoat';
+import { Maximize, Minimize, Archive } from 'lucide-react';
 import { Language, Theme } from '../types';
 import { CyberButton } from './CyberButton';
 import { TRANSLATIONS } from '../constants';
-import { useTimeoutManager } from '../hooks/useTimeoutManager';
 
 type SyncStatus = 'synced' | 'local-only' | 'error' | 'merging' | 'mirror-skipped';
 
@@ -15,14 +12,7 @@ interface DashboardHeaderProps {
   dynamicVersion: string;
   isFullscreen: boolean;
   onOpenArchive: () => void;
-  onNewEntry: () => void;
   toggleFullScreen: () => void;
-  setShowSettings: (show: boolean) => void;
-  showConfirmHome: boolean;
-  setShowConfirmHome: (show: boolean) => void;
-  lastClickTime: number;
-  setLastClickTime: (time: number) => void;
-  onReplayIntro: () => void;
   syncStatus?: SyncStatus;
 }
 
@@ -69,18 +59,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   dynamicVersion,
   isFullscreen,
   onOpenArchive,
-  onNewEntry,
   toggleFullScreen,
-  setShowSettings,
-  showConfirmHome,
-  setShowConfirmHome,
-  lastClickTime,
-  setLastClickTime,
-  onReplayIntro,
   syncStatus,
 }) => {
   const t = TRANSLATIONS[language];
-  const { scheduleTimeout } = useTimeoutManager();
 
   return (
     <header
@@ -139,56 +121,12 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </div>
       </div>
       <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
-        <div className="flex items-center gap-3">
-          <AnimatePresence>
-            {showConfirmHome && (
-              <motion.span
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className="text-[10px] font-mono text-vector-magenta font-bold uppercase tracking-widest neon-glow-alert"
-              >
-                {t.confirmAction || 'Confirm?'}
-              </motion.span>
-            )}
-          </AnimatePresence>
-          <button
-            onClick={() => {
-              const now = Date.now();
-              if (showConfirmHome) {
-                if (now - lastClickTime > 500) {
-                  onReplayIntro();
-                }
-              } else {
-                setShowConfirmHome(true);
-                setLastClickTime(now);
-                scheduleTimeout(() => setShowConfirmHome(false), 3000);
-              }
-            }}
-            className={`p-2 border transition-all rounded-sm group relative w-12 h-12 flex items-center justify-center ${showConfirmHome ? 'border-vector-magenta text-vector-magenta bg-vector-magenta/5 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-vector-magenta)_10%,_transparent)]' : theme === 'light' ? 'border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-400 bg-white' : 'border-white/10 text-slate-500 hover:text-white hover:border-white/20 hover:bg-white/5'}`}
-            title={t.backToHome || 'Back to Home'}
-          >
-            <GeometricBoat className="w-7 h-7" theme={theme} />
-          </button>
-        </div>
-
         <button
           onClick={toggleFullScreen}
           className={`p-2 border transition-all rounded-sm group relative w-12 h-12 flex items-center justify-center ${theme === 'light' ? 'border-slate-200 text-slate-400 hover:text-slate-900 bg-white' : 'border-white/10 text-slate-500 hover:text-white hover:border-white/20 hover:bg-white/5'}`}
           title={t.toggleFullscreen}
         >
           {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-        </button>
-
-        <button
-          onClick={() => setShowSettings(true)}
-          className={`p-2 border transition-all rounded-sm group relative w-12 h-12 flex items-center justify-center ${theme === 'light' ? 'border-slate-200 text-slate-400 hover:text-slate-900 bg-white' : 'border-white/10 text-slate-500 hover:text-white hover:border-white/20 hover:bg-white/5'}`}
-          title={t.settingsTitle}
-        >
-          <Settings className="w-5 h-5 group-hover:rotate-180 transition-transform duration-1000" />
-          <div
-            className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${theme === 'light' ? 'bg-emerald-500' : 'bg-cyan-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-cyan-500)_80%,_transparent)]'}`}
-          ></div>
         </button>
 
         <CyberButton
@@ -199,14 +137,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           theme={theme}
         >
           <Archive className="w-4 h-4 mr-2" /> {t.archive}
-        </CyberButton>
-        <CyberButton
-          data-testid="dashboard-new-entry"
-          onClick={onNewEntry}
-          theme={theme}
-          className="h-12 px-8 uppercase font-black tracking-widest text-base shadow-[0_8px_32px_color-mix(in_srgb,_var(--color-vector-cyan-neon)_15%,_transparent)]"
-        >
-          <Plus className="w-5 h-5 mr-1" /> {t.newEntry}
         </CyberButton>
       </div>
     </header>

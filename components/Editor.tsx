@@ -17,7 +17,6 @@ import {
   Target,
   Anchor,
   Edit2,
-  Clock,
 } from 'lucide-react';
 import { DiaryEntry, Language, Theme } from '../types';
 import { CyberButton } from './CyberButton';
@@ -46,6 +45,7 @@ interface EditorProps {
     title?: string;
     content?: string;
     tags?: string;
+    reflectionDepth?: 'release' | 'sort' | 'clarity';
   } | null;
 }
 
@@ -81,11 +81,214 @@ export const Editor: React.FC<EditorProps> = ({
   const [isEditingAnchor, setIsEditingAnchor] = useState(false);
   const [anchorInput, setAnchorInput] = useState(t.customAnchor);
   const anchorInputRef = useRef<HTMLInputElement>(null);
-
-  // Time Lock state
-  const [unlockAt, setUnlockAt] = useState<number>(Date.now());
-  const [customUnlockDate, setCustomUnlockDate] = useState<string>('');
-  const [showTimeOptions, setShowTimeOptions] = useState(false);
+  const releaseDepthPlaceholder =
+    language === 'zh'
+      ? [
+          '## 发生了什么',
+          '- 现在我想记录的是哪件事？',
+          '- 我记得比较清楚的片段是什么？',
+          '',
+          '## 当下状态',
+          '- 这件事之后，我现在的状态是：',
+          '- 身体或精力上有什么变化？（平静 / 兴奋 / 紧绷 / 疲惫 / 轻松 / 分散 / 专注）',
+          '',
+          '## 留下的内容',
+          '- 这件事里，我印象最深的是：',
+          '- 还有什么想一起记下来的？',
+        ].join('\n')
+      : t.contentPlaceholder;
+  const sortDepthPlaceholder =
+    language === 'zh'
+      ? [
+          '## 事件（事实）',
+          '- 什么时候、在哪里、涉及谁？',
+          '- 具体发生了什么？（只写看到、听到、发生的事）',
+          '',
+          '## 我的行动',
+          '- 我做了什么 / 说了什么 / 没做什么？',
+          '- 我当时为什么这样做？',
+          '',
+          '## 我的想法',
+          '- 当时我心里是怎么理解这件事的？',
+          '- 我当时比较明确的判断是：',
+          '',
+          '## 结果',
+          '- 事情最后变成了什么样？',
+          '- 这个结果和我原本期待的一样吗？',
+        ].join('\n')
+      : t.contentPlaceholder;
+  const clarityDepthPlaceholder =
+    language === 'zh'
+      ? [
+          '## 关键片段',
+          '- 这件事里，我印象最深的是：',
+          '- 当时有哪些具体的话、动作或画面？',
+          '',
+          '## 我的回应',
+          '- 我当时做了什么 / 说了什么 / 没做什么？',
+          '- 哪一刻之后，我的反应开始变化？',
+          '',
+          '## 当时的想法',
+          '- 当时我脑子里最先冒出来的想法是：',
+          '- 我当时是怎么判断这件事的？',
+          '',
+          '## 后来的变化',
+          '- 这件事之后，我的想法、状态或行动有什么变化？',
+          '- 它对后面的人、事或关系有什么影响？',
+          '',
+          '## 相似经历',
+          '- 以前有没有类似情况？有的话，简单写一次。',
+          '- 这次和以前相比，有什么相同或不同？',
+          '',
+          '## 补充',
+          '- 还有哪些背景、细节或没说完的话，可能和这件事有关？',
+        ].join('\n')
+      : t.contentPlaceholder;
+  const releaseGuideSections =
+    language === 'zh'
+      ? [
+          {
+            title: '发生了什么',
+            prompts: ['现在我想记录的是哪件事？', '我记得比较清楚的片段是什么？'],
+          },
+          {
+            title: '当下状态',
+            prompts: [
+              '这件事之后，我现在的状态是：',
+              '身体或精力上有什么变化？（平静 / 兴奋 / 紧绷 / 疲惫 / 轻松 / 分散 / 专注）',
+            ],
+          },
+          {
+            title: '留下的内容',
+            prompts: ['这件事里，我印象最深的是：', '还有什么想一起记下来的？'],
+          },
+        ]
+      : [
+          {
+            title: 'What happened',
+            prompts: ['What do I want to record right now?', 'Which fragments do I remember clearly?'],
+          },
+          {
+            title: 'Current state',
+            prompts: ['After this, my current state is:', 'What changed in my body or energy?'],
+          },
+          {
+            title: 'What remains',
+            prompts: ['The strongest impression from this was:', 'What else do I want to keep with it?'],
+          },
+        ];
+  const sortGuideSections =
+    language === 'zh'
+      ? [
+          {
+            title: '事件（事实）',
+            prompts: [
+              '什么时候、在哪里、涉及谁？',
+              '具体发生了什么？（只写看到、听到、发生的事）',
+            ],
+          },
+          {
+            title: '我的行动',
+            prompts: ['我做了什么 / 说了什么 / 没做什么？', '我当时为什么这样做？'],
+          },
+          {
+            title: '我的想法',
+            prompts: ['当时我心里是怎么理解这件事的？', '我当时比较明确的判断是：'],
+          },
+          {
+            title: '结果',
+            prompts: ['事情最后变成了什么样？', '这个结果和我原本期待的一样吗？'],
+          },
+        ]
+      : [
+          {
+            title: 'What happened',
+            prompts: ['When, where, and who was involved?', 'What specifically happened?'],
+          },
+          {
+            title: 'My actions',
+            prompts: ['What did I do, say, or not do?', 'Why did I do that at the time?'],
+          },
+          {
+            title: 'My thoughts',
+            prompts: ['How did I understand this at the time?', 'My clearest judgment then was:'],
+          },
+          {
+            title: 'Result',
+            prompts: ['How did things end up?', 'Did this match what I originally expected?'],
+          },
+        ];
+  const clarityGuideSections =
+    language === 'zh'
+      ? [
+          {
+            title: '关键片段',
+            prompts: ['这件事里，我印象最深的是：', '当时有哪些具体的话、动作或画面？'],
+          },
+          {
+            title: '我的回应',
+            prompts: ['我当时做了什么 / 说了什么 / 没做什么？', '哪一刻之后，我的反应开始变化？'],
+          },
+          {
+            title: '当时的想法',
+            prompts: ['当时我脑子里最先冒出来的想法是：', '我当时是怎么判断这件事的？'],
+          },
+          {
+            title: '后来的变化',
+            prompts: [
+              '这件事之后，我的想法、状态或行动有什么变化？',
+              '它对后面的人、事或关系有什么影响？',
+            ],
+          },
+          {
+            title: '相似经历',
+            prompts: ['以前有没有类似情况？有的话，简单写一次。', '这次和以前相比，有什么相同或不同？'],
+          },
+          {
+            title: '补充',
+            prompts: ['还有哪些背景、细节或没说完的话，可能和这件事有关？'],
+          },
+        ]
+      : [
+          {
+            title: 'Key fragment',
+            prompts: ['What left the strongest impression?', 'Which words, actions, or images stand out?'],
+          },
+          {
+            title: 'My response',
+            prompts: ['What did I do, say, or not do?', 'After which moment did my response begin to change?'],
+          },
+          {
+            title: 'Thoughts then',
+            prompts: ['The first thought that came up was:', 'How did I judge this at the time?'],
+          },
+          {
+            title: 'Later changes',
+            prompts: ['What changed afterward?', 'What impact did it have on later people, events, or relationships?'],
+          },
+          {
+            title: 'Similar experiences',
+            prompts: ['Has something similar happened before?', 'What is the same or different this time?'],
+          },
+          {
+            title: 'Notes',
+            prompts: ['What background, details, or unfinished words may matter here?'],
+          },
+        ];
+  const recordGuideSections =
+    seed?.reflectionDepth === 'clarity'
+      ? clarityGuideSections
+      : seed?.reflectionDepth === 'sort'
+        ? sortGuideSections
+        : releaseGuideSections;
+  const contentPlaceholder =
+    seed?.reflectionDepth === 'release'
+      ? releaseDepthPlaceholder
+      : seed?.reflectionDepth === 'sort'
+        ? sortDepthPlaceholder
+        : seed?.reflectionDepth === 'clarity'
+          ? clarityDepthPlaceholder
+          : t.contentPlaceholder;
 
   // System Presets - Updated categories with descriptions
   const SYSTEM_TAGS = [
@@ -218,7 +421,7 @@ export const Editor: React.FC<EditorProps> = ({
             .split(/[,，]/)
             .map((t) => t.trim())
             .filter(Boolean),
-          unlockAt: unlockAt > Date.now() + 1000 ? unlockAt : undefined,
+          unlockAt: undefined,
         });
 
         // Clear draft
@@ -341,40 +544,27 @@ export const Editor: React.FC<EditorProps> = ({
                 className="overflow-hidden"
               >
                 <div
-                  className={`p-4 mb-2 text-sm font-mono flex flex-col gap-2 border ${theme === 'light' ? 'bg-vector-cyan-brand/5 border-vector-cyan-brand/10 text-slate-600' : 'bg-cyan-950/20 border-cyan-900/30 text-cyan-500/80'}`}
+                  className={`p-4 mb-2 text-sm font-mono flex flex-col gap-4 border ${theme === 'light' ? 'bg-vector-cyan-brand/5 border-vector-cyan-brand/10 text-slate-600' : 'bg-cyan-950/20 border-cyan-900/30 text-cyan-500/80'}`}
                 >
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
-                    >
-                      01
-                    </span>{' '}
-                    <span>{t.guideEvent}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
-                    >
-                      02
-                    </span>{' '}
-                    <span>{t.guideEmotion}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
-                    >
-                      03
-                    </span>{' '}
-                    <span>{t.guideJudgment}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
-                    >
-                      04
-                    </span>{' '}
-                    <span>{t.guideDecision}</span>
-                  </div>
+                  {recordGuideSections.map((section) => (
+                    <section key={section.title} className="space-y-2">
+                      <h3
+                        className={`text-sm font-bold tracking-widest ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-300'}`}
+                      >
+                        ## {section.title}
+                      </h3>
+                      <ul className="space-y-1">
+                        {section.prompts.map((prompt) => (
+                          <li key={prompt} className="flex items-start gap-2">
+                            <span className={theme === 'light' ? 'text-cyan-600' : 'text-cyan-400'}>
+                              -
+                            </span>
+                            <span>{prompt}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -385,7 +575,7 @@ export const Editor: React.FC<EditorProps> = ({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className={`flex-1 bg-transparent border p-4 font-mono text-lg focus:outline-none resize-none min-h-[200px] transition-all ${theme === 'light' ? 'border-slate-100 text-vector-slate-mid focus:border-cyan-200 focus:bg-white/50' : 'border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 focus:shadow-inset-glow-cyan-mid'}`}
-            placeholder={t.contentPlaceholder}
+            placeholder={contentPlaceholder}
             disabled={isSaving}
           />
         </div>
@@ -471,132 +661,6 @@ export const Editor: React.FC<EditorProps> = ({
             </div>
           </div>
 
-          {/* 2. Time Lock Selection */}
-          <div className="flex flex-col gap-4">
-            <label
-              className={`text-xs font-mono uppercase flex items-center gap-2 ${theme === 'light' ? 'text-slate-400' : 'text-cyan-700'}`}
-            >
-              <Clock className="w-3 h-3" /> {t.setTimeLock}
-            </label>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setUnlockAt(Date.now());
-                  setShowTimeOptions(false);
-                }}
-                className={`px-3 py-2 border text-[10px] font-mono uppercase tracking-widest transition-all
-                      ${
-                        unlockAt <= Date.now() + 1000
-                          ? theme === 'light'
-                            ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                            : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
-                          : theme === 'light'
-                            ? 'bg-white/40 border-slate-200 text-slate-400'
-                            : 'bg-transparent border-cyan-900/50 text-cyan-700'
-                      }
-                    `}
-              >
-                {t.immediate}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUnlockAt(Date.now() + 60 * 1000);
-                  setShowTimeOptions(false);
-                }}
-                className={`px-3 py-2 border text-[10px] font-mono uppercase tracking-widest transition-all
-                      ${
-                        Math.abs(unlockAt - (Date.now() + 60 * 1000)) < 10000
-                          ? theme === 'light'
-                            ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                            : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
-                          : theme === 'light'
-                            ? 'bg-white/40 border-slate-200 text-slate-400'
-                            : 'bg-transparent border-cyan-900/50 text-cyan-700'
-                      }
-                    `}
-              >
-                {t.oneMin}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUnlockAt(Date.now() + 24 * 60 * 60 * 1000);
-                  setShowTimeOptions(false);
-                }}
-                className={`px-3 py-2 border text-[10px] font-mono uppercase tracking-widest transition-all
-                      ${
-                        Math.abs(unlockAt - (Date.now() + 24 * 60 * 60 * 1000)) < 10000
-                          ? theme === 'light'
-                            ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                            : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
-                          : theme === 'light'
-                            ? 'bg-white/40 border-slate-200 text-slate-400'
-                            : 'bg-transparent border-cyan-900/50 text-cyan-700'
-                      }
-                    `}
-              >
-                {t.oneDay}
-              </button>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowTimeOptions(!showTimeOptions)}
-                  className={`px-3 py-2 border text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2
-                        ${
-                          unlockAt > Date.now() + 25 * 60 * 60 * 1000 ||
-                          (unlockAt > Date.now() + 65 * 1000 &&
-                            unlockAt < Date.now() + 23 * 60 * 60 * 1000)
-                            ? theme === 'light'
-                              ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                              : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
-                            : theme === 'light'
-                              ? 'bg-white/40 border-slate-200 text-slate-400'
-                              : 'bg-transparent border-cyan-900/50 text-cyan-700'
-                        }
-                        `}
-                >
-                  {t.customDate}{' '}
-                  {unlockAt > Date.now() + 25 * 60 * 60 * 1000 &&
-                    `[${new Date(unlockAt).toLocaleDateString()}]`}
-                </button>
-
-                <AnimatePresence>
-                  {showTimeOptions && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className={`absolute bottom-full mb-2 left-0 z-50 p-4 border rounded-lg shadow-2xl backdrop-blur-xl ${theme === 'light' ? 'bg-white/90 border-slate-200 shadow-elevation-modal-light' : 'bg-black/90 border-cyan-500/30 shadow-elevation-modal-cyan'}`}
-                    >
-                      <input
-                        type="datetime-local"
-                        value={customUnlockDate}
-                        onChange={(e) => {
-                          setCustomUnlockDate(e.target.value);
-                          if (e.target.value) {
-                            setUnlockAt(new Date(e.target.value).getTime());
-                          }
-                        }}
-                        className={`bg-transparent border p-2 text-xs font-mono outline-none ${theme === 'light' ? 'text-slate-900 border-slate-200' : 'text-cyan-100 border-cyan-900'}`}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {unlockAt > Date.now() && (
-              <p
-                className={`text-[10px] font-mono italic ${theme === 'light' ? 'text-cyan-600' : 'text-cyan-500'}`}
-              >
-                锁定至: {new Date(unlockAt).toLocaleString()}
-              </p>
-            )}
-          </div>
         </div>
 
         <div className="flex justify-end pt-4">

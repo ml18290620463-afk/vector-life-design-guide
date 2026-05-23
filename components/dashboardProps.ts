@@ -117,7 +117,12 @@ export interface DashboardProps {
    * suggestion). When omitted, ProactiveRecallCard.onOpen falls
    * back to the legacy "just dismiss the card" behaviour.
    */
-  onOpenComposerWithSeed?: (seed: { title?: string; content?: string; tags?: string }) => void;
+  onOpenComposerWithSeed?: (seed: {
+    title?: string;
+    content?: string;
+    tags?: string;
+    reflectionDepth?: 'release' | 'sort' | 'clarity';
+  }) => void;
   /**
    * Phase 4.5 §A (Letter Mode) — direct entry-mint callback used
    * by the letter delivery sweep to persist a Memoir reply as a

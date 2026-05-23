@@ -133,6 +133,31 @@ export const useViewerAccess = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.isEncrypted, entry.content, entry.unlockAt, masterPassword]);
 
+  useEffect(() => {
+    if (isTimeLocked || !masterPassword || viewState === 'reading') return;
+    let cancelled = false;
+    const openWithVaultPassword = async () => {
+      try {
+        const content = entry.isEncrypted
+          ? await SecurityService.decrypt(entry.content, masterPassword)
+          : entry.content;
+        if (cancelled) return;
+        setDecryptedContent(content);
+        setViewState('reading');
+        setDecrypted(true);
+      } catch (err) {
+        console.error('Auto-open entry failed', err);
+        if (cancelled) return;
+        setDecryptedContent('');
+        setDecrypted(false);
+      }
+    };
+    void openWithVaultPassword();
+    return () => {
+      cancelled = true;
+    };
+  }, [entry.content, entry.isEncrypted, isTimeLocked, masterPassword, viewState]);
+
   // Clear the decryption error only when the user actually *changes* the
   // password (typing into the field after a failure). We track the
   // previous value via a ref so the effect doesn't fire when our own

@@ -360,6 +360,7 @@ const App: React.FC = () => {
     title?: string;
     content?: string;
     tags?: string;
+    reflectionDepth?: 'release' | 'sort' | 'clarity';
   } | null>(null);
 
   const handleMigrationApplyCredentialSnapshot = useCallback(
@@ -417,7 +418,12 @@ const App: React.FC = () => {
   // and `handleBackToDashboard` clear it so it doesn't leak into a
   // future "+ New entry" flow.
   const handleOpenComposerWithSeed = useCallback(
-    (seed: { title?: string; content?: string; tags?: string }) => {
+    (seed: {
+      title?: string;
+      content?: string;
+      tags?: string;
+      reflectionDepth?: 'release' | 'sort' | 'clarity';
+    }) => {
       setEditorSeed(seed);
       setAppState(AppState.EDITOR);
     },

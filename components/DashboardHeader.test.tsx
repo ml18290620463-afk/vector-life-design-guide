@@ -8,15 +8,8 @@ const mockProps = {
   theme: 'dark' as const,
   dynamicVersion: 'v1.0.0',
   isFullscreen: false,
-  onNewEntry: vi.fn(),
   onOpenArchive: vi.fn(),
   toggleFullScreen: vi.fn(),
-  setShowSettings: vi.fn(),
-  showConfirmHome: false,
-  setShowConfirmHome: vi.fn(),
-  lastClickTime: Date.now(),
-  setLastClickTime: vi.fn(),
-  onReplayIntro: vi.fn(),
 };
 
 const t = TRANSLATIONS['zh'];
@@ -29,11 +22,9 @@ describe('DashboardHeader', () => {
     expect(screen.getByText(t.appTitle)).toBeDefined();
   });
 
-  it('triggers onNewEntry when "New" button clicked', () => {
+  it('does not render the header new entry button', () => {
     render(<DashboardHeader {...mockProps} />);
-    const btn = screen.getByText(t.newEntry);
-    fireEvent.click(btn);
-    expect(mockProps.onNewEntry).toHaveBeenCalled();
+    expect(screen.queryByTestId('dashboard-new-entry')).toBeNull();
   });
 
   it('triggers onOpenArchive when archive button clicked', () => {
@@ -43,10 +34,8 @@ describe('DashboardHeader', () => {
     expect(mockProps.onOpenArchive).toHaveBeenCalled();
   });
 
-  it('triggers setShowSettings when settings button clicked', () => {
+  it('does not render the settings boat in the header', () => {
     render(<DashboardHeader {...mockProps} />);
-    const btn = screen.getByTitle(t.settingsTitle);
-    fireEvent.click(btn);
-    expect(mockProps.setShowSettings).toHaveBeenCalledWith(true);
+    expect(screen.queryByTestId('dashboard-settings-boat')).toBeNull();
   });
 });

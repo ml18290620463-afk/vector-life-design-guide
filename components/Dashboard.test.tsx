@@ -72,6 +72,7 @@ const defaultProps = {
   onDeleteContainer: vi.fn(),
   theme: 'dark' as const,
   onSetTheme: vi.fn(),
+  onOpenComposerWithSeed: vi.fn(),
   toggleFullScreen: vi.fn(),
   loading: false,
 };
@@ -93,15 +94,41 @@ describe('Dashboard', () => {
     expect(screen.getByText('Test Entry 12')).toBeDefined();
   });
 
-  it('triggers onNewEntry when "New" button clicked', () => {
+  it('does not render the removed header new entry button', () => {
     render(<Dashboard {...defaultProps} />);
-    // Use getByRole to target the button specifically
-    const newButton = screen
-      .getAllByRole('button')
-      .find((b) => b.textContent?.includes(t.newEntry));
-    if (!newButton) throw new Error('New button not found');
-    fireEvent.click(newButton);
-    expect(defaultProps.onNewEntry).toHaveBeenCalled();
+    expect(screen.queryByTestId('dashboard-new-entry')).toBeNull();
+  });
+
+  it('shows quick capture by default before opening the vault', () => {
+    render(<Dashboard {...defaultProps} />);
+    expect(screen.getByTestId('quick-capture-bar')).toBeDefined();
+    expect(screen.getByPlaceholderText('快速记录一句此刻想法，然后进入完整编辑...')).toBeDefined();
+  });
+
+  it('opens depth selection before entering the editor from quick capture', () => {
+    render(<Dashboard {...defaultProps} />);
+    fireEvent.change(screen.getByPlaceholderText('快速记录一句此刻想法，然后进入完整编辑...'), {
+      target: { value: '今天有点乱' },
+    });
+    fireEvent.click(screen.getByText('刻录此刻'));
+
+    expect(screen.getByTestId('reflection-depth-modal')).toBeDefined();
+    expect(screen.getByText('第二步')).toBeDefined();
+    expect(screen.getByText('只是放下')).toBeDefined();
+    expect(screen.getByText('陪我理一理')).toBeDefined();
+    expect(screen.getByText('帮我看清')).toBeDefined();
+  });
+
+  it('continues with the release depth when "只是放下" is selected', () => {
+    render(<Dashboard {...defaultProps} />);
+    fireEvent.click(screen.getByText('刻录此刻'));
+    fireEvent.click(screen.getByText('只是放下'));
+    fireEvent.click(screen.getByText('继续刻录'));
+
+    expect(defaultProps.onOpenComposerWithSeed).toHaveBeenCalledWith({
+      content: '',
+      reflectionDepth: 'release',
+    });
   });
 
   it('triggers onSelectEntry when an entry is clicked', async () => {

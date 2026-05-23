@@ -1,4 +1,5 @@
 import React from 'react';
+import { Settings } from 'lucide-react';
 import type { Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { GeometricBoat } from './GeometricBoat';
@@ -6,11 +7,8 @@ import { GeometricBoat } from './GeometricBoat';
 interface DashboardFooterProps {
   theme: Theme;
   t: TranslationDictionary;
-  /** True while the boat is animating away after the user clicks it. */
-  isSailingHome: boolean;
-  /** Trigger the "sail home" animation; the parent decides what happens
-   *  next (replay intro / navigate). */
-  onGoHome: () => void;
+  /** Open the centralized settings surface. */
+  onOpenSettings: () => void;
 }
 
 /**
@@ -22,8 +20,7 @@ interface DashboardFooterProps {
 export const DashboardFooter: React.FC<DashboardFooterProps> = ({
   theme,
   t,
-  isSailingHome,
-  onGoHome,
+  onOpenSettings,
 }) => (
   <div
     className={`relative z-10 rounded-xl overflow-hidden min-h-[300px] flex items-center justify-center group border mt-auto backdrop-blur-md transition-all duration-1000 ${theme === 'light' ? 'border-slate-200/40 bg-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.03)]' : 'border-cyan-900/20 bg-black/40'}`}
@@ -38,17 +35,24 @@ export const DashboardFooter: React.FC<DashboardFooterProps> = ({
     <div className="relative z-10 max-w-3xl px-8 text-center flex flex-col items-center">
       <button
         type="button"
-        onClick={onGoHome}
-        aria-label={t.replayIntro ?? 'Replay intro'}
-        className={`mb-6 p-4 rounded-full border transition-all cursor-pointer bg-transparent ${
-          isSailingHome
-            ? 'duration-1000 translate-x-[200px] opacity-0 blur-md scale-75'
-            : 'duration-700 hover:scale-110 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)]'
-        } ${theme === 'light' ? 'bg-white border-slate-100 shadow-sm' : 'bg-black/50 border-cyan-900/30'}`}
+        onClick={onOpenSettings}
+        aria-label={t.settingsTitle}
+        title={t.settingsTitle}
+        data-testid="dashboard-footer-settings"
+        className={`mb-6 p-4 rounded-full border transition-all cursor-pointer relative overflow-hidden group/boat ${
+          theme === 'light'
+            ? 'bg-white border-slate-100 shadow-sm hover:border-cyan-300 hover:shadow-[0_0_30px_rgba(6,182,212,0.18)]'
+            : 'bg-black/50 border-cyan-900/30 hover:border-cyan-400/50 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)]'
+        } hover:scale-110 duration-700`}
       >
-        <div className="relative">
+        <div className="relative flex h-16 w-16 items-center justify-center">
+          <Settings
+            className={`absolute h-16 w-16 opacity-60 transition-transform duration-700 group-hover/boat:rotate-90 ${
+              theme === 'light' ? 'text-cyan-600' : 'text-cyan-200'
+            }`}
+          />
           <GeometricBoat
-            className={`w-10 h-10 ${theme === 'light' ? 'text-slate-700' : 'text-slate-100'} relative z-10 transition-colors duration-500`}
+            className={`w-8 h-8 ${theme === 'light' ? 'text-slate-700' : 'text-slate-100'} relative z-10 transition-colors duration-500`}
             theme={theme}
           />
           <div

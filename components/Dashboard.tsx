@@ -15,6 +15,7 @@ import { FilterBar } from './FilterBar';
 import { DashboardSettingsModal } from './DashboardSettingsModal';
 import { DashboardFooter } from './DashboardFooter';
 import { VaultContent } from './VaultContent';
+import { ReflectionDepthModal } from './ReflectionDepthModal';
 import { ProactiveRecallCard } from './ProactiveRecallCard';
 import { useProactiveRecall } from '../hooks/useProactiveRecall';
 import { LetterArrivedCard } from './LetterArrivedCard';
@@ -34,12 +35,13 @@ import { useDashboardFullscreen } from '../hooks/useDashboardFullscreen';
 import { useDashboardGroupedEntries } from '../hooks/useDashboardGroupedEntries';
 import { useDashboardFilters } from '../hooks/useDashboardFilters';
 import type { DashboardProps } from './dashboardProps';
-import { GrowthPulseCard } from './GrowthPulseCard';
+
+const reflectionDepthValues = ['release', 'sort', 'clarity'] as const;
 
 // prettier-ignore
 export const Dashboard: React.FC<DashboardProps> = ({
   entries, currentUser, isGuest, language, onSetLanguage, theme, onSetTheme,
-  onSelectEntry, onUpdateEntry, onBulkUpdateEntries, onNewEntry, onOpenArchive,
+  onSelectEntry, onUpdateEntry, onBulkUpdateEntries, onOpenArchive,
   onReplayIntro, onWipeData, onCreateMaterialEntry, isUnlocked, passwordHash,
   passwordSalt, onSetPassword, onClearPassword, onImportBackup, guidingStars,
   onSaveGuidingStars, selectedStars, onSaveSelectedStars, customPersonas,
@@ -140,9 +142,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     selectedTag,
     selectedCategory,
   });
-
-  const [showConfirmHome, setShowConfirmHome] = useState(false);
-  const [lastClickTime, setLastClickTime] = useState(0);
 
   const {
     dynamicVersion,
@@ -376,6 +375,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
     [onMintEntry, t.echoChamberEntryTitlePrefix],
   );
   const [quickCapture, setQuickCapture] = useState('');
+  const [showDepthOptions, setShowDepthOptions] = useState(false);
+  const [pendingQuickCapture, setPendingQuickCapture] = useState('');
+  const [reflectionDepth, setReflectionDepth] = useState(1);
+
+  const openDepthOptions = () => {
+    setPendingQuickCapture(quickCapture.trim());
+    setShowDepthOptions(true);
+  };
+
+  const continueFromDepthOptions = () => {
+    const depth = reflectionDepthValues[reflectionDepth] ?? 'sort';
+    onOpenComposerWithSeed?.({ content: pendingQuickCapture, reflectionDepth: depth });
+    setQuickCapture('');
+    setPendingQuickCapture('');
+    setShowDepthOptions(false);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen flex flex-col relative z-10">
@@ -385,14 +400,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         dynamicVersion={dynamicVersion}
         isFullscreen={isFullscreen}
         onOpenArchive={onOpenArchive}
-        onNewEntry={onNewEntry}
         toggleFullScreen={toggleFullScreen}
-        setShowSettings={setShowSettings}
-        showConfirmHome={showConfirmHome}
-        setShowConfirmHome={setShowConfirmHome}
-        lastClickTime={lastClickTime}
-        setLastClickTime={setLastClickTime}
-        onReplayIntro={onReplayIntro}
         syncStatus={syncStatus}
       />
 
@@ -400,7 +408,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         theme={theme}
         language={language}
         t={t}
-        backupReminderActive={backupReminderActive}
+        backupReminderActive={false}
         daysSinceBackup={daysSinceBackup}
         onOpenSettings={() => setShowSettings(true)}
         pwaInstallAvailable={pwaInstall.isAvailable}
@@ -472,6 +480,41 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {...licenseProps}
       />
 
+      <section
+        className={`mb-5 border rounded-xl p-3 ${theme === 'light' ? 'bg-white/80 border-slate-200' : 'bg-black/30 border-cyan-900/40'}`}
+        data-testid="quick-capture-bar"
+      >
+        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+          <input
+            value={quickCapture}
+            onChange={(e) => setQuickCapture(e.target.value)}
+            placeholder={
+              language === 'zh'
+                ? '快速记录一句此刻想法，然后进入完整编辑...'
+                : 'Quick capture one thought, then continue in editor...'
+            }
+            className={`flex-1 px-3 py-2 text-sm rounded-md border ${theme === 'light' ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/50 border-cyan-900/60 text-cyan-100'}`}
+          />
+          <button
+            type="button"
+            className={`px-3 py-2 text-xs uppercase tracking-widest rounded-md border ${theme === 'light' ? 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' : 'border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/10'}`}
+            onClick={openDepthOptions}
+          >
+            {language === 'zh' ? '刻录此刻' : 'Open writer'}
+          </button>
+        </div>
+      </section>
+
+      <ReflectionDepthModal
+        open={showDepthOptions}
+        theme={theme}
+        language={language}
+        depth={reflectionDepth}
+        onDepthChange={setReflectionDepth}
+        onCancel={() => setShowDepthOptions(false)}
+        onContinue={continueFromDepthOptions}
+      />
+
       <FilterBar
         theme={theme}
         language={language}
@@ -489,38 +532,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         isEditingStars={isEditingStars}
         entriesCount={baseFilteredEntries.length}
       />
-
-      {isVaultOpen && (
-        <section
-          className={`mb-5 border rounded-xl p-3 ${theme === 'light' ? 'bg-white/80 border-slate-200' : 'bg-black/30 border-cyan-900/40'}`}
-          data-testid="quick-capture-bar"
-        >
-          <div className="flex flex-col md:flex-row gap-2 md:items-center">
-            <input
-              value={quickCapture}
-              onChange={(e) => setQuickCapture(e.target.value)}
-              placeholder={
-                language === 'zh'
-                  ? '快速记录一句此刻想法，然后进入完整编辑...'
-                  : 'Quick capture one thought, then continue in editor...'
-              }
-              className={`flex-1 px-3 py-2 text-sm rounded-md border ${theme === 'light' ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/50 border-cyan-900/60 text-cyan-100'}`}
-            />
-            <button
-              type="button"
-              className={`px-3 py-2 text-xs uppercase tracking-widest rounded-md border ${theme === 'light' ? 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' : 'border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/10'}`}
-              onClick={() => {
-                const trimmed = quickCapture.trim();
-                if (!trimmed) return onNewEntry();
-                onOpenComposerWithSeed?.({ content: trimmed });
-                setQuickCapture('');
-              }}
-            >
-              {language === 'zh' ? '快速进入写作' : 'Open writer'}
-            </button>
-          </div>
-        </section>
-      )}
 
       <AnimatePresence>
         {showFilterHub && (
@@ -576,8 +587,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {isVaultOpen && <GrowthPulseCard entries={entries} theme={theme} language={language} />}
-
       {/* Phase 4.5 §A — Letter arrived stack. Sister to the
           proactive-recall stack, intentionally below it so a
           stale "silence" suggestion never appears above an
@@ -624,8 +633,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <DashboardFooter
         theme={theme}
         t={t}
-        isSailingHome={isSailingHome}
-        onGoHome={handleGoHomeClick}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
       {/* Phase 4.5 §A — Letter Mode entry point + compose modal.
@@ -657,29 +665,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         memoirs={memoirsOnly}
         onSendLetter={handleSendLetter}
       />
-
-      {/* Phase 4.5 §B — Echo Chamber FAB. Stacks ABOVE the Letter
-          FAB when both are visible. Always rendered when the vault
-          is unlocked; the paywall verdict gates the actual
-          functionality (Free tier sees the upgrade surface inside
-          the modal). The button shows for everyone so users can
-          discover the feature even before they upgrade. */}
-      {isVaultOpen && hasCoreHabit && (
-        <button
-          type="button"
-          onClick={() => setShowEchoChamber(true)}
-          className={`fixed ${memoirsOnly.length > 0 ? 'bottom-20' : 'bottom-6'} right-6 z-30 flex items-center gap-2 px-4 py-2 rounded-full border-2 backdrop-blur-md shadow-lg transition-colors ${theme === 'light' ? 'bg-cyan-50/90 border-cyan-200 text-cyan-700 hover:bg-cyan-50' : 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/20'}`}
-          aria-label={(t.echoChamberOpenAria as string) ?? 'Convene a multi-persona round table'}
-          data-testid="echo-chamber-fab"
-        >
-          <span className="text-sm" aria-hidden="true">
-            ⚭
-          </span>
-          <span className="text-[11px] uppercase tracking-widest">
-            {(t.echoChamberOpenLabel as string) ?? 'Round table'}
-          </span>
-        </button>
-      )}
 
       <EchoChamberModal
         open={showEchoChamber}

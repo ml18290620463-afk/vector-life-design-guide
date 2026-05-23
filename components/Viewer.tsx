@@ -6,7 +6,6 @@ import { getStoredString } from '../services/browserStorage';
 import { downloadTextFile } from '../services/fileDownload';
 import { useTimeoutManager } from '../hooks/useTimeoutManager';
 import { useViewerStars } from '../hooks/useViewerStars';
-import { ViewerSealedPanel } from './ViewerSealedPanel';
 import { ViewerReadingPanel } from './ViewerReadingPanel';
 import { useViewerAccess } from '../hooks/useViewerAccess';
 import { useMorningStarPipeline } from '../hooks/useMorningStarPipeline';
@@ -65,10 +64,9 @@ export const Viewer: React.FC<ViewerProps> = ({
     () => getStoredString(AppStorageKeys.customIdentity)?.slice(0, 15) || 'GUEST_01',
     [],
   );
-  const { fixedStars, twinklingStars, rippleStars, decodedStars } = useViewerStars(entry.id);
+  const { fixedStars, twinklingStars, decodedStars } = useViewerStars(entry.id);
 
   const [showPackingMenu, setShowPackingMenu] = useState(false);
-  const [isShaking, setIsShaking] = useState(false);
   const [showConfirmHome, setShowConfirmHome] = useState(false);
   const [lastClickTime, setLastClickTime] = useState(0);
   const [shareCardOpen, setShareCardOpen] = useState(false);
@@ -78,33 +76,13 @@ export const Viewer: React.FC<ViewerProps> = ({
     setShowPackingMenu(false);
   };
 
-  const triggerShake = useCallback(() => {
-    setIsShaking(true);
-    scheduleTimeout(() => setIsShaking(false), 500);
-  }, [scheduleTimeout]);
-
   const access = useViewerAccess({
     entry,
     masterPassword,
     isTimeLocked,
     t,
-    onShake: triggerShake,
   });
-  const {
-    viewState,
-    decrypted,
-    decryptedContent,
-    decryptionPassword,
-    setDecryptionPassword,
-    decryptionError,
-    biometricAvailable,
-    isScanning,
-    biometricError,
-    lockout,
-    handleOpenLetter,
-    handleBiometricAuth,
-  } = access;
-  const { lockoutUntil } = lockout;
+  const { viewState, decrypted, decryptedContent } = access;
 
   // Phase 4 §5.1.A — build the `name → systemPrompt` lookup table once
   // per render so it's stable across the pipeline's deps. Memoised on
@@ -240,21 +218,6 @@ export const Viewer: React.FC<ViewerProps> = ({
     return () => clearInterval(timer);
   }, [isTimeLocked]);
 
-  const getTimeLeft = () => {
-    if (!entry.unlockAt) return null;
-    const diff = entry.unlockAt - now;
-    if (diff <= 0) return null;
-
-    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const m = Math.floor((diff / (1000 * 60)) % 60);
-    const s = Math.floor((diff / 1000) % 60);
-
-    return { d, h, m, s };
-  };
-
-  const timeLeft = getTimeLeft();
-
   // Reset Viewer-local non-access state when navigating into a different
   // entry. (`useViewerAccess` and `useMorningStarPipeline` reset their own
   // slices.) `burnMode` and `archiveState` are exclusive to Viewer so we
@@ -266,8 +229,7 @@ export const Viewer: React.FC<ViewerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
 
-  // (Decryption error auto-clear, handleOpenLetter and handleBiometricAuth
-  //  live in useViewerAccess now.)
+  // (Access state lives in useViewerAccess now.)
   // (Morning Star analyze / delete live in useMorningStarPipeline.)
 
   // --- BURN LOGIC ---
@@ -340,29 +302,6 @@ export const Viewer: React.FC<ViewerProps> = ({
       className={`relative min-h-screen overflow-hidden flex flex-col items-center transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-vector-onyx'}`}
     >
       <ViewerStarfield theme={theme} fixedStars={fixedStars} twinklingStars={twinklingStars} />
-
-      <AnimatePresence>
-        {viewState !== 'reading' && (
-          <ViewerSealedPanel
-            theme={theme}
-            t={t}
-            entry={entry}
-            displayIdentity={displayIdentity}
-            viewState={viewState}
-            decryptionPassword={decryptionPassword}
-            setDecryptionPassword={setDecryptionPassword}
-            decryptionError={decryptionError}
-            biometricError={biometricError}
-            isScanning={isScanning}
-            lockoutUntil={lockoutUntil}
-            isTimeLocked={isTimeLocked}
-            timeLeft={timeLeft}
-            rippleStars={rippleStars}
-            onOpenLetter={() => void handleOpenLetter()}
-            onBack={onBack}
-          />
-        )}
-      </AnimatePresence>
 
       {/* 
          === STATE 2: READING CONTENT (The "Letter" Unfolded) === 
