@@ -20,6 +20,21 @@ describe('geminiService — buffered getMorningStarAnalysis', () => {
     ).resolves.toContain('"content":"ok"');
   });
 
+  it('builds the living reflection-letter prompt instead of multi-persona sections', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ response: '{"content":"ok","metrics":{}}' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getMorningStarAnalysis('entry', '', ['Marcus Aurelius']);
+
+    const body = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string) as { prompt: string };
+    expect(body.prompt).toContain('照见回信');
+    expect(body.prompt).toContain('不是替用户下结论');
+    expect(body.prompt).not.toContain('分别给用户写一封');
+  });
+
   it('falls back to a public message when backend fails', async () => {
     vi.stubGlobal(
       'fetch',

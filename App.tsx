@@ -26,6 +26,7 @@ import { TRANSLATIONS } from './constants';
 import { SecurityService } from './services/securityService';
 import { useAppStore } from './stores/appStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import type { PostEngraveDestination } from './components/Editor';
 
 // Phase 4.5 §D — code-split everything that is NOT visible on the
 // initial Cover screen. Lazy-loading Dashboard / Onboarding /
@@ -362,6 +363,8 @@ const App: React.FC = () => {
     tags?: string;
     reflectionDepth?: 'release' | 'sort' | 'clarity';
   } | null>(null);
+  const [postEngraveDestination, setPostEngraveDestination] =
+    useState<PostEngraveDestination | null>(null);
 
   const handleMigrationApplyCredentialSnapshot = useCallback(
     async (hash: string, salt: string) => {
@@ -457,13 +460,24 @@ const App: React.FC = () => {
 
   const handleSelectEntry = (entry: DiaryEntry) => {
     if (entry.unlockAt && entry.unlockAt > Date.now()) return;
+    setPostEngraveDestination(null);
     setSelectedEntry(entry);
     setAppState(AppState.VIEWER);
   };
 
-  const handleSaveEntry = (data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => {
-    addEntry(data);
-    setAppState(AppState.DASHBOARD);
+  const handleSaveEntry = async (
+    data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
+    destination: PostEngraveDestination = 'release',
+  ) => {
+    const newEntry = await addEntry(data);
+    if (destination === 'release') {
+      setPostEngraveDestination(null);
+      setAppState(AppState.DASHBOARD);
+    } else {
+      setPostEngraveDestination(destination);
+      setSelectedEntry(newEntry);
+      setAppState(AppState.VIEWER);
+    }
     // Phase 4.5 follow-ups (F4) — drop the seed once consumed so a
     // future + New Entry click starts blank.
     setEditorSeed(null);
@@ -472,6 +486,7 @@ const App: React.FC = () => {
   const handleBackToDashboard = () => {
     setAppState(AppState.DASHBOARD);
     setSelectedEntry(null);
+    setPostEngraveDestination(null);
     // Phase 4.5 follow-ups (F4) — same reasoning as in
     // handleSaveEntry: explicit cancel also drops the seed.
     setEditorSeed(null);
@@ -658,6 +673,7 @@ const App: React.FC = () => {
                 masterPassword={masterPassword}
                 guidingStars={selectedStars}
                 customPersonas={customPersonas}
+                postEngraveDestination={postEngraveDestination}
                 onBack={handleBackToDashboard}
                 onGoHome={() => setAppState(AppState.COVER)}
                 onUpdateEntry={(entry) => {

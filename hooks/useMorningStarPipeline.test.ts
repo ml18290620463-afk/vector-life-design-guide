@@ -37,6 +37,7 @@ describe('useMorningStarPipeline', () => {
         language: 'en',
         onUpdateEntry,
         fetcher,
+        streamingEnabled: false,
       }),
     );
     expect(result.current.personas).toEqual(['Naval Ravikant']);
@@ -51,6 +52,7 @@ describe('useMorningStarPipeline', () => {
         language: 'en',
         onUpdateEntry,
         fetcher,
+        streamingEnabled: false,
       }),
     );
     expect(result.current.personas).toEqual(['Camus']);
@@ -65,6 +67,7 @@ describe('useMorningStarPipeline', () => {
         language: 'en',
         onUpdateEntry,
         fetcher,
+        streamingEnabled: false,
       }),
     );
     expect(result.current.readingStep).toBe('evaluation');
@@ -81,6 +84,7 @@ describe('useMorningStarPipeline', () => {
         language: 'en',
         onUpdateEntry,
         fetcher,
+        streamingEnabled: false,
       }),
     );
 
@@ -94,6 +98,31 @@ describe('useMorningStarPipeline', () => {
     expect(updated.reflection).toBe('I feel stuck.');
   });
 
+  it('analyze() can run without an extra reflection prompt', async () => {
+    fetcher.mockResolvedValueOnce('{"content":"letter","metrics":{}}');
+    const { result } = renderHook(() =>
+      useMorningStarPipeline({
+        entry: baseEntry(),
+        guidingStars: ['Camus'],
+        decryptedContent: 'plain text',
+        language: 'zh',
+        onUpdateEntry,
+        fetcher,
+        streamingEnabled: false,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.analyze();
+    });
+
+    expect(fetcher).toHaveBeenCalledWith('plain text', '', ['Camus'], undefined, undefined);
+    expect(onUpdateEntry).toHaveBeenCalledOnce();
+    const updated = onUpdateEntry.mock.calls[0][0] as DiaryEntry;
+    expect(updated.morningStarAnalysis).toContain('letter');
+    expect(updated.reflection).toBe('');
+  });
+
   it('analyze() surfaces an error message on failure', async () => {
     fetcher.mockRejectedValueOnce(new Error('upstream'));
     const { result } = renderHook(() =>
@@ -104,6 +133,7 @@ describe('useMorningStarPipeline', () => {
         language: 'zh',
         onUpdateEntry,
         fetcher,
+        streamingEnabled: false,
       }),
     );
 

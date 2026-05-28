@@ -427,6 +427,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       // (e.g. future re-seed flow) leave samples alone.
       const baseEntries = newEntry.isSample ? entries : entries.filter((e) => !e.isSample);
       persistEntries([newEntry, ...baseEntries]);
+      return newEntry;
     },
     [entries, persistEntries],
   );

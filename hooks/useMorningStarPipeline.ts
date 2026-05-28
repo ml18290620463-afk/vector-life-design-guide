@@ -220,7 +220,7 @@ export const useMorningStarPipeline = ({
   );
 
   const analyze = useCallback(async () => {
-    if (loading || !reflectionText.trim() || personas.length === 0) return;
+    if (loading || personas.length === 0) return;
     setLoading(true);
     setError(null);
     setStreamingPreview('');
@@ -237,7 +237,7 @@ export const useMorningStarPipeline = ({
             try {
               return await streamer(
                 contentToAnalyze,
-                reflectionText,
+                reflectionText.trim(),
                 personas,
                 (_delta, accumulated) => setStreamingPreview(accumulated),
                 undefined,
@@ -249,7 +249,7 @@ export const useMorningStarPipeline = ({
               // attempt does not hard-fail the entire reflection loop.
               return fetcher(
                 contentToAnalyze,
-                reflectionText,
+                reflectionText.trim(),
                 personas,
                 customPersonaPrompts,
                 memoirRecallByPersona,
@@ -258,7 +258,7 @@ export const useMorningStarPipeline = ({
           })()
         : await fetcher(
             contentToAnalyze,
-            reflectionText,
+            reflectionText.trim(),
             personas,
             customPersonaPrompts,
             memoirRecallByPersona,
@@ -267,7 +267,7 @@ export const useMorningStarPipeline = ({
         ...entry,
         morningStarAnalysis: result,
         morningStarPersonas: personas,
-        reflection: reflectionText,
+        reflection: reflectionText.trim(),
       });
       // Phase 4 Week 3.5 — fire-and-forget Memoir memory harvest.
       // The harvest hook itself swallows errors (extraction is a
@@ -277,7 +277,7 @@ export const useMorningStarPipeline = ({
       if (onAnalysisHarvest) {
         try {
           void onAnalysisHarvest({
-            reflection: reflectionText,
+            reflection: reflectionText.trim(),
             rawResponse: result,
             participatingPersonas: personas,
           });

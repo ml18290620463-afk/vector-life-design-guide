@@ -15,6 +15,7 @@ import { TRANSLATIONS } from '../constants';
 import { ViewerStarfield } from './ViewerStarfield';
 import { buildViewerMarkdownComponents } from './viewerMarkdown';
 import { ShareCardModal } from './ShareCardModal';
+import type { PostEngraveDestination } from './Editor';
 
 interface ViewerProps {
   language: Language;
@@ -27,6 +28,7 @@ interface ViewerProps {
    *  absent (legacy callers), Morning Star uses the generic fallback
    *  for any unknown persona name. */
   customPersonas?: CustomPersona[];
+  postEngraveDestination?: PostEngraveDestination | null;
   onBack: () => void;
   onGoHome?: () => void;
   onUpdateEntry: (updatedEntry: DiaryEntry) => void;
@@ -48,6 +50,7 @@ export const Viewer: React.FC<ViewerProps> = ({
   masterPassword,
   guidingStars,
   customPersonas,
+  postEngraveDestination,
   onBack,
   onGoHome,
   onUpdateEntry,
@@ -338,6 +341,7 @@ export const Viewer: React.FC<ViewerProps> = ({
             morningStarError={morningStarError}
             morningStarStreamingPreview={morningStarStreamingPreview}
             parsedAnalysis={parsedAnalysis}
+            postEngraveDestination={postEngraveDestination}
             onAnalyze={handleMorningStarAnalysis}
             onDeleteAnalysis={handleDeleteAnalysis}
             onBack={onBack}

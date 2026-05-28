@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Editor } from './Editor';
 import { clearEditorDraft } from '../services/editorDraft';
 
@@ -21,6 +21,7 @@ const baseProps = {
 
 describe('Editor — Phase 4.5 F4 seed prop', () => {
   afterEach(async () => {
+    vi.useRealTimers();
     cleanup();
     // Defensive — make sure stale drafts from previous tests don't
     // poison the seed-restore path.
@@ -134,5 +135,47 @@ describe('Editor — Phase 4.5 F4 seed prop', () => {
     expect(screen.getByText('当时有哪些具体的话、动作或画面？')).toBeDefined();
     expect(screen.getByText('## 相似经历')).toBeDefined();
     expect(screen.getByText('## 补充')).toBeDefined();
+  });
+
+  it('routes an ordinary engraved note to Morning Star after the transmission ceremony', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<Editor {...baseProps} onSave={onSave} seed={null} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-title')).toBeDefined();
+    });
+    fireEvent.change(screen.getByTestId('editor-title'), { target: { value: '今天的记录' } });
+    fireEvent.change(screen.getByTestId('editor-content'), { target: { value: '今天我想理一理。' } });
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId('editor-save'));
+
+    await act(async () => {
+      vi.advanceTimersByTime(3400);
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ title: '今天的记录' }), 'morning-star');
+    vi.useRealTimers();
+  });
+
+  it('keeps the explicit release path quiet after transmission', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<Editor {...baseProps} onSave={onSave} seed={{ reflectionDepth: 'release' }} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-title')).toBeDefined();
+    });
+    fireEvent.change(screen.getByTestId('editor-title'), { target: { value: '只是放下' } });
+    fireEvent.change(screen.getByTestId('editor-content'), { target: { value: '今天先记下来。' } });
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId('editor-save'));
+
+    await act(async () => {
+      vi.advanceTimersByTime(3400);
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ title: '只是放下' }), 'release');
+    vi.useRealTimers();
   });
 });
