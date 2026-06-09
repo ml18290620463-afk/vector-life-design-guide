@@ -3,8 +3,11 @@ import { motion } from 'motion/react';
 import {
   AlertTriangle,
   BookOpen,
+  Compass,
+  Eye,
   MessageSquareQuote,
   RefreshCcw,
+  Route,
   Scan,
   Sparkles,
   Star,
@@ -14,6 +17,8 @@ import Markdown, { Components } from 'react-markdown';
 import { DiaryEntry, Theme } from '../types';
 import { TranslationDictionary } from '../i18n/translations';
 import { CyberButton } from './CyberButton';
+import type { MorningStarAnalyzeInput } from '../hooks/useMorningStarPipeline';
+import { KleinBottleFoldSpace } from './KleinBottleFoldSpace';
 
 export type ReadingStep = 'reading' | 'reflecting' | 'evaluation';
 
@@ -42,7 +47,7 @@ interface MorningStarPanelProps {
    */
   morningStarStreamingPreview?: string;
   parsedAnalysis: ParsedAnalysis | null;
-  onAnalyze: () => void;
+  onAnalyze: (input?: MorningStarAnalyzeInput) => void;
   onDeleteAnalysis: () => void;
   markdownComponents: Components;
 }
@@ -52,6 +57,30 @@ const getEntryHint = (entry: DiaryEntry): string => {
   if (!source) return '你刚刚写下的经历已经在这里。';
   return source.length > 72 ? `${source.slice(0, 72)}...` : source;
 };
+
+const lensOptions = [
+  {
+    id: 'sort',
+    title: '先理清',
+    instruction:
+      '这次请以“梳理现状”为主：先区分事实、解释、感受、需求和已经发生的结果，帮我看清我现在站在哪里。',
+    icon: Compass,
+  },
+  {
+    id: 'essence',
+    title: '看关键',
+    instruction:
+      '这次请以“洞察本质”为主：不要急着给建议，先看这件事背后的核心张力、重复模式、欲望或我没有说出口的恐惧。',
+    icon: Eye,
+  },
+  {
+    id: 'solution',
+    title: '给一步',
+    instruction:
+      '这次请以“给出解决方案”为主：在不替我下结论的前提下，给我一个温和、可执行、成本很小的下一步。',
+    icon: Route,
+  },
+] as const;
 
 export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
   theme,
@@ -95,9 +124,25 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
     }
   };
 
+  const getSeededPersonas = () => {
+    if (morningStarPersonas.length > 0) return morningStarPersonas;
+    if (guidingStars.length > 0) return [guidingStars[0]];
+    return [];
+  };
+
   const handleAnalyze = () => {
     ensurePersonaSeed();
     onAnalyze();
+  };
+
+  const handleLensAnalyze = (instruction: string) => {
+    const seededPersonas = getSeededPersonas();
+    const nextReflection = reflectionText.trim()
+      ? `${reflectionText.trim()}\n\n${instruction}`
+      : instruction;
+    if (seededPersonas.length > 0) setMorningStarPersonas(seededPersonas);
+    setReflectionText(nextReflection);
+    onAnalyze({ reflectionText: nextReflection, personas: seededPersonas });
   };
 
   const handleAskMore = () => {
@@ -115,58 +160,80 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
       className={`mt-16 pt-12 border-t ${theme === 'light' ? 'border-[color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent)]' : 'border-cyan-900/40'}`}
     >
       {readingStep === 'reading' && (
-        <div className="flex flex-col items-center gap-7 text-center">
-          <div
-            className={`w-16 h-16 rounded-full border flex items-center justify-center ${theme === 'light' ? 'bg-cyan-50 border-cyan-100' : 'bg-cyan-950/20 border-cyan-900/30'}`}
-          >
-            <Star
-              className={`w-8 h-8 ${theme === 'light' ? 'text-cyan-600' : 'text-cyan-400'}`}
-            />
-          </div>
+        <div className="relative overflow-hidden border border-cyan-200/10 bg-[#02050b]/86 p-5 text-center shadow-[0_24px_70px_rgba(0,0,0,0.28)] md:p-7">
+          <KleinBottleFoldSpace compact />
 
-          <div className="space-y-3 max-w-xl">
-            <h3 className={`text-lg font-bold tracking-widest ${primaryText}`}>
-              让启明星帮我看看
-            </h3>
-            <p className={`text-sm leading-relaxed ${mutedText}`}>
-              它不会替你下结论，只会读你刚写下的经历，帮你照亮一点还没说清的地方。
-            </p>
-            <div className={`mt-4 p-4 border text-left text-sm leading-relaxed ${subtleSurface}`}>
-              <div className={`text-[10px] font-mono uppercase tracking-widest mb-2 ${accentText}`}>
-                刚刚写下的是
+          <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center gap-5">
+            <div className="flex items-center gap-2">
+              <Star className={`h-4 w-4 ${accentText}`} />
+              <div className={`text-[10px] font-mono uppercase tracking-[0.24em] ${accentText}`}>
+                Morning Star
               </div>
-              {getEntryHint(entry)}
             </div>
-          </div>
 
-          {morningStarError && (
-            <div
-              className={`p-4 border text-sm max-w-xl ${theme === 'light' ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-rose-950/20 border-rose-900/30 text-rose-300'}`}
+            <div className="space-y-2">
+              <h3 className={`text-xl font-semibold tracking-[0.04em] sm:text-2xl ${primaryText}`}>
+                让启明星帮你看一眼
+              </h3>
+              <p className={`text-sm leading-6 ${mutedText}`}>选一个关注点，或直接开始。</p>
+            </div>
+
+            <div className={`w-full border px-4 py-3 text-left text-sm leading-6 backdrop-blur-md ${subtleSurface}`}>
+              <div className={`mb-1 text-[10px] font-mono uppercase tracking-[0.18em] ${accentText}`}>
+                这次记录
+              </div>
+              <div className="line-clamp-2">{getEntryHint(entry)}</div>
+            </div>
+
+            {morningStarError && (
+              <div
+                className={`p-4 border text-sm max-w-xl ${theme === 'light' ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-rose-950/20 border-rose-900/30 text-rose-300'}`}
+              >
+                {morningStarError}
+              </div>
+            )}
+
+            <div className="grid w-full grid-cols-3 gap-2">
+              {lensOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => handleLensAnalyze(option.instruction)}
+                    disabled={morningStarLoading}
+                    className={`group flex h-20 flex-col items-center justify-center gap-2 border px-2 text-center transition-all duration-300 disabled:cursor-wait disabled:opacity-60 ${theme === 'light' ? 'bg-white/80 border-cyan-100 hover:border-cyan-300 hover:bg-cyan-50' : 'bg-[#03111d]/70 border-cyan-200/12 hover:border-cyan-200/34 hover:bg-cyan-300/8'}`}
+                  >
+                    <Icon className={`h-4 w-4 ${accentText}`} />
+                    <span className={`text-sm font-semibold tracking-[0.06em] ${primaryText}`}>
+                      {option.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <CyberButton onClick={handleAnalyze} disabled={morningStarLoading} theme={theme}>
+                {morningStarLoading ? (
+                  <RefreshCcw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-2" />
+                )}
+                直接开始
+              </CyberButton>
+              <CyberButton variant="ghost" onClick={() => setReadingStep('reflecting')} theme={theme}>
+                补一句
+              </CyberButton>
+            </div>
+
+            <button
+              type="button"
+              className={`text-xs transition-colors ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-cyan-800 hover:text-cyan-500'}`}
             >
-              {morningStarError}
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <CyberButton onClick={handleAnalyze} disabled={morningStarLoading} theme={theme}>
-              {morningStarLoading ? (
-                <RefreshCcw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4 mr-2" />
-              )}
-              让启明星帮我看看
-            </CyberButton>
-            <CyberButton variant="ghost" onClick={() => setReadingStep('reflecting')} theme={theme}>
-              我想先补一句
-            </CyberButton>
+              今天到这里
+            </button>
           </div>
-
-          <button
-            type="button"
-            className={`text-xs font-mono tracking-widest transition-colors ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-cyan-800 hover:text-cyan-500'}`}
-          >
-            今天到这里就好
-          </button>
         </div>
       )}
 

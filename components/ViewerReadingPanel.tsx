@@ -10,7 +10,10 @@ import { DecryptionText } from './DecryptionText';
 import { ViewerAttachmentPanel } from './ViewerAttachmentPanel';
 import { ViewerActionFooter } from './ViewerActionFooter';
 import { MorningStarPanel } from './MorningStarPanel';
-import type { ParsedMorningStarAnalysis } from '../hooks/useMorningStarPipeline';
+import type {
+  MorningStarAnalyzeInput,
+  ParsedMorningStarAnalysis,
+} from '../hooks/useMorningStarPipeline';
 import type { PostEngraveDestination } from './Editor';
 
 interface DecodedStar {
@@ -57,7 +60,7 @@ interface ViewerReadingPanelProps {
   morningStarStreamingPreview?: string;
   parsedAnalysis: ParsedMorningStarAnalysis | null;
   postEngraveDestination?: PostEngraveDestination | null;
-  onAnalyze: () => void | Promise<void>;
+  onAnalyze: (input?: MorningStarAnalyzeInput) => void | Promise<void>;
   onDeleteAnalysis: () => void;
   // Burn / nav
   onBack: () => void;
@@ -139,6 +142,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   markdownComponents,
 }) => {
   const destinationRef = useRef<HTMLDivElement | null>(null);
+  const autoMorningStarEntryRef = useRef<string | null>(null);
   const [showDestinationPicker, setShowDestinationPicker] = useState(false);
 
   useEffect(() => {
@@ -155,9 +159,34 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
     return () => window.clearTimeout(timer);
   }, [postEngraveDestination]);
 
-  const showDestinationHub =
-    postEngraveDestination === 'morning-star' ||
-    postEngraveDestination === 'morning-star-memoir';
+  useEffect(() => {
+    const shouldAutoStart =
+      (postEngraveDestination === 'morning-star' ||
+        postEngraveDestination === 'morning-star-memoir') &&
+      !parsedAnalysis &&
+      !morningStarLoading &&
+      autoMorningStarEntryRef.current !== entry.id;
+
+    if (!shouldAutoStart) return;
+
+    autoMorningStarEntryRef.current = entry.id;
+    setShowDestinationPicker(false);
+    setReadingStep('evaluation');
+    const timer = window.setTimeout(() => {
+      destinationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      onAnalyze();
+    }, 520);
+    return () => window.clearTimeout(timer);
+  }, [
+    entry.id,
+    morningStarLoading,
+    onAnalyze,
+    parsedAnalysis,
+    postEngraveDestination,
+    setReadingStep,
+  ]);
+
+  const showDestinationHub = false;
 
   const selectDestination = () => {
     setShowDestinationPicker(false);

@@ -14,6 +14,11 @@ export interface ParsedMorningStarAnalysis {
   metrics: Record<string, number>;
 }
 
+export interface MorningStarAnalyzeInput {
+  reflectionText?: string;
+  personas?: string[];
+}
+
 /** Signature compatible with `services/geminiService.getMorningStarAnalysis`.
  *  The trailing `customPersonaPrompts` arg (Phase 4 §5.1.A) carries the
  *  user-created persona's `name → systemPrompt` map; defaults to {}.
@@ -112,7 +117,7 @@ export interface MorningStarPipeline {
    */
   streamingPreview: string;
   /** Trigger an analysis call. No-ops if already loading or pre-conditions fail. */
-  analyze: () => Promise<void>;
+  analyze: (input?: MorningStarAnalyzeInput) => Promise<void>;
   /** Drop the persisted analysis and reset to the reading step. */
   deleteAnalysis: () => void;
 }
@@ -219,8 +224,12 @@ export const useMorningStarPipeline = ({
     [entry.morningStarAnalysis],
   );
 
-  const analyze = useCallback(async () => {
-    if (loading || personas.length === 0) return;
+  const analyze = useCallback(async (input?: MorningStarAnalyzeInput) => {
+    const activePersonas = input?.personas ?? personas;
+    const activeReflection = input?.reflectionText ?? reflectionText;
+    if (loading || activePersonas.length === 0) return;
+    if (input?.personas) setPersonas(activePersonas);
+    if (input?.reflectionText !== undefined) setReflectionText(activeReflection);
     setLoading(true);
     setError(null);
     setStreamingPreview('');
@@ -237,8 +246,8 @@ export const useMorningStarPipeline = ({
             try {
               return await streamer(
                 contentToAnalyze,
-                reflectionText.trim(),
-                personas,
+                activeReflection.trim(),
+                activePersonas,
                 (_delta, accumulated) => setStreamingPreview(accumulated),
                 undefined,
                 customPersonaPrompts,
@@ -249,8 +258,8 @@ export const useMorningStarPipeline = ({
               // attempt does not hard-fail the entire reflection loop.
               return fetcher(
                 contentToAnalyze,
-                reflectionText.trim(),
-                personas,
+                activeReflection.trim(),
+                activePersonas,
                 customPersonaPrompts,
                 memoirRecallByPersona,
               );
@@ -258,16 +267,16 @@ export const useMorningStarPipeline = ({
           })()
         : await fetcher(
             contentToAnalyze,
-            reflectionText.trim(),
-            personas,
+            activeReflection.trim(),
+            activePersonas,
             customPersonaPrompts,
             memoirRecallByPersona,
           );
       onUpdateEntry({
         ...entry,
         morningStarAnalysis: result,
-        morningStarPersonas: personas,
-        reflection: reflectionText.trim(),
+        morningStarPersonas: activePersonas,
+        reflection: activeReflection.trim(),
       });
       // Phase 4 Week 3.5 — fire-and-forget Memoir memory harvest.
       // The harvest hook itself swallows errors (extraction is a
@@ -277,9 +286,9 @@ export const useMorningStarPipeline = ({
       if (onAnalysisHarvest) {
         try {
           void onAnalysisHarvest({
-            reflection: reflectionText.trim(),
+            reflection: activeReflection.trim(),
             rawResponse: result,
-            participatingPersonas: personas,
+            participatingPersonas: activePersonas,
           });
         } catch (harvestError) {
           console.warn('Memoir memory harvest dispatch failed:', harvestError);
