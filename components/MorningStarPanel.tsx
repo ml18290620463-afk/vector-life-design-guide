@@ -160,10 +160,15 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
       className={`mt-16 pt-12 border-t ${theme === 'light' ? 'border-[color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent)]' : 'border-cyan-900/40'}`}
     >
       {readingStep === 'reading' && (
-        <div className="relative overflow-hidden border border-cyan-200/10 bg-[#02050b]/86 p-5 text-center shadow-[0_24px_70px_rgba(0,0,0,0.28)] md:p-7">
-          <KleinBottleFoldSpace compact />
+        <div className="relative min-h-[560px] overflow-hidden border border-cyan-100/22 bg-[#02050b] p-5 text-center shadow-[0_30px_100px_rgba(0,0,0,0.38),inset_0_0_60px_rgba(56,189,248,0.08)] md:min-h-[620px] md:p-8">
+          <KleinBottleFoldSpace compact className="opacity-[0.72]" />
+          <div className="pointer-events-none absolute inset-0 border border-cyan-200/14" />
+          <div className="pointer-events-none absolute inset-[1rem] border border-violet-200/10 md:inset-[1.35rem]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_44%,rgba(2,8,23,0.02),rgba(2,6,23,0.36)_54%,rgba(2,6,23,0.78)_100%)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#02050b]/86 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#02050b]/92 to-transparent" />
 
-          <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center gap-5">
+          <div className="relative z-10 mx-auto flex min-h-[510px] max-w-2xl flex-col items-center justify-center gap-5 md:min-h-[560px]">
             <div className="flex items-center gap-2">
               <Star className={`h-4 w-4 ${accentText}`} />
               <div className={`text-[10px] font-mono uppercase tracking-[0.24em] ${accentText}`}>
@@ -178,8 +183,16 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
               <p className={`text-sm leading-6 ${mutedText}`}>选一个关注点，或直接开始。</p>
             </div>
 
-            <div className={`w-full border px-4 py-3 text-left text-sm leading-6 backdrop-blur-md ${subtleSurface}`}>
-              <div className={`mb-1 text-[10px] font-mono uppercase tracking-[0.18em] ${accentText}`}>
+            <div
+              className={`w-full border px-4 py-3 text-left text-sm leading-6 backdrop-blur-xl ${
+                theme === 'light'
+                  ? 'border-white/70 bg-white/78 text-slate-700'
+                  : 'border-cyan-100/12 bg-[#03111d]/66 text-cyan-100/76'
+              }`}
+            >
+              <div
+                className={`mb-1 text-[10px] font-mono uppercase tracking-[0.18em] ${accentText}`}
+              >
                 这次记录
               </div>
               <div className="line-clamp-2">{getEntryHint(entry)}</div>
@@ -202,7 +215,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
                     type="button"
                     onClick={() => handleLensAnalyze(option.instruction)}
                     disabled={morningStarLoading}
-                    className={`group flex h-20 flex-col items-center justify-center gap-2 border px-2 text-center transition-all duration-300 disabled:cursor-wait disabled:opacity-60 ${theme === 'light' ? 'bg-white/80 border-cyan-100 hover:border-cyan-300 hover:bg-cyan-50' : 'bg-[#03111d]/70 border-cyan-200/12 hover:border-cyan-200/34 hover:bg-cyan-300/8'}`}
+                    className={`group flex h-20 flex-col items-center justify-center gap-2 border px-2 text-center backdrop-blur-xl transition-all duration-300 disabled:cursor-wait disabled:opacity-60 ${theme === 'light' ? 'bg-white/78 border-cyan-100 hover:border-cyan-300 hover:bg-cyan-50' : 'bg-[#03111d]/68 border-cyan-200/14 hover:border-cyan-200/40 hover:bg-cyan-300/10'}`}
                   >
                     <Icon className={`h-4 w-4 ${accentText}`} />
                     <span className={`text-sm font-semibold tracking-[0.06em] ${primaryText}`}>
@@ -222,7 +235,11 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
                 )}
                 直接开始
               </CyberButton>
-              <CyberButton variant="ghost" onClick={() => setReadingStep('reflecting')} theme={theme}>
+              <CyberButton
+                variant="ghost"
+                onClick={() => setReadingStep('reflecting')}
+                theme={theme}
+              >
                 补一句
               </CyberButton>
             </div>
@@ -406,11 +423,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
                     <CyberButton variant="ghost" onClick={handleAnotherLens} theme={theme}>
                       换个角度看看
                     </CyberButton>
-                    <CyberButton
-                      variant="ghost"
-                      onClick={() => setSavedSignal(true)}
-                      theme={theme}
-                    >
+                    <CyberButton variant="ghost" onClick={() => setSavedSignal(true)} theme={theme}>
                       收藏这封回信
                     </CyberButton>
                   </div>
