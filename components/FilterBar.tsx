@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'motion/react';
-import { Mail } from 'lucide-react';
+import { Mail, Search, X } from 'lucide-react';
 import { GroupingMode, Language, Theme } from '../types';
 import { TRANSLATIONS } from '../constants';
 
@@ -40,15 +40,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   entriesCount,
 }) => {
   const t = TRANSLATIONS[language];
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div
-      className={`mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 ${!isEditingStars ? 'border-b' : ''} ${theme === 'light' ? 'border-slate-100' : 'border-vector-navy-deep/20'}`}
+      className={`vector-filter-bar mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 ${!isEditingStars ? 'border' : ''} ${theme === 'light' ? 'border-slate-200 bg-white/70 shadow-sm' : 'border-white/[0.07] bg-slate-950/60'}`}
     >
-      <div className="flex-1 flex flex-col md:flex-row md:items-center gap-6">
+      <div className="vector-filter-primary flex-1 flex flex-col md:flex-row md:items-center gap-4 min-w-0">
         <button
           onClick={onToggleVault}
-          className={`flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 ${isVaultOpen ? (theme === 'light' ? 'text-cyan-600' : 'text-vector-cyan-neon') : theme === 'light' ? 'text-slate-400' : 'text-vector-slate-chrome/60'}`}
+          className={`vector-vault-toggle flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] transition-all active:scale-95 shrink-0 ${isVaultOpen ? (theme === 'light' ? 'text-cyan-700' : 'text-vector-cyan-neon') : theme === 'light' ? 'text-slate-500' : 'text-vector-slate-chrome/70'}`}
         >
           <Mail className={`w-4 h-4 ${isVaultOpen ? 'animate-pulse' : ''}`} /> {t.encryptedLog}
           <span
@@ -62,6 +63,48 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             {isVaultOpen ? 'OPEN' : 'LOCKED'}
           </span>
         </button>
+
+        <div
+          className={`vector-search-control flex items-center gap-2 rounded-md border px-2 py-1.5 transition-colors ${
+            theme === 'light'
+              ? 'border-slate-200 bg-white/70 text-slate-700 focus-within:border-cyan-400'
+              : 'border-white/[0.07] bg-black/20 text-cyan-100 focus-within:border-cyan-400/60'
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => searchInputRef.current?.focus()}
+            aria-label={language === 'zh' ? '搜索关键词' : 'Search keyword'}
+            className={`shrink-0 transition-colors ${
+              theme === 'light' ? 'text-slate-400 hover:text-cyan-600' : 'text-cyan-400/70 hover:text-cyan-200'
+            }`}
+          >
+            <Search className="h-4 w-4" />
+          </button>
+          <input
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={language === 'zh' ? '关键词搜索' : 'Keyword'}
+            className="min-w-0 flex-1 bg-transparent font-mono text-[11px] tracking-[0.08em] outline-none placeholder:text-current placeholder:opacity-35"
+            aria-label={language === 'zh' ? '按关键词搜索记录' : 'Search records by keyword'}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
+              aria-label={language === 'zh' ? '清空搜索' : 'Clear search'}
+              className={`shrink-0 transition-colors ${
+                theme === 'light' ? 'text-slate-300 hover:text-rose-500' : 'text-white/30 hover:text-rose-300'
+              }`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
         {!showFilterHub && (selectedTag || selectedCategory !== 'all' || searchQuery) && (
           <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
@@ -84,13 +127,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="vector-grouping-control flex items-center gap-3 min-w-0">
         <span
-          className={`text-[11px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-vector-slate-chrome/60'}`}
+          className={`text-[11px] font-mono uppercase tracking-widest shrink-0 ${theme === 'light' ? 'text-slate-500' : 'text-vector-slate-chrome/70'}`}
         >
           {t.groupBy} :
         </span>
-        <div className="flex gap-2">
+        <div className="vector-segmented-control flex gap-1 overflow-x-auto custom-scrollbar">
           {(
             [
               { id: 'none', label: t.none },
@@ -105,11 +148,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 key={mode.id}
                 onClick={() => setGroupingMode(mode.id)}
                 className={`
-                          px-6 py-2.5 text-xs font-mono border transition-all duration-500 relative overflow-hidden flex items-center justify-center group
+                          px-4 py-2 text-xs font-mono border transition-all duration-300 relative overflow-hidden flex items-center justify-center group rounded-md shrink-0
                           ${
                             isActive
                               ? theme === 'light'
-                                ? 'bg-cyan-500 border-cyan-600 text-white shadow-lg shadow-cyan-500/20'
+                                ? 'bg-cyan-600 border-cyan-600 text-white shadow-lg shadow-cyan-500/20'
                                 : 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-glow-cyan-400-strong ring-1 ring-cyan-400/50'
                               : theme === 'light'
                                 ? 'bg-white/50 border-slate-200 text-slate-400 hover:border-cyan-300 hover:text-cyan-600'

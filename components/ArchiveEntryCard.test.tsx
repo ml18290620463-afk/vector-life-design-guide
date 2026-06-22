@@ -17,7 +17,7 @@ const baseEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 });
 
 describe('ArchiveEntryCard', () => {
-  it('grid view renders title + archive id + tag list', () => {
+  it('grid view renders title + archive id + expanded body without tag controls', () => {
     render(
       <ArchiveEntryCard
         theme="dark"
@@ -32,7 +32,8 @@ describe('ArchiveEntryCard', () => {
     );
     expect(screen.getByText('Sample Entry')).toBeTruthy();
     expect(screen.getByText('AR-25-ABCD')).toBeTruthy();
-    expect(screen.getByText(/#alpha/)).toBeTruthy();
+    expect(screen.getByText('Body')).toBeTruthy();
+    expect(screen.queryByText(/#alpha/)).toBeNull();
   });
 
   it('list view shows the bracketed date + ordinal index', () => {
@@ -108,7 +109,7 @@ describe('ArchiveEntryCard', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('renders the paperclip when entry.attachment is present (grid view)', () => {
+  it('renders image attachments inline in grid view', () => {
     const { container, rerender } = render(
       <ArchiveEntryCard
         theme="dark"
@@ -136,6 +137,9 @@ describe('ArchiveEntryCard', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(container.querySelector('.lucide-paperclip')).not.toBeNull();
+    const image = screen.getByAltText('p.png');
+    expect(image).toBeTruthy();
+    expect(image.getAttribute('src')).toBe('data:');
+    expect(container.querySelector('.lucide-paperclip')).toBeNull();
   });
 });

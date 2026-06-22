@@ -40,7 +40,7 @@ export const MasterLockHeader: React.FC<MasterLockHeaderProps> = ({
   onCancelClick,
 }) => (
   <>
-    <div className="absolute left-7 top-7 z-50 flex items-center gap-3">
+    <div className="master-lock-nav absolute left-7 top-7 z-50 flex items-center gap-3">
       {isRecoveryMode ? (
         <button
           onClick={onBackFromRecovery}

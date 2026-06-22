@@ -30,7 +30,7 @@ interface OnboardingProps {
   language: Language;
   onSetLanguage: (lang: Language) => void;
   theme?: Theme;
-  onComplete: (password: string, directory: string[], selection: string[]) => void;
+  onComplete: (password: string, directory: string[], selection: string[]) => void | Promise<void>;
   onCancel?: () => void;
 }
 
@@ -100,6 +100,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({
   );
   const hasIssuedAccessPass = Boolean(recoveryKey && credentialExportStatus === 'success');
   const isAccessPassReady = Boolean(recoveryKey && hasIssuedAccessPass);
+  const isMobileOnboarding =
+    typeof window !== 'undefined' &&
+    (document.documentElement.classList.contains('vector-force-mobile') ||
+      window.matchMedia('(max-width: 767px)').matches);
+  const canEnterOnboarding = isAccessPassReady || (isMobileOnboarding && Boolean(recoveryKey));
   const isCredentialInputReady = validatePassword(password) && password === confirmPassword;
   const accessPassCopy = useMemo(() => {
     const copy = {
@@ -657,7 +662,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       return language === 'zh' ? '等待密令一致' : 'Waiting for matching code';
     }
     if (currentCalibrationRequirement) {
-      return language === 'zh' ? '等待密令完整' : 'Waiting for complete code';
+      return language === 'zh' ? '领取专属私钥' : 'Claim private key';
     }
     return onboardingCopy.waitingCalibration;
   })();
@@ -685,7 +690,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     return undefined;
   }, [isCredentialInputReady]);
 
-  const generateRecoveryKey = () => {
+  const generateRecoveryKey = (options: { commit?: boolean } = {}) => {
+    const { commit = true } = options;
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const random = new Uint8Array(32);
     window.crypto.getRandomValues(random);
@@ -695,7 +701,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       result += chars.charAt(random[i] % chars.length);
     }
     SecurityService.wipeSensitive(random);
-    setRecoveryKey(result);
+    if (commit) setRecoveryKey(result);
+    return result;
   };
 
   const handleGenerateCredential = () => {
@@ -712,11 +719,25 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     setCredentialExportStatus('idle');
     setIssueFlash(false);
     setIsForgingCredential(true);
-    window.setTimeout(() => {
-      generateRecoveryKey();
-      setIssueFlash(true);
-      setIsForgingCredential(false);
-      window.setTimeout(() => setIssueFlash(false), 900);
+    window.setTimeout(async () => {
+      try {
+        if (isMobileOnboarding) {
+          const issuedRecoveryKey = generateRecoveryKey({ commit: false });
+          void SecurityService.hashRecoveryKey(issuedRecoveryKey)
+            .then((recoveryHash) => setStoredString(AppStorageKeys.recoveryVerifier, recoveryHash))
+            .catch((err) => console.warn('Onboarding: recovery key hash failed', err));
+          await onComplete(password, [], []);
+          return;
+        }
+        generateRecoveryKey();
+        setIssueFlash(true);
+        window.setTimeout(() => setIssueFlash(false), 900);
+      } catch (err) {
+        console.warn('Onboarding: credential generation failed', err);
+        setError(onboardingCopy.pngError);
+      } finally {
+        setIsForgingCredential(false);
+      }
     }, 1300);
   };
 
@@ -730,7 +751,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       setError(t.passwordMismatch);
       return;
     }
-    if (!hasIssuedAccessPass) {
+    if (!hasIssuedAccessPass && !(isMobileOnboarding && recoveryKey)) {
       setError(onboardingCopy.savePngFirst);
       return;
     }
@@ -761,7 +782,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 backdrop-blur-xl transition-colors duration-700 md:overflow-hidden ${isLight ? 'bg-[radial-gradient(circle_at_18%_12%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(124,110,246,0.12),transparent_34%),linear-gradient(135deg,#f7fcff,#eef7fb_48%,#f7f3ff)]' : 'bg-[#02020a]'}`}
+      className={`onboarding-screen fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 backdrop-blur-xl transition-colors duration-700 md:overflow-hidden ${isLight ? 'bg-[radial-gradient(circle_at_18%_12%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(124,110,246,0.12),transparent_34%),linear-gradient(135deg,#f7fcff,#eef7fb_48%,#f7f3ff)]' : 'bg-[#02020a]'}`}
     >
       {/* Phase 4.5 §D — inline noise SVG (see lib/noiseTexture.ts). */}
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={NOISE_BG_STYLE}></div>
@@ -769,7 +790,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`relative w-full max-w-6xl overflow-hidden rounded-[30px] border p-0 transition-all duration-700 md:rounded-[42px] ${isLight ? 'border-cyan-500/16 bg-white/74 shadow-[0_28px_90px_rgba(33,80,120,0.16),inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-2xl' : 'border-cyan-300/18 bg-[#02070b] shadow-[0_28px_90px_rgba(0,0,0,0.46),0_0_88px_rgba(104,82,255,0.08)]'}`}
+        className={`onboarding-frame relative w-full max-w-6xl overflow-hidden rounded-[30px] border p-0 transition-all duration-700 md:rounded-[42px] ${isLight ? 'border-cyan-500/16 bg-white/74 shadow-[0_28px_90px_rgba(33,80,120,0.16),inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-2xl' : 'border-cyan-300/18 bg-[#02070b] shadow-[0_28px_90px_rgba(0,0,0,0.46),0_0_88px_rgba(104,82,255,0.08)]'}`}
       >
         <div className="pointer-events-none absolute left-10 top-0 h-px w-44 bg-gradient-to-r from-transparent via-cyan-200/34 to-transparent" />
         <div className="pointer-events-none absolute right-16 bottom-0 h-px w-56 bg-gradient-to-r from-transparent via-cyan-300/24 to-transparent" />
@@ -782,7 +803,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="relative flex min-h-[calc(100svh-24px)] flex-col overflow-hidden px-4 py-5 md:h-[calc(100vh-28px)] md:min-h-[640px] md:max-h-[820px] md:px-8 md:py-6"
+            className="onboarding-step relative flex min-h-[calc(100svh-24px)] flex-col overflow-hidden px-4 py-5 md:h-[calc(100vh-28px)] md:min-h-[640px] md:max-h-[820px] md:px-8 md:py-6"
           >
             <div className={`absolute inset-0 ${isLight ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(241,250,253,0.78)_46%,rgba(245,242,255,0.86))]' : 'bg-[#020915]'}`} />
             <div className={`absolute inset-0 ${isLight ? 'bg-[radial-gradient(circle_at_48%_8%,rgba(34,211,238,0.16),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(124,110,246,0.10),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(0,175,200,0.10),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(124,110,246,0.08),transparent_32%)]' : 'bg-[radial-gradient(circle_at_48%_8%,rgba(126,239,255,0.15),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(139,92,246,0.16),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(100,80,255,0.14),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(168,85,247,0.10),transparent_32%),linear-gradient(180deg,rgba(4,20,36,0.14)_0%,rgba(7,18,42,0.52)_46%,rgba(0,5,12,0.92)_100%)]'}`} />
@@ -1084,8 +1105,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({
               )}
             </AnimatePresence>
 
-            <div className="relative z-20 mx-auto flex h-full w-full max-w-5xl flex-col justify-between gap-4 pb-20 text-center md:pb-0">
-              <div className="flex flex-col items-center gap-1 pt-5 md:pt-7">
+            <div className="onboarding-content relative z-20 mx-auto flex h-full w-full max-w-5xl flex-col justify-between gap-4 pb-20 text-center md:pb-0">
+              <div className="onboarding-hero flex flex-col items-center gap-1 pt-5 md:pt-7">
                 <div className="h-px w-24 bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent shadow-glow-cyan-400" />
                 <h2 className={`text-xl font-mono uppercase tracking-widest md:text-[1.8rem] ${isLight ? 'text-slate-900' : 'text-cyan-50'}`}>
                   {onboardingCopy.title}
@@ -1096,7 +1117,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
               </div>
 
               <div
-                className={`relative w-full overflow-hidden rounded-[26px] border text-left backdrop-blur-md transition-all duration-500 ${hasIssuedAccessPass ? 'p-3 md:p-4' : 'p-4 md:p-5'} ${isLight ? 'border-cyan-600/18 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.10),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(124,110,246,0.09),transparent_32%),rgba(255,255,255,0.78)] shadow-[0_22px_70px_rgba(33,80,120,0.13),inset_0_1px_0_rgba(255,255,255,0.72)]' : 'border-cyan-200/40 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.12),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.13),transparent_32%),linear-gradient(135deg,rgba(5,29,39,0.88),rgba(5,7,24,0.76)_56%,rgba(7,18,38,0.9))] shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_18px_rgba(126,239,255,0.26),0_0_58px_rgba(34,211,238,0.16),0_0_110px_rgba(104,82,255,0.18),inset_0_0_32px_rgba(126,239,255,0.055),inset_0_1px_0_rgba(184,251,255,0.18)]'}`}
+                className={`onboarding-panel relative w-full overflow-hidden rounded-[26px] border text-left backdrop-blur-md transition-all duration-500 ${hasIssuedAccessPass ? 'p-3 md:p-4' : 'p-4 md:p-5'} ${isLight ? 'border-cyan-600/18 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.10),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(124,110,246,0.09),transparent_32%),rgba(255,255,255,0.78)] shadow-[0_22px_70px_rgba(33,80,120,0.13),inset_0_1px_0_rgba(255,255,255,0.72)]' : 'border-cyan-200/40 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.12),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.13),transparent_32%),linear-gradient(135deg,rgba(5,29,39,0.88),rgba(5,7,24,0.76)_56%,rgba(7,18,38,0.9))] shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_18px_rgba(126,239,255,0.26),0_0_58px_rgba(34,211,238,0.16),0_0_110px_rgba(104,82,255,0.18),inset_0_0_32px_rgba(126,239,255,0.055),inset_0_1px_0_rgba(184,251,255,0.18)]'}`}
               >
                 <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-cyan-100/12 shadow-[inset_0_0_28px_rgba(126,239,255,0.12)]" />
                 <div className="pointer-events-none absolute -inset-px rounded-[27px] bg-[linear-gradient(120deg,rgba(126,239,255,0.34),transparent_24%,rgba(168,85,247,0.22)_62%,rgba(126,239,255,0.24))] opacity-30 blur-[2px]" />
@@ -1186,7 +1207,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         transition={{ duration: 0.45, ease: 'easeOut' }}
                       />
 
-                      <div className="relative z-10 grid gap-4 md:grid-cols-[1fr_72px_1fr] md:items-end">
+                      <div className="onboarding-input-grid relative z-10 grid gap-4 md:grid-cols-[1fr_72px_1fr] md:items-end">
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-mono uppercase tracking-widest text-cyan-500/80">
                             {onboardingCopy.passwordLabel}
@@ -1388,7 +1409,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         </svg>
                         <div className="pointer-events-none absolute inset-x-3 top-1 hidden h-16 bg-[radial-gradient(circle_at_12%_52%,rgba(126,239,255,0.10),transparent_8%),radial-gradient(circle_at_28%_42%,rgba(126,239,255,0.08),transparent_8%),radial-gradient(circle_at_44%_54%,rgba(168,85,247,0.08),transparent_8%),radial-gradient(circle_at_61%_40%,rgba(126,239,255,0.08),transparent_8%),radial-gradient(circle_at_78%_54%,rgba(126,239,255,0.08),transparent_8%),radial-gradient(circle_at_94%_44%,rgba(134,239,172,0.08),transparent_8%)] blur-[1px] md:block" />
                         <div
-                          className="grid grid-cols-6 gap-x-0"
+                          className={`onboarding-requirements grid grid-cols-6 gap-x-0 ${isCredentialInputReady ? 'onboarding-requirements--complete' : ''}`}
                           aria-label={onboardingCopy.calibrating}
                         >
                           {calibrationRequirements.map((req, index) => {
@@ -1531,7 +1552,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                 )}
               </div>
 
-              <div className="min-h-[168px]">
+              <div className="onboarding-recovery-area min-h-[168px]">
                 <AnimatePresence>
                   {recoveryKey && (
                     <motion.div
@@ -1699,17 +1720,17 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             </div>
           )}
 
-          <div className="fixed bottom-3 left-4 right-4 z-40 flex items-end gap-3 md:absolute md:bottom-4 md:left-auto md:right-5">
+          <div className="onboarding-next-bar fixed bottom-3 left-4 right-4 z-40 flex items-end gap-3 md:absolute md:bottom-4 md:left-auto md:right-5">
             <CyberButton
               data-testid="onboarding-next"
               onClick={handleNextStep}
-              disabled={!isAccessPassReady}
+              disabled={!canEnterOnboarding}
               className={`w-full justify-center md:w-auto ${
-                !isAccessPassReady ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : ''
+                !canEnterOnboarding ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : ''
               }`}
               theme={theme}
             >
-              {isAccessPassReady ? onboardingCopy.enter : onboardingCopy.locked}{' '}
+              {canEnterOnboarding ? onboardingCopy.enter : onboardingCopy.locked}{' '}
               <ArrowRight className="ml-2 w-4 h-4" />
             </CyberButton>
           </div>

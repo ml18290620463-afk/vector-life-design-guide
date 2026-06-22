@@ -66,25 +66,24 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
   return (
     <header
-      className={`flex flex-col md:flex-row justify-between items-end mb-16 pb-6 relative gap-8 border-b border-white/[0.03]`}
+      className={`vector-dashboard-header flex flex-col md:flex-row justify-between items-start md:items-end relative gap-5 border-b ${theme === 'light' ? 'border-slate-200/80' : 'border-white/[0.06]'}`}
     >
       <div className="w-full md:w-auto">
         <div className="flex items-baseline gap-3 mb-2">
           <h2
-            className={`text-3xl sm:text-5xl font-black tracking-tighter uppercase ${theme === 'light' ? 'text-slate-900' : 'text-slate-100'}`}
-            style={{ letterSpacing: '-0.05em' }}
+            className={`vector-dashboard-title text-3xl sm:text-4xl font-black uppercase ${theme === 'light' ? 'text-slate-950' : 'text-slate-50'}`}
           >
             {t.appTitle}
           </h2>
           <span
-            className={`text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-1 border ${theme === 'light' ? 'text-slate-400 border-slate-200 bg-white shadow-sm' : 'text-cyan-500/80 border-cyan-500/20 bg-cyan-500/5'}`}
+            className={`text-[10px] font-mono uppercase tracking-[0.18em] px-2 py-1 border rounded-md ${theme === 'light' ? 'text-slate-500 border-slate-200 bg-white shadow-sm' : 'text-cyan-300/80 border-cyan-500/20 bg-cyan-500/5'}`}
           >
             {dynamicVersion}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <p
-            className={`text-[10px] font-mono tracking-[0.3em] uppercase opacity-60 ${theme === 'light' ? 'text-slate-500' : 'text-slate-500'}`}
+            className={`text-[10px] font-mono tracking-[0.24em] uppercase opacity-70 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}
           >
             {t.archiveStatus}
           </p>
@@ -120,10 +119,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           })()}
         </div>
       </div>
-      <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
+      <div className="flex flex-wrap gap-3 w-full md:w-auto justify-start md:justify-end">
         <button
           onClick={toggleFullScreen}
-          className={`p-2 border transition-all rounded-sm group relative w-12 h-12 flex items-center justify-center ${theme === 'light' ? 'border-slate-200 text-slate-400 hover:text-slate-900 bg-white' : 'border-white/10 text-slate-500 hover:text-white hover:border-white/20 hover:bg-white/5'}`}
+          className={`p-2 border transition-all rounded-md group relative w-11 h-11 flex items-center justify-center ${theme === 'light' ? 'border-slate-200 text-slate-500 hover:text-slate-900 bg-white' : 'border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-white/5'}`}
           title={t.toggleFullscreen}
         >
           {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
@@ -133,7 +132,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           data-testid="dashboard-open-archive"
           onClick={onOpenArchive}
           variant="ghost"
-          className="text-[10px] tracking-[0.2em] h-12 px-6"
+          className="text-[10px] tracking-[0.18em] h-11 px-5"
           theme={theme}
         >
           <Archive className="w-4 h-4 mr-2" /> {t.archive}

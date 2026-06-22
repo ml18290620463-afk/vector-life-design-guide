@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, AlertTriangle, Key } from 'lucide-react';
 import Markdown from 'react-markdown';
@@ -9,7 +9,6 @@ import { CyberButton } from './CyberButton';
 import { DecryptionText } from './DecryptionText';
 import { ViewerAttachmentPanel } from './ViewerAttachmentPanel';
 import { ViewerActionFooter } from './ViewerActionFooter';
-import { MorningStarPanel } from './MorningStarPanel';
 import type {
   MorningStarAnalyzeInput,
   ParsedMorningStarAnalysis,
@@ -120,20 +119,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   onMoveToContainer,
   onArchiveOrRestore,
   onDownload,
-  guidingStars,
   readingStep,
-  setReadingStep,
-  reflectionText,
-  setReflectionText,
-  morningStarPersonas,
-  setMorningStarPersonas,
-  morningStarLoading,
-  morningStarError,
-  morningStarStreamingPreview,
-  parsedAnalysis,
-  postEngraveDestination,
-  onAnalyze,
-  onDeleteAnalysis,
   onBack,
   onRequestBurn,
   onCancelBurn,
@@ -141,58 +127,6 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   onShareCard,
   markdownComponents,
 }) => {
-  const destinationRef = useRef<HTMLDivElement | null>(null);
-  const autoMorningStarEntryRef = useRef<string | null>(null);
-  const [showDestinationPicker, setShowDestinationPicker] = useState(false);
-
-  useEffect(() => {
-    if (
-      postEngraveDestination !== 'morning-star' &&
-      postEngraveDestination !== 'morning-star-memoir'
-    ) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      destinationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setShowDestinationPicker(true);
-    }, 180);
-    return () => window.clearTimeout(timer);
-  }, [postEngraveDestination]);
-
-  useEffect(() => {
-    const shouldAutoStart =
-      (postEngraveDestination === 'morning-star' ||
-        postEngraveDestination === 'morning-star-memoir') &&
-      !parsedAnalysis &&
-      !morningStarLoading &&
-      autoMorningStarEntryRef.current !== entry.id;
-
-    if (!shouldAutoStart) return;
-
-    autoMorningStarEntryRef.current = entry.id;
-    setShowDestinationPicker(false);
-    setReadingStep('evaluation');
-    const timer = window.setTimeout(() => {
-      destinationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      onAnalyze();
-    }, 520);
-    return () => window.clearTimeout(timer);
-  }, [
-    entry.id,
-    morningStarLoading,
-    onAnalyze,
-    parsedAnalysis,
-    postEngraveDestination,
-    setReadingStep,
-  ]);
-
-  const showDestinationHub = false;
-
-  const selectDestination = () => {
-    setShowDestinationPicker(false);
-    destinationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   return (
     <motion.div
     initial={{
@@ -225,86 +159,6 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
     }}
     className={`container mx-auto px-4 py-4 md:py-6 max-w-3xl min-h-screen ${computeContainerStyles(burnMode, archiveState)}`}
   >
-    <AnimatePresence>
-      {showDestinationPicker && showDestinationHub && (
-        <motion.div
-          className="fixed inset-0 z-[9997] flex items-center justify-center px-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <button
-            type="button"
-            aria-label="关闭接收方选择"
-            className="absolute inset-0 bg-black/70 backdrop-blur-md"
-            onClick={() => setShowDestinationPicker(false)}
-          />
-          <motion.section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="destination-picker-title"
-            className={`relative z-10 w-full max-w-2xl border p-6 shadow-2xl ${theme === 'light' ? 'bg-white border-cyan-200 text-slate-900' : 'bg-[#020811]/96 border-cyan-500/30 text-cyan-50 shadow-[0_0_56px_rgba(6,182,212,0.2)]'}`}
-            initial={{ y: 24, scale: 0.96, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: 16, scale: 0.98, opacity: 0 }}
-            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="mb-6">
-              <p
-                className={`mb-2 text-[10px] font-mono uppercase tracking-[0.34em] ${theme === 'light' ? 'text-cyan-700' : 'text-cyan-300/75'}`}
-              >
-                传信已完成
-              </p>
-              <h3 id="destination-picker-title" className="text-2xl font-light tracking-[0.16em]">
-                {postEngraveDestination === 'morning-star'
-                  ? '这封信要交给启明星'
-                  : '这封信要交给谁一起看？'}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed opacity-65">
-                {postEngraveDestination === 'morning-star'
-                  ? '你选择了“陪我理一理”。启明星会先帮你把材料理顺，看见真正卡住的一点。'
-                  : '你选择了“帮我看清”。启明星负责判断与选择，心象负责时间、关系与重复回声。'}
-              </p>
-            </div>
-
-            <div
-              className={`grid gap-3 ${postEngraveDestination === 'morning-star-memoir' ? 'md:grid-cols-2' : 'grid-cols-1'}`}
-            >
-              <button
-                type="button"
-                onClick={selectDestination}
-                className={`border p-5 text-left transition-colors ${theme === 'light' ? 'border-cyan-200 bg-cyan-50/70 hover:bg-cyan-100/70' : 'border-cyan-400/25 bg-cyan-500/8 hover:bg-cyan-500/14'}`}
-              >
-                <div className="mb-2 text-base font-bold tracking-widest">启明星</div>
-                <p className="text-sm leading-relaxed opacity-75">
-                  帮你把刚写下的经历理清一点，不替你下结论，只照亮一个更值得停留的问题。
-                </p>
-              </button>
-
-              {postEngraveDestination === 'morning-star-memoir' && (
-                <button
-                  type="button"
-                  onClick={selectDestination}
-                  className={`border p-5 text-left transition-colors ${theme === 'light' ? 'border-violet-200 bg-violet-50/70 hover:bg-violet-100/70' : 'border-violet-400/25 bg-violet-500/8 hover:bg-violet-500/14'}`}
-                >
-                  <div className="mb-2 text-base font-bold tracking-widest">心象</div>
-                  <p className="text-sm leading-relaxed opacity-75">
-                    把这件事放回你的时间线、关系和反复出现的感受里，看见它作为生命回声的位置。
-                  </p>
-                </button>
-              )}
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <CyberButton variant="ghost" theme={theme} onClick={() => setShowDestinationPicker(false)}>
-                先看记录
-              </CyberButton>
-            </div>
-          </motion.section>
-        </motion.div>
-      )}
-    </AnimatePresence>
-
     {burnMode === 'idle' && archiveState === 'idle' && (
       <div className="mb-8 flex justify-between items-center z-20 relative">
         <CyberButton
@@ -420,18 +274,6 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
           </span>
         </div>
 
-        {entry.tags && entry.tags.length > 0 && decrypted && (
-          <div className="flex flex-wrap gap-2 mt-4 animate-in fade-in slide-in-from-left-2 duration-700">
-            {entry.tags.map((tag) => (
-              <span
-                key={tag}
-                className={`text-[9px] uppercase px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-vector-cyan-brand/10 text-vector-slate-soft bg-vector-cyan-brand/2' : 'border-cyan-900 text-cyan-600 bg-cyan-950/10'}`}
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="relative z-10">
@@ -483,78 +325,6 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
             </span>
           </div>
         )}
-      </div>
-
-      <div ref={destinationRef}>
-        {showDestinationHub && (
-          <div
-            className={`mt-14 border p-5 ${theme === 'light' ? 'bg-white/80 border-cyan-100 text-slate-700 shadow-sm' : 'bg-black/20 border-cyan-500/15 text-cyan-100/80'}`}
-          >
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <div
-                  className={`mb-1 text-[10px] font-mono uppercase tracking-[0.32em] ${theme === 'light' ? 'text-cyan-700' : 'text-cyan-300/75'}`}
-                >
-                  传信归属已完成
-                </div>
-                <div className="text-lg font-semibold tracking-widest">
-                  {postEngraveDestination === 'morning-star'
-                    ? '这封信已抵达启明星'
-                    : '这封信已抵达启明星与心象'}
-                </div>
-              </div>
-              <div className="text-xs font-mono tracking-[0.24em] opacity-50">
-                {postEngraveDestination === 'morning-star' ? 'SORT' : 'CLARITY'}
-              </div>
-            </div>
-
-            <div
-              className={`grid gap-3 ${postEngraveDestination === 'morning-star-memoir' ? 'md:grid-cols-2' : 'grid-cols-1'}`}
-            >
-              <div
-                className={`border p-4 ${theme === 'light' ? 'border-cyan-100 bg-cyan-50/50' : 'border-cyan-500/15 bg-cyan-500/5'}`}
-              >
-                <div className="mb-2 text-sm font-bold tracking-widest">启明星</div>
-                <p className="text-sm leading-relaxed opacity-75">
-                  {postEngraveDestination === 'morning-star'
-                    ? '先帮你把刚写下的材料理顺，看见真正卡住的一点。'
-                    : '从判断、选择与疑问出发，帮你看清这件事可以怎么被理解。'}
-                </p>
-              </div>
-
-              {postEngraveDestination === 'morning-star-memoir' && (
-                <div
-                  className={`border p-4 ${theme === 'light' ? 'border-violet-100 bg-violet-50/50' : 'border-violet-400/15 bg-violet-500/5'}`}
-                >
-                  <div className="mb-2 text-sm font-bold tracking-widest">心象</div>
-                  <p className="text-sm leading-relaxed opacity-75">
-                    从时间、关系与重复出现的感受里见证它：这不只是一次事件，也可能是你生命线上的一个回声。
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <MorningStarPanel
-          theme={theme}
-          t={t}
-          entry={entry}
-          guidingStars={guidingStars}
-          readingStep={readingStep}
-          setReadingStep={setReadingStep}
-          reflectionText={reflectionText}
-          setReflectionText={setReflectionText}
-          morningStarPersonas={morningStarPersonas}
-          setMorningStarPersonas={setMorningStarPersonas}
-          morningStarLoading={morningStarLoading}
-          morningStarError={morningStarError}
-          morningStarStreamingPreview={morningStarStreamingPreview}
-          parsedAnalysis={parsedAnalysis}
-          onAnalyze={onAnalyze}
-          onDeleteAnalysis={onDeleteAnalysis}
-          markdownComponents={markdownComponents}
-        />
       </div>
 
       {decrypted &&

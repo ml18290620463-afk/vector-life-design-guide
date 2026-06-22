@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft,
-  Save,
+  ArrowUp,
+  Check,
+  ChevronDown,
   Hash,
   Wifi,
   Activity,
@@ -17,6 +19,15 @@ import {
   Target,
   Anchor,
   Edit2,
+  FileText,
+  Image as ImageIcon,
+  Link,
+  Mic,
+  Paperclip,
+  Plus,
+  Square,
+  Video,
+  X,
 } from 'lucide-react';
 import { DiaryEntry, Language, Theme } from '../types';
 import { CyberButton } from './CyberButton';
@@ -30,6 +41,25 @@ export type PostEngraveDestination = 'release' | 'morning-star' | 'morning-star-
 type ReflectionDepth = 'release' | 'sort' | 'clarity';
 
 const TRANSMISSION_DURATION_MS = 3400;
+
+const formatEditorTimestamp = (language: Language) => {
+  const now = new Date();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const time = `${now.getHours()}:${minutes}`;
+
+  if (language === 'zh') {
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    return `${now.getMonth() + 1}月${now.getDate()}日 · ${weekdays[now.getDay()]} ${time}`;
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(now);
+};
 
 const destinationForDepth = (depth: ReflectionDepth): PostEngraveDestination => {
   if (depth === 'clarity') return 'morning-star-memoir';
@@ -87,6 +117,14 @@ export const Editor: React.FC<EditorProps> = ({
   const [error, setError] = useState(''); // Local error state
   const [showConfirmHome, setShowConfirmHome] = useState(false);
   const [lastClickTime, setLastClickTime] = useState(0);
+  const [stagedMaterialName, setStagedMaterialName] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [showRecordChoice, setShowRecordChoice] = useState(false);
+  const [showUploadMenu, setShowUploadMenu] = useState(false);
+  const [showMobileTagMenu, setShowMobileTagMenu] = useState(false);
+  const materialInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
 
   // Recording guide state
   const [showGuide, setShowGuide] = useState(false);
@@ -304,6 +342,7 @@ export const Editor: React.FC<EditorProps> = ({
         : seed?.reflectionDepth === 'clarity'
           ? clarityDepthPlaceholder
           : t.contentPlaceholder;
+  const editorTimestamp = formatEditorTimestamp(language);
 
   // System Presets - Updated categories with descriptions
   const SYSTEM_TAGS = [
@@ -455,6 +494,75 @@ export const Editor: React.FC<EditorProps> = ({
     }
   };
 
+  const handleMaterialSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setStagedMaterialName(file.name);
+    setShowUploadMenu(false);
+  };
+
+  const openMaterialPicker = (accept: string) => {
+    if (!materialInputRef.current) return;
+    materialInputRef.current.setAttribute('accept', accept);
+    materialInputRef.current.click();
+    setShowUploadMenu(false);
+  };
+
+  const insertLinkAnchor = () => {
+    setContent((prev) => `${prev}${prev ? '\n' : ''}https://`);
+    setShowUploadMenu(false);
+  };
+
+  const finishRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setShowRecordChoice(true);
+  };
+
+  const startRecording = async () => {
+    if (isRecording) return;
+    setShowRecordChoice(false);
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setIsRecording(true);
+      scheduleTimeout(() => {
+        setIsRecording(false);
+        setShowRecordChoice(true);
+      }, 1200);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordingChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(recordingChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        if (blob.size > 0) setStagedMaterialName(language === 'zh' ? '录音片段.webm' : 'voice-note.webm');
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch {
+      setIsRecording(false);
+    }
+  };
+
+  const handleRecordAsText = () => {
+    setContent((prev) => `${prev}${prev ? '\n' : ''}${language === 'zh' ? '【语音转文字】' : '[Voice transcription]'}`);
+    setShowRecordChoice(false);
+  };
+
+  const handleRecordAsAudio = () => {
+    setStagedMaterialName(language === 'zh' ? '录音片段.webm' : 'voice-note.webm');
+    setShowRecordChoice(false);
+  };
+
   const isValid = title.trim() && content.trim();
 
   // Determine which system tags are currently active
@@ -465,7 +573,7 @@ export const Editor: React.FC<EditorProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
       transition={{ duration: 0.5 }}
-      className="container mx-auto px-4 py-8 max-w-4xl min-h-screen flex flex-col relative z-10"
+      className="vector-editor-shell container mx-auto px-4 py-8 max-w-4xl min-h-screen flex flex-col relative z-10"
     >
       <AnimatePresence>
         {isSaving && (
@@ -483,12 +591,28 @@ export const Editor: React.FC<EditorProps> = ({
         )}
       </AnimatePresence>
 
-      <div className="flex justify-between items-center mb-8">
+      <div className="vector-editor-header flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
           <CyberButton variant="ghost" onClick={onCancel} theme={theme}>
-            <ArrowLeft className="w-4 h-4" /> {t.abortProgram}
+            <ArrowLeft className="vector-editor-desktop-back-icon w-4 h-4" />
+            <X className="vector-editor-mobile-close-icon w-5 h-5" />
+            <span>{t.abortProgram}</span>
           </CyberButton>
         </div>
+        <div className="vector-editor-mobile-time" aria-label={editorTimestamp}>
+          <span>{editorTimestamp}</span>
+          <ChevronDown className="w-3.5 h-3.5" />
+        </div>
+        <button
+          type="button"
+          className="vector-editor-mobile-confirm"
+          onClick={handleSave}
+          disabled={!isValid || isSaving || !!error}
+          aria-label={t.engrave}
+          title={t.engrave}
+        >
+          <Check className="w-5 h-5" />
+        </button>
         <div className="flex items-center gap-4">
           {autoSaved && !isSaving && !error && !draftSaveError && (
             <span
@@ -519,7 +643,7 @@ export const Editor: React.FC<EditorProps> = ({
       </div>
 
       <div
-        className={`flex-1 border p-8 backdrop-blur-md flex flex-col gap-6 relative transition-all duration-500 ${error ? 'border-rose-500 shadow-glow-rose-mid' : theme === 'light' ? 'border-vector-cyan-brand/10 bg-white/60 shadow-lg' : 'border-cyan-500/30 bg-black/40 shadow-xl'}`}
+        className={`vector-editor-panel flex-1 border p-8 backdrop-blur-md flex flex-col gap-6 relative transition-all duration-500 ${error ? 'border-rose-500 shadow-glow-rose-mid' : theme === 'light' ? 'border-vector-cyan-brand/10 bg-white/60 shadow-lg' : 'border-cyan-500/30 bg-black/40 shadow-xl'}`}
       >
         {/* Corners */}
         <div
@@ -535,28 +659,114 @@ export const Editor: React.FC<EditorProps> = ({
           className={`absolute bottom-0 right-0 w-4 h-4 border-r-2 ${theme === 'light' ? 'border-cyan-400' : 'border-cyan-500'}`}
         ></div>
 
-        {/* Title Input */}
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between">
-            {error && (
-              <span className="text-xs font-mono text-rose-500 flex items-center gap-1 animate-pulse drop-shadow-glow-rose">
-                <AlertTriangle className="w-3 h-3" /> {error}
-              </span>
-            )}
-          </div>
-          <input
-            data-testid="editor-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={`text-3xl font-bold px-2 py-2 focus:outline-none transition-all ${theme === 'light' ? 'bg-transparent text-vector-ink-strong placeholder:text-slate-200' : 'bg-cyan-950/20 text-white placeholder-cyan-900'} ${error ? 'border-b border-rose-500' : ''}`}
-            placeholder={t.titlePlaceholder}
-            disabled={isSaving}
-          />
+        <div className="vector-editor-upload-menu">
+          <button
+            type="button"
+            className="vector-editor-upload-trigger"
+            onClick={() => setShowUploadMenu((value) => !value)}
+            aria-expanded={showUploadMenu}
+            aria-label={language === 'zh' ? '添加素材' : 'Add material'}
+            title={language === 'zh' ? '添加素材' : 'Add material'}
+          >
+            <Plus className="vector-editor-upload-plus-icon w-5 h-5" />
+            <Paperclip className="vector-editor-upload-clip-icon w-5 h-5" />
+          </button>
+          {showUploadMenu && (
+            <div className="vector-editor-upload-popover" role="menu">
+              <button
+                type="button"
+                onClick={() => openMaterialPicker('image/*')}
+                role="menuitem"
+              >
+                <ImageIcon className="w-4 h-4" />
+                <span>{language === 'zh' ? '上传图片' : 'Image'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openMaterialPicker('video/*,audio/*')}
+                role="menuitem"
+              >
+                <Video className="w-4 h-4" />
+                <span>{language === 'zh' ? '音视频' : 'Audio / video'}</span>
+              </button>
+              <button type="button" onClick={insertLinkAnchor} role="menuitem">
+                <Link className="w-4 h-4" />
+                <span>{language === 'zh' ? '添加链接' : 'Link'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openMaterialPicker('.pdf,.doc,.docx,.txt,.md,application/pdf,text/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document')}
+                role="menuitem"
+              >
+                <FileText className="w-4 h-4" />
+                <span>{language === 'zh' ? '上传文件' : 'File'}</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Content Input */}
-        <div className="flex flex-col gap-2 flex-1">
+        <div className="vector-editor-mobile-tag-menu">
+          <button
+            type="button"
+            className="vector-editor-mobile-tag-trigger"
+            onClick={() => setShowMobileTagMenu((value) => !value)}
+            aria-expanded={showMobileTagMenu}
+            aria-label={t.tagsLabel}
+            title={t.tagsLabel}
+          >
+            <Hash className="w-5 h-5" />
+          </button>
+          {showMobileTagMenu && (
+            <div className="vector-editor-mobile-tag-popover" role="menu">
+              {SYSTEM_TAGS.map((sysTag) => {
+                const isSelected = tags
+                  .split(/[,，]/)
+                  .map((tag) => tag.trim())
+                  .includes(sysTag.label);
+                const Icon = sysTag.icon;
+                return (
+                  <button
+                    key={`mobile-${sysTag.isCustom ? 'custom-anchor' : sysTag.label}`}
+                    type="button"
+                    onClick={() => toggleSystemTag(sysTag.label)}
+                    disabled={isSaving}
+                    role="menuitemcheckbox"
+                    aria-checked={isSelected}
+                    title={sysTag.desc}
+                    className={isSelected ? 'vector-editor-mobile-tag-option--active' : ''}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{sysTag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="vector-editor-record-card">
+          {/* Title Input */}
+          <div className="vector-editor-title-section flex flex-col gap-2">
+            <div className="flex justify-between">
+              {error && (
+                <span className="text-xs font-mono text-rose-500 flex items-center gap-1 animate-pulse drop-shadow-glow-rose">
+                  <AlertTriangle className="w-3 h-3" /> {error}
+                </span>
+              )}
+            </div>
+            <input
+              data-testid="editor-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={`vector-editor-title-input text-3xl font-bold px-2 py-2 focus:outline-none transition-all ${theme === 'light' ? 'bg-transparent text-vector-ink-strong placeholder:text-slate-200' : 'bg-cyan-950/20 text-white placeholder-cyan-900'} ${error ? 'border-b border-rose-500' : ''}`}
+              placeholder={language === 'zh' ? '此刻的想法...' : 'This thought...'}
+              disabled={isSaving}
+            />
+          </div>
+
+          {/* Content Input */}
+          <div className="vector-editor-content-section flex flex-col gap-2 flex-1">
           <div className="flex justify-between items-center">
             <label
               className={`text-xs font-mono uppercase ${theme === 'light' ? 'text-slate-400' : 'text-cyan-700'}`}
@@ -610,16 +820,47 @@ export const Editor: React.FC<EditorProps> = ({
             data-testid="editor-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className={`flex-1 bg-transparent border p-4 font-mono text-lg focus:outline-none resize-none min-h-[200px] transition-all ${theme === 'light' ? 'border-slate-100 text-vector-slate-mid focus:border-cyan-200 focus:bg-white/50' : 'border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 focus:shadow-inset-glow-cyan-mid'}`}
+            className={`vector-editor-content-input flex-1 bg-transparent border p-4 font-mono text-lg focus:outline-none resize-none min-h-[200px] transition-all ${theme === 'light' ? 'border-slate-100 text-vector-slate-mid focus:border-cyan-200 focus:bg-white/50' : 'border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 focus:shadow-inset-glow-cyan-mid'}`}
             placeholder={contentPlaceholder}
             disabled={isSaving}
           />
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              startRecording();
+            }}
+            onPointerUp={(event) => {
+              event.preventDefault();
+              finishRecording();
+            }}
+            onPointerCancel={finishRecording}
+            onPointerLeave={() => {
+              if (isRecording) finishRecording();
+            }}
+            className={`vector-editor-record-button ${isRecording ? 'vector-editor-record-button--active' : ''}`}
+            aria-label={isRecording ? (language === 'zh' ? '松开选择输出方式' : 'Release to choose output') : language === 'zh' ? '按住录音' : 'Hold to record'}
+            title={isRecording ? (language === 'zh' ? '松开选择输出方式' : 'Release to choose output') : language === 'zh' ? '按住录音' : 'Hold to record'}
+          >
+            {isRecording ? <Square className="w-7 h-7" fill="currentColor" /> : <Mic className="w-9 h-9" />}
+          </button>
+          {showRecordChoice && (
+            <div className="vector-editor-record-choice" role="menu">
+              <button type="button" onClick={handleRecordAsText} role="menuitem">
+                {language === 'zh' ? '转为文字' : 'As text'}
+              </button>
+              <button type="button" onClick={handleRecordAsAudio} role="menuitem">
+                {language === 'zh' ? '保存语音' : 'Save audio'}
+              </button>
+            </div>
+          )}
+          </div>
         </div>
 
         {/* Meta Data Section - Restored Multi-dimensional Coordinates */}
-        <div className={`grid grid-cols-1 gap-8 pt-6`}>
+        <div className={`vector-editor-meta grid grid-cols-1 gap-8 pt-6`}>
           {/* 1. Tags Selection */}
-          <div className="flex flex-col gap-4">
+          <div className="vector-editor-tag-section flex flex-col gap-4">
             <label
               className={`text-xs font-mono uppercase flex items-center gap-2 ${theme === 'light' ? 'text-slate-400' : 'text-cyan-700'}`}
             >
@@ -627,7 +868,7 @@ export const Editor: React.FC<EditorProps> = ({
             </label>
 
             {/* System Tag Buttons */}
-            <div className="flex flex-wrap gap-2">
+            <div className="vector-editor-tags flex flex-wrap gap-2">
               {SYSTEM_TAGS.map((sysTag, idx) => {
                 const isSelected = tags
                   .split(/[,，]/)
@@ -699,7 +940,20 @@ export const Editor: React.FC<EditorProps> = ({
 
         </div>
 
-        <div className="flex justify-end pt-4">
+        <div className="vector-editor-actions flex justify-end pt-4">
+          <input
+            ref={materialInputRef}
+            type="file"
+            accept="image/*,video/*,audio/*,application/pdf"
+            className="hidden"
+            onChange={handleMaterialSelect}
+            aria-label={language === 'zh' ? '上传素材' : 'Upload material'}
+          />
+          {stagedMaterialName && (
+            <div className="vector-editor-material-name" title={stagedMaterialName}>
+              {stagedMaterialName}
+            </div>
+          )}
           <CyberButton
             data-testid="editor-save"
             onClick={handleSave}
@@ -712,7 +966,7 @@ export const Editor: React.FC<EditorProps> = ({
               </span>
             ) : (
               <>
-                <Save className="w-4 h-4" /> {t.engrave}
+                <ArrowUp className="w-4 h-4" /> {t.engrave}
               </>
             )}
           </CyberButton>

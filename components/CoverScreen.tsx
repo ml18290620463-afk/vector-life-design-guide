@@ -389,7 +389,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
   return (
     <div
-      className={`relative min-h-screen overflow-hidden flex flex-col items-center justify-center perspective-[1000px] transition-colors duration-1000 ${theme === 'light' ? 'cover-light-shell' : ''} ${
+      className={`cover-screen relative min-h-screen overflow-hidden flex flex-col items-center justify-center perspective-[1000px] transition-colors duration-1000 ${theme === 'light' ? 'cover-light-shell' : ''} ${
         theme === 'light'
           ? 'bg-[radial-gradient(ellipse_120%_86%_at_50%_8%,#fcfefd_0%,#f3fbfa_38%,#e8f4f3_72%,#fbfdfb_100%)]'
           : 'bg-[radial-gradient(ellipse_125%_100%_at_50%_8%,var(--color-space-layer)_0%,var(--color-space-deep)_44%,var(--color-space-bg)_100%)]'
@@ -718,9 +718,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
       {/* Main UI Content */}
       <div
-        className={`relative z-20 flex flex-col items-center text-center transition-all duration-700 ${mounted && !isWarping ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-sm'}`}
+        className={`cover-hero-stack relative z-20 flex flex-col items-center text-center transition-all duration-700 ${mounted && !isWarping ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-sm'}`}
       >
-        <div className="mb-8 relative w-56 h-56 md:w-[19.5rem] md:h-[19.5rem] flex items-center justify-center [perspective:1000px] cover-enter cover-enter--3">
+        <div className="cover-core-stage mb-8 relative w-56 h-56 md:w-[19.5rem] md:h-[19.5rem] flex items-center justify-center [perspective:1000px] cover-enter cover-enter--3">
           <div
             className={`cover-core-breath ${isLaunchSliding ? 'cover-core-breath--launching' : ''} absolute inset-0 border rounded-full blur-[0.5px] ${theme === 'light' ? 'border-[#86b4bb]/22 shadow-[0_0_26px_rgba(134,180,187,0.16),0_0_82px_rgba(255,255,255,0.72)]' : 'border-[color:var(--color-cover-status-rule)]/25 shadow-[0_0_20px_rgba(0,200,232,0.08)]'}`}
           ></div>
@@ -945,7 +945,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               />
             </div>
           </button>
-          <div className="absolute left-[calc(100%+2.75rem)] top-2 hidden md:flex flex-col items-start gap-2 min-w-[180px]">
+          <div className="cover-core-status cover-core-status--identity absolute left-[calc(100%+2.75rem)] top-2 flex flex-col items-start gap-2 min-w-[180px]">
             <div
               className={`flex items-center gap-2 text-xs font-mono pl-3 ${theme === 'light' ? 'text-[#547f89]/72 drop-shadow-[0_0_8px_rgba(134,180,187,0.08)]' : 'text-[color:var(--color-cover-status-title)]'}`}
             >
@@ -991,7 +991,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               </div>
             )}
           </div>
-          <div className="absolute right-[calc(100%+2.5rem)] bottom-2 hidden md:flex flex-col items-end gap-1">
+          <div className="cover-core-status cover-core-status--observation absolute right-[calc(100%+2.5rem)] bottom-2 flex flex-col items-end gap-1">
             <div
               className={`flex items-center gap-1 text-[9px] font-mono border-r-2 pr-2 pl-1 py-0.5 ${theme === 'light' ? 'text-[#547f89]/62 border-[#86b4bb]/34 bg-white/30 backdrop-blur-[2px] shadow-[0_0_8px_rgba(134,180,187,0.05)]' : 'text-[color:var(--color-cover-status-title)] border-[color:var(--color-cover-status-rule)] bg-[color-mix(in_srgb,var(--color-space-bg)_55%,transparent)] shadow-[0_0_10px_rgba(0,200,232,0.12)]'}`}
             >
@@ -1045,13 +1045,13 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   uses the real TTF — same heroic visual weight,
                   no paint delay. */}
         <h1
-          className={`cover-enter cover-enter--1 relative z-10 text-5xl sm:text-7xl md:text-9xl font-bold tracking-[0.08em] md:tracking-[0.12em] mb-2 max-md:mix-blend-normal md:mix-blend-plus-lighter [transform:scaleX(1.045)] ${theme === 'light' ? 'text-[#303846] md:[text-shadow:0_1px_0_rgba(255,255,255,0.76),0_10px_34px_rgba(84,127,137,0.07)]' : 'text-[color:var(--color-cover-hero-title)] md:drop-shadow-[0_2px_0_rgba(123,109,255,0.22)] md:[text-shadow:0_0_20px_rgba(0,200,232,0.10),0_0_34px_rgba(123,109,255,0.12),0_8px_26px_rgba(0,0,0,0.34)]'}`}
+          className={`cover-title cover-enter cover-enter--1 relative z-10 text-5xl sm:text-7xl md:text-9xl font-bold tracking-[0.08em] md:tracking-[0.12em] mb-2 max-md:mix-blend-normal md:mix-blend-plus-lighter [transform:scaleX(1.045)] ${theme === 'light' ? 'text-[#303846] md:[text-shadow:0_1px_0_rgba(255,255,255,0.76),0_10px_34px_rgba(84,127,137,0.07)]' : 'text-[color:var(--color-cover-hero-title)] md:drop-shadow-[0_2px_0_rgba(123,109,255,0.22)] md:[text-shadow:0_0_20px_rgba(0,200,232,0.10),0_0_34px_rgba(123,109,255,0.12),0_8px_26px_rgba(0,0,0,0.34)]'}`}
           data-text="VECTOR"
         >
           VECTOR
         </h1>
         <div
-          className={`cover-enter cover-enter--2 relative z-10 flex items-center gap-4 font-bold text-xl md:text-3xl tracking-[0.5em] md:tracking-[0.54em] uppercase mb-4 ${theme === 'light' ? 'text-[#3f4b62]' : ''}`}
+          className={`cover-subtitle cover-enter cover-enter--2 relative z-10 flex items-center gap-4 font-bold text-xl md:text-3xl tracking-[0.5em] md:tracking-[0.54em] uppercase mb-4 ${theme === 'light' ? 'text-[#3f4b62]' : ''}`}
         >
           <span
             className={`h-[1px] w-24 md:w-36 ${theme === 'light' ? 'bg-gradient-to-l from-[#3f4b62]/28 via-[#86b4bb]/12 to-transparent' : 'bg-gradient-to-l from-[color:var(--color-cover-hero-rule)] via-[#7b6dff]/55 to-transparent shadow-[0_0_12px_rgba(0,200,232,0.26),0_0_18px_rgba(123,109,255,0.20)]'}`}
@@ -1066,7 +1066,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           ></span>
         </div>
         <p
-          className={`cover-enter cover-enter--2b relative z-10 mx-auto mb-3 flex max-w-[min(90vw,720px)] items-center justify-center px-4 text-center text-sm font-semibold leading-relaxed tracking-[0.12em] md:text-lg md:tracking-[0.18em] ${theme === 'light' ? 'text-[#57616f]' : 'text-[color:var(--color-cover-status-body)]'}`}
+          className={`cover-narrative cover-enter cover-enter--2b relative z-10 mx-auto mb-3 flex max-w-[min(90vw,720px)] items-center justify-center px-4 text-center text-sm font-semibold leading-relaxed tracking-[0.12em] md:text-lg md:tracking-[0.18em] ${theme === 'light' ? 'text-[#57616f]' : 'text-[color:var(--color-cover-status-body)]'}`}
           aria-label={t.brandNarrative}
         >
           <span

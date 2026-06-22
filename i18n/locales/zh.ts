@@ -220,7 +220,7 @@ export const zh = {
   principles: '航行守则',
   targetYear: '目标年份',
   dataCached: '数据已缓存',
-  titlePlaceholder: '此刻，尚未被命名。',
+  titlePlaceholder: '',
   contentPlaceholder: '不要急着说正确的话，说真实的...',
   tagsLabel: '每个故事，最终归向自己',
   tagsPlaceholder: '事实, 感受, 假设 (逗号分隔)...',

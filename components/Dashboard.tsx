@@ -109,6 +109,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onSetPassword,
   });
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('preview') && params.get('screen') === 'dashboard' && isUnlocked && !isVaultOpen) {
+      handleToggleVault();
+    }
+  }, [handleToggleVault, isUnlocked, isVaultOpen]);
+
   const {
     selectedTag,
     setSelectedTag,
@@ -381,6 +389,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const openDepthOptions = () => {
     setPendingQuickCapture(quickCapture.trim());
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const isMobilePreview = params.get('preview') === 'mobile';
+      const isNarrowScreen = window.matchMedia('(max-width: 767px)').matches;
+      if (isMobilePreview || isNarrowScreen) {
+        const depth = reflectionDepthValues[reflectionDepth] ?? 'sort';
+        onOpenComposerWithSeed?.({ content: quickCapture.trim(), reflectionDepth: depth });
+        setQuickCapture('');
+        return;
+      }
+    }
     setShowDepthOptions(true);
   };
 
@@ -393,7 +412,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen flex flex-col relative z-10">
+    <div className="vector-dashboard-shell mx-auto w-full min-h-screen flex flex-col relative z-10">
       <DashboardHeader
         theme={theme}
         language={language}
@@ -481,7 +500,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       />
 
       <section
-        className={`mb-5 border rounded-xl p-3 ${theme === 'light' ? 'bg-white/80 border-slate-200' : 'bg-black/30 border-cyan-900/40'}`}
+        className={`vector-quick-capture mb-5 border p-3 ${theme === 'light' ? 'bg-white/90 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-cyan-900/40 shadow-[0_18px_60px_rgba(0,0,0,0.26)]'}`}
         data-testid="quick-capture-bar"
       >
         <div className="flex flex-col md:flex-row gap-2 md:items-center">
@@ -493,11 +512,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 ? '快速记录一句此刻想法，然后进入完整编辑...'
                 : 'Quick capture one thought, then continue in editor...'
             }
-            className={`flex-1 px-3 py-2 text-sm rounded-md border ${theme === 'light' ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/50 border-cyan-900/60 text-cyan-100'}`}
+            className={`flex-1 px-3 py-2 text-sm rounded-md border ${theme === 'light' ? 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400' : 'bg-black/40 border-cyan-900/60 text-cyan-100 placeholder:text-cyan-100/35'}`}
           />
           <button
             type="button"
-            className={`px-3 py-2 text-xs uppercase tracking-widest rounded-md border ${theme === 'light' ? 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' : 'border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/10'}`}
+            className={`px-4 py-2 text-xs uppercase tracking-widest rounded-md border transition-colors ${theme === 'light' ? 'border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100' : 'border-cyan-500/40 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20'}`}
             onClick={openDepthOptions}
           >
             {language === 'zh' ? '刻录此刻' : 'Open writer'}
@@ -565,7 +584,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           [`docs/memoir-memory-system.md`](
           ../docs/memoir-memory-system.md) §3.2 future work. */}
       {isVaultOpen && hasCoreHabit && proactiveSuggestions.length > 0 && (
-        <div className="container mx-auto px-4 max-w-5xl">
+        <div className="vector-notice-stack">
           {proactiveSuggestions.map((s) => (
             <ProactiveRecallCard
               key={`${s.memoirId}::${s.trigger}`}
@@ -592,7 +611,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           stale "silence" suggestion never appears above an
           actual letter that just landed. */}
       {isVaultOpen && arrivedLetters.length > 0 && (
-        <div className="container mx-auto px-4 max-w-5xl">
+        <div className="vector-notice-stack">
           {arrivedLetters.map((letter) => (
             <LetterArrivedCard
               key={letter.id}

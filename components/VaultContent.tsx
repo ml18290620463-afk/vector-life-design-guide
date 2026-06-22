@@ -108,10 +108,10 @@ export const VaultContent: React.FC<VaultContentProps> = ({
   return (
     <div
       {...sealedInteractiveProps}
-      className={`transition-all duration-700 relative overflow-hidden rounded-2xl border ${
+      className={`vector-vault-content transition-all duration-700 relative overflow-hidden border ${
         theme === 'light'
-          ? 'bg-white/40 border-slate-200/40 shadow-sm'
-          : 'bg-vector-night-slate/60 border-vector-navy-deep/20 backdrop-blur-md'
+          ? 'bg-white/75 border-slate-200/80 shadow-sm'
+          : 'bg-vector-night-slate/70 border-white/[0.07] backdrop-blur-md shadow-[0_24px_80px_rgba(0,0,0,0.28)]'
       } ${isVaultOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-40 lg:opacity-50 grayscale blur-xl translate-y-4 cursor-pointer hover:opacity-70'}`}
     >
       <AnimatePresence>

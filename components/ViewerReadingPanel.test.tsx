@@ -58,10 +58,10 @@ describe('ViewerReadingPanel', () => {
     expect(screen.getByText(/VECTOR_TRACE_PROTOCOL/)).toBeTruthy();
   });
 
-  it('renders tag chips when the entry is decrypted', () => {
+  it('does not render tag chips in the reading-only view', () => {
     render(<ViewerReadingPanel {...baseProps} />);
-    expect(screen.getByText('#alpha')).toBeTruthy();
-    expect(screen.getByText('#beta')).toBeTruthy();
+    expect(screen.queryByText('#alpha')).toBeNull();
+    expect(screen.queryByText('#beta')).toBeNull();
   });
 
   it('renders the decrypted markdown body via the supplied components', () => {

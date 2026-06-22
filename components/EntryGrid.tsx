@@ -118,7 +118,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`text-center py-20 border border-dashed rounded-lg backdrop-blur-sm ${theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-cyan-900/50 bg-black/20'}`}
+        className={`text-center py-16 border border-dashed rounded-lg backdrop-blur-sm ${theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-cyan-900/50 bg-black/20'}`}
       >
         <p
           className={`font-mono text-lg ${theme === 'light' ? 'text-slate-400' : 'text-cyan-700'}`}
@@ -153,7 +153,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
   return (
     <div
       ref={parentRef}
-      className="max-h-[75vh] overflow-auto custom-scrollbar relative pr-2"
+      className="vector-entry-scroll overflow-auto custom-scrollbar relative pr-2"
       style={{
         contain: 'strict',
       }}
@@ -254,7 +254,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                     onSelectEntry(entry);
                   }}
                   className={`
-                    flex-1 flex items-center gap-4 h-full px-6 py-4 border-l-2 font-mono text-[11px] transition-all cursor-pointer group relative overflow-hidden rounded-r-lg
+                    flex-1 flex items-center gap-4 h-full px-5 py-4 border-l-2 font-mono text-[11px] transition-all cursor-pointer group relative overflow-hidden rounded-r-lg
                     ${
                       entry.unlockAt && entry.unlockAt > now
                         ? theme === 'light'
@@ -415,7 +415,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                     onSelectEntry(entry);
                   }}
                   className={`
-                     relative w-full h-full border-l-2 transition-all cursor-pointer group overflow-hidden flex flex-col items-start justify-between p-8
+                     relative w-full h-full border-l-2 transition-all cursor-pointer group overflow-hidden flex flex-col items-start justify-between p-6 rounded-md
                      ${
                        entry.unlockAt && entry.unlockAt > now
                          ? theme === 'light'
@@ -499,7 +499,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                       [{new Date(entry.createdAt).toLocaleDateString()}]
                     </span>
                     <h4
-                      className={`text-lg font-black tracking-tighter uppercase transition-colors duration-300 ${theme === 'light' ? 'text-slate-800' : 'text-slate-100 group-hover:text-cyan-400'}`}
+                      className={`text-lg font-black uppercase transition-colors duration-300 ${theme === 'light' ? 'text-slate-800' : 'text-slate-100 group-hover:text-cyan-400'}`}
                     >
                       {entry.title}
                     </h4>

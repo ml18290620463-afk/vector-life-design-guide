@@ -86,6 +86,20 @@ const ScreenLoader: React.FC<{ language: Language }> = ({ language }) => (
   </div>
 );
 
+const getPreviewMode = () => {
+  if (typeof window === 'undefined') return null;
+  const mode = new URLSearchParams(window.location.search).get('preview');
+  return mode === 'mobile' || mode === 'web' ? mode : null;
+};
+
+const getPreviewScreen = () => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  if (!params.get('preview')) return null;
+  const screen = params.get('screen');
+  return screen === 'dashboard' || screen === 'editor' || screen === 'onboarding' ? screen : null;
+};
+
 const App: React.FC = () => {
   // Subscribe via `useShallow` so changes to unrelated store fields (e.g.
   // a child component flipping `selectedEntry`) do not trigger an App
@@ -131,6 +145,33 @@ const App: React.FC = () => {
   useEffect(() => {
     setCurrentUser(TRANSLATIONS[language].localUser);
   }, [language, setCurrentUser]);
+
+  useEffect(() => {
+    const mode = getPreviewMode();
+    document.documentElement.classList.toggle('vector-force-mobile', mode === 'mobile');
+    document.documentElement.classList.toggle('vector-force-web', mode === 'web');
+
+    return () => {
+      document.documentElement.classList.remove('vector-force-mobile', 'vector-force-web');
+    };
+  }, []);
+
+  useEffect(() => {
+    const screen = getPreviewScreen();
+    if (!screen) return;
+    if (screen === 'onboarding') {
+      setIsUnlocked(false);
+      setAppState(AppState.ONBOARDING);
+      return;
+    }
+    setIsUnlocked(true);
+    if (screen === 'editor') {
+      setAppState(AppState.DASHBOARD);
+      setAppState(AppState.EDITOR);
+      return;
+    }
+    setAppState(AppState.DASHBOARD);
+  }, [setAppState, setIsUnlocked]);
 
   // Phase 4.5 §C — auto-enable Argon2id on first mount post-rollout.
   // Idempotent (one-shot migration marker inside the service); safe
@@ -503,7 +544,7 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <AppMotionConfig>
         <div
-          className={`min-h-screen font-sans relative transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7] text-[#1a202c] selection:bg-cyan-600/20 selection:text-cyan-900' : 'bg-[var(--background)] text-[color:var(--foreground)] selection:bg-[color-mix(in_srgb,var(--color-tech-cyan-energy)_38%,transparent)] selection:text-[var(--foreground)]'}`}
+          className={`vector-app-shell min-h-screen font-sans relative transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f6f8fb] text-[#1a202c] selection:bg-cyan-600/20 selection:text-cyan-900' : 'bg-[var(--background)] text-[color:var(--foreground)] selection:bg-[color-mix(in_srgb,var(--color-tech-cyan-energy)_38%,transparent)] selection:text-[var(--foreground)]'}`}
         >
           {showGlobalBackground && (
             <Suspense fallback={null}>
@@ -707,7 +748,7 @@ const App: React.FC = () => {
                 onCancel={handleBackToDashboard}
                 onGoHome={() => setAppState(AppState.COVER)}
                 existingTitles={entries.map((e) => e.title)}
-                seed={editorSeed}
+                seed={editorSeed ?? (getPreviewScreen() === 'editor' ? { reflectionDepth: 'sort' } : null)}
               />
             </Suspense>
           )}

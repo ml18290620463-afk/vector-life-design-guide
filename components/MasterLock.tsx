@@ -97,11 +97,11 @@ export const MasterLock: React.FC<MasterLockProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex items-center justify-center p-6 md:p-10 backdrop-blur-3xl overflow-y-auto transition-colors duration-1000 ${theme === 'light' ? 'bg-neutral-50' : 'bg-vector-onyx'}`}
+      className={`master-lock-screen fixed inset-0 z-[200] flex items-center justify-center p-6 md:p-10 backdrop-blur-3xl overflow-y-auto transition-colors duration-1000 ${theme === 'light' ? 'bg-neutral-50' : 'bg-vector-onyx'}`}
     >
       <MasterLockBackdrop theme={theme} />
 
-      <div className="relative z-10 my-auto w-full max-w-[760px] perspective-[3000px] transition-all duration-500">
+      <div className="master-lock-frame relative z-10 my-auto w-full max-w-[760px] perspective-[3000px] transition-all duration-500">
         <div
           aria-hidden="true"
           className={`pointer-events-none absolute -inset-10 opacity-80 blur-2xl [border-radius:37%_63%_48%_52%/12%_18%_82%_88%] ${
@@ -115,7 +115,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
           data-testid="organic-lock-silhouette"
           viewBox="0 0 820 690"
           preserveAspectRatio="none"
-          className="pointer-events-none absolute -inset-6 h-[calc(100%+3rem)] w-[calc(100%+3rem)] overflow-visible opacity-85 blur-[0.2px]"
+          className="master-lock-silhouette pointer-events-none absolute -inset-6 h-[calc(100%+3rem)] w-[calc(100%+3rem)] overflow-visible opacity-85 blur-[0.2px]"
         >
           <defs>
             <linearGradient id="lock-organic-edge" x1="8%" y1="2%" x2="92%" y2="96%">
@@ -192,10 +192,10 @@ export const MasterLock: React.FC<MasterLockProps> = ({
                   scale: { duration: 0.4 },
                 }
           }
-          className={`group relative min-h-[650px] w-full overflow-hidden border p-7 transition-all duration-1000 [border-radius:4.8rem_7.2rem_5.9rem_6.8rem/3.3rem_4.5rem_6.5rem_5.3rem] sm:p-10 ${theme === 'light' ? 'border-cyan-500/10 bg-white/82 shadow-[0_38px_100px_color-mix(in_srgb,_black_16%,_transparent)]' : 'border-cyan-100/14 bg-[radial-gradient(circle_at_14%_12%,rgba(91,255,244,0.18),transparent_25%),radial-gradient(circle_at_84%_16%,rgba(139,92,246,0.22),transparent_33%),radial-gradient(circle_at_52%_72%,rgba(34,211,238,0.08),transparent_38%),linear-gradient(135deg,rgba(2,27,34,0.82),rgba(4,5,18,0.74)_48%,rgba(6,13,34,0.86))] shadow-[0_30px_90px_rgba(0,0,0,0.50),0_0_120px_rgba(104,82,255,0.14),0_0_100px_rgba(0,220,255,0.10),inset_0_1px_0_rgba(190,255,255,0.14),inset_16px_0_64px_rgba(25,255,240,0.085),inset_-22px_-18px_92px_rgba(139,92,246,0.16)]'} ${verify.isSuccess ? 'pointer-events-none shadow-[0_0_80px_rgba(126,239,255,0.24)]' : ''}`}
+          className={`master-lock-card group relative min-h-[650px] w-full overflow-hidden border p-7 transition-all duration-1000 [border-radius:4.8rem_7.2rem_5.9rem_6.8rem/3.3rem_4.5rem_6.5rem_5.3rem] sm:p-10 ${theme === 'light' ? 'border-cyan-500/10 bg-white/82 shadow-[0_38px_100px_color-mix(in_srgb,_black_16%,_transparent)]' : 'border-cyan-100/14 bg-[radial-gradient(circle_at_14%_12%,rgba(91,255,244,0.18),transparent_25%),radial-gradient(circle_at_84%_16%,rgba(139,92,246,0.22),transparent_33%),radial-gradient(circle_at_52%_72%,rgba(34,211,238,0.08),transparent_38%),linear-gradient(135deg,rgba(2,27,34,0.82),rgba(4,5,18,0.74)_48%,rgba(6,13,34,0.86))] shadow-[0_30px_90px_rgba(0,0,0,0.50),0_0_120px_rgba(104,82,255,0.14),0_0_100px_rgba(0,220,255,0.10),inset_0_1px_0_rgba(190,255,255,0.14),inset_16px_0_64px_rgba(25,255,240,0.085),inset_-22px_-18px_92px_rgba(139,92,246,0.16)]'} ${verify.isSuccess ? 'pointer-events-none shadow-[0_0_80px_rgba(126,239,255,0.24)]' : ''}`}
         >
           <MasterLockCardChrome theme={theme} />
-          <div className="absolute right-7 top-7 z-50 font-mono uppercase tracking-widest">
+          <div className="master-lock-language absolute right-7 top-7 z-50 font-mono uppercase tracking-widest">
             <button
               type="button"
               onClick={() => setShowLanguageMenu((prev) => !prev)}
@@ -256,7 +256,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
             onCancelClick={cancelConfirm.trigger}
           />
 
-          <div className="flex flex-col items-center text-center space-y-4">
+          <div className="master-lock-content flex flex-col items-center text-center space-y-4">
             {recovery.isRecoveryMode ? (
               <MasterLockRecoveryForm theme={theme} t={t} recovery={recovery} />
             ) : (
@@ -284,7 +284,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
             )}
           </div>
           {!recovery.isRecoveryMode && (
-            <div className="pointer-events-none absolute bottom-6 left-8 right-8 flex items-center justify-center gap-2 text-center font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(160,200,240,0.65)] md:text-[10px]">
+            <div className="master-lock-security pointer-events-none absolute bottom-6 left-8 right-8 flex items-center justify-center gap-2 text-center font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(160,200,240,0.65)] md:text-[10px]">
               <span className="text-[#1D9E75]">●</span>
               <span>端到端加密</span>
               <span className="text-[#1D9E75]">●</span>

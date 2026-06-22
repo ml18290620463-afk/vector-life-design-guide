@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Lock, Paperclip, Shield } from 'lucide-react';
+import { FileText, Lock, Paperclip, Shield } from 'lucide-react';
 import type { DiaryEntry, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 
@@ -28,6 +28,42 @@ interface ArchiveEntryCardProps {
 const buildArchiveId = (entry: DiaryEntry): string => {
   const yearSuffix = new Date(entry.createdAt).getFullYear().toString().slice(2);
   return `AR-${yearSuffix}-${entry.id.slice(0, 4).toUpperCase()}`;
+};
+
+const ArchiveAttachmentPreview: React.FC<{
+  entry: DiaryEntry;
+  theme: Theme;
+  compact?: boolean;
+}> = ({ entry, theme, compact = false }) => {
+  if (!entry.attachment) return null;
+
+  if (entry.attachment.type === 'image') {
+    return (
+      <figure className={compact ? 'mt-3' : 'mt-4'}>
+        <img
+          src={entry.attachment.data}
+          alt={entry.attachment.name}
+          loading="lazy"
+          className={`w-full rounded-lg border object-cover ${
+            compact ? 'max-h-56' : 'max-h-80'
+          } ${theme === 'light' ? 'border-slate-200 bg-slate-100' : 'border-cyan-900/30 bg-black/30'}`}
+        />
+      </figure>
+    );
+  }
+
+  return (
+    <div
+      className={`mt-3 inline-flex max-w-full items-center gap-2 rounded-md border px-3 py-2 text-xs ${
+        theme === 'light'
+          ? 'border-slate-200 bg-slate-50 text-slate-500'
+          : 'border-cyan-900/30 bg-black/20 text-cyan-300/70'
+      }`}
+    >
+      <FileText className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{entry.attachment.name}</span>
+    </div>
+  );
 };
 
 /**
@@ -64,7 +100,7 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: delayIndex * 0.03 }}
         onClick={handleClick}
-        className="flex items-center group/container"
+        className="flex items-stretch group/container"
       >
         {/* Structural Spine Segment */}
         <div className="relative w-12 flex items-center justify-center pointer-events-none">
@@ -79,7 +115,7 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
         </div>
 
         <div
-          className={`flex-1 flex items-center gap-4 p-3 border transition-all cursor-pointer group/item relative overflow-hidden font-mono text-[11px] rounded-sm ${
+          className={`flex-1 p-4 border transition-all cursor-pointer group/item relative overflow-hidden text-[13px] rounded-lg ${
             isTimeLocked
               ? theme === 'light'
                 ? 'border-indigo-200 bg-indigo-50/50 cursor-not-allowed opacity-80 shadow-sm'
@@ -119,71 +155,48 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
             className={`absolute bottom-1 left-0 w-0.5 h-4 opacity-30 ${theme === 'light' ? 'bg-cyan-200' : 'bg-cyan-900'}`}
           />
 
-          <div className="shrink-0 flex flex-col gap-0.5">
-            <div className="opacity-80 text-cyan-800 font-bold">
-              [{new Date(entry.createdAt).toLocaleDateString()}]
+          <div className="relative z-10 flex flex-col gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div
+                  className={`mb-1 font-mono text-[10px] opacity-50 ${theme === 'light' ? 'text-slate-500' : 'text-green-700'}`}
+                >
+                  {new Date(entry.createdAt).toLocaleDateString()} · {archiveId}
+                </div>
+                <h4
+                  className={`text-base font-bold leading-snug tracking-tight ${theme === 'light' ? 'text-vector-ink-strong group-hover/item:text-vector-cyan-brand' : 'text-cyan-100 group-hover/item:text-cyan-50'}`}
+                >
+                  {entry.title}
+                </h4>
+              </div>
+              {entry.isSample && (
+                <span
+                  data-testid="archive-sample-badge"
+                  title={t.sampleBadgeAria ?? 'Sample reflection'}
+                  className={`shrink-0 text-[7px] font-mono uppercase tracking-[0.3em] px-1.5 py-0.5 border rounded-sm ${theme === 'light' ? 'border-amber-300 text-amber-700 bg-amber-50/80' : 'border-amber-500/50 text-amber-300 bg-amber-500/10'}`}
+                >
+                  {t.sampleBadge ?? 'Sample'}
+                </span>
+              )}
             </div>
-            <div
-              className={`text-[8px] opacity-30 tracking-tighter ${theme === 'light' ? 'text-slate-400' : 'text-green-900'}`}
+
+            <ArchiveAttachmentPreview entry={entry} theme={theme} compact />
+
+            <p
+              className={`whitespace-pre-wrap break-words text-sm leading-7 ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}
             >
-              {archiveId}
-            </div>
-          </div>
+              {entry.content}
+            </p>
 
-          <div className="flex-1 truncate tracking-[0.1em] flex items-center gap-2">
-            <span className="opacity-40 text-cyan-800 font-black">{'>>'}</span>
-            <span
-              className={`transition-colors uppercase font-bold truncate ${theme === 'light' ? 'group-hover:text-vector-cyan-brand' : 'text-green-500 group-hover:text-cyan-200'}`}
-            >
-              {entry.title}
-            </span>
-            {entry.isSample && (
-              <span
-                data-testid="archive-sample-badge"
-                title={t.sampleBadgeAria ?? 'Sample reflection'}
-                className={`shrink-0 text-[7px] font-mono uppercase tracking-[0.3em] px-1.5 py-0.5 border rounded-sm ${theme === 'light' ? 'border-amber-300 text-amber-700 bg-amber-50/80' : 'border-amber-500/50 text-amber-300 bg-amber-500/10'}`}
-              >
-                {t.sampleBadge ?? 'Sample'}
-              </span>
-            )}
-          </div>
-
-          <div className="shrink-0 opacity-60 hidden md:block text-cyan-900 text-[10px]">
-            {entry.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                className="mr-2 px-1 border border-transparent hover:border-current transition-colors"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {isTimeLocked ? (
+            {isTimeLocked && (
               <div className="flex items-center gap-1.5 text-vector-magenta transition-colors neon-glow-alert">
                 <Lock className="w-3 h-3" />
                 <span className="text-[9px] font-bold tracking-tighter uppercase px-1 border border-vector-magenta/30 neon-border-alert">
                   {t.encryptedRecord || 'RESTRICTED'}
                 </span>
               </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-cyan-700 group-hover/item:text-teal-400 transition-colors">
-                <Shield className="w-3 h-3" />
-                <span className="text-[8px] font-bold opacity-60 uppercase">
-                  {t.safeRecord || 'VERIFIED'}
-                </span>
-              </div>
             )}
           </div>
-
-          {entry.attachment ? (
-            <Paperclip className="w-3 h-3 text-cyan-500 opacity-80" />
-          ) : (
-            <div
-              className={`w-3 h-px opacity-20 ${theme === 'light' ? 'bg-slate-400' : 'bg-green-600'}`}
-            />
-          )}
         </div>
       </motion.div>
     );
@@ -256,7 +269,9 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
           >
             {isTimeLocked ? <Lock className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
           </div>
-          {entry.attachment && <Paperclip className="w-3 h-3 text-cyan-500" />}
+          {entry.attachment && entry.attachment.type !== 'image' && (
+            <Paperclip className="w-3 h-3 text-cyan-500" />
+          )}
         </div>
         <span
           className={`text-[10px] border px-1.5 py-0.5 rounded-sm font-mono tracking-tighter ${theme === 'light' ? 'text-vector-slate-soft border-vector-cyan-brand/10' : 'text-green-800 border-green-900/40'}`}
@@ -265,16 +280,17 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
         </span>
       </div>
       <h4
-        className={`font-bold mb-2 truncate tracking-tight text-sm ${theme === 'light' ? 'text-vector-ink-strong group-hover/item:text-vector-cyan-brand' : 'text-cyan-100 group-hover/item:text-cyan-50'}`}
+        className={`font-bold mb-2 tracking-tight text-sm ${theme === 'light' ? 'text-vector-ink-strong group-hover/item:text-vector-cyan-brand' : 'text-cyan-100 group-hover/item:text-cyan-50'}`}
       >
         {entry.title}
       </h4>
-      <div className="flex items-center justify-between border-t border-dashed mt-2 pt-2 border-vector-cyan-brand/5">
-        <p
-          className={`text-[9px] truncate font-mono tracking-tighter ${theme === 'light' ? 'text-vector-slate-soft' : 'text-green-900'}`}
-        >
-          {entry.tags.map((tag) => `#${tag}`).join(' ')}
-        </p>
+      <ArchiveAttachmentPreview entry={entry} theme={theme} />
+      <p
+        className={`mt-3 whitespace-pre-wrap break-words text-sm leading-7 ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}
+      >
+        {entry.content}
+      </p>
+      <div className="flex items-center justify-end border-t border-dashed mt-4 pt-2 border-vector-cyan-brand/5">
         <span
           className={`text-[8px] font-black uppercase tracking-tighter sm:opacity-0 group-hover/item:opacity-100 transition-opacity ${isTimeLocked ? 'text-vector-magenta neon-glow-alert' : 'text-teal-500'}`}
         >

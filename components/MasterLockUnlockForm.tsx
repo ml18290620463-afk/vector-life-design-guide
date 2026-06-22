@@ -102,13 +102,13 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
 
   return (
     <>
-      <div className="flex min-h-[430px] w-full flex-col justify-start gap-10 pt-7 font-mono text-cyan-300 md:gap-12 md:pt-8">
-        <div className="mx-auto w-full max-w-[620px] space-y-8 text-center md:space-y-9">
-          <div className="space-y-8 md:space-y-9">
+      <div className="master-unlock-form flex min-h-[430px] w-full flex-col justify-start gap-10 pt-7 font-mono text-cyan-300 md:gap-12 md:pt-8">
+        <div className="master-unlock-panel mx-auto w-full max-w-[620px] space-y-8 text-center md:space-y-9">
+          <div className="master-unlock-main space-y-8 md:space-y-9">
             <div
-              className={`space-y-3 text-center ${theme === 'light' ? 'text-slate-500' : 'text-cyan-200'}`}
+              className={`master-unlock-title-block space-y-3 text-center ${theme === 'light' ? 'text-slate-500' : 'text-cyan-200'}`}
             >
-              <div className="flex items-center justify-center gap-5 text-[16px] font-bold uppercase tracking-[0.34em] md:text-[20px]">
+              <div className="master-unlock-title flex items-center justify-center gap-5 text-[16px] font-bold uppercase tracking-[0.34em] md:text-[20px]">
                 <span className="h-px w-24 bg-gradient-to-r from-transparent via-cyan-200/62 to-cyan-300/10 shadow-[0_0_16px_rgba(34,211,238,0.18)]" />
                 <span
                   className={
@@ -119,7 +119,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
                 </span>
                 <span className="h-px w-24 bg-gradient-to-r from-cyan-300/10 via-violet-200/46 to-transparent shadow-[0_0_16px_rgba(139,92,246,0.16)]" />
               </div>
-              <div className="text-[12px] font-semibold tracking-[0.2em] text-slate-300/80 md:text-[13px]">
+              <div className="master-unlock-subtitle text-[12px] font-semibold tracking-[0.2em] text-slate-300/80 md:text-[13px]">
                 {LOGIN_MEMORY_PROMPT.split('').map((char, index) => (
                   <motion.span
                     key={`${char}-${index}`}
@@ -148,7 +148,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
                 ))}
               </div>
             </div>
-            <div className="space-y-4">
+            <div className="master-password-area space-y-4">
               <div
                 className={`master-memory-slot relative mx-auto h-[78px] w-full max-w-[560px] transition-all duration-300 ${
                   error ? 'master-memory-slot--error' : ''
@@ -280,7 +280,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
           </AnimatePresence>
         </div>
 
-        <div className="mx-auto flex w-full max-w-[360px] flex-col items-center gap-4 text-center">
+        <div className="master-connect-area mx-auto flex w-full max-w-[360px] flex-col items-center gap-4 text-center">
           <motion.button
             type="button"
             onClick={onSubmit}
@@ -308,7 +308,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
                 : undefined
             }
             transition={isSuccess ? { duration: 0.58, ease: 'easeOut' } : undefined}
-            className={`relative flex h-[72px] min-w-[212px] items-center justify-center gap-4 rounded-full border px-8 transition-opacity disabled:cursor-not-allowed disabled:opacity-75 ${theme === 'light' ? 'border-cyan-400/38 bg-white/34 text-cyan-700' : 'border-cyan-100/46 bg-[radial-gradient(circle_at_28%_50%,rgba(34,211,238,0.18),rgba(0,0,0,0.18)_54%,rgba(168,85,247,0.12)),linear-gradient(90deg,rgba(34,211,238,0.10),rgba(139,92,246,0.10))] text-cyan-100 shadow-[0_0_28px_rgba(0,220,255,0.20),0_0_58px_rgba(139,92,246,0.14),inset_0_0_24px_rgba(126,239,255,0.055)]'}`}
+            className={`master-connect-button relative flex h-[72px] min-w-[212px] items-center justify-center gap-4 rounded-full border px-8 transition-opacity disabled:cursor-not-allowed disabled:opacity-75 ${theme === 'light' ? 'border-cyan-400/38 bg-white/34 text-cyan-700' : 'border-cyan-100/46 bg-[radial-gradient(circle_at_28%_50%,rgba(34,211,238,0.18),rgba(0,0,0,0.18)_54%,rgba(168,85,247,0.12)),linear-gradient(90deg,rgba(34,211,238,0.10),rgba(139,92,246,0.10))] text-cyan-100 shadow-[0_0_28px_rgba(0,220,255,0.20),0_0_58px_rgba(139,92,246,0.14),inset_0_0_24px_rgba(126,239,255,0.055)]'}`}
           >
             <span
               aria-hidden="true"
