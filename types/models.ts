@@ -277,4 +277,5 @@ export enum AppState {
   EDITOR = 'EDITOR',
   VIEWER = 'VIEWER',
   ARCHIVE = 'ARCHIVE', // Bio-Vault
+  FUTURE = 'FUTURE', // 克莱因空间 · 照见模式 + 轻量实验
 }

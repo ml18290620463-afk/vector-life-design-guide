@@ -27,6 +27,7 @@ import { SecurityService } from './services/securityService';
 import { useAppStore } from './stores/appStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { PostEngraveDestination } from './components/Editor';
+import { MobileTabBar } from './components/MobileTabBar';
 
 // Phase 4.5 §D — code-split everything that is NOT visible on the
 // initial Cover screen. Lazy-loading Dashboard / Onboarding /
@@ -70,6 +71,9 @@ const Viewer = lazy(() =>
 );
 const Editor = lazy(() =>
   import('./components/Editor').then((module) => ({ default: module.Editor })),
+);
+const FutureKleinView = lazy(() =>
+  import('./components/FutureKleinView').then((module) => ({ default: module.FutureKleinView })),
 );
 const ArchiveVault = lazy(() =>
   import('./components/ArchiveVault').then((module) => ({ default: module.ArchiveVault })),
@@ -538,6 +542,7 @@ const App: React.FC = () => {
     AppState.VIEWER,
     AppState.EDITOR,
     AppState.ARCHIVE,
+    AppState.FUTURE,
   ].includes(appState);
 
   return (
@@ -748,7 +753,10 @@ const App: React.FC = () => {
                 onCancel={handleBackToDashboard}
                 onGoHome={() => setAppState(AppState.COVER)}
                 existingTitles={entries.map((e) => e.title)}
-                seed={editorSeed ?? (getPreviewScreen() === 'editor' ? { reflectionDepth: 'sort' } : null)}
+                seed={
+                  editorSeed ??
+                  (getPreviewScreen() === 'editor' ? { reflectionDepth: 'sort' } : null)
+                }
               />
             </Suspense>
           )}
@@ -769,6 +777,17 @@ const App: React.FC = () => {
                 containers={containers}
                 onAddContainer={addContainer}
                 onDeleteContainer={deleteContainer}
+              />
+            </Suspense>
+          )}
+
+          {appState === AppState.FUTURE && (
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <FutureKleinView
+                entries={entries}
+                language={language}
+                theme={theme}
+                onNewEntry={() => setAppState(AppState.EDITOR)}
               />
             </Suspense>
           )}
@@ -820,6 +839,16 @@ const App: React.FC = () => {
             />
           )}
           {void billing.checkoutReturn}
+
+          {[AppState.DASHBOARD, AppState.EDITOR, AppState.FUTURE].includes(appState) && (
+            <MobileTabBar
+              appState={appState}
+              language={language}
+              onGoPast={() => setAppState(AppState.DASHBOARD)}
+              onGoPresent={() => setAppState(AppState.EDITOR)}
+              onGoFuture={() => setAppState(AppState.FUTURE)}
+            />
+          )}
         </div>
       </AppMotionConfig>
     </ErrorBoundary>
