@@ -5,7 +5,7 @@ import 'react-pdf/dist/Page/TextLayer.css';
 // Bundle the pdf.js worker locally (Vite resolves `?url` to a hashed asset
 // served from /assets) so we are not dependent on unpkg.com and our CSP
 // `worker-src 'self'` does not need to allow third-party origins.
-import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
