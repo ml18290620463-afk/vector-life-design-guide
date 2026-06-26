@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Build artefacts and reports
+coverage/
+test-results/
+playwright-report/
+storybook-static/
+lighthouse-reports/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Cursor IDE local state (plans, agent transcripts, project metadata)
+.cursor/
+
+# Local snapshot exports (not part of shipped source)
+backups/
+
+# Local side-by-side version reference. V0 is kept locally; V1 root is pushed.
+versions/V0-original/

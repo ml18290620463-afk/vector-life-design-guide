@@ -1,0 +1,55 @@
+services:
+  vector:
+    build:
+      context: .
+      args:
+        # Optional: pass through if you want Sentry baked into the client bundle.
+        SENTRY_DSN: ${SENTRY_DSN:-}
+    image: vector-life-design-guide:local
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # IMPORTANT: keep loopback unless you front this with the nginx service
+      # below or another reverse proxy. Public exposure must always be paired
+      # with MORNING_STAR_ALLOWED_ORIGINS / MORNING_STAR_ACCESS_TOKEN.
+      HOST: 0.0.0.0
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      MORNING_STAR_ALLOWED_ORIGINS: ${MORNING_STAR_ALLOWED_ORIGINS:-}
+      MORNING_STAR_ACCESS_TOKEN: ${MORNING_STAR_ACCESS_TOKEN:-}
+      MORNING_STAR_RATE_LIMIT_WINDOW_MS: ${MORNING_STAR_RATE_LIMIT_WINDOW_MS:-60000}
+      MORNING_STAR_RATE_LIMIT_MAX: ${MORNING_STAR_RATE_LIMIT_MAX:-5}
+    expose:
+      - '3000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Optional reverse proxy. Uncomment to expose the app on :443 with nginx
+  # handling TLS termination and forwarding to the `vector` service. See
+  # deploy/nginx.conf.example for a worked example.
+  # nginx:
+  #   image: nginx:1.27-alpine
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - vector
+  #   ports:
+  #     - '80:80'
+  #     - '443:443'
+  #   volumes:
+  #     - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./deploy/certs:/etc/nginx/certs:ro
