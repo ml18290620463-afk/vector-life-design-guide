@@ -40,8 +40,7 @@ test.describe('axe accessibility', () => {
   test('onboarding intro has no serious or critical violations', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: /起航|initialize/i }).dispatchEvent('click');
-    // Wait for the onboarding "next" button to indicate the panel has rendered.
-    await page.getByRole('button', { name: /下一步|next/i }).waitFor({ state: 'visible' });
+    await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
 
     const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
     const blockers = summarise(result.violations);

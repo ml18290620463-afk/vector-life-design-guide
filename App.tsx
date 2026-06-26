@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
+/* eslint-disable max-lines */
 import { MotionConfig } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { AppState, DiaryEntry, Language, Theme } from './types';
@@ -27,6 +28,13 @@ import { SecurityService } from './services/securityService';
 import { useAppStore } from './stores/appStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { PostEngraveDestination } from './components/Editor';
+import { getPreviewMode, isMobileExperience, pushAppPath, replaceAppPath } from './lib/previewMode';
+import {
+  getMobileMainTab,
+  getMobileTabFromPath,
+  navigateMobileTab,
+} from './features/mobile/mobileRoutes';
+import type { MobileMainTab } from './features/mobile/types';
 
 // Phase 4.5 §D — code-split everything that is NOT visible on the
 // initial Cover screen. Lazy-loading Dashboard / Onboarding /
@@ -77,6 +85,17 @@ const ArchiveVault = lazy(() =>
 const NowFlow = lazy(() =>
   import('./features/now/NowFlow').then((module) => ({ default: module.NowFlow })),
 );
+const PastRepository = lazy(() =>
+  import('./features/mobile/PastRepository').then((module) => ({ default: module.PastRepository })),
+);
+const FuturePlaceholder = lazy(() =>
+  import('./features/mobile/FuturePlaceholder').then((module) => ({
+    default: module.FuturePlaceholder,
+  })),
+);
+const MobileShell = lazy(() =>
+  import('./features/mobile/MobileShell').then((module) => ({ default: module.MobileShell })),
+);
 
 const ScreenLoader: React.FC<{ language: Language }> = ({ language }) => (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-sm">
@@ -88,12 +107,6 @@ const ScreenLoader: React.FC<{ language: Language }> = ({ language }) => (
     </div>
   </div>
 );
-
-const getPreviewMode = () => {
-  if (typeof window === 'undefined') return null;
-  const mode = new URLSearchParams(window.location.search).get('preview');
-  return mode === 'mobile' || mode === 'web' ? mode : null;
-};
 
 const getPreviewScreen = () => {
   if (typeof window === 'undefined') return null;
@@ -114,6 +127,7 @@ const getPreviewScreen = () => {
 
 const getNowRouteFromPath = (): 'now' | 'tags' | 'avatar-chat' | null => {
   if (typeof window === 'undefined') return null;
+  if (window.location.pathname === '/avatar') return 'avatar-chat';
   if (window.location.pathname === '/now/tags') return 'tags';
   if (window.location.pathname === '/now/avatar-chat') return 'avatar-chat';
   if (window.location.pathname === '/now') return 'now';
@@ -122,10 +136,13 @@ const getNowRouteFromPath = (): 'now' | 'tags' | 'avatar-chat' | null => {
 
 const pushNowPath = (route: 'now' | 'tags' | 'avatar-chat') => {
   if (typeof window === 'undefined') return;
-  const path = route === 'now' ? '/now' : `/now/${route}`;
-  if (window.location.pathname !== path) {
-    window.history.pushState({ nowRoute: route }, '', path);
-  }
+  const path =
+    route === 'avatar-chat' && isMobileExperience()
+      ? '/avatar'
+      : route === 'now'
+        ? '/now'
+        : `/now/${route}`;
+  pushAppPath(path, { nowRoute: route });
 };
 
 const App: React.FC = () => {
@@ -193,18 +210,34 @@ const App: React.FC = () => {
       return;
     }
     setIsUnlocked(true);
-    if (screen === 'editor' || screen === 'now') {
+    if (screen === 'now') {
+      setNowRoute('now');
+      replaceAppPath('/now', { nowRoute: 'now' });
+      setAppState(AppState.NOW);
+      return;
+    }
+    if (screen === 'editor') {
       setAppState(AppState.DASHBOARD);
       setAppState(AppState.EDITOR);
       return;
     }
     if (screen === 'archive' || screen === 'past') {
-      setAppState(AppState.DASHBOARD);
-      setAppState(AppState.ARCHIVE);
+      if (isMobileExperience()) {
+        replaceAppPath('/past');
+        setAppState(AppState.PAST);
+      } else {
+        setAppState(AppState.DASHBOARD);
+        setAppState(AppState.ARCHIVE);
+      }
       return;
     }
     if (screen === 'future') {
-      setAppState(AppState.DASHBOARD);
+      if (isMobileExperience()) {
+        replaceAppPath('/future');
+        setAppState(AppState.FUTURE);
+      } else {
+        setAppState(AppState.DASHBOARD);
+      }
       return;
     }
     if (screen === 'settings') {
@@ -245,6 +278,24 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const mobileTab = getMobileTabFromPath();
+    if (mobileTab) {
+      setIsUnlocked(true);
+      if (mobileTab === 'past') {
+        setAppState(AppState.PAST);
+        return;
+      }
+      if (mobileTab === 'future') {
+        setAppState(AppState.FUTURE);
+        return;
+      }
+      if (mobileTab === 'avatar') {
+        setNowRoute('avatar-chat');
+        setAppState(AppState.NOW_AVATAR_CHAT);
+        return;
+      }
+    }
+
     const route = getNowRouteFromPath();
     if (!route) return;
     setIsUnlocked(true);
@@ -260,8 +311,30 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const onPopState = () => {
+      const mobileTab = getMobileTabFromPath();
+      if (mobileTab) {
+        setIsUnlocked(true);
+        if (mobileTab === 'past') {
+          setAppState(AppState.PAST);
+          return;
+        }
+        if (mobileTab === 'future') {
+          setAppState(AppState.FUTURE);
+          return;
+        }
+        if (mobileTab === 'avatar') {
+          setNowRoute('avatar-chat');
+          setAppState(AppState.NOW_AVATAR_CHAT);
+          return;
+        }
+      }
+
       const route = getNowRouteFromPath();
       if (!route) {
+        if (isMobileExperience()) {
+          setAppState(AppState.NOW);
+          return;
+        }
         setAppState(AppState.DASHBOARD);
         return;
       }
@@ -276,7 +349,7 @@ const App: React.FC = () => {
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [setAppState]);
+  }, [setAppState, setIsUnlocked]);
 
   // Data Layer Hook
   const {
@@ -382,24 +455,28 @@ const App: React.FC = () => {
     directory: string[],
     selection: string[],
   ) => {
-    // Generate salt
     const saltArray = window.crypto.getRandomValues(new Uint8Array(32));
     const salt = btoa(String.fromCharCode(...saltArray));
     SecurityService.wipeSensitive(saltArray);
 
-    // Hash password
     const hash = await SecurityService.hashPassword(password, salt);
 
-    // Save
     await savePasswordSalt(salt);
     await savePasswordHash(hash);
-
     await saveGuidingStars(directory);
     await saveSelectedStars(selection);
+
     setMasterPassword(password);
     setIsUnlocked(true);
-    setAppState(AppState.DASHBOARD);
-    setAppState(AppState.ARCHIVE);
+
+    if (isMobileExperience()) {
+      setNowRoute('now');
+      replaceAppPath('/now', { nowRoute: 'now' });
+      setAppState(AppState.NOW);
+    } else {
+      setAppState(AppState.ARCHIVE);
+    }
+
     // prettier-ignore
     void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed', err));
   };
@@ -407,16 +484,28 @@ const App: React.FC = () => {
   const handleReturningUserUnlock = (password: string) => {
     setMasterPassword(password);
     setIsUnlocked(true);
-    setAppState(AppState.DASHBOARD);
-    setAppState(AppState.ARCHIVE);
+    if (isMobileExperience()) {
+      setNowRoute('now');
+      replaceAppPath('/now', { nowRoute: 'now' });
+      setAppState(AppState.NOW);
+    } else {
+      setAppState(AppState.DASHBOARD);
+      setAppState(AppState.ARCHIVE);
+    }
     // prettier-ignore
     void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed', err));
   };
 
   const handleRecoveryPasswordReset = async (password: string) => {
     await handleSetPassword(password);
-    setAppState(AppState.DASHBOARD);
-    setAppState(AppState.ARCHIVE);
+    if (isMobileExperience()) {
+      setNowRoute('now');
+      replaceAppPath('/now', { nowRoute: 'now' });
+      setAppState(AppState.NOW);
+    } else {
+      setAppState(AppState.DASHBOARD);
+      setAppState(AppState.ARCHIVE);
+    }
     // prettier-ignore
     void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed after recovery reset', err));
   };
@@ -558,8 +647,34 @@ const App: React.FC = () => {
     [],
   );
 
+  const handleMobileTabChange = useCallback(
+    (tab: MobileMainTab) => {
+      navigateMobileTab(tab, { replace: true });
+      if (tab === 'past') {
+        setAppState(AppState.PAST);
+        return;
+      }
+      if (tab === 'future') {
+        setAppState(AppState.FUTURE);
+        return;
+      }
+      if (tab === 'avatar') {
+        setNowRoute('avatar-chat');
+        setAppState(AppState.NOW_AVATAR_CHAT);
+        return;
+      }
+      setNowRoute('now');
+      setAppState(AppState.NOW);
+    },
+    [setAppState],
+  );
+
   const handleOpenNow = useCallback(
     (route: 'now' | 'tags' | 'avatar-chat' = 'now') => {
+      if (isMobileExperience() && route === 'avatar-chat') {
+        handleMobileTabChange('avatar');
+        return;
+      }
       setNowRoute(route);
       pushNowPath(route);
       setAppState(
@@ -570,18 +685,20 @@ const App: React.FC = () => {
             : AppState.NOW,
       );
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [handleMobileTabChange, setAppState],
   );
 
   const handleExitNow = useCallback(() => {
+    if (isMobileExperience()) {
+      handleMobileTabChange('past');
+      return;
+    }
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/now')) {
-      window.history.pushState({}, '', '/');
+      replaceAppPath('/', {});
     }
     setNowRoute('now');
     setAppState(AppState.DASHBOARD);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [handleMobileTabChange, setAppState]);
 
   // Phase 4.5 follow-ups (F2) — cascade-delete a Memoir, its memories,
   // and its pending letters in one shot. Wraps `cascadeDeleteMemoir`
@@ -631,13 +748,18 @@ const App: React.FC = () => {
   };
 
   const handleBackToDashboard = () => {
-    setAppState(AppState.DASHBOARD);
+    if (isMobileExperience()) {
+      handleMobileTabChange('past');
+    } else {
+      setAppState(AppState.DASHBOARD);
+    }
     setSelectedEntry(null);
     setPostEngraveDestination(null);
-    // Phase 4.5 follow-ups (F4) — same reasoning as in
-    // handleSaveEntry: explicit cancel also drops the seed.
     setEditorSeed(null);
   };
+
+  const mobileMainTab = getMobileMainTab(appState);
+  const useMobileShell = isMobileExperience() && mobileMainTab !== null;
 
   const showGlobalBackground = [
     AppState.DASHBOARD,
@@ -672,7 +794,11 @@ const App: React.FC = () => {
                 t={TRANSLATIONS[language]}
                 entries={entries}
                 onNewEntry={() => handleOpenNow()}
-                onOpenArchive={() => setAppState(AppState.ARCHIVE)}
+                onOpenArchive={() =>
+                  isMobileExperience()
+                    ? handleMobileTabChange('past')
+                    : setAppState(AppState.ARCHIVE)
+                }
                 onBackToDashboard={handleBackToDashboard}
                 onReplayIntro={() => setAppState(AppState.COVER)}
                 onSelectEntry={handleSelectEntry}
@@ -684,16 +810,19 @@ const App: React.FC = () => {
             </Suspense>
           )}
 
-          {loading && (
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-12 h-12 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                <div className="font-mono text-cyan-500 text-xs tracking-widest animate-pulse uppercase">
-                  {TRANSLATIONS[language].restoringLink}
+          {loading &&
+            appState !== AppState.COVER &&
+            appState !== AppState.ONBOARDING &&
+            appState !== AppState.LOGIN && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="font-mono text-cyan-500 text-xs tracking-widest animate-pulse uppercase">
+                    {TRANSLATIONS[language].restoringLink}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {appState === AppState.COVER && (
             <Suspense fallback={<ScreenLoader language={language} />}>
@@ -748,7 +877,11 @@ const App: React.FC = () => {
                 onUpdateEntry={updateEntry}
                 onBulkUpdateEntries={bulkUpdateEntries}
                 onNewEntry={() => handleOpenNow()}
-                onOpenArchive={() => setAppState(AppState.ARCHIVE)}
+                onOpenArchive={() =>
+                  isMobileExperience()
+                    ? handleMobileTabChange('past')
+                    : setAppState(AppState.ARCHIVE)
+                }
                 onReplayIntro={() => setAppState(AppState.COVER)}
                 onWipeData={handleWipeData}
                 onCreateMaterialEntry={(material, isArchived) => {
@@ -845,32 +978,78 @@ const App: React.FC = () => {
             </Suspense>
           )}
 
-          {[AppState.NOW, AppState.NOW_TAGS, AppState.NOW_AVATAR_CHAT].includes(appState) && (
+          {useMobileShell && mobileMainTab && (
             <Suspense fallback={<ScreenLoader language={language} />}>
-              <NowFlow
-                route={nowRoute}
-                theme={theme}
-                language={language}
-                onRouteChange={(route) => {
-                  setNowRoute(route);
-                  pushNowPath(route);
-                  setAppState(
-                    route === 'tags'
-                      ? AppState.NOW_TAGS
-                      : route === 'avatar-chat'
-                        ? AppState.NOW_AVATAR_CHAT
-                        : AppState.NOW,
-                  );
-                }}
-                onExit={handleExitNow}
-                onPersistRecord={async (payload) => {
-                  const id = generateSecureId();
-                  await addEntry({ ...payload, id });
-                  return id;
-                }}
-              />
+              <MobileShell activeTab={mobileMainTab} onTabChange={handleMobileTabChange}>
+                {appState === AppState.PAST && (
+                  <PastRepository
+                    language={language}
+                    theme={theme}
+                    entries={entries}
+                    principles={principles}
+                    onAddPrinciple={addPrinciple}
+                    onDeletePrinciple={deletePrinciple}
+                    onUpdatePrinciple={updatePrinciple}
+                    onSelectEntry={handleSelectEntry}
+                    containers={containers}
+                  />
+                )}
+                {appState === AppState.FUTURE && <FuturePlaceholder language={language} />}
+                {[AppState.NOW, AppState.NOW_TAGS, AppState.NOW_AVATAR_CHAT].includes(appState) && (
+                  <NowFlow
+                    route={nowRoute}
+                    theme={theme}
+                    language={language}
+                    mobileShell
+                    onRouteChange={(route) => {
+                      setNowRoute(route);
+                      if (route === 'avatar-chat') {
+                        navigateMobileTab('avatar', { replace: true });
+                        setAppState(AppState.NOW_AVATAR_CHAT);
+                        return;
+                      }
+                      pushNowPath(route);
+                      setAppState(route === 'tags' ? AppState.NOW_TAGS : AppState.NOW);
+                    }}
+                    onExit={handleExitNow}
+                    onPersistRecord={async (payload) => {
+                      const id = generateSecureId();
+                      await addEntry({ ...payload, id });
+                      return id;
+                    }}
+                  />
+                )}
+              </MobileShell>
             </Suspense>
           )}
+
+          {!useMobileShell &&
+            [AppState.NOW, AppState.NOW_TAGS, AppState.NOW_AVATAR_CHAT].includes(appState) && (
+              <Suspense fallback={<ScreenLoader language={language} />}>
+                <NowFlow
+                  route={nowRoute}
+                  theme={theme}
+                  language={language}
+                  onRouteChange={(route) => {
+                    setNowRoute(route);
+                    pushNowPath(route);
+                    setAppState(
+                      route === 'tags'
+                        ? AppState.NOW_TAGS
+                        : route === 'avatar-chat'
+                          ? AppState.NOW_AVATAR_CHAT
+                          : AppState.NOW,
+                    );
+                  }}
+                  onExit={handleExitNow}
+                  onPersistRecord={async (payload) => {
+                    const id = generateSecureId();
+                    await addEntry({ ...payload, id });
+                    return id;
+                  }}
+                />
+              </Suspense>
+            )}
 
           {appState === AppState.EDITOR && (
             <Suspense fallback={<ScreenLoader language={language} />}>
@@ -882,12 +1061,15 @@ const App: React.FC = () => {
                 onCancel={handleBackToDashboard}
                 onGoHome={() => setAppState(AppState.COVER)}
                 existingTitles={entries.map((e) => e.title)}
-                seed={editorSeed ?? (getPreviewScreen() === 'editor' ? { reflectionDepth: 'sort' } : null)}
+                seed={
+                  editorSeed ??
+                  (getPreviewScreen() === 'editor' ? { reflectionDepth: 'sort' } : null)
+                }
               />
             </Suspense>
           )}
 
-          {appState === AppState.ARCHIVE && (
+          {!useMobileShell && appState === AppState.ARCHIVE && (
             <Suspense fallback={<ScreenLoader language={language} />}>
               <ArchiveVault
                 language={language}

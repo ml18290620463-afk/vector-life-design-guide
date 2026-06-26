@@ -6,12 +6,28 @@ export const sanitizeDownloadFilename = (filename: string) => {
   return sanitized || 'download';
 };
 
-export const downloadBlob = (blob: Blob, filename: string) => {
+export const downloadBlob = async (blob: Blob, filename: string) => {
+  const safeName = sanitizeDownloadFilename(filename);
+
+  if (typeof navigator !== 'undefined' && typeof File !== 'undefined') {
+    const file = new File([blob], safeName, { type: blob.type || 'application/octet-stream' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+  }
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
 
   link.href = url;
-  link.download = sanitizeDownloadFilename(filename);
+  link.download = safeName;
   link.rel = 'noopener';
   link.style.display = 'none';
 
@@ -24,10 +40,10 @@ export const downloadBlob = (blob: Blob, filename: string) => {
   }
 };
 
-export const downloadTextFile = (
+export const downloadTextFile = async (
   content: string,
   filename: string,
   mimeType = 'text/plain;charset=utf-8',
 ) => {
-  downloadBlob(new Blob([content], { type: mimeType }), filename);
+  await downloadBlob(new Blob([content], { type: mimeType }), filename);
 };

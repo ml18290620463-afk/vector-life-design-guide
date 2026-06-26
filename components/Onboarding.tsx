@@ -24,7 +24,6 @@ import { AppStorageKeys } from '../services/appSettings';
 import { setStoredString } from '../services/browserStorage';
 import { downloadBlob, sanitizeDownloadFilename } from '../services/fileDownload';
 import { SecurityService } from '../services/securityService';
-import { CyberButton } from './CyberButton';
 
 interface OnboardingProps {
   language: Language;
@@ -71,8 +70,21 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     'idle' | 'rendering' | 'success' | 'error'
   >('idle');
   const [issueFlash, setIssueFlash] = useState(false);
+  const [releasePhase, setReleasePhase] = useState<'calibration' | 'backup' | 'entry'>(
+    'calibration',
+  );
   const credentialCardRef = useRef<HTMLDivElement | null>(null);
   const completingOnboardingRef = useRef(false);
+  const recoveryKeyRef = useRef(recoveryKey);
+  const credentialExportStatusRef = useRef(credentialExportStatus);
+
+  useEffect(() => {
+    recoveryKeyRef.current = recoveryKey;
+  }, [recoveryKey]);
+
+  useEffect(() => {
+    credentialExportStatusRef.current = credentialExportStatus;
+  }, [credentialExportStatus]);
 
   const getPasswordStrength = (pass: string) => {
     if (!pass) return 0;
@@ -100,12 +112,29 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     [],
   );
   const hasIssuedAccessPass = Boolean(recoveryKey && credentialExportStatus === 'success');
-  const isAccessPassReady = Boolean(recoveryKey && hasIssuedAccessPass);
-  const isMobileOnboarding =
-    typeof window !== 'undefined' &&
-    (document.documentElement.classList.contains('vector-force-mobile') ||
-      window.matchMedia('(max-width: 767px)').matches);
-  const canEnterOnboarding = isAccessPassReady;
+  const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
+
+  const entryChecklist = useMemo(
+    () =>
+      language === 'zh'
+        ? [
+            {
+              label: '密令已确认',
+              done: getPasswordStrength(password) === 100 && password === confirmPassword,
+            },
+            { label: '恢复私钥已签发', done: Boolean(recoveryKey) },
+            { label: '离线凭证已保存', done: hasIssuedAccessPass },
+          ]
+        : [
+            {
+              label: 'Access code confirmed',
+              done: getPasswordStrength(password) === 100 && password === confirmPassword,
+            },
+            { label: 'Recovery key issued', done: Boolean(recoveryKey) },
+            { label: 'Offline pass saved', done: hasIssuedAccessPass },
+          ],
+    [hasIssuedAccessPass, language, password, confirmPassword, recoveryKey],
+  );
   const isCredentialInputReady = validatePassword(password) && password === confirmPassword;
   const accessPassCopy = useMemo(() => {
     const copy = {
@@ -624,6 +653,29 @@ export const Onboarding: React.FC<OnboardingProps> = ({
 
     return copy[language];
   }, [language]);
+
+  const phaseHero = useMemo(() => {
+    if (releasePhase === 'backup') {
+      return {
+        title: language === 'zh' ? '保存离线凭证' : 'Save offline pass',
+        subtitle:
+          language === 'zh'
+            ? '请将恢复私钥导出为离线图片。保存成功后再前往进入界面。'
+            : 'Export your recovery key as an offline image before continuing to the entry screen.',
+      };
+    }
+    if (releasePhase === 'entry') {
+      return {
+        title: language === 'zh' ? '进入入口' : 'Entry gate',
+        subtitle:
+          language === 'zh'
+            ? '离线凭证已保存。确认后进入主界面。'
+            : 'Your offline pass is saved. Confirm below to enter the app.',
+      };
+    }
+    return { title: onboardingCopy.title, subtitle: onboardingCopy.subtitle };
+  }, [language, onboardingCopy.subtitle, onboardingCopy.title, releasePhase]);
+
   const calibrationRequirements = [
     {
       label: onboardingCopy.requirementLength,
@@ -674,7 +726,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     setRecoveryKey('');
     setIsForgingCredential(false);
     setCredentialExportStatus('idle');
+    credentialExportStatusRef.current = 'idle';
     setIssueFlash(false);
+    setReleasePhase('calibration');
   }, [password, confirmPassword]);
 
   useEffect(() => {
@@ -724,6 +778,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       try {
         generateRecoveryKey();
         setIssueFlash(true);
+        setReleasePhase('backup');
         window.setTimeout(() => setIssueFlash(false), 900);
       } catch (err) {
         console.warn('Onboarding: credential generation failed', err);
@@ -734,53 +789,93 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     }, 1300);
   };
 
+  const resetEnteringState = () => {
+    completingOnboardingRef.current = false;
+    setIsCompletingOnboarding(false);
+  };
+
   const handleNextStep = async () => {
     if (completingOnboardingRef.current) return;
+
+    const activeRecoveryKey = recoveryKeyRef.current;
+    const backupReady = Boolean(
+      activeRecoveryKey && credentialExportStatusRef.current === 'success',
+    );
+
     completingOnboardingRef.current = true;
+    setIsCompletingOnboarding(true);
     setError(null);
+
     if (!validatePassword(password)) {
       setError(t.passwordRequirement);
-      completingOnboardingRef.current = false;
+      resetEnteringState();
       return;
     }
     if (password !== confirmPassword) {
       setError(t.passwordMismatch);
-      completingOnboardingRef.current = false;
+      resetEnteringState();
       return;
     }
-    if (!hasIssuedAccessPass) {
+    if (!backupReady) {
       setError(onboardingCopy.savePngFirst);
-      completingOnboardingRef.current = false;
+      resetEnteringState();
+      return;
+    }
+    if (releasePhase !== 'entry') {
+      setError(
+        language === 'zh' ? '请先完成凭证保存并前往进入界面' : 'Complete the backup step first.',
+      );
+      resetEnteringState();
       return;
     }
 
     try {
-      const recoveryHash = await SecurityService.hashRecoveryKey(recoveryKey);
+      const recoveryHash = await SecurityService.hashRecoveryKey(activeRecoveryKey);
       setStoredString(AppStorageKeys.recoveryVerifier, recoveryHash);
       await onComplete(password, [], []);
     } catch (err) {
-      completingOnboardingRef.current = false;
       console.warn('Onboarding: complete failed', err);
       setError(language === 'zh' ? '进入失败，请再试一次' : 'Could not enter. Please try again.');
+      resetEnteringState();
     }
   };
 
+  const handleContinueToEntry = () => {
+    if (!hasIssuedAccessPass) {
+      setError(onboardingCopy.savePngFirst);
+      return;
+    }
+    setError(null);
+    setReleasePhase('entry');
+  };
+
+  const handleEnterApp = () => {
+    void handleNextStep();
+  };
+
   const issueCredentialAsPng = async () => {
-    if (!credentialCardRef.current) return;
+    if (!credentialCardRef.current || credentialExportStatus === 'rendering') return;
     setCredentialExportStatus('rendering');
+    setError(null);
     try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
       const { domToBlob } = await import('modern-screenshot');
       const blob = await domToBlob(credentialCardRef.current, {
         type: 'image/png',
-        scale: 2,
+        scale: Math.min(2, window.devicePixelRatio || 1),
         backgroundColor: '#031318',
       });
       if (!blob) throw new Error('NO_ACCESS_PASS_IMAGE');
-      downloadBlob(blob, sanitizeDownloadFilename(`VECTOR_ACCESS_PASS_${Date.now()}.png`));
+      await downloadBlob(blob, sanitizeDownloadFilename(`VECTOR_ACCESS_PASS_${Date.now()}.png`));
       setCredentialExportStatus('success');
+      credentialExportStatusRef.current = 'success';
     } catch (err) {
       console.warn('Onboarding: credential PNG export failed', err);
       setCredentialExportStatus('error');
+      credentialExportStatusRef.current = 'error';
+      setError(onboardingCopy.pngError);
     }
   };
 
@@ -808,9 +903,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             className="onboarding-step relative flex min-h-[calc(100svh-24px)] flex-col overflow-hidden px-4 py-5 md:h-[calc(100vh-28px)] md:min-h-[640px] md:max-h-[820px] md:px-8 md:py-6"
+            data-release-phase={releasePhase}
           >
-            <div className={`absolute inset-0 ${isLight ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(241,250,253,0.78)_46%,rgba(245,242,255,0.86))]' : 'bg-[#061a34]'}`} />
-            <div className={`absolute inset-0 ${isLight ? 'bg-[radial-gradient(circle_at_48%_8%,rgba(34,211,238,0.16),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(124,110,246,0.10),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(0,175,200,0.10),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(124,110,246,0.08),transparent_32%)]' : 'bg-[radial-gradient(circle_at_46%_8%,rgba(169,212,255,0.16),transparent_20%),radial-gradient(circle_at_22%_30%,rgba(234,210,164,0.08),transparent_26%),radial-gradient(circle_at_76%_48%,rgba(111,174,232,0.12),transparent_32%),radial-gradient(circle_at_62%_86%,rgba(138,168,149,0.07),transparent_34%),linear-gradient(180deg,rgba(8,32,61,0.22)_0%,rgba(7,31,64,0.58)_48%,rgba(6,23,46,0.94)_100%)]'}`} />
+            <div
+              className={`absolute inset-0 ${isLight ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(241,250,253,0.78)_46%,rgba(245,242,255,0.86))]' : 'bg-[#061a34]'}`}
+            />
+            <div
+              className={`absolute inset-0 ${isLight ? 'bg-[radial-gradient(circle_at_48%_8%,rgba(34,211,238,0.16),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(124,110,246,0.10),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(0,175,200,0.10),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(124,110,246,0.08),transparent_32%)]' : 'bg-[radial-gradient(circle_at_46%_8%,rgba(169,212,255,0.16),transparent_20%),radial-gradient(circle_at_22%_30%,rgba(234,210,164,0.08),transparent_26%),radial-gradient(circle_at_76%_48%,rgba(111,174,232,0.12),transparent_32%),radial-gradient(circle_at_62%_86%,rgba(138,168,149,0.07),transparent_34%),linear-gradient(180deg,rgba(8,32,61,0.22)_0%,rgba(7,31,64,0.58)_48%,rgba(6,23,46,0.94)_100%)]'}`}
+            />
             <div className="absolute inset-0 opacity-[0.52]">
               <svg
                 aria-hidden="true"
@@ -1010,8 +1110,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             />
             <div className="absolute inset-0 bg-[linear-gradient(rgba(126,239,255,0.014)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,0.012)_1px,transparent_1px)] bg-[size:72px_72px]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(126,239,255,0.12)_0_1px,transparent_2px),radial-gradient(circle_at_74%_10%,rgba(168,85,247,0.14)_0_1px,transparent_2px),radial-gradient(circle_at_46%_36%,rgba(123,109,255,0.12)_0_1px,transparent_2px)]" />
-            <div className={`absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b ${isLight ? 'from-white/42 via-transparent to-transparent' : 'from-black/10 via-transparent to-transparent'}`} />
-            <div className={`absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t ${isLight ? 'from-cyan-50/62 via-white/18 to-transparent' : 'from-[#01030a]/62 via-[#06091a]/18 to-transparent'}`} />
+            <div
+              className={`absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b ${isLight ? 'from-white/42 via-transparent to-transparent' : 'from-black/10 via-transparent to-transparent'}`}
+            />
+            <div
+              className={`absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t ${isLight ? 'from-cyan-50/62 via-white/18 to-transparent' : 'from-[#01030a]/62 via-[#06091a]/18 to-transparent'}`}
+            />
             {onCancel && (
               <motion.button
                 type="button"
@@ -1109,72 +1213,39 @@ export const Onboarding: React.FC<OnboardingProps> = ({
               )}
             </AnimatePresence>
 
-            <div className="onboarding-content relative z-20 mx-auto flex h-full w-full max-w-5xl flex-col justify-between gap-4 pb-20 text-center md:pb-0">
+            <div
+              className="onboarding-content relative z-20 mx-auto flex h-full w-full max-w-5xl flex-col justify-between gap-4 pb-20 text-center md:pb-0"
+              data-release-phase={releasePhase}
+            >
               <div className="onboarding-hero flex flex-col items-center gap-1 pt-5 md:pt-7">
                 <div className="h-px w-24 bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent shadow-glow-cyan-400" />
-                <h2 className={`text-xl font-mono uppercase tracking-widest md:text-[1.8rem] ${isLight ? 'text-slate-900' : 'text-cyan-50'}`}>
-                  {onboardingCopy.title}
+                <h2
+                  className={`text-xl font-mono uppercase tracking-widest md:text-[1.8rem] ${isLight ? 'text-slate-900' : 'text-cyan-50'}`}
+                >
+                  {phaseHero.title}
                 </h2>
-                <p className={`max-w-2xl text-xs leading-relaxed tracking-wide md:text-sm ${isLight ? 'text-slate-600' : 'text-cyan-100/72'}`}>
-                  {onboardingCopy.subtitle}
+                <p
+                  className={`max-w-2xl text-xs leading-relaxed tracking-wide md:text-sm ${isLight ? 'text-slate-600' : 'text-cyan-100/72'}`}
+                >
+                  {phaseHero.subtitle}
                 </p>
               </div>
 
-              <div
-                data-recovery-issued={recoveryKey ? 'true' : 'false'}
-                className={`onboarding-panel relative w-full overflow-hidden rounded-[26px] border text-left backdrop-blur-md transition-all duration-500 ${hasIssuedAccessPass ? 'p-3 md:p-4' : 'p-4 md:p-5'} ${isLight ? 'border-cyan-600/18 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.10),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(124,110,246,0.09),transparent_32%),rgba(255,255,255,0.78)] shadow-[0_22px_70px_rgba(33,80,120,0.13),inset_0_1px_0_rgba(255,255,255,0.72)]' : 'border-cyan-200/40 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.12),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.13),transparent_32%),linear-gradient(135deg,rgba(5,29,39,0.88),rgba(5,7,24,0.76)_56%,rgba(7,18,38,0.9))] shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_18px_rgba(126,239,255,0.26),0_0_58px_rgba(34,211,238,0.16),0_0_110px_rgba(104,82,255,0.18),inset_0_0_32px_rgba(126,239,255,0.055),inset_0_1px_0_rgba(184,251,255,0.18)]'}`}
-              >
-                <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-cyan-100/12 shadow-[inset_0_0_28px_rgba(126,239,255,0.12)]" />
-                <div className="pointer-events-none absolute -inset-px rounded-[27px] bg-[linear-gradient(120deg,rgba(126,239,255,0.34),transparent_24%,rgba(168,85,247,0.22)_62%,rgba(126,239,255,0.24))] opacity-30 blur-[2px]" />
-                <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/45 to-transparent" />
-                <div className="pointer-events-none absolute -left-24 top-8 h-40 w-40 rounded-full bg-cyan-300/5 blur-2xl" />
-                <div className="mb-3 flex flex-wrap items-center gap-3 font-mono">
-                  <span className="text-[10px] uppercase tracking-[0.32em] text-cyan-500">
-                    {hasIssuedAccessPass ? onboardingCopy.calibrated : onboardingCopy.calibrating}
-                  </span>
-                </div>
-
-                {hasIssuedAccessPass ? (
-                  <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                    <div className="grid gap-2 md:grid-cols-3">
-                      {[
-                        {
-                          label: onboardingCopy.passwordConfirmed,
-                          value: onboardingCopy.accessLocked,
-                        },
-                        {
-                          label: onboardingCopy.keyIssued,
-                          value: onboardingCopy.plaintextNotStored,
-                        },
-                        {
-                          label: onboardingCopy.ownership,
-                          value: onboardingCopy.belongsToVessel,
-                        },
-                      ].map((item) => (
-                        <div
-                          key={item.label}
-                          className="rounded-2xl border border-cyan-400/14 bg-black/24 px-3 py-2 shadow-[inset_0_1px_0_rgba(184,251,255,0.04)]"
-                        >
-                          <div className="text-[8px] uppercase tracking-[0.24em] text-cyan-700">
-                            {item.label}
-                          </div>
-                          <div className="mt-1 text-[11px] font-bold tracking-widest text-cyan-100">
-                            {item.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleGenerateCredential}
-                      disabled={isForgingCredential}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-400/8 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-200 transition-all hover:bg-cyan-400/16 disabled:cursor-wait disabled:opacity-65"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      {onboardingCopy.reissue}
-                    </button>
+              {releasePhase === 'calibration' && (
+                <div
+                  data-recovery-issued="false"
+                  className={`onboarding-panel relative w-full overflow-hidden rounded-[26px] border text-left backdrop-blur-md transition-all duration-500 p-4 md:p-5 ${isLight ? 'border-cyan-600/18 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.10),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(124,110,246,0.09),transparent_32%),rgba(255,255,255,0.78)] shadow-[0_22px_70px_rgba(33,80,120,0.13),inset_0_1px_0_rgba(255,255,255,0.72)]' : 'border-cyan-200/40 bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.12),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.13),transparent_32%),linear-gradient(135deg,rgba(5,29,39,0.88),rgba(5,7,24,0.76)_56%,rgba(7,18,38,0.9))] shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_18px_rgba(126,239,255,0.26),0_0_58px_rgba(34,211,238,0.16),0_0_110px_rgba(104,82,255,0.18),inset_0_0_32px_rgba(126,239,255,0.055),inset_0_1px_0_rgba(184,251,255,0.18)]'}`}
+                >
+                  <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-cyan-100/12 shadow-[inset_0_0_28px_rgba(126,239,255,0.12)]" />
+                  <div className="pointer-events-none absolute -inset-px rounded-[27px] bg-[linear-gradient(120deg,rgba(126,239,255,0.34),transparent_24%,rgba(168,85,247,0.22)_62%,rgba(126,239,255,0.24))] opacity-30 blur-[2px]" />
+                  <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/45 to-transparent" />
+                  <div className="pointer-events-none absolute -left-24 top-8 h-40 w-40 rounded-full bg-cyan-300/5 blur-2xl" />
+                  <div className="mb-3 flex flex-wrap items-center gap-3 font-mono">
+                    <span className="text-[10px] uppercase tracking-[0.32em] text-cyan-500">
+                      {onboardingCopy.calibrating}
+                    </span>
                   </div>
-                ) : (
+
                   <>
                     <div
                       className={`onboarding-calibration-module relative overflow-hidden bg-[radial-gradient(circle_at_18%_0%,rgba(126,239,255,0.05),transparent_34%),radial-gradient(circle_at_88%_96%,rgba(168,85,247,0.08),transparent_38%),rgba(0,3,12,0.08)] p-3 shadow-[inset_0_1px_0_rgba(184,251,255,0.035),0_0_30px_rgba(104,82,255,0.035)] md:p-5 ${
@@ -1512,6 +1583,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
 
                     <motion.button
                       type="button"
+                      data-testid="onboarding-issue-key"
                       onClick={handleGenerateCredential}
                       disabled={isForgingCredential || !isCredentialInputReady}
                       className="group relative mt-4 inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cyan-400/36 bg-cyan-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.2em] text-cyan-100 transition-all hover:bg-cyan-400/18 disabled:cursor-not-allowed disabled:border-cyan-400/20 disabled:bg-cyan-400/5 disabled:text-cyan-300/58 md:w-auto md:px-6"
@@ -1556,174 +1628,137 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                       <span className="relative z-10">{calibrationCtaLabel}</span>
                     </motion.button>
                   </>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div className="onboarding-recovery-area min-h-[168px]">
-                <AnimatePresence>
-                  {recoveryKey && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 12 }}
-                      className="mx-auto w-full max-w-xl"
-                    >
-                      <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/18 bg-[radial-gradient(circle_at_0%_0%,rgba(126,239,255,0.08),transparent_42%),rgba(0,5,9,0.58)] p-4 font-mono text-left shadow-[0_22px_70px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(184,251,255,0.08)] backdrop-blur-md">
-                        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-green-200/40 to-transparent" />
-                        <AnimatePresence>
-                          {issueFlash && (
-                            <motion.div
-                              aria-hidden="true"
-                              className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-[radial-gradient(circle_at_center,rgba(134,239,172,0.16),rgba(0,0,0,0.18)_42%,transparent_68%)] backdrop-blur-[1px]"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: [0, 1, 0] }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.9, ease: 'easeOut' }}
-                            >
-                              <div className="rounded-full border border-green-200/34 bg-black/38 px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-green-200 shadow-[0_0_32px_rgba(134,239,172,0.22)]">
-                                {onboardingCopy.generatedTitle}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        <motion.div
-                          aria-hidden="true"
-                          className="pointer-events-none absolute right-5 top-5 h-12 w-12 rounded-full border border-green-200/24"
-                          animate={{
-                            scale: hasIssuedAccessPass ? [1, 1.18, 1] : [1, 1.08, 1],
-                            opacity: hasIssuedAccessPass ? [0.45, 0.82, 0.45] : [0.26, 0.5, 0.26],
-                            boxShadow: hasIssuedAccessPass
-                              ? [
-                                  '0 0 14px rgba(134,239,172,0.08)',
-                                  '0 0 34px rgba(134,239,172,0.26)',
-                                  '0 0 14px rgba(134,239,172,0.08)',
-                                ]
-                              : [
-                                  '0 0 10px rgba(126,239,255,0.06)',
-                                  '0 0 22px rgba(126,239,255,0.12)',
-                                  '0 0 10px rgba(126,239,255,0.06)',
-                                ],
-                          }}
-                          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                        <div className="flex items-start gap-3 text-cyan-200">
-                          <div className="relative mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-green-300/24 bg-green-300/6 shadow-[0_0_22px_rgba(134,239,172,0.1)]">
-                            <Fingerprint className="h-4 w-4 text-green-300" />
-                          </div>
-                          <div>
-                            <div className="text-[10px] uppercase tracking-[0.34em] text-cyan-400">
-                              {hasIssuedAccessPass
-                                ? onboardingCopy.savedTitle
-                                : onboardingCopy.generatedTitle}
-                            </div>
-                            <div className="mt-1 text-xs leading-relaxed text-cyan-100/72">
-                              {hasIssuedAccessPass
-                                ? onboardingCopy.savedBody
-                                : onboardingCopy.generatedBody}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3 grid gap-2 text-[10px] uppercase tracking-[0.18em] md:grid-cols-3">
-                          {[
-                            [accessPassCopy.ownerLabel, accessPassCopy.ownerValue],
-                            [
-                              accessPassCopy.localTitle,
-                              language === 'zh' ? '仅保存在本设备' : 'This device only',
-                            ],
-                            [
-                              accessPassCopy.keyTitle,
-                              language === 'zh' ? '忘记密令时使用' : 'For lost access',
-                            ],
-                          ].map(([label, value]) => (
-                            <div
-                              key={label}
-                              className="rounded-full border border-cyan-400/14 bg-cyan-400/5 px-3 py-2 text-center"
-                            >
-                              <span className="text-cyan-700">{label}</span>
-                              <span className="ml-2 text-cyan-100/78">{value}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <motion.div
-                          className="relative mt-3 overflow-hidden rounded-[22px] border border-cyan-400/14 bg-[#031318]/72 p-3 text-center shadow-[inset_0_0_28px_rgba(126,239,255,0.045)]"
-                          animate={{
-                            borderColor: hasIssuedAccessPass
-                              ? 'rgba(134,239,172,0.28)'
-                              : 'rgba(34,211,238,0.18)',
-                            boxShadow: hasIssuedAccessPass
-                              ? 'inset 0 0 30px rgba(134,239,172,0.06), 0 0 26px rgba(134,239,172,0.08)'
-                              : 'inset 0 0 28px rgba(126,239,255,0.045), 0 0 18px rgba(0,200,232,0.04)',
-                          }}
-                          transition={{ duration: 0.5, ease: 'easeOut' }}
-                        >
-                          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/28 to-transparent" />
-                          <div className="select-all break-all px-6 text-sm font-bold tracking-widest text-cyan-200 md:px-8 md:text-[15px]">
-                            {recoveryKey}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(recoveryKey);
-                            }}
-                            className="absolute right-2 top-2 rounded-full p-1 text-cyan-700 transition-colors hover:text-cyan-300"
-                            aria-label={onboardingCopy.copyKey}
-                          >
-                            <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
-                          </button>
-                        </motion.div>
-                        {!hasIssuedAccessPass ? (
-                          <motion.button
-                            type="button"
-                            onClick={issueCredentialAsPng}
-                            disabled={credentialExportStatus === 'rendering'}
-                            className="relative mt-3 inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-full border border-cyan-400/40 bg-cyan-400/12 px-4 py-4 text-sm uppercase tracking-[0.18em] text-cyan-100 transition-all hover:bg-cyan-400/20"
-                            animate={{
-                              boxShadow: [
-                                '0 0 16px rgba(0,200,232,0.08)',
-                                '0 0 30px rgba(126,239,255,0.18)',
-                                '0 0 16px rgba(0,200,232,0.08)',
-                              ],
-                            }}
-                            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                          >
-                            <span className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/42 to-transparent" />
-                            <Download className="relative z-10 h-4 w-4" />
-                            <span className="relative z-10">
-                              {credentialExportStatus === 'rendering'
-                                ? onboardingCopy.savingPng
-                                : onboardingCopy.savePng}
-                            </span>
-                          </motion.button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleNextStep}
-                            onTouchEnd={(event) => {
-                              event.preventDefault();
-                              void handleNextStep();
-                            }}
-                            data-testid="onboarding-recovery-saved"
-                            className="relative z-30 mt-3 flex w-full items-center gap-3 rounded-full border border-green-300/36 bg-green-300/8 p-3 text-left text-cyan-100 transition-all hover:border-green-200/70 hover:bg-green-300/12"
-                          >
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-green-300 bg-green-300/70">
-                              <Check className="w-4 h-4 text-white" />
-                            </div>
-                            <span className="text-sm uppercase tracking-widest">
-                              {onboardingCopy.savedReady}
-                            </span>
-                            <ArrowRight className="ml-auto h-4 w-4 text-cyan-200/80" />
-                          </button>
-                        )}
-                        {credentialExportStatus === 'error' && (
-                          <div className="mt-2 text-[10px] text-rose-300">
-                            {onboardingCopy.pngError}
-                          </div>
-                        )}
+              {releasePhase === 'backup' && recoveryKey && (
+                <motion.div
+                  key="backup-phase"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="onboarding-backup-phase mx-auto w-full max-w-xl text-left"
+                  data-testid="onboarding-backup-phase"
+                >
+                  <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/18 bg-[radial-gradient(circle_at_0%_0%,rgba(126,239,255,0.08),transparent_42%),rgba(0,5,9,0.58)] p-4 font-mono shadow-[0_22px_70px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(184,251,255,0.08)] backdrop-blur-md">
+                    <div className="flex items-start gap-3 text-cyan-200">
+                      <div className="relative mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-green-300/24 bg-green-300/6">
+                        <Fingerprint className="h-4 w-4 text-green-300" />
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.34em] text-cyan-400">
+                          {hasIssuedAccessPass
+                            ? onboardingCopy.savedTitle
+                            : onboardingCopy.generatedTitle}
+                        </div>
+                        <div className="mt-1 text-xs leading-relaxed text-cyan-100/72">
+                          {hasIssuedAccessPass
+                            ? onboardingCopy.savedBody
+                            : onboardingCopy.generatedBody}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative mt-3 overflow-hidden rounded-[22px] border border-cyan-400/14 bg-[#031318]/72 p-3 text-center">
+                      <div className="select-all break-all px-4 text-sm font-bold tracking-widest text-cyan-200">
+                        {recoveryKey}
+                      </div>
+                    </div>
+                    {!hasIssuedAccessPass ? (
+                      <motion.button
+                        type="button"
+                        data-testid="onboarding-save-png"
+                        onClick={() => {
+                          void issueCredentialAsPng();
+                        }}
+                        disabled={credentialExportStatus === 'rendering'}
+                        className="relative mt-3 inline-flex w-full items-center justify-center gap-3 rounded-full border border-cyan-400/40 bg-cyan-400/12 px-4 py-4 text-sm uppercase tracking-[0.18em] text-cyan-100"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>
+                          {credentialExportStatus === 'rendering'
+                            ? onboardingCopy.savingPng
+                            : onboardingCopy.savePng}
+                        </span>
+                      </motion.button>
+                    ) : (
+                      <button
+                        type="button"
+                        data-testid="onboarding-continue-entry"
+                        onClick={handleContinueToEntry}
+                        className="relative z-30 mt-3 flex w-full min-h-[48px] items-center justify-center gap-2 rounded-full border border-green-300/36 bg-green-300/10 px-4 py-3 text-sm uppercase tracking-widest text-green-100 touch-manipulation"
+                      >
+                        <Check className="h-4 w-4" />
+                        <span>{language === 'zh' ? '前往进入界面' : 'Continue to entry'}</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
+                    {credentialExportStatus === 'error' && (
+                      <div className="mt-2 text-[10px] text-rose-300">
+                        {onboardingCopy.pngError}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {releasePhase === 'entry' && hasIssuedAccessPass && (
+                <motion.div
+                  key="entry-phase"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="onboarding-entry-gate mx-auto w-full max-w-md text-left"
+                  data-testid="onboarding-entry-gate"
+                >
+                  <div className="rounded-[28px] border border-green-300/20 bg-[radial-gradient(circle_at_0%_0%,rgba(134,239,172,0.10),transparent_42%),rgba(0,5,9,0.58)] p-5 font-mono shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-md">
+                    <ul className="space-y-3">
+                      {entryChecklist.map((item) => (
+                        <li
+                          key={item.label}
+                          className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-xs uppercase tracking-widest ${
+                            item.done
+                              ? 'border-green-300/30 bg-green-300/8 text-green-100'
+                              : 'border-cyan-400/14 bg-cyan-400/5 text-cyan-700'
+                          }`}
+                        >
+                          <Check
+                            className={`h-4 w-4 ${item.done ? 'text-green-300' : 'opacity-30'}`}
+                          />
+                          <span>{item.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={handleEnterApp}
+                      disabled={isCompletingOnboarding || !hasIssuedAccessPass}
+                      data-testid="onboarding-recovery-saved"
+                      data-backup-ready="true"
+                      className="onboarding-enter-button relative z-30 mt-5 flex w-full min-h-[52px] items-center justify-center gap-3 rounded-full border border-green-300/40 bg-green-300/12 px-4 py-3 text-sm uppercase tracking-[0.2em] text-green-50 touch-manipulation disabled:cursor-wait disabled:opacity-70"
+                    >
+                      {isCompletingOnboarding ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border border-white border-t-transparent" />
+                      ) : (
+                        <ArrowRight className="h-5 w-5" />
+                      )}
+                      <span>
+                        {isCompletingOnboarding
+                          ? language === 'zh'
+                            ? '正在进入...'
+                            : 'Entering...'
+                          : language === 'zh'
+                            ? '进入现在'
+                            : 'Enter now'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReleasePhase('backup')}
+                      className="mt-3 w-full text-center text-[10px] uppercase tracking-widest text-cyan-500/80 underline-offset-2 hover:text-cyan-300 hover:underline"
+                    >
+                      {language === 'zh' ? '返回重新保存凭证' : 'Back to save pass again'}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
 
@@ -1733,33 +1768,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({
               {error}
             </div>
           )}
-
-          {!hasIssuedAccessPass && (
-            <div className="onboarding-next-bar fixed bottom-3 left-4 right-4 z-40 flex items-end gap-3 md:absolute md:bottom-4 md:left-auto md:right-5">
-              <CyberButton
-                data-testid="onboarding-next"
-                onClick={handleNextStep}
-                disabled={!canEnterOnboarding}
-                className={`w-full justify-center md:w-auto ${
-                  !canEnterOnboarding ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : ''
-                }`}
-                theme={theme}
-              >
-                {canEnterOnboarding ? onboardingCopy.enter : onboardingCopy.locked}{' '}
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </CyberButton>
-            </div>
-          )}
         </div>
       </motion.div>
       {recoveryKey && (
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed left-0 top-0 w-[960px] -translate-x-[120vw] font-mono"
+          className="onboarding-credential-export pointer-events-none fixed left-0 top-0 -z-10 overflow-hidden opacity-0"
         >
           <div
             ref={credentialCardRef}
-            className="relative w-[960px] overflow-hidden border border-cyan-300/60 bg-[#031318] p-8 text-cyan-50 shadow-[0_0_64px_rgba(0,200,232,0.22)]"
+            className="relative w-[960px] overflow-hidden border border-cyan-300/60 bg-[#031318] p-8 font-mono text-cyan-50 shadow-[0_0_64px_rgba(0,200,232,0.22)]"
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(126,239,255,0.18),transparent_25%),radial-gradient(circle_at_12%_92%,rgba(123,109,255,0.18),transparent_28%),linear-gradient(135deg,rgba(6,22,42,0.95),rgba(0,32,36,0.95)_48%,rgba(0,8,12,0.98))]" />
             <div className="absolute inset-0 bg-[linear-gradient(rgba(126,239,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(126,239,255,0.04)_1px,transparent_1px)] bg-[size:42px_42px]" />

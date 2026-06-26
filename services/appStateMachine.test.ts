@@ -17,6 +17,16 @@ describe('appStateMachine', () => {
     expect(canTransitionAppState(AppState.ARCHIVE, AppState.VIEWER)).toBe(true);
   });
 
+  it('allows mobile main tab navigation (past / now / future / avatar)', () => {
+    expect(canTransitionAppState(AppState.PAST, AppState.NOW)).toBe(true);
+    expect(canTransitionAppState(AppState.NOW, AppState.PAST)).toBe(true);
+    expect(canTransitionAppState(AppState.NOW, AppState.FUTURE)).toBe(true);
+    expect(canTransitionAppState(AppState.FUTURE, AppState.NOW_AVATAR_CHAT)).toBe(true);
+    expect(canTransitionAppState(AppState.PAST, AppState.EDITOR)).toBe(true);
+    expect(canTransitionAppState(AppState.EDITOR, AppState.PAST)).toBe(true);
+    expect(canTransitionAppState(AppState.ONBOARDING, AppState.NOW)).toBe(true);
+  });
+
   it('blocks unsafe direct jumps', () => {
     expect(canTransitionAppState(AppState.COVER, AppState.VIEWER)).toBe(false);
     expect(canTransitionAppState(AppState.COVER, AppState.EDITOR)).toBe(false);

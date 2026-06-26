@@ -1,5 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeft, ArrowUp, Bot, Image, Link as LinkIcon, Mic, Paperclip, Plus, Trash2, Video, X } from 'lucide-react';
+/* eslint-disable max-lines */
+import {
+  ArrowLeft,
+  ArrowUp,
+  Bot,
+  Image,
+  Link as LinkIcon,
+  Mic,
+  Paperclip,
+  Plus,
+  Trash2,
+  Video,
+  X,
+} from 'lucide-react';
 import type { DiaryEntry, Language, Theme } from '../../types';
 import { CONFIG, STORAGE_KEYS } from './constants/config';
 import { EVENT_TAGS, MOOD_TAGS, TAG_SLOGAN } from './constants/tags';
@@ -12,7 +25,6 @@ import { useVoiceInput } from './hooks/useVoiceInput';
 import {
   buildRecordFromDraft,
   buildAdaptiveFollowup,
-  createEmptyDraft,
   getCanSend,
   getDisabledSendReason,
   getRecordableInformation,
@@ -21,12 +33,20 @@ import {
   validateMaterials,
   validateTags,
 } from './state/nowRules';
-import type { ChatMessage, Material, NowDraft, NowRecord, NowRoute, RecordPreviewPayload } from './types/now';
+import type {
+  ChatMessage,
+  Material,
+  NowDraft,
+  NowRecord,
+  NowRoute,
+  RecordPreviewPayload,
+} from './types/now';
 
 interface NowFlowProps {
   route: NowRoute;
   theme: Theme;
   language: Language;
+  mobileShell?: boolean;
   onRouteChange: (route: NowRoute) => void;
   onExit: () => void;
   onPersistRecord: (payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => Promise<string>;
@@ -46,15 +66,23 @@ const getCustomAnchors = (): string[] => {
   }
 };
 
-const recordToEntry = (record: Omit<NowRecord, 'id' | 'sync_status'>): Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'> => {
-  const materialLines = record.materials.map((material) => `- ${material.type}: ${material.meta?.title || material.local_path || material.url || '本地素材'}`);
+const recordToEntry = (
+  record: Omit<NowRecord, 'id' | 'sync_status'>,
+): Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'> => {
+  const materialLines = record.materials.map(
+    (material) =>
+      `- ${material.type}: ${material.meta?.title || material.local_path || material.url || '本地素材'}`,
+  );
   const content = [record.text, materialLines.length ? `\n素材:\n${materialLines.join('\n')}` : '']
     .filter(Boolean)
     .join('\n');
   return {
     title: record.display_time,
     content,
-    tags: [...record.mood_tags.map((tag) => `心情:${tag}`), ...record.event_tags.map((tag) => `事件:${tag}`)],
+    tags: [
+      ...record.mood_tags.map((tag) => `心情:${tag}`),
+      ...record.event_tags.map((tag) => `事件:${tag}`),
+    ],
     updatedAt: Date.now(),
   };
 };
@@ -63,6 +91,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   route,
   theme,
   language: _language,
+  mobileShell = false,
   onRouteChange,
   onExit,
   onPersistRecord,
@@ -72,8 +101,16 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   const [sending, setSending] = useState(false);
   const isLight = theme === 'light';
 
-  const submitRecord = async (source: NowRecord['source'], overrideDraft = draft, avatarSessionId: string | null = null) => {
-    const tagValidation = validateTags(overrideDraft.mood_tags, overrideDraft.event_tags, getCustomAnchors());
+  const submitRecord = async (
+    source: NowRecord['source'],
+    overrideDraft = draft,
+    avatarSessionId: string | null = null,
+  ) => {
+    const tagValidation = validateTags(
+      overrideDraft.mood_tags,
+      overrideDraft.event_tags,
+      getCustomAnchors(),
+    );
     const materialValidation = validateMaterials(overrideDraft.materials);
     if (tagValidation.ok === false) {
       showToast(tagValidation.message);
@@ -99,8 +136,13 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       return true;
     } catch {
       if (CONFIG.ENABLE_OFFLINE_QUEUE) {
-        const pending = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.pendingRecords) || '[]');
-        window.localStorage.setItem(STORAGE_KEYS.pendingRecords, JSON.stringify([...pending, record]));
+        const pending = JSON.parse(
+          window.localStorage.getItem(STORAGE_KEYS.pendingRecords) || '[]',
+        );
+        window.localStorage.setItem(
+          STORAGE_KEYS.pendingRecords,
+          JSON.stringify([...pending, record]),
+        );
       }
       showToast('发送失败，请重试');
       return false;
@@ -122,6 +164,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           onExit={onExit}
           onRouteChange={onRouteChange}
           showToast={showToast}
+          mobileShell={mobileShell}
         />
       )}
       {route === 'tags' && (
@@ -137,6 +180,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           draft={draft}
           setDraft={setDraft}
           sending={sending}
+          mobileShell={mobileShell}
           onBack={() => onRouteChange('now')}
           onRouteChange={onRouteChange}
           onSend={(preview, sessionId) => {
@@ -167,6 +211,7 @@ interface NowPageProps {
   onExit: () => void;
   onRouteChange: (route: NowRoute) => void;
   showToast: (message: string) => void;
+  mobileShell?: boolean;
 }
 
 const NowPage: React.FC<NowPageProps> = ({
@@ -179,6 +224,7 @@ const NowPage: React.FC<NowPageProps> = ({
   onExit,
   onRouteChange,
   showToast,
+  mobileShell = false,
 }) => {
   const picker = useMaterialPicker({
     materials: draft.materials,
@@ -188,7 +234,11 @@ const NowPage: React.FC<NowPageProps> = ({
     onError: showToast,
   });
   const voice = useVoiceInput({
-    onTranscription: (text) => setDraft((current) => ({ ...current, text: `${current.text}${current.text ? '\n' : ''}${text}` })),
+    onTranscription: (text) =>
+      setDraft((current) => ({
+        ...current,
+        text: `${current.text}${current.text ? '\n' : ''}${text}`,
+      })),
     onAudioMaterial: (material) => {
       setDraft((current) => {
         const next = [...current.materials, { ...material, sort_order: current.materials.length }];
@@ -230,13 +280,26 @@ const NowPage: React.FC<NowPageProps> = ({
   return (
     <main className="now-page" data-testid="now-page">
       <header className="now-header">
-        <button type="button" className="now-icon-button" onClick={handleBack} aria-label="返回">
-          <ArrowLeft size={20} />
-        </button>
+        {!mobileShell ? (
+          <button type="button" className="now-icon-button" onClick={handleBack} aria-label="返回">
+            <ArrowLeft size={20} />
+          </button>
+        ) : (
+          <span className="now-icon-button now-icon-button--placeholder" aria-hidden="true" />
+        )}
         <div className="now-time">{draft.display_time}</div>
-        <button type="button" className="now-icon-button" onClick={() => onRouteChange('avatar-chat')} aria-label="分身记录">
-          <Bot size={20} />
-        </button>
+        {!mobileShell ? (
+          <button
+            type="button"
+            className="now-icon-button"
+            onClick={() => onRouteChange('avatar-chat')}
+            aria-label="分身记录"
+          >
+            <Bot size={20} />
+          </button>
+        ) : (
+          <span className="now-header__badge">写入</span>
+        )}
       </header>
 
       <section className="now-editor">
@@ -276,13 +339,28 @@ const NowPage: React.FC<NowPageProps> = ({
           {voice.recording && <span>{Math.ceil(voice.durationMs / 1000)}s</span>}
         </button>
         <div className="now-material-menu">
-          <button type="button" className="now-tool-button" aria-label="图片" onClick={picker.openImagePicker}>
+          <button
+            type="button"
+            className="now-tool-button"
+            aria-label="图片"
+            onClick={picker.openImagePicker}
+          >
             <Image size={20} />
           </button>
-          <button type="button" className="now-tool-button" aria-label="视频" onClick={picker.openVideoPicker}>
+          <button
+            type="button"
+            className="now-tool-button"
+            aria-label="视频"
+            onClick={picker.openVideoPicker}
+          >
             <Video size={20} />
           </button>
-          <button type="button" className="now-tool-button" aria-label="链接" onClick={picker.addLink}>
+          <button
+            type="button"
+            className="now-tool-button"
+            aria-label="链接"
+            onClick={picker.addLink}
+          >
             <LinkIcon size={20} />
           </button>
         </div>
@@ -320,7 +398,10 @@ const NowPage: React.FC<NowPageProps> = ({
               <strong>录音完成</strong>
               <span>{Math.max(1, Math.ceil(voice.pendingCapture.durationMs / 1000))} 秒</span>
             </div>
-            {voice.pendingCapture.url && <audio controls src={voice.pendingCapture.url} />}
+            {voice.pendingCapture.url && (
+              // eslint-disable-next-line jsx-a11y/media-has-caption -- voice preview has no transcript until transcription
+              <audio controls src={voice.pendingCapture.url} />
+            )}
             <div className="now-voice-choice__actions">
               <button type="button" onClick={voice.confirmTranscription}>
                 转文字
@@ -335,19 +416,39 @@ const NowPage: React.FC<NowPageProps> = ({
           </div>
         </div>
       )}
-      <input ref={picker.imageInputRef} hidden type="file" accept="image/*" multiple onChange={(event) => picker.addFiles(event.target.files, 'image')} />
-      <input ref={picker.videoInputRef} hidden type="file" accept="video/*" onChange={(event) => picker.addFiles(event.target.files, 'video')} />
+      <input
+        ref={picker.imageInputRef}
+        hidden
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(event) => picker.addFiles(event.target.files, 'image')}
+      />
+      <input
+        ref={picker.videoInputRef}
+        hidden
+        type="file"
+        accept="video/*"
+        onChange={(event) => picker.addFiles(event.target.files, 'video')}
+      />
     </main>
   );
 };
 
-const MaterialPreview: React.FC<{ materials: Material[]; onRemove: (id: string) => void }> = ({ materials, onRemove }) => {
+const MaterialPreview: React.FC<{ materials: Material[]; onRemove: (id: string) => void }> = ({
+  materials,
+  onRemove,
+}) => {
   if (materials.length === 0) return null;
   return (
     <div className="now-materials">
       {materials.map((material) => (
         <div key={material.id} className="now-material">
-          {material.type === 'image' && material.url ? <img src={material.url} alt={material.local_path || '图片素材'} /> : <Paperclip size={18} />}
+          {material.type === 'image' && material.url ? (
+            <img src={material.url} alt={material.local_path || '图片素材'} />
+          ) : (
+            <Paperclip size={18} />
+          )}
           <span>{material.meta?.title || material.local_path || material.type}</span>
           <button type="button" onClick={() => onRemove(material.id)} aria-label="删除素材">
             <Trash2 size={16} />
@@ -368,7 +469,12 @@ const TagSelectPage: React.FC<{
   const [eventTags, setEventTags] = useState(draft.event_tags);
   const [customAnchors, setCustomAnchors] = useState(getCustomAnchors);
 
-  const toggle = (tag: string, values: string[], setValues: (values: string[]) => void, max: number) => {
+  const toggle = (
+    tag: string,
+    values: string[],
+    setValues: (values: string[]) => void,
+    max: number,
+  ) => {
     if (values.includes(tag)) {
       setValues(values.filter((item) => item !== tag));
       return;
@@ -419,7 +525,12 @@ const TagSelectPage: React.FC<{
         <h2>心情</h2>
         <div className="now-chip-grid">
           {MOOD_TAGS.map((tag) => (
-            <button key={tag} type="button" className={moodTags.includes(tag) ? 'is-selected' : ''} onClick={() => toggle(tag, moodTags, setMoodTags, CONFIG.MAX_MOOD_TAGS)}>
+            <button
+              key={tag}
+              type="button"
+              className={moodTags.includes(tag) ? 'is-selected' : ''}
+              onClick={() => toggle(tag, moodTags, setMoodTags, CONFIG.MAX_MOOD_TAGS)}
+            >
               {tag}
             </button>
           ))}
@@ -427,7 +538,12 @@ const TagSelectPage: React.FC<{
         <h2>事件</h2>
         <div className="now-chip-grid">
           {[...EVENT_TAGS.filter((tag) => tag !== '自定义锚点'), ...customAnchors].map((tag) => (
-            <button key={tag} type="button" className={eventTags.includes(tag) ? 'is-selected' : ''} onClick={() => toggle(tag, eventTags, setEventTags, CONFIG.MAX_EVENT_TAGS)}>
+            <button
+              key={tag}
+              type="button"
+              className={eventTags.includes(tag) ? 'is-selected' : ''}
+              onClick={() => toggle(tag, eventTags, setEventTags, CONFIG.MAX_EVENT_TAGS)}
+            >
               {tag}
             </button>
           ))}
@@ -444,11 +560,21 @@ const AvatarChatPage: React.FC<{
   draft: NowDraft;
   setDraft: (updater: NowDraft | ((draft: NowDraft) => NowDraft)) => void;
   sending: boolean;
+  mobileShell?: boolean;
   onBack: () => void;
   onRouteChange: (route: NowRoute) => void;
   onSend: (preview: RecordPreviewPayload, sessionId: string) => Promise<boolean>;
   showToast: (message: string) => void;
-}> = ({ draft, setDraft, sending, onBack, onRouteChange, onSend, showToast }) => {
+}> = ({
+  draft,
+  setDraft,
+  sending,
+  mobileShell = false,
+  onBack,
+  onRouteChange,
+  onSend,
+  showToast,
+}) => {
   const sessionId = useMemo(() => makeId('avatar-session'), []);
   const [input, setInput] = useState('');
   const [followupRound, setFollowupRound] = useState(0);
@@ -465,14 +591,16 @@ const AvatarChatPage: React.FC<{
             id: makeId('msg'),
             role: 'assistant',
             type: 'text',
-            content: '你好，我是你的分身。我可以帮你记录此刻：把今天发生的事、你的感受、想法，整理成一条完整记录，存进「过去」。',
+            content:
+              '你好，我是你的分身。我可以帮你记录此刻：把今天发生的事、你的感受、想法，整理成一条完整记录，存进「过去」。',
             created_at: now,
           },
           {
             id: makeId('msg'),
             role: 'assistant',
             type: 'text',
-            content: '使用规则：① 用语音或文字告诉我想记下什么 ② 说完点「记录完毕」③ 若内容较少，我会最多追问 2 轮 ④ 整理好后给你完整记录和心情/事件标签，你确认后发送。现在，说说今天想记下什么吧。',
+            content:
+              '使用规则：① 用语音或文字告诉我想记下什么 ② 说完点「记录完毕」③ 若内容较少，我会最多追问 2 轮 ④ 整理好后给你完整记录和心情/事件标签，你确认后发送。现在，说说今天想记下什么吧。',
             created_at: now,
           },
         ]
@@ -500,7 +628,10 @@ const AvatarChatPage: React.FC<{
       created_at: new Date().toISOString(),
     };
     const nextUserMessages = [...userMessages, userMessage];
-    const followup = assistantTurns < CONFIG.MAX_FOLLOWUP_ROUNDS ? buildAdaptiveFollowup(nextUserMessages, assistantTurns) : null;
+    const followup =
+      assistantTurns < CONFIG.MAX_FOLLOWUP_ROUNDS
+        ? buildAdaptiveFollowup(nextUserMessages, assistantTurns)
+        : null;
     setMessages((current) => {
       const next = [...current, userMessage];
       if (!followup) return next;
@@ -526,31 +657,64 @@ const AvatarChatPage: React.FC<{
     }
     const recordableMessages = getRecordableInformation(userMessages);
     if (recordableMessages.length === 0) {
-      const question = buildAdaptiveFollowup(userMessages, followupRound) ?? '这些内容还不足以整理成记录。请至少说清一件具体发生的事，或先返回手动记录。';
+      const question =
+        buildAdaptiveFollowup(userMessages, followupRound) ??
+        '这些内容还不足以整理成记录。请至少说清一件具体发生的事，或先返回手动记录。';
       if (followupRound < CONFIG.MAX_FOLLOWUP_ROUNDS) setFollowupRound((value) => value + 1);
       setMessages((current) => [
         ...current,
-        { id: makeId('msg'), role: 'assistant', type: 'text', content: question, created_at: new Date().toISOString() },
+        {
+          id: makeId('msg'),
+          role: 'assistant',
+          type: 'text',
+          content: question,
+          created_at: new Date().toISOString(),
+        },
       ]);
       return;
     }
     if (!isContentSufficient(userMessages) && followupRound < CONFIG.MAX_FOLLOWUP_ROUNDS) {
-      const question = buildAdaptiveFollowup(userMessages, followupRound) ?? (followupRound === 0 ? '能具体说说是哪件事吗？当时你怎么想的？' : '这件事你现在的感受是什么？');
+      const question =
+        buildAdaptiveFollowup(userMessages, followupRound) ??
+        (followupRound === 0
+          ? '能具体说说是哪件事吗？当时你怎么想的？'
+          : '这件事你现在的感受是什么？');
       setFollowupRound((value) => value + 1);
-      setMessages((current) => [...current, { id: makeId('msg'), role: 'assistant', type: 'text', content: question, created_at: new Date().toISOString() }]);
+      setMessages((current) => [
+        ...current,
+        {
+          id: makeId('msg'),
+          role: 'assistant',
+          type: 'text',
+          content: question,
+          created_at: new Date().toISOString(),
+        },
+      ]);
       return;
     }
     setGenerating(true);
     try {
-      const result = await summarizeAvatarMessages({ messages, record_time: draft.record_time, followup_round: followupRound });
-      if (result.can_summarize === false || result.mood_tags.length === 0 || result.event_tags.length === 0 || !result.text.trim()) {
+      const result = await summarizeAvatarMessages({
+        messages,
+        record_time: draft.record_time,
+        followup_round: followupRound,
+      });
+      if (
+        result.can_summarize === false ||
+        result.mood_tags.length === 0 ||
+        result.event_tags.length === 0 ||
+        !result.text.trim()
+      ) {
         setMessages((current) => [
           ...current,
           {
             id: makeId('msg'),
             role: 'assistant',
             type: 'text',
-            content: result.followup_question || result.reason || '信息还不够具体，我不能替你随意生成记录或标签。请补充一件具体事实。',
+            content:
+              result.followup_question ||
+              result.reason ||
+              '信息还不够具体，我不能替你随意生成记录或标签。请补充一件具体事实。',
             created_at: new Date().toISOString(),
           },
         ]);
@@ -558,7 +722,16 @@ const AvatarChatPage: React.FC<{
       }
       if (result.followup_question && followupRound < CONFIG.MAX_FOLLOWUP_ROUNDS) {
         setFollowupRound((value) => value + 1);
-        setMessages((current) => [...current, { id: makeId('msg'), role: 'assistant', type: 'text', content: result.followup_question!, created_at: new Date().toISOString() }]);
+        setMessages((current) => [
+          ...current,
+          {
+            id: makeId('msg'),
+            role: 'assistant',
+            type: 'text',
+            content: result.followup_question!,
+            created_at: new Date().toISOString(),
+          },
+        ]);
         return;
       }
       const payload = {
@@ -570,7 +743,17 @@ const AvatarChatPage: React.FC<{
         is_sparse: result.is_sparse,
       };
       setPreview(payload);
-      setMessages((current) => [...current, { id: makeId('msg'), role: 'assistant', type: 'record_preview', content: 'record_preview', payload, created_at: new Date().toISOString() }]);
+      setMessages((current) => [
+        ...current,
+        {
+          id: makeId('msg'),
+          role: 'assistant',
+          type: 'record_preview',
+          content: 'record_preview',
+          payload,
+          created_at: new Date().toISOString(),
+        },
+      ]);
     } catch {
       showToast('整理失败，请重试');
     } finally {
@@ -579,15 +762,23 @@ const AvatarChatPage: React.FC<{
   };
 
   return (
-    <main className="now-page now-chat-page">
+    <main className="now-page now-chat-page" data-testid="avatar-assist-page">
       <header className="now-header">
-        <button type="button" className="now-icon-button" onClick={onBack} aria-label="返回">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="now-time">分身记录</div>
-        <button type="button" className="now-icon-button" onClick={onBack} aria-label="关闭">
-          <X size={20} />
-        </button>
+        {!mobileShell ? (
+          <button type="button" className="now-icon-button" onClick={onBack} aria-label="返回">
+            <ArrowLeft size={20} />
+          </button>
+        ) : (
+          <span className="now-icon-button now-icon-button--placeholder" aria-hidden="true" />
+        )}
+        <div className="now-time">{mobileShell ? '记录协助' : '分身记录'}</div>
+        {!mobileShell ? (
+          <button type="button" className="now-icon-button" onClick={onBack} aria-label="关闭">
+            <X size={20} />
+          </button>
+        ) : (
+          <span className="now-header__badge">协助</span>
+        )}
       </header>
       <section className="now-chat-list">
         {messages.map((message) =>
@@ -599,14 +790,21 @@ const AvatarChatPage: React.FC<{
               onChange={setPreview}
               onEditTags={() => {
                 if (preview) {
-                  setDraft((current) => ({ ...current, mood_tags: preview.mood_tags, event_tags: preview.event_tags }));
+                  setDraft((current) => ({
+                    ...current,
+                    mood_tags: preview.mood_tags,
+                    event_tags: preview.event_tags,
+                  }));
                 }
                 onRouteChange('tags');
               }}
               onSend={() => void onSend(preview ?? message.payload!, sessionId)}
             />
           ) : (
-            <div key={message.id} className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}>
+            <div
+              key={message.id}
+              className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}
+            >
               {message.content}
             </div>
           ),
@@ -614,9 +812,18 @@ const AvatarChatPage: React.FC<{
         {generating && <div className="now-chat-bubble">正在整理…</div>}
       </section>
       <footer className="now-chat-input">
-        <input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && sendMessage()} placeholder="输入想记录的内容" />
-        <button type="button" onClick={sendMessage}>发送</button>
-        <button type="button" onClick={() => void finish()} disabled={generating}>记录完毕</button>
+        <input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => event.key === 'Enter' && sendMessage()}
+          placeholder="输入想记录的内容"
+        />
+        <button type="button" onClick={sendMessage}>
+          发送
+        </button>
+        <button type="button" onClick={() => void finish()} disabled={generating}>
+          记录完毕
+        </button>
       </footer>
     </main>
   );
@@ -639,17 +846,27 @@ const RecordPreviewCard: React.FC<{
         <p>{text}</p>
       )}
       <div className="now-preview-tags">
-        {[...payload.mood_tags.map((tag) => `心情·${tag}`), ...payload.event_tags.map((tag) => `事件·${tag}`)].join('  ')}
+        {[
+          ...payload.mood_tags.map((tag) => `心情·${tag}`),
+          ...payload.event_tags.map((tag) => `事件·${tag}`),
+        ].join('  ')}
       </div>
       <div className="now-preview-actions">
-        <button type="button" onClick={() => {
-          if (editing) onChange({ ...payload, text });
-          setEditing((value) => !value);
-        }}>
+        <button
+          type="button"
+          onClick={() => {
+            if (editing) onChange({ ...payload, text });
+            setEditing((value) => !value);
+          }}
+        >
           {editing ? '保存' : '修改'}
         </button>
-        <button type="button" onClick={onEditTags}>改标签</button>
-        <button type="button" onClick={onSend} disabled={sending}>发送过去</button>
+        <button type="button" onClick={onEditTags}>
+          改标签
+        </button>
+        <button type="button" onClick={onSend} disabled={sending}>
+          发送过去
+        </button>
       </div>
     </article>
   );

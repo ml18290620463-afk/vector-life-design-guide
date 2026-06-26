@@ -36,23 +36,18 @@ export const seedOnboardedApp = async (
   // copy changes on the homepage do not break all onboarding specs.
   await page.getByTestId('cover-initialize').dispatchEvent('click');
 
-  // Onboarding step 1 (intro) → next.
-  await page.getByTestId('onboarding-next').click();
-
-  // Onboarding step 2: master password (twice).
+  // Calibration: master password (twice) then issue recovery key.
   await page.getByTestId('onboarding-password').fill(password);
   await page.getByTestId('onboarding-password-confirm').fill(password);
-  await page.getByTestId('onboarding-next').click();
+  await page.getByTestId('onboarding-issue-key').click();
+  await page.getByTestId('onboarding-backup-phase').waitFor({ state: 'visible' });
 
-  // Onboarding step 3: acknowledge the recovery key, then continue.
+  // Backup: save offline PNG, then continue to entry gate.
+  await page.getByTestId('onboarding-save-png').click();
+  await page.getByTestId('onboarding-continue-entry').waitFor({ state: 'visible' });
+  await page.getByTestId('onboarding-continue-entry').click();
+
+  // Entry: confirm checklist and enter the app.
+  await page.getByTestId('onboarding-entry-gate').waitFor({ state: 'visible' });
   await page.getByTestId('onboarding-recovery-saved').click();
-  await page.getByTestId('onboarding-next').click();
-
-  // Onboarding step 4: pick three guiding stars then enter Dashboard.
-  // The persona keys are derived in Onboarding.tsx as the lowercased
-  // last-word of the persona name, so e.g. 'Elon Musk' → 'musk'.
-  await page.getByTestId('onboarding-star-musk').first().click();
-  await page.getByTestId('onboarding-star-laozi').first().click();
-  await page.getByTestId('onboarding-star-camus').first().click();
-  await page.getByTestId('onboarding-finish').click();
 };

@@ -277,6 +277,8 @@ export enum AppState {
   EDITOR = 'EDITOR',
   VIEWER = 'VIEWER',
   ARCHIVE = 'ARCHIVE', // Bio-Vault
+  PAST = 'PAST', // Mobile repository hub (timeline / principles / archive)
+  FUTURE = 'FUTURE', // Mobile future analysis (placeholder)
   NOW = 'NOW',
   NOW_TAGS = 'NOW_TAGS',
   NOW_AVATAR_CHAT = 'NOW_AVATAR_CHAT',

@@ -24,8 +24,8 @@ describe('fileDownload', () => {
     expect(sanitizeDownloadFilename('   ')).toBe('download');
   });
 
-  it('downloads blobs and revokes object URLs', () => {
-    downloadBlob(new Blob(['hello']), 'note.txt');
+  it('downloads blobs and revokes object URLs', async () => {
+    await downloadBlob(new Blob(['hello']), 'note.txt');
 
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledTimes(1);
@@ -33,8 +33,8 @@ describe('fileDownload', () => {
     expect(document.body.querySelectorAll('a')).toHaveLength(0);
   });
 
-  it('creates text blobs with the requested filename', () => {
-    downloadTextFile('hello', 'entry/name.txt');
+  it('creates text blobs with the requested filename', async () => {
+    await downloadTextFile('hello', 'entry/name.txt');
 
     const createdBlob = (URL.createObjectURL as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0] as Blob;

@@ -29,21 +29,19 @@ test('completes onboarding and creates a journal entry', async ({ page }) => {
   // can change (i18n / copy edits) without breaking the spec; only
   // an intentional change to a data-testid does.
   await page.getByTestId('cover-initialize').click();
-  await expect(page.getByTestId('onboarding-next')).toBeVisible();
-
-  await page.getByTestId('onboarding-next').click();
+  await expect(page.getByTestId('onboarding-password')).toBeVisible();
 
   await page.getByTestId('onboarding-password').fill('Vector123!');
   await page.getByTestId('onboarding-password-confirm').fill('Vector123!');
-  await page.getByTestId('onboarding-next').click();
+  await page.getByTestId('onboarding-issue-key').click();
+  await page.getByTestId('onboarding-backup-phase').waitFor({ state: 'visible' });
 
+  await page.getByTestId('onboarding-save-png').click();
+  await page.getByTestId('onboarding-continue-entry').waitFor({ state: 'visible' });
+  await page.getByTestId('onboarding-continue-entry').click();
+
+  await page.getByTestId('onboarding-entry-gate').waitFor({ state: 'visible' });
   await page.getByTestId('onboarding-recovery-saved').click();
-  await page.getByTestId('onboarding-next').click();
-
-  await page.getByTestId('onboarding-star-musk').first().click();
-  await page.getByTestId('onboarding-star-laozi').first().click();
-  await page.getByTestId('onboarding-star-camus').first().click();
-  await page.getByTestId('onboarding-finish').click();
 
   // The "default first entry" still uses an i18n locator because it's
   // a localised piece of copy injected by `useDiaryData.seedDefaults`,
