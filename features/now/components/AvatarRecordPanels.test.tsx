@@ -21,6 +21,7 @@ describe('AvatarRecordPanels', () => {
           eventTags: ['个人成长'],
           completeness: 80,
           nextQuestion: null,
+          evidenceEntryIds: [],
         }}
       />,
     );
@@ -30,6 +31,29 @@ describe('AvatarRecordPanels', () => {
     expect(screen.getByText('完成了一次复盘')).not.toBeNull();
     expect(screen.getAllByText('感动').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('个人成长')).not.toBeNull();
+    expect(screen.getByText('仅基于本次对话，尚未引用过去记录')).not.toBeNull();
+  });
+
+  it('shows inspectable confirmed evidence for an insight', () => {
+    const onSelectEntry = vi.fn();
+    render(
+      <AvatarInsightPanel
+        insight={{
+          fact: '今天又遇到相似问题', action: null, feeling: null, thought: null, result: null,
+          moodTags: [], eventTags: [], completeness: 20, nextQuestion: null,
+          evidenceEntryIds: ['entry-1'],
+        }}
+        evidence={[{
+          id: 'memory-1', sourceEntryId: 'entry-1', title: '上次复盘', excerpt: '先澄清目标',
+          tags: [], score: 1, createdAt: 1, reason: '同主题',
+        }]}
+        onSelectEntry={onSelectEntry}
+      />,
+    );
+
+    expect(screen.getByText('依据 1 条已确认记录')).not.toBeNull();
+    fireEvent.click(screen.getByText('上次复盘'));
+    expect(onSelectEntry).toHaveBeenCalledWith('entry-1');
   });
 
   it('renders top recalled memories only', () => {

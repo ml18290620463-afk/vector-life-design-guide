@@ -188,7 +188,14 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   });
 
   const userMessages = messages.filter((message) => message.role === 'user');
-  const liveInsight = useMemo(() => buildAvatarStructuredInsight(userMessages), [userMessages]);
+  const validRecallMemories = useMemo(() => {
+    const existingIds = new Set(pastEntries.map((entry) => entry.id));
+    return recallMemories.filter((memory) => existingIds.has(memory.sourceEntryId));
+  }, [pastEntries, recallMemories]);
+  const liveInsight = useMemo(
+    () => buildAvatarStructuredInsight(userMessages, validRecallMemories),
+    [userMessages, validRecallMemories],
+  );
   const references = useMemo<AvatarSourceReference[]>(
     () =>
       recallMemories.map((memory) => ({
@@ -255,7 +262,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     setUnderstanding(next);
     writeAvatarUnderstanding({
       ...next,
-      sourceEntryIds: references.map((item) => item.entryId),
+      sourceEntryIds: liveInsight.evidenceEntryIds,
       createdAt: Date.now(),
     });
   };
@@ -278,7 +285,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       id: next.id,
       statement,
       status,
-      sourceEntryIds: references.map((item) => item.entryId),
+      sourceEntryIds: liveInsight.evidenceEntryIds,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -505,7 +512,13 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         )
       )}
       <section className="now-chat-list">
-        {userMessages.length > 0 && <AvatarInsightPanel insight={liveInsight} />}
+        {userMessages.length > 0 && (
+          <AvatarInsightPanel
+            insight={liveInsight}
+            evidence={validRecallMemories}
+            onSelectEntry={onSelectEntry}
+          />
+        )}
         {recallMemories.length > 0 && (
           <AvatarRecallPanel memories={recallMemories} onSelectEntry={onSelectEntry} />
         )}
@@ -520,9 +533,10 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
           message.type === 'record_preview' && message.payload ? (
             <RecordPreviewCard
               key={message.id}
-              payload={message.payload}
+              payload={preview ?? message.payload}
               sending={sending}
               onChange={setPreview}
+              showPrincipleOutcome={launchContext.mode === 'review'}
               onEditTags={() => {
                 if (preview) {
                   setDraft((current) => ({

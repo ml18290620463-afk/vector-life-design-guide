@@ -137,10 +137,12 @@ const entryToSemanticSource = (
 });
 
 export const principleToSemanticSource = (
-  principle: Pick<Principle, 'text'>,
+  principle: Pick<Principle, 'text' | 'application'>,
   evidenceEntries: Array<Pick<DiaryEntry, 'tags'>> = [],
 ): SemanticSource => ({
-  text: principle.text,
+  text: [principle.text, principle.application?.trigger, principle.application?.action]
+    .filter(Boolean)
+    .join(' '),
   tags: evidenceEntries.flatMap((entry) => entry.tags),
 });
 

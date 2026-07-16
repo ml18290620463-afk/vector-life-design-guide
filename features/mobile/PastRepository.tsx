@@ -3,7 +3,14 @@ import { Archive, BookOpen, Search, SlidersHorizontal, Sparkles } from 'lucide-r
 import { useNowTick } from '../../hooks/useNowTick';
 import { useArchiveGrouping } from '../../hooks/useArchiveGrouping';
 import { TRANSLATIONS } from '../../constants';
-import type { Container, DiaryEntry, Language, Principle, Theme } from '../../types';
+import type {
+  Container,
+  DiaryEntry,
+  Language,
+  Principle,
+  PrincipleApplication,
+  Theme,
+} from '../../types';
 import type { ExperienceFeedbackOutcome } from '../../types';
 import { ArchivePrinciplesView } from '../../components/ArchivePrinciplesView';
 import { ArchiveVaultEntries } from '../../components/ArchiveVaultEntries';
@@ -12,6 +19,8 @@ import { FilterHub } from '../../components/FilterHub';
 import { PastExperienceWorkbench } from '../../components/PastExperienceWorkbench';
 import { RelatedExperienceDisclosure } from '../../components/RelatedExperienceDisclosure';
 import { applyPrincipleFeedback, hasFeedbackForPrinciple } from '../../services/experienceFeedback';
+import { buildTopicTrajectory } from '../../services/topicTrajectory';
+import { confirmExperienceEdge, resetExperienceEdge } from '../../services/entryRelations';
 import { MobilePastTimelineEntry } from './MobilePastTimelineEntry';
 import type { PastRepositorySection } from './types';
 import type { AvatarLaunchContext } from '../avatar/types';
@@ -26,6 +35,7 @@ interface PastRepositoryProps {
     year: number,
     showOnHome: boolean,
     derivedFromEntryIds?: string[],
+    application?: PrincipleApplication,
   ) => void;
   onDeletePrinciple: (id: string) => void;
   onUpdatePrinciple: (principle: Principle) => void;
@@ -82,6 +92,10 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       return relatedEntry && relatedEntry.id !== latestEntry.id ? [relatedEntry] : [];
     });
   }, [entries, latestEntry]);
+  const topicTrajectory = useMemo(
+    () => (latestEntry ? buildTopicTrajectory(latestEntry, entries) : null),
+    [entries, latestEntry],
+  );
   const pendingFeedbackPrinciple = useMemo(() => {
     if (!latestEntry || !onUpdateEntry) return null;
     return (
@@ -198,6 +212,19 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 onSelectEntry={onSelectEntry}
                 relatedEntries={relatedExperiences}
                 theme={theme}
+                trajectory={topicTrajectory}
+                onConfirmEdge={
+                  onUpdateEntry
+                    ? (targetEntryId, kind) =>
+                        onUpdateEntry(confirmExperienceEdge(latestEntry, targetEntryId, kind))
+                    : undefined
+                }
+                onResetEdge={
+                  onUpdateEntry
+                    ? (targetEntryId) =>
+                        onUpdateEntry(resetExperienceEdge(latestEntry, targetEntryId))
+                    : undefined
+                }
               />
             )}
             {latestEntry && pendingFeedbackPrinciple && (

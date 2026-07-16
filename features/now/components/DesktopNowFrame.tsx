@@ -18,6 +18,7 @@ type DesktopNowFrameProps = {
   principles: Principle[];
   actions: ActionItem[];
   onActionResultRecorded: (actionId: string, resultEntryId: string) => Promise<void> | void;
+  onUpdatePrinciple: (principle: Principle) => Promise<void> | void;
   theme: Theme;
   avatarLaunchContext?: AvatarLaunchContext;
   onSelectEntry?: (entryId: string) => void;
@@ -35,6 +36,7 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
   principles,
   actions,
   onActionResultRecorded,
+  onUpdatePrinciple,
   theme,
   avatarLaunchContext,
   onSelectEntry,
@@ -68,6 +70,7 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
       onRelatedEntriesResolved={onRelatedEntriesResolved}
       onRecordComplete={onRecordComplete}
       onActionResultRecorded={onActionResultRecorded}
+      onUpdatePrinciple={onUpdatePrinciple}
       avatarLaunchContext={avatarLaunchContext}
       onSelectEntry={onSelectEntry}
     />

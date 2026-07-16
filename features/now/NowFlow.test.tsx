@@ -34,7 +34,26 @@ vi.mock('./components/NowPage', () => ({
 }));
 
 vi.mock('./components/TagSelectPage', () => ({ TagSelectPage: () => null }));
-vi.mock('./components/AvatarChatPage', () => ({ AvatarChatPage: () => null }));
+vi.mock('./components/AvatarChatPage', () => ({
+  AvatarChatPage: ({ onSend }: { onSend: (preview: object, sessionId: string) => void }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onSend(
+          {
+            text: '实际执行后，会议先确认目标，讨论明显更聚焦。',
+            mood_tags: ['平静'],
+            event_tags: ['个人成长'],
+            principle_outcome: 'helpful',
+          },
+          'session-1',
+        )
+      }
+    >
+      save-reviewed-result
+    </button>
+  ),
+}));
 vi.mock('./api/records', () => ({ postRecord: vi.fn().mockResolvedValue({}) }));
 vi.mock('../../services/neuralSemanticRecall', () => ({
   findNeuralRelatedEntryIds: vi.fn().mockResolvedValue([]),
@@ -89,5 +108,64 @@ describe('NowFlow action review', () => {
       ),
     );
     expect(onActionResultRecorded).toHaveBeenCalledWith('action-1', 'result-entry');
+  });
+
+  it('writes confirmed action feedback into the result and evolves principle confidence', async () => {
+    const onPersistRecord = vi.fn(
+      async (payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>): Promise<DiaryEntry> => ({
+        ...payload,
+        id: 'result-entry',
+        createdAt: 2,
+        isLocked: false,
+      }),
+    );
+    const onUpdatePrinciple = vi.fn();
+
+    render(
+      <NowFlow
+        route="avatar-chat"
+        theme="dark"
+        language="zh"
+        onRouteChange={vi.fn()}
+        onExit={vi.fn()}
+        onPersistRecord={onPersistRecord}
+        avatarLaunchContext={{ mode: 'review', source: 'action-review', actionId: 'action-1' }}
+        actions={[
+          {
+            id: 'action-1',
+            title: '先确认会议目标',
+            status: 'active',
+            principleId: 'principle-1',
+            createdAt: 1,
+          },
+        ]}
+        principles={[
+          {
+            id: 'principle-1',
+            text: '重要沟通前先定义目标',
+            year: 2026,
+            createdAt: 1,
+            showOnHome: true,
+            confidence: 0.5,
+          },
+        ]}
+        onUpdatePrinciple={onUpdatePrinciple}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'save-reviewed-result' }));
+
+    await waitFor(() =>
+      expect(onPersistRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principleFeedback: [
+            expect.objectContaining({ principleId: 'principle-1', outcome: 'helpful' }),
+          ],
+        }),
+      ),
+    );
+    expect(onUpdatePrinciple).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'principle-1', confidence: 0.62, helpfulCount: 1 }),
+    );
   });
 });

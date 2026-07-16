@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { del, set } from 'idb-keyval';
-import { DiaryEntry, Language, Principle, Attachment, Container } from '../types';
+import type { Attachment, Container, DiaryEntry, Language, Principle, PrincipleApplication } from '../types';
 import { AppError, reportError } from '../lib/error';
 import { getSampleEntries } from '../services/sampleEntries';
 import { getStoredString } from '../services/browserStorage';
@@ -463,6 +463,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       year: number,
       showOnHome: boolean = true,
       derivedFromEntryIds: string[] = [],
+      application?: PrincipleApplication,
     ) => {
       const newPrinciple: Principle = {
         id: generateSecureId(),
@@ -472,6 +473,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         showOnHome,
         derivedFromEntryIds:
           derivedFromEntryIds.length > 0 ? [...new Set(derivedFromEntryIds)] : undefined,
+        application,
         confidence: DEFAULT_PRINCIPLE_CONFIDENCE,
         recallCount: 0,
         helpfulCount: 0,

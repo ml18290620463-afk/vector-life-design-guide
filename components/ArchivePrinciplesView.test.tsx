@@ -66,6 +66,43 @@ describe('ArchivePrinciplesView', () => {
     expect(showOnHome).toBe(true);
   });
 
+  it('persists an optional trigger-to-action application when both fields are present', () => {
+    const onAddPrinciple = vi.fn();
+    render(<ArchivePrinciplesView {...baseProps} language="zh" onAddPrinciple={onAddPrinciple} />);
+    fireEvent.change(screen.getByLabelText(t.addPrinciple), { target: { value: '沟通前先对齐' } });
+    fireEvent.change(screen.getByLabelText('触发场景（可选）'), {
+      target: { value: '重要沟通开始前' },
+    });
+    fireEvent.change(screen.getByLabelText('对应动作（可选）'), {
+      target: { value: '写下唯一目标' },
+    });
+    fireEvent.click(screen.getAllByRole('button').find((button) => button.textContent?.includes(t.addPrinciple))!);
+    expect(onAddPrinciple).toHaveBeenCalledWith(
+      '沟通前先对齐',
+      expect.any(Number),
+      true,
+      undefined,
+      { trigger: '重要沟通开始前', action: '写下唯一目标' },
+    );
+  });
+
+  it('renders a structured principle as a when-do pair', () => {
+    render(
+      <ArchivePrinciplesView
+        {...baseProps}
+        language="zh"
+        principles={[
+          {
+            id: 'structured', text: '沟通前先对齐', year: 2026, createdAt: 1, showOnHome: true,
+            application: { trigger: '重要沟通开始前', action: '写下唯一目标' },
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText('重要沟通开始前')).toBeTruthy();
+    expect(screen.getByText('写下唯一目标')).toBeTruthy();
+  });
+
   it('renders persisted principles grouped by year (descending)', () => {
     const principles: Principle[] = [
       { id: 'p1', text: 'Older', year: 2023, createdAt: 1, showOnHome: true },

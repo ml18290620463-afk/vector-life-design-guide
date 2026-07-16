@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Check, ChevronDown, Eye, FileText, Layers3, Sparkles, X } from 'lucide-react';
-import type { DiaryEntry, Language, Principle, Theme } from '../types';
+import type { DiaryEntry, Language, Principle, PrincipleApplication, Theme } from '../types';
 
 interface PastExperienceWorkbenchProps {
   language: Language;
@@ -13,6 +13,7 @@ interface PastExperienceWorkbenchProps {
     year: number,
     showOnHome: boolean,
     derivedFromEntryIds?: string[],
+    application?: PrincipleApplication,
   ) => void;
   onSelectEntry: (entry: DiaryEntry) => void;
 }
@@ -25,6 +26,7 @@ interface ExperienceCandidate {
   title: string;
   conclusion: string;
   principle: string;
+  application: PrincipleApplication;
   evidence: DiaryEntry[];
   confidence: 'low' | 'medium' | 'high';
 }
@@ -76,6 +78,10 @@ const buildCandidates = (
       principle: isZh
         ? `遇到${tag}场景，先定义目标再行动`
         : `Define the goal before acting in ${tag} situations`,
+      application: {
+        trigger: isZh ? `再次遇到${tag}相关场景` : `When a ${tag} situation appears again`,
+        action: isZh ? '先写下这次唯一目标，再开始行动' : 'Write the single goal before taking action',
+      },
       evidence,
       confidence: evidence.length >= 3 ? 'high' : 'medium',
     });
@@ -94,6 +100,10 @@ const buildCandidates = (
       principle: isZh
         ? '有复盘痕迹的经验，转成下一次动作'
         : 'Turn reflected experiences into next actions',
+      application: {
+        trigger: isZh ? '一条经验已经完成复盘时' : 'When an experience has been reflected on',
+        action: isZh ? '提取一个下次可直接尝试的动作' : 'Extract one action to try next time',
+      },
       evidence,
       confidence: 'medium',
     });
@@ -111,6 +121,10 @@ const buildCandidates = (
       principle: isZh
         ? '重要经验先写场景目标动作结果'
         : 'Write scene goal action result for important experiences',
+      application: {
+        trigger: isZh ? '记录一次重要经验时' : 'When recording an important experience',
+        action: isZh ? '补齐场景、目标、动作和结果' : 'Capture scene, goal, action, and result',
+      },
       evidence,
       confidence: 'low',
     });
@@ -152,6 +166,7 @@ export const PastExperienceWorkbench: React.FC<PastExperienceWorkbenchProps> = (
       new Date().getFullYear(),
       true,
       candidate.evidence.map((entry) => entry.id),
+      candidate.application,
     );
     setStatuses((prev) => ({ ...prev, [candidate.id]: 'confirmed' }));
   };

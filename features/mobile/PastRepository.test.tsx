@@ -277,9 +277,16 @@ describe('PastRepository', () => {
     expect(screen.getByText('把记录变成原则')).not.toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /确认记忆/ }));
-    expect(onAddPrinciple).toHaveBeenCalledWith('重要经验先写场景目标动作结果', 2026, true, [
-      'entry-video',
-    ]);
+    expect(onAddPrinciple).toHaveBeenCalledWith(
+      '重要经验先写场景目标动作结果',
+      2026,
+      true,
+      ['entry-video'],
+      {
+        trigger: '记录一次重要经验时',
+        action: '补齐场景、目标、动作和结果',
+      },
+    );
   });
 
   it('collects principle feedback in the context of a newly saved record', () => {
@@ -341,6 +348,15 @@ describe('PastRepository', () => {
       id: 'latest-entry',
       createdAt: 2,
       relatedEntryIds: [relatedEntry.id],
+      experienceEdges: [
+        {
+          targetEntryId: relatedEntry.id,
+          kind: 'supports' as const,
+          confidence: 1,
+          createdAt: 2,
+          source: 'user-confirmed' as const,
+        },
+      ],
     };
 
     render(
@@ -360,9 +376,76 @@ describe('PastRepository', () => {
 
     expect(screen.queryByRole('button', { name: '查看关联经验 过去的项目沟通' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /已关联到过去 1 条经验/ }));
+    expect(screen.getByText('主题轨迹')).toBeTruthy();
+    expect(screen.getByLabelText('主题轨迹当前节点')).toBeTruthy();
+    expect(screen.getByText('支持')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '查看关联经验 过去的项目沟通' }));
 
     expect(onSelectEntry).toHaveBeenCalledWith(relatedEntry);
+  });
+
+  it('lets the user confirm a semantic relationship', () => {
+    const onUpdateEntry = vi.fn();
+    const relatedEntry = { ...makeVideoEntry(), id: 'related-confirm', title: '过去沟通', createdAt: 1 };
+    const latestEntry = {
+      ...makeVideoEntry(), id: 'latest-confirm', createdAt: 2,
+      relatedEntryIds: [relatedEntry.id],
+      experienceEdges: [{
+        targetEntryId: relatedEntry.id, kind: 'sameTheme' as const, confidence: 0.7,
+        createdAt: 2, source: 'local-semantic' as const,
+      }],
+    };
+    render(
+      <PastRepository
+        language="zh" entries={[latestEntry, relatedEntry]} principles={[]}
+        onAddPrinciple={vi.fn()} onDeletePrinciple={vi.fn()} onUpdatePrinciple={vi.fn()}
+        onUpdateEntry={onUpdateEntry} onSelectEntry={vi.fn()} containers={[]}
+        onAddContainer={vi.fn()} onDeleteContainer={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /已关联到过去 1 条经验/ }));
+    fireEvent.click(screen.getByRole('button', { name: '彼此矛盾' }));
+    expect(onUpdateEntry).toHaveBeenCalledWith(expect.objectContaining({
+      experienceEdges: [expect.objectContaining({
+        targetEntryId: relatedEntry.id, kind: 'contradicts', source: 'user-confirmed', confidence: 1,
+      })],
+    }));
+  });
+
+  it('explains and lets the user correct or reset a confirmed relationship', () => {
+    const onUpdateEntry = vi.fn();
+    const relatedEntry = { ...makeVideoEntry(), id: 'related-revise', title: '过去决定', createdAt: 1 };
+    const latestEntry = {
+      ...makeVideoEntry(), id: 'latest-revise', createdAt: 2,
+      relatedEntryIds: [relatedEntry.id],
+      experienceEdges: [{
+        targetEntryId: relatedEntry.id, kind: 'supports' as const, confidence: 1,
+        createdAt: 2, source: 'user-confirmed' as const,
+      }],
+    };
+    render(
+      <PastRepository
+        language="zh" entries={[latestEntry, relatedEntry]} principles={[]}
+        onAddPrinciple={vi.fn()} onDeletePrinciple={vi.fn()} onUpdatePrinciple={vi.fn()}
+        onUpdateEntry={onUpdateEntry} onSelectEntry={vi.fn()} containers={[]}
+        onAddContainer={vi.fn()} onDeleteContainer={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /已关联到过去 1 条经验/ }));
+    expect(screen.getByText('依据：已确认的经验反馈')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '改为矛盾' }));
+    expect(onUpdateEntry).toHaveBeenLastCalledWith(expect.objectContaining({
+      experienceEdges: [expect.objectContaining({ kind: 'contradicts', source: 'user-confirmed' })],
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: '撤销判断' }));
+    expect(onUpdateEntry).toHaveBeenLastCalledWith(expect.objectContaining({
+      relatedEntryIds: [relatedEntry.id],
+      experienceEdges: [expect.objectContaining({ kind: 'sameTheme', source: 'local-semantic' })],
+    }));
   });
 
   it('guides newly saved records from timeline into distillation', () => {

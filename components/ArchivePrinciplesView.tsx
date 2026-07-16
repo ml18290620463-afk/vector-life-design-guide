@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Book, Plus, Shield, Star, Trash2 } from 'lucide-react';
-import type { Language, Principle, Theme } from '../types';
+import type { Language, Principle, PrincipleApplication, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { getPrincipleConfidence } from '../services/experienceFeedback';
 import { CyberButton } from './CyberButton';
@@ -11,7 +11,13 @@ interface ArchivePrinciplesViewProps {
   language?: Language;
   t: TranslationDictionary;
   principles: Principle[];
-  onAddPrinciple: (text: string, year: number, showOnHome: boolean) => void;
+  onAddPrinciple: (
+    text: string,
+    year: number,
+    showOnHome: boolean,
+    derivedFromEntryIds?: string[],
+    application?: PrincipleApplication,
+  ) => void;
   onDeletePrinciple: (id: string) => void;
   onUpdatePrinciple: (principle: Principle) => void;
 }
@@ -38,6 +44,8 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   const [newPrincipleText, setNewPrincipleText] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showOnHome, setShowOnHome] = useState(true);
+  const [trigger, setTrigger] = useState('');
+  const [action, setAction] = useState('');
 
   const overLimit = newPrincipleText.length >= PRINCIPLE_MAX_LENGTH;
   const years = Array.from(new Set(principles.map((p) => p.year))).sort((a, b) => b - a);
@@ -119,6 +127,23 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input
+              value={trigger}
+              onChange={(event) => setTrigger(event.target.value.slice(0, 120))}
+              aria-label={language === 'zh' ? '触发场景（可选）' : 'Trigger situation (optional)'}
+              placeholder={language === 'zh' ? '何时想起它（可选）' : 'When to recall it (optional)'}
+              className={`border p-3 text-xs outline-none focus:border-vector-cyan-brand ${theme === 'light' ? 'bg-white border-vector-cyan-brand/10 text-vector-slate-mid' : 'bg-black border-white/5 text-cyan-300'}`}
+            />
+            <input
+              value={action}
+              onChange={(event) => setAction(event.target.value.slice(0, 160))}
+              aria-label={language === 'zh' ? '对应动作（可选）' : 'Response action (optional)'}
+              placeholder={language === 'zh' ? '触发后做什么（可选）' : 'What to do then (optional)'}
+              className={`border p-3 text-xs outline-none focus:border-vector-cyan-brand ${theme === 'light' ? 'bg-white border-vector-cyan-brand/10 text-vector-slate-mid' : 'bg-black border-white/5 text-cyan-300'}`}
+            />
+          </div>
+
           <div className="flex items-center gap-3 px-1">
             <button
               type="button"
@@ -142,8 +167,13 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
           <CyberButton
             onClick={() => {
               if (newPrincipleText.trim()) {
-                onAddPrinciple(newPrincipleText, selectedYear, showOnHome);
+                const application = trigger.trim() && action.trim()
+                  ? { trigger: trigger.trim(), action: action.trim() }
+                  : undefined;
+                onAddPrinciple(newPrincipleText, selectedYear, showOnHome, undefined, application);
                 setNewPrincipleText('');
+                setTrigger('');
+                setAction('');
               }
             }}
             disabled={!newPrincipleText.trim()}
@@ -214,6 +244,12 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                             >
                               {principle.text}
                             </p>
+                            {principle.application && (
+                              <dl className="principle-application">
+                                <div><dt>{language === 'zh' ? '当' : 'When'}</dt><dd>{principle.application.trigger}</dd></div>
+                                <div><dt>{language === 'zh' ? '就' : 'Do'}</dt><dd>{principle.application.action}</dd></div>
+                              </dl>
+                            )}
                             <span
                               className={`principle-health ${theme === 'light' ? 'principle-health--light' : ''}`}
                               title={

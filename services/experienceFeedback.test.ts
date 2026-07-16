@@ -5,6 +5,7 @@ import {
   findRelatedPrinciples,
   getPrincipleConfidence,
 } from './experienceFeedback';
+import { sanitizePrinciple } from './diaryDataRead';
 
 const buildEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
   id: 'entry-1',
@@ -26,6 +27,18 @@ const buildPrinciple = (overrides: Partial<Principle> = {}): Principle => ({
 });
 
 describe('experienceFeedback', () => {
+  it('sanitizes complete trigger-action structures and drops partial ones', () => {
+    expect(
+      sanitizePrinciple(
+        buildPrinciple({ application: { trigger: '  会议开始前  ', action: '  写下目标  ' } }),
+      ).application,
+    ).toEqual({ trigger: '会议开始前', action: '写下目标' });
+    expect(
+      sanitizePrinciple(
+        buildPrinciple({ application: { trigger: '会议开始前', action: '   ' } }),
+      ).application,
+    ).toBeUndefined();
+  });
   it('uses a neutral confidence for legacy principles', () => {
     expect(getPrincipleConfidence(buildPrinciple())).toBe(0.5);
   });

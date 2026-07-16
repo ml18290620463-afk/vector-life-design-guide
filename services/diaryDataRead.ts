@@ -5,6 +5,7 @@ import type {
   DiaryEntry,
   ExperienceFeedback,
   ExperienceFeedbackOutcome,
+  ExperienceEdge,
   Principle,
 } from '../types';
 import { generateSecureId } from './idGenerator';
@@ -19,6 +20,8 @@ const FEEDBACK_OUTCOMES = new Set<ExperienceFeedbackOutcome>([
   'unrelated',
 ]);
 const ACTION_STATUSES = new Set<ActionItemStatus>(['pending', 'active', 'completed', 'abandoned']);
+const EDGE_KINDS = new Set<ExperienceEdge['kind']>(['supports', 'contradicts', 'sameTheme']);
+const EDGE_SOURCES = new Set<ExperienceEdge['source']>(['local-semantic', 'user-confirmed']);
 
 const sanitizeStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -26,6 +29,38 @@ const sanitizeStringArray = (value: unknown): string[] | undefined => {
     (item): item is string => typeof item === 'string' && item.trim().length > 0,
   );
   return strings.length > 0 ? [...new Set(strings)] : undefined;
+};
+
+const sanitizeExperienceEdges = (
+  value: unknown,
+  sourceEntryId: string,
+): ExperienceEdge[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const edges = new Map<string, ExperienceEdge>();
+  value.forEach((item) => {
+    if (!item || typeof item !== 'object') return;
+    const edge = item as Partial<ExperienceEdge>;
+    if (
+      typeof edge.targetEntryId !== 'string' ||
+      !edge.targetEntryId ||
+      edge.targetEntryId === sourceEntryId ||
+      !edge.kind ||
+      !EDGE_KINDS.has(edge.kind) ||
+      typeof edge.confidence !== 'number' ||
+      !Number.isFinite(edge.confidence) ||
+      typeof edge.createdAt !== 'number' ||
+      !Number.isFinite(edge.createdAt) ||
+      !edge.source ||
+      !EDGE_SOURCES.has(edge.source)
+    ) return;
+    if (!edges.has(edge.targetEntryId)) {
+      edges.set(edge.targetEntryId, {
+        ...(edge as ExperienceEdge),
+        confidence: Math.min(1, Math.max(0, edge.confidence)),
+      });
+    }
+  });
+  return edges.size > 0 ? [...edges.values()] : undefined;
 };
 
 const sanitizeExperienceFeedback = (value: unknown): ExperienceFeedback[] | undefined => {
@@ -80,6 +115,7 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
     attachment: safeEntry.attachment || undefined,
     nowMaterials: Array.isArray(safeEntry.nowMaterials) ? safeEntry.nowMaterials : undefined,
     relatedEntryIds: sanitizeStringArray(safeEntry.relatedEntryIds),
+    experienceEdges: sanitizeExperienceEdges(safeEntry.experienceEdges, safeEntry.id),
     relatedActionIds: sanitizeStringArray(safeEntry.relatedActionIds),
     relatedPrincipleIds: sanitizeStringArray(safeEntry.relatedPrincipleIds),
     principleFeedback: sanitizeExperienceFeedback(safeEntry.principleFeedback),
@@ -93,6 +129,17 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
 
 export const sanitizePrinciple = (principle: Principle): Principle => ({
   ...principle,
+  application:
+    principle.application &&
+    typeof principle.application.trigger === 'string' &&
+    principle.application.trigger.trim() &&
+    typeof principle.application.action === 'string' &&
+    principle.application.action.trim()
+      ? {
+          trigger: principle.application.trigger.trim().slice(0, 120),
+          action: principle.application.action.trim().slice(0, 160),
+        }
+      : undefined,
   derivedFromEntryIds: sanitizeStringArray(principle.derivedFromEntryIds),
   confidence:
     typeof principle.confidence === 'number' && Number.isFinite(principle.confidence)

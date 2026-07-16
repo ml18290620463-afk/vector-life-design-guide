@@ -47,4 +47,14 @@ describe('buildFutureDecision', () => {
     expect(decision?.principle).toBeNull();
     expect(decision?.actionTitle).toContain('最小可逆验证');
   });
+
+  it('uses a confirmed structured action and exposes its trigger in the rationale', () => {
+    const decision = buildFutureDecision(
+      '怎样让下次客户沟通不再失焦？',
+      [entry('work', '客户会议讨论失焦。', ['事件:工作'])],
+      [principle({ application: { trigger: '重要沟通开始前', action: '写下这次唯一目标' } })],
+    );
+    expect(decision?.actionTitle).toBe('写下这次唯一目标');
+    expect(decision?.rationale).toContain('触发场景：重要沟通开始前');
+  });
 });

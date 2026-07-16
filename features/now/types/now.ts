@@ -55,6 +55,8 @@ export interface RecordPreviewPayload {
   record_time: string;
   display_time: string;
   is_sparse: boolean;
+  /** Optional, user-confirmed result of applying the action's source principle. */
+  principle_outcome?: 'helpful' | 'partial' | 'unhelpful';
 }
 
 export type NowRoute = 'now' | 'tags' | 'avatar-chat';

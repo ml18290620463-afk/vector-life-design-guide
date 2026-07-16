@@ -12,6 +12,24 @@ export interface ExperienceFeedback {
   createdAt: number;
 }
 
+export type ExperienceEdgeKind = 'supports' | 'contradicts' | 'sameTheme';
+export type ExperienceEdgeSource = 'local-semantic' | 'user-confirmed';
+
+export interface ExperienceEdge {
+  targetEntryId: string;
+  kind: ExperienceEdgeKind;
+  confidence: number;
+  createdAt: number;
+  source: ExperienceEdgeSource;
+}
+
+export interface PrincipleApplication {
+  /** Situation in which this principle should be recalled. */
+  trigger: string;
+  /** Small, observable behaviour to try when the trigger occurs. */
+  action: string;
+}
+
 export interface Principle {
   id: string;
   text: string;
@@ -22,6 +40,8 @@ export interface Principle {
   containerId?: string; // New: Link to a storage container
   /** Entry evidence explicitly confirmed when this principle was distilled. */
   derivedFromEntryIds?: string[];
+  /** Optional P4 trigger-to-action structure, confirmed with the principle. */
+  application?: PrincipleApplication;
   /** 0–1 reliability estimate. Missing legacy values are interpreted as 0.5. */
   confidence?: number;
   recallCount?: number;
@@ -104,6 +124,8 @@ export interface DiaryEntry {
   containerId?: string; // New: The storage package this entry belongs to
   /** Locally derived semantic neighbours. This stores ids, never vector payloads. */
   relatedEntryIds?: string[];
+  /** Directed local relationships; vector payloads remain outside diary data. */
+  experienceEdges?: ExperienceEdge[];
   /** Explicit Future actions whose result is recorded by this entry. */
   relatedActionIds?: string[];
   /** Principles that this experience may validate or challenge. */

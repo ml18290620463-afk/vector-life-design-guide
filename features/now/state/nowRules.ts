@@ -206,6 +206,7 @@ export interface AvatarStructuredInsight {
   eventTags: string[];
   completeness: number;
   nextQuestion: string | null;
+  evidenceEntryIds: string[];
 }
 
 export interface AvatarRecallMemory {
@@ -363,6 +364,7 @@ export const inferAvatarEventTags = (text: string): string[] => {
 
 export const buildAvatarStructuredInsight = (
   messages: Array<{ content: string }>,
+  recallMemories: AvatarRecallMemory[] = [],
 ): AvatarStructuredInsight => {
   const lines = messages.map((message) => message.content.trim()).filter(Boolean);
   const text = lines.join('\n');
@@ -402,6 +404,7 @@ export const buildAvatarStructuredInsight = (
     eventTags,
     completeness,
     nextQuestion: buildAdaptiveFollowup(messages, 0),
+    evidenceEntryIds: [...new Set(recallMemories.map((memory) => memory.sourceEntryId).filter(Boolean))],
   };
 
   return insight;

@@ -135,6 +135,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               onRelatedEntriesResolved={onRelatedEntriesResolved}
               onRecordComplete={onNowRecordComplete}
               onActionResultRecorded={onActionResultRecorded}
+              onUpdatePrinciple={updatePrinciple}
               avatarLaunchContext={avatarLaunchContext}
               onSelectEntry={(entryId) => {
                 const entry = entries.find((item) => item.id === entryId);
@@ -183,6 +184,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
           onRelatedEntriesResolved={onRelatedEntriesResolved}
           onRecordComplete={onNowRecordComplete}
           onActionResultRecorded={onActionResultRecorded}
+          onUpdatePrinciple={updatePrinciple}
           avatarLaunchContext={avatarLaunchContext}
           onSelectEntry={(entryId) => {
             const entry = entries.find((item) => item.id === entryId);

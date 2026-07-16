@@ -84,10 +84,12 @@ export const buildFutureDecision = (
     .slice(0, 3);
   const principle = rankPrinciples(question, principles, entriesById)[0] ?? null;
   const actionTitle = principle
-    ? `先做一次小范围验证：${truncate(principle.text, 44)}`
+    ? principle.application?.action
+      ? truncate(principle.application.action, 52)
+      : `先做一次小范围验证：${truncate(principle.text, 44)}`
     : `为「${truncate(question, 28)}」完成一次最小可逆验证`;
   const rationale = principle
-    ? `这一步优先调用了一条与你当前问题相关、可信度为 ${Math.round(
+    ? `${principle.application?.trigger ? `触发场景：${principle.application.trigger}。` : ''}这一步优先调用了一条与你当前问题相关、可信度为 ${Math.round(
         getPrincipleConfidence(principle) * 100,
       )}% 的既有原则。`
     : evidenceEntries.length > 0

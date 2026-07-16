@@ -4,6 +4,7 @@ import {
   buildAdaptiveFollowup,
   buildRecordFromDraft,
   buildCompanionAcknowledgement,
+  buildAvatarStructuredInsight,
   getCanSend,
   getDisabledSendReason,
   hasRecordableInformation,
@@ -207,5 +208,14 @@ describe('nowRules', () => {
     expect(reply).toContain('我联想到一条过去记录');
     expect(reply).toContain('不会替你下结论');
     expect(reply).toContain('感受偏向「难过」');
+  });
+
+  it('anchors structured insight only to unique recalled entry ids', () => {
+    const memory = selectAvatarRecallMemories([entry({ id: 'work-sad' })], '客户方案')[0]!;
+    const anchored = buildAvatarStructuredInsight([{ content: '今天客户方案又被否定' }], [memory, memory]);
+    const conversationOnly = buildAvatarStructuredInsight([{ content: '今天有一场会议' }]);
+
+    expect(anchored.evidenceEntryIds).toEqual(['work-sad']);
+    expect(conversationOnly.evidenceEntryIds).toEqual([]);
   });
 });

@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import type { ActionItem, DiaryEntry, Language, Principle, Theme } from '../../types';
-import { findRelatedPrinciples } from '../../services/experienceFeedback';
+import type {
+  ActionItem,
+  DiaryEntry,
+  ExperienceFeedbackOutcome,
+  Language,
+  Principle,
+  Theme,
+} from '../../types';
+import { applyPrincipleFeedback, findRelatedPrinciples } from '../../services/experienceFeedback';
+import { buildExperienceEdges } from '../../services/entryRelations';
 import {
   buildLocalSemanticIndex,
   searchLocalSemanticIndex,
@@ -40,6 +48,7 @@ interface NowFlowProps {
   principles?: Principle[];
   actions?: ActionItem[];
   onActionResultRecorded?: (actionId: string, resultEntryId: string) => Promise<void> | void;
+  onUpdatePrinciple?: (principle: Principle) => Promise<void> | void;
   avatarLaunchContext?: AvatarLaunchContext;
   onSelectEntry?: (entryId: string) => void;
 }
@@ -58,6 +67,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   principles = [],
   actions = [],
   onActionResultRecorded,
+  onUpdatePrinciple,
   avatarLaunchContext = DEFAULT_AVATAR_CONTEXT,
   onSelectEntry,
 }) => {
@@ -71,6 +81,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     source: NowRecord['source'],
     overrideDraft = draft,
     avatarSessionId: string | null = null,
+    principleOutcome?: ExperienceFeedbackOutcome,
   ) => {
     const tagValidation = validateTags(
       overrideDraft.mood_tags,
@@ -107,15 +118,40 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           ...(reviewAction?.principleId ? [reviewAction.principleId] : []),
         ]),
       ];
-      const relatedEntryIds = searchLocalSemanticIndex(entryPayload, semanticIndex).map(
-        ({ entry }) => entry.id,
+      const relatedEntries = searchLocalSemanticIndex(entryPayload, semanticIndex).map(
+        ({ entry }) => entry,
       );
+      const relatedEntryIds = relatedEntries.map((entry) => entry.id);
+      const reviewPrinciple = reviewAction?.principleId
+        ? principles.find((principle) => principle.id === reviewAction.principleId)
+        : undefined;
+      const feedbackCreatedAt = Date.now();
+      const principleFeedback =
+        reviewPrinciple && principleOutcome
+          ? [
+              {
+                principleId: reviewPrinciple.id,
+                outcome: principleOutcome,
+                createdAt: feedbackCreatedAt,
+              },
+            ]
+          : undefined;
       const persistedEntry = await onPersistRecord({
         ...entryPayload,
         relatedActionIds: reviewAction ? [reviewAction.id] : undefined,
         relatedEntryIds: relatedEntryIds.length > 0 ? relatedEntryIds : undefined,
+        experienceEdges:
+          relatedEntries.length > 0
+            ? buildExperienceEdges({ ...entryPayload, principleFeedback }, relatedEntries)
+            : undefined,
         relatedPrincipleIds: relatedPrincipleIds.length > 0 ? relatedPrincipleIds : undefined,
+        principleFeedback,
       });
+      if (reviewPrinciple && principleOutcome && onUpdatePrinciple) {
+        await onUpdatePrinciple(
+          applyPrincipleFeedback(reviewPrinciple, principleOutcome, feedbackCreatedAt),
+        );
+      }
       if (reviewAction && onActionResultRecorded) {
         await onActionResultRecorded(reviewAction.id, persistedEntry.id);
       }
@@ -198,7 +234,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
               event_tags: preview.event_tags,
               updated_at: new Date().toISOString(),
             };
-            return submitRecord('avatar_assisted', next, sessionId);
+            return submitRecord('avatar_assisted', next, sessionId, preview.principle_outcome);
           }}
           showToast={showToast}
           launchContext={avatarLaunchContext}
