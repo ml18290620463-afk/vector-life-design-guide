@@ -58,6 +58,9 @@ export const DiaryStorageKeys = {
   passwordSalt: 'vector_master_vault_pwd_salt',
   guidingStars: 'vector_master_vault_stars',
   containers: 'vector_master_vault_containers',
+  actions: 'vector_master_vault_actions',
+  /** Derived local vectors only. Never mirrored or included in backups. */
+  semanticEmbeddings: 'vector_semantic_embeddings_v1',
   /**
    * Phase 4 §4.b-3 — per-device Ed25519 keypair for backup signing.
    * Stored as a JSON `{ publicKey, encryptedSecret, createdAt }`.
@@ -112,6 +115,8 @@ export const getDiaryStorageKeys = (uid: string | undefined) => ({
   selectedStars: getSelectedStarsStorageKey(uid),
   materials: getMaterialsStorageKey(uid),
   containers: DiaryStorageKeys.containers,
+  actions: DiaryStorageKeys.actions,
+  semanticEmbeddings: DiaryStorageKeys.semanticEmbeddings,
   deviceKeypair: DiaryStorageKeys.deviceKeypair,
   license: DiaryStorageKeys.license,
   backup: DiaryStorageKeys.backup,

@@ -50,6 +50,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@google/genai": "^1.50.1",
+    "@huggingface/transformers": "^4.2.0",
     "@noble/ed25519": "^3.1.0",
     "@noble/hashes": "^2.2.0",
     "@sentry/node": "^10.51.0",

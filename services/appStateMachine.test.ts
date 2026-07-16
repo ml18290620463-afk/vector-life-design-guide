@@ -24,6 +24,7 @@ describe('appStateMachine', () => {
     expect(canTransitionAppState(AppState.NOW, AppState.PAST)).toBe(true);
     expect(canTransitionAppState(AppState.NOW, AppState.FUTURE)).toBe(true);
     expect(canTransitionAppState(AppState.FUTURE, AppState.NOW_AVATAR_CHAT)).toBe(true);
+    expect(canTransitionAppState(AppState.VIEWER, AppState.NOW_AVATAR_CHAT)).toBe(true);
   });
 
   it('blocks unsafe direct jumps', () => {

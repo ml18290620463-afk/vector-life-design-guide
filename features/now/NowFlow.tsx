@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
-import type { DiaryEntry, Language, Principle, Theme } from '../../types';
+import React, { useMemo, useState } from 'react';
+import type { ActionItem, DiaryEntry, Language, Principle, Theme } from '../../types';
 import { findRelatedPrinciples } from '../../services/experienceFeedback';
+import {
+  buildLocalSemanticIndex,
+  searchLocalSemanticIndex,
+} from '../../services/localSemanticIndex';
+import { findNeuralRelatedEntryIds } from '../../services/neuralSemanticRecall';
 import { postRecord } from './api/records';
 import { useNowDraft } from './hooks/useNowDraft';
 import { useToast } from './hooks/useToast';
@@ -16,6 +21,8 @@ import {
 } from './state/nowRules';
 import { queuePendingRecord, readCustomAnchors } from './state/nowStorage';
 import type { NowRecord, NowRoute } from './types/now';
+import type { AvatarLaunchContext } from '../avatar/types';
+import { DEFAULT_AVATAR_CONTEXT } from '../avatar/types';
 
 interface NowFlowProps {
   route: NowRoute;
@@ -24,10 +31,17 @@ interface NowFlowProps {
   mobileShell?: boolean;
   onRouteChange: (route: NowRoute) => void;
   onExit: () => void;
-  onPersistRecord: (payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => Promise<string>;
+  onPersistRecord: (
+    payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
+  ) => Promise<DiaryEntry>;
+  onRelatedEntriesResolved?: (entryId: string, relatedEntryIds: string[]) => void;
   onRecordComplete?: () => void;
   pastEntries?: DiaryEntry[];
   principles?: Principle[];
+  actions?: ActionItem[];
+  onActionResultRecorded?: (actionId: string, resultEntryId: string) => Promise<void> | void;
+  avatarLaunchContext?: AvatarLaunchContext;
+  onSelectEntry?: (entryId: string) => void;
 }
 
 export const NowFlow: React.FC<NowFlowProps> = ({
@@ -38,13 +52,19 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   onRouteChange,
   onExit,
   onPersistRecord,
+  onRelatedEntriesResolved,
   onRecordComplete,
   pastEntries = [],
   principles = [],
+  actions = [],
+  onActionResultRecorded,
+  avatarLaunchContext = DEFAULT_AVATAR_CONTEXT,
+  onSelectEntry,
 }) => {
   const { draft, setDraft, saveDraft, discardDraft, resetAfterSend } = useNowDraft();
   const { toastMessage, showToast } = useToast();
   const [sending, setSending] = useState(false);
+  const semanticIndex = useMemo(() => buildLocalSemanticIndex(pastEntries), [pastEntries]);
   const isLight = theme === 'light';
 
   const submitRecord = async (
@@ -75,17 +95,48 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     const record = buildRecordFromDraft(overrideDraft, source, avatarSessionId);
     try {
       const entryPayload = recordToDiaryEntry(record);
-      const relatedPrincipleIds = findRelatedPrinciples(entryPayload, principles, pastEntries).map(
-        (principle) => principle.id,
+      const reviewAction =
+        avatarLaunchContext.mode === 'review' && avatarLaunchContext.actionId
+          ? actions.find((action) => action.id === avatarLaunchContext.actionId)
+          : undefined;
+      const relatedPrincipleIds = [
+        ...new Set([
+          ...findRelatedPrinciples(entryPayload, principles, pastEntries).map(
+            (principle) => principle.id,
+          ),
+          ...(reviewAction?.principleId ? [reviewAction.principleId] : []),
+        ]),
+      ];
+      const relatedEntryIds = searchLocalSemanticIndex(entryPayload, semanticIndex).map(
+        ({ entry }) => entry.id,
       );
-      await onPersistRecord({
+      const persistedEntry = await onPersistRecord({
         ...entryPayload,
+        relatedActionIds: reviewAction ? [reviewAction.id] : undefined,
+        relatedEntryIds: relatedEntryIds.length > 0 ? relatedEntryIds : undefined,
         relatedPrincipleIds: relatedPrincipleIds.length > 0 ? relatedPrincipleIds : undefined,
       });
+      if (reviewAction && onActionResultRecorded) {
+        await onActionResultRecorded(reviewAction.id, persistedEntry.id);
+      }
+      if (onRelatedEntriesResolved) {
+        void findNeuralRelatedEntryIds(persistedEntry.id, entryPayload, pastEntries)
+          .then((neuralRelatedEntryIds) => {
+            const mergedIds = [...new Set([...neuralRelatedEntryIds, ...relatedEntryIds])].slice(
+              0,
+              3,
+            );
+            onRelatedEntriesResolved(persistedEntry.id, mergedIds);
+          })
+          .catch(() => {
+            // The deterministic on-device fingerprint already supplied a
+            // result. Neural loading is an optional, non-blocking rerank.
+          });
+      }
       void postRecord(record).catch(() => {
         if (!queuePendingRecord(record)) console.warn('NowFlow: failed to queue pending record');
       });
-      showToast('已存入过去');
+      showToast(reviewAction ? '行动结果已回写' : '已存入过去');
       resetAfterSend();
       if (onRecordComplete) {
         onRecordComplete();
@@ -150,6 +201,8 @@ export const NowFlow: React.FC<NowFlowProps> = ({
             return submitRecord('avatar_assisted', next, sessionId);
           }}
           showToast={showToast}
+          launchContext={avatarLaunchContext}
+          onSelectEntry={onSelectEntry}
         />
       )}
       {toastMessage && <div className="now-toast">{toastMessage}</div>}

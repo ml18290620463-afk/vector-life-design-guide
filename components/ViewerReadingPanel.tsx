@@ -39,6 +39,7 @@ interface ViewerReadingPanelProps {
   /** Phase 3 §3.h — open the share-card preview / export modal.
    *  Optional so existing tests / call sites compile unchanged. */
   onShareCard?: () => void;
+  onOpenAvatar?: () => void;
   // Burn / nav
   onBack: () => void;
   /** Footer "burn" button — moves into the confirmation overlay. */
@@ -102,6 +103,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   onCancelBurn,
   onExecuteBurn,
   onShareCard,
+  onOpenAvatar,
   markdownComponents,
 }) => {
   return (
@@ -294,6 +296,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
           onDownload={onDownload}
           onRequestBurn={onRequestBurn}
           onShareCard={onShareCard}
+          onOpenAvatar={onOpenAvatar}
         />
       )}
 

@@ -31,6 +31,8 @@ import {
   shouldShowLoadingOverlay,
   shouldUseMobileShell,
 } from './lib/appShellRules';
+import type { AvatarLaunchContext } from './features/avatar/types';
+import { DEFAULT_AVATAR_CONTEXT } from './features/avatar/types';
 
 const App: React.FC = () => {
   // Subscribe via `useShallow` so changes to unrelated store fields (e.g.
@@ -53,6 +55,8 @@ const App: React.FC = () => {
     setMasterPassword,
     setIsUnlocked,
     setSelectedEntry,
+    avatarLaunchContext,
+    setAvatarLaunchContext,
   } = useAppStore(
     useShallow((state) => ({
       appState: state.appState,
@@ -70,6 +74,8 @@ const App: React.FC = () => {
       setMasterPassword: state.setMasterPassword,
       setIsUnlocked: state.setIsUnlocked,
       setSelectedEntry: state.setSelectedEntry,
+      avatarLaunchContext: state.avatarLaunchContext,
+      setAvatarLaunchContext: state.setAvatarLaunchContext,
     })),
   );
 
@@ -83,6 +89,7 @@ const App: React.FC = () => {
     principles,
     addEntry,
     updateEntry,
+    updateEntryRelatedIds,
     bulkUpdateEntries,
     deleteEntry,
     archiveEntry,
@@ -90,6 +97,10 @@ const App: React.FC = () => {
     addPrinciple,
     deletePrinciple,
     updatePrinciple,
+    actions,
+    addAction,
+    updateAction,
+    recordActionResult,
     importBackup,
     wipeData,
     passwordHash,
@@ -172,6 +183,22 @@ const App: React.FC = () => {
   });
 
   const mobileMainTab = getMobileMainTab(appState);
+  const openAvatar = (context: AvatarLaunchContext) => {
+    setAvatarLaunchContext(context);
+    handleMainModuleNavigate('avatar');
+  };
+  const navigateMainModule = (tab: Parameters<typeof handleMainModuleNavigate>[0]) => {
+    if (tab === 'avatar') setAvatarLaunchContext(DEFAULT_AVATAR_CONTEXT);
+    handleMainModuleNavigate(tab);
+  };
+  const navigateMobileTabWithAvatarContext = (tab: Parameters<typeof handleMobileTabChange>[0]) => {
+    if (tab === 'avatar') setAvatarLaunchContext(DEFAULT_AVATAR_CONTEXT);
+    handleMobileTabChange(tab);
+  };
+  const changeNowRoute = (route: Parameters<typeof handleNowRouteChange>[0]) => {
+    if (route === 'avatar-chat') setAvatarLaunchContext({ mode: 'capture', source: 'now' });
+    handleNowRouteChange(route);
+  };
   const useMobileShell = shouldUseMobileShell(isMobileExperience(), mobileMainTab);
   const showGlobalBackground = shouldShowGlobalBackground(appState);
   const showLoadingOverlay = shouldShowLoadingOverlay(loading, appState);
@@ -279,6 +306,7 @@ const App: React.FC = () => {
             onSelectEntry={setSelectedEntry}
             onUpdateEntry={updateEntry}
             theme={theme}
+            onOpenAvatar={openAvatar}
           />
 
           <AppMainModuleScreens
@@ -293,17 +321,24 @@ const App: React.FC = () => {
             mobileMainTab={mobileMainTab}
             nowRoute={nowRoute}
             onExitNow={handleExitNow}
-            onMainModuleNavigate={handleMainModuleNavigate}
-            onMobileTabChange={handleMobileTabChange}
+            onMainModuleNavigate={navigateMainModule}
+            onMobileTabChange={navigateMobileTabWithAvatarContext}
             onNowRecordComplete={handleNowRecordComplete}
-            onNowRouteChange={handleNowRouteChange}
+            onNowRouteChange={changeNowRoute}
             onPersistNowRecord={handlePersistNowRecord}
+            onRelatedEntriesResolved={updateEntryRelatedIds}
+            actions={actions}
+            onAddAction={addAction}
+            onUpdateAction={updateAction}
+            onActionResultRecorded={recordActionResult}
             onSelectEntry={handleSelectEntry}
             principles={principles}
             theme={theme}
             updateEntry={updateEntry}
             updatePrinciple={updatePrinciple}
             useMobileShell={useMobileShell}
+            avatarLaunchContext={avatarLaunchContext ?? DEFAULT_AVATAR_CONTEXT}
+            onOpenAvatar={openAvatar}
           />
 
           <AppOverlayLayer

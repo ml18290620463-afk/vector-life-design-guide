@@ -1,5 +1,7 @@
 import { get } from 'idb-keyval';
 import type {
+  ActionItem,
+  ActionItemStatus,
   DiaryEntry,
   ExperienceFeedback,
   ExperienceFeedbackOutcome,
@@ -16,6 +18,7 @@ const FEEDBACK_OUTCOMES = new Set<ExperienceFeedbackOutcome>([
   'unhelpful',
   'unrelated',
 ]);
+const ACTION_STATUSES = new Set<ActionItemStatus>(['pending', 'active', 'completed', 'abandoned']);
 
 const sanitizeStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -76,6 +79,8 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
     containerId: safeEntry.containerId || undefined,
     attachment: safeEntry.attachment || undefined,
     nowMaterials: Array.isArray(safeEntry.nowMaterials) ? safeEntry.nowMaterials : undefined,
+    relatedEntryIds: sanitizeStringArray(safeEntry.relatedEntryIds),
+    relatedActionIds: sanitizeStringArray(safeEntry.relatedActionIds),
     relatedPrincipleIds: sanitizeStringArray(safeEntry.relatedPrincipleIds),
     principleFeedback: sanitizeExperienceFeedback(safeEntry.principleFeedback),
     unlockAt:
@@ -110,6 +115,51 @@ export const sanitizePrinciple = (principle: Principle): Principle => ({
       ? Math.floor(principle.unhelpfulCount)
       : 0,
 });
+
+export const sanitizeActionItem = (value: unknown): ActionItem | null => {
+  if (!value || typeof value !== 'object') return null;
+  const action = value as Partial<ActionItem>;
+  if (
+    typeof action.id !== 'string' ||
+    !action.id ||
+    typeof action.title !== 'string' ||
+    !action.title.trim() ||
+    !action.status ||
+    !ACTION_STATUSES.has(action.status) ||
+    typeof action.createdAt !== 'number' ||
+    !Number.isFinite(action.createdAt)
+  ) {
+    return null;
+  }
+
+  return {
+    id: action.id,
+    title: action.title.trim(),
+    status: action.status,
+    createdAt: action.createdAt,
+    question: typeof action.question === 'string' ? action.question.trim() || undefined : undefined,
+    rationale:
+      typeof action.rationale === 'string' ? action.rationale.trim() || undefined : undefined,
+    principleId: typeof action.principleId === 'string' ? action.principleId : undefined,
+    sourceEntryId: typeof action.sourceEntryId === 'string' ? action.sourceEntryId : undefined,
+    evidenceEntryIds: sanitizeStringArray(action.evidenceEntryIds),
+    resultEntryId: typeof action.resultEntryId === 'string' ? action.resultEntryId : undefined,
+    updatedAt:
+      typeof action.updatedAt === 'number' && Number.isFinite(action.updatedAt)
+        ? action.updatedAt
+        : undefined,
+    dueAt:
+      typeof action.dueAt === 'number' && Number.isFinite(action.dueAt) ? action.dueAt : undefined,
+    completedAt:
+      typeof action.completedAt === 'number' && Number.isFinite(action.completedAt)
+        ? action.completedAt
+        : undefined,
+    reviewedAt:
+      typeof action.reviewedAt === 'number' && Number.isFinite(action.reviewedAt)
+        ? action.reviewedAt
+        : undefined,
+  };
+};
 
 export const readStoredArray = async <T>(key: string): Promise<T[]> => {
   const idbValue = await get(key).catch(() => undefined);

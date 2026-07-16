@@ -26,6 +26,7 @@ interface ViewerProps {
   onArchive: (id: string) => void;
   onRestore: (id: string) => void;
   containers: Container[];
+  onOpenAvatar?: () => void;
 }
 
 // Markdown components and TypewriterText were moved to dedicated modules
@@ -45,6 +46,7 @@ export const Viewer: React.FC<ViewerProps> = ({
   onArchive,
   onRestore,
   containers,
+  onOpenAvatar,
 }) => {
   const t = TRANSLATIONS[language];
   const [now, setNow] = useState(Date.now());
@@ -202,6 +204,7 @@ export const Viewer: React.FC<ViewerProps> = ({
             onCancelBurn={cancelBurn}
             onExecuteBurn={executeBurn}
             onShareCard={decrypted ? () => setShareCardOpen(true) : undefined}
+            onOpenAvatar={onOpenAvatar}
             markdownComponents={buildViewerMarkdownComponents(theme)}
           />
         )}

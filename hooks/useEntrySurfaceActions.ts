@@ -22,8 +22,7 @@ export const useEntrySurfaceActions = ({
   const persistNowRecord = useCallback(
     async (payload: EntryPayload) => {
       const id = generateSecureId();
-      await addEntry({ ...payload, id });
-      return id;
+      return addEntry({ ...payload, id });
     },
     [addEntry],
   );

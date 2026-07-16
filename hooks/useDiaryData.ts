@@ -29,6 +29,8 @@ import {
   sanitizePrinciple,
 } from '../services/diaryDataRead';
 import { DEFAULT_PRINCIPLE_CONFIDENCE } from '../services/experienceFeedback';
+import { updateRelatedEntryIds } from '../services/entryRelations';
+import { useActionItems } from './useActionItems';
 
 export type ImportBackupMode = 'merge' | 'replace';
 
@@ -66,6 +68,13 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   const [scanProgress, setScanProgress] = useState(0);
   const [lastScanSummary, setLastScanSummary] = useState<ScanSummary | null>(null);
   const activeLoadIdRef = useRef(0);
+  const entriesRef = useRef<DiaryEntry[]>([]);
+  const { actions, addAction, updateAction, recordActionResult, resetActions } =
+    useActionItems(userId);
+
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,6 +193,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   const persistEntries = useCallback(
     async (newEntries: DiaryEntry[]) => {
       const keys = getDiaryStorageKeys(userId);
+      entriesRef.current = newEntries;
       setEntries(newEntries);
       try {
         let payload: string | null = null;
@@ -395,6 +405,13 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     [entries, persistEntries],
   );
 
+  const updateEntryRelatedIds = useCallback(
+    async (entryId: string, relatedEntryIds: string[]) => {
+      await persistEntries(updateRelatedEntryIds(entriesRef.current, entryId, relatedEntryIds));
+    },
+    [persistEntries],
+  );
+
   const bulkUpdateEntries = useCallback(
     async (updatedEntries: DiaryEntry[]) => {
       const now = Date.now();
@@ -603,6 +620,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     setPasswordSalt(null);
     setMaterials([]);
     setContainers([]);
+    resetActions();
 
     const storageKeys = [
       keys.entries,
@@ -613,6 +631,8 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       keys.selectedStars,
       keys.materials,
       keys.containers,
+      keys.actions,
+      keys.semanticEmbeddings,
       keys.backup,
     ];
 
@@ -622,13 +642,14 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     }
 
     removeDiaryMirror(DiaryStorageKeys.initializedFlag);
-  }, [userId]);
+  }, [resetActions, userId]);
 
   return {
     entries,
     principles,
     addEntry,
     updateEntry,
+    updateEntryRelatedIds,
     bulkUpdateEntries,
     deleteEntry,
     archiveEntry,
@@ -636,6 +657,10 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     addPrinciple,
     deletePrinciple,
     updatePrinciple,
+    actions,
+    addAction,
+    updateAction,
+    recordActionResult,
     importBackup,
     wipeData,
     passwordHash,

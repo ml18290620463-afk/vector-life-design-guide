@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
+import { Check, Pencil, X } from 'lucide-react';
+import type { AvatarUnderstandingStatus } from '../../avatar/types';
 import type { AvatarRecallMemory, AvatarStructuredInsight } from '../state/nowRules';
 import type { RecordPreviewPayload } from '../types/now';
 
-export const AvatarRecallPanel: React.FC<{ memories: AvatarRecallMemory[] }> = ({ memories }) => {
+export const AvatarRecallPanel: React.FC<{
+  memories: AvatarRecallMemory[];
+  onSelectEntry?: (entryId: string) => void;
+}> = ({ memories, onSelectEntry }) => {
   const top = memories.slice(0, 2);
   return (
     <aside className="now-avatar-recall" aria-label="关联过去">
@@ -11,11 +16,68 @@ export const AvatarRecallPanel: React.FC<{ memories: AvatarRecallMemory[] }> = (
         <strong>{memories.length}</strong>
       </div>
       {top.map((memory) => (
-        <p key={memory.id}>
-          <span>{memory.title}</span>
-          {memory.excerpt}
-        </p>
+        <button
+          key={memory.id}
+          type="button"
+          className="now-avatar-recall__item"
+          onClick={() => onSelectEntry?.(memory.sourceEntryId)}
+          disabled={!onSelectEntry}
+          aria-label={`查看原始记录：${memory.title}`}
+        >
+          <span className="now-avatar-recall__title">{memory.title}</span>
+          <time dateTime={new Date(memory.createdAt).toISOString()}>
+            {new Date(memory.createdAt).toLocaleDateString('zh-CN')}
+          </time>
+          <span>{memory.excerpt}</span>
+          <small>{memory.reason}</small>
+          <code>ID · {memory.sourceEntryId}</code>
+        </button>
       ))}
+    </aside>
+  );
+};
+
+interface AvatarUnderstandingCardProps {
+  statement: string;
+  status?: AvatarUnderstandingStatus;
+  onResolve: (status: 'confirmed' | 'rejected', statement: string) => void;
+}
+
+export const AvatarUnderstandingCard: React.FC<AvatarUnderstandingCardProps> = ({
+  statement,
+  status = 'pending',
+  onResolve,
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(statement);
+  const isPending = status === 'pending';
+  return (
+    <aside className="now-avatar-understanding" aria-label="候选理解">
+      <div className="now-avatar-understanding__head">
+        <strong>我的候选理解</strong>
+        <span>{isPending ? '尚未写入长期记忆' : status === 'confirmed' ? '已由你确认' : '已标记不准确'}</span>
+      </div>
+      {editing && isPending ? (
+        <textarea aria-label="修改候选理解" value={value} onChange={(event) => setValue(event.target.value)} />
+      ) : (
+        <p>{value}</p>
+      )}
+      {isPending && (
+        <div className="now-avatar-understanding__actions">
+          <button type="button" onClick={() => onResolve('confirmed', value.trim() || statement)}>
+            <Check size={15} aria-hidden="true" />确认
+          </button>
+          <button type="button" onClick={() => setEditing((current) => !current)}>
+            <Pencil size={15} aria-hidden="true" />{editing ? '继续确认' : '修改'}
+          </button>
+          <button type="button" onClick={() => onResolve('rejected', value.trim() || statement)}>
+            <X size={15} aria-hidden="true" />不准确
+          </button>
+        </div>
+      )}
+      <p className="sr-only" aria-live="polite">
+        {status === 'confirmed' ? '已写入长期记忆' : status === 'rejected' ? '已否定该理解' : ''}
+      </p>
     </aside>
   );
 };

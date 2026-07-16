@@ -40,6 +40,32 @@ describe('avatarChatRules', () => {
     expect(messages[0].content).toContain('你自然说');
   });
 
+  it('introduces the standalone avatar as a second perspective instead of a recorder', () => {
+    const messages = getAvatarIntroMessages({
+      isFirstVisit: true,
+      createdAt: '2026-07-09T10:30:00.000Z',
+      createId: () => 'msg-general',
+      mode: 'general',
+    });
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toContain('另一个角度');
+    expect(messages[0].content).not.toContain('帮你记录');
+  });
+
+  it('frames action review around actual outcomes', () => {
+    const messages = getAvatarIntroMessages({
+      isFirstVisit: false,
+      createdAt: '2026-07-09T10:30:00.000Z',
+      createId: () => 'msg-review',
+      mode: 'review',
+    });
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toContain('真实发生的结果');
+    expect(messages[0].content).toContain('需要调整');
+  });
+
   it('reads and marks avatar intro state in storage', () => {
     expect(readAndMarkAvatarIntroFirstVisit()).toBe(true);
     expect(localStorage.getItem(STORAGE_KEYS.avatarIntroShown)).toBe('true');

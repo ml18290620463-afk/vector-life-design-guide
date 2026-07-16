@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import type { Container, DiaryEntry, Language, Theme } from '../types';
 import { Viewer } from './appLazyComponents';
 import { ScreenLoader } from './ScreenLoader';
+import type { AvatarLaunchContext } from '../features/avatar/types';
 
 type AppViewerScreenProps = {
   active: boolean;
@@ -19,6 +20,7 @@ type AppViewerScreenProps = {
   onSelectEntry: (entry: DiaryEntry) => void;
   onUpdateEntry: (entry: DiaryEntry) => void;
   theme: Theme;
+  onOpenAvatar?: (context: AvatarLaunchContext) => void;
 };
 
 export const AppViewerScreen: FC<AppViewerScreenProps> = ({
@@ -36,6 +38,7 @@ export const AppViewerScreen: FC<AppViewerScreenProps> = ({
   onSelectEntry,
   onUpdateEntry,
   theme,
+  onOpenAvatar,
 }) => {
   if (!active || !entry) {
     return null;
@@ -64,6 +67,12 @@ export const AppViewerScreen: FC<AppViewerScreenProps> = ({
         onArchive={(id) => returnAfter(() => onArchiveEntry(id))}
         onRestore={(id) => returnAfter(() => onRestoreEntry(id))}
         containers={containers}
+        onOpenAvatar={onOpenAvatar ? () => onOpenAvatar({
+          mode: 'distill',
+          source: 'past-detail',
+          entryId: entry.id,
+          prompt: `请帮我整理「${entry.title}」`,
+        }) : undefined}
       />
     </Suspense>
   );

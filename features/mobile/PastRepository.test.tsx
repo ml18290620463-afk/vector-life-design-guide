@@ -328,6 +328,43 @@ describe('PastRepository', () => {
     );
   });
 
+  it('keeps semantic recalls collapsed until the user chooses to explore them', () => {
+    const onSelectEntry = vi.fn();
+    const relatedEntry = {
+      ...makeVideoEntry(),
+      id: 'related-entry',
+      title: '过去的项目沟通',
+      createdAt: 1,
+    };
+    const latestEntry = {
+      ...makeVideoEntry(),
+      id: 'latest-entry',
+      createdAt: 2,
+      relatedEntryIds: [relatedEntry.id],
+    };
+
+    render(
+      <PastRepository
+        language="zh"
+        entries={[latestEntry, relatedEntry]}
+        principles={[]}
+        onAddPrinciple={vi.fn()}
+        onDeletePrinciple={vi.fn()}
+        onUpdatePrinciple={vi.fn()}
+        onSelectEntry={onSelectEntry}
+        containers={[]}
+        onAddContainer={vi.fn()}
+        onDeleteContainer={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: '查看关联经验 过去的项目沟通' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /已关联到过去 1 条经验/ }));
+    fireEvent.click(screen.getByRole('button', { name: '查看关联经验 过去的项目沟通' }));
+
+    expect(onSelectEntry).toHaveBeenCalledWith(relatedEntry);
+  });
+
   it('guides newly saved records from timeline into distillation', () => {
     render(
       <PastRepository

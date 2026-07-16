@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { AvatarInsightPanel, AvatarRecallPanel, RecordPreviewCard } from './AvatarRecordPanels';
+import {
+  AvatarInsightPanel,
+  AvatarRecallPanel,
+  AvatarUnderstandingCard,
+  RecordPreviewCard,
+} from './AvatarRecordPanels';
 
 describe('AvatarRecordPanels', () => {
   it('renders structured insight rows and tags', () => {
@@ -31,9 +36,9 @@ describe('AvatarRecordPanels', () => {
     render(
       <AvatarRecallPanel
         memories={[
-          { id: '1', title: '记录一', excerpt: '第一条', tags: [], score: 3 },
-          { id: '2', title: '记录二', excerpt: '第二条', tags: [], score: 2 },
-          { id: '3', title: '记录三', excerpt: '第三条', tags: [], score: 1 },
+          { id: '1', sourceEntryId: '1', title: '记录一', excerpt: '第一条', tags: [], score: 3, createdAt: 1, reason: '关键词关联' },
+          { id: '2', sourceEntryId: '2', title: '记录二', excerpt: '第二条', tags: [], score: 2, createdAt: 2, reason: '标签关联' },
+          { id: '3', sourceEntryId: '3', title: '记录三', excerpt: '第三条', tags: [], score: 1, createdAt: 3, reason: '关键词关联' },
         ]}
       />,
     );
@@ -42,6 +47,14 @@ describe('AvatarRecordPanels', () => {
     expect(screen.getByText('第一条')).not.toBeNull();
     expect(screen.getByText('第二条')).not.toBeNull();
     expect(screen.queryByText('第三条')).toBeNull();
+  });
+
+  it('requires explicit confirmation before accepting an understanding', () => {
+    const onResolve = vi.fn();
+    render(<AvatarUnderstandingCard statement="你更看重可验证的进展" onResolve={onResolve} />);
+    expect(screen.getByText('尚未写入长期记忆')).not.toBeNull();
+    fireEvent.click(screen.getByText('确认'));
+    expect(onResolve).toHaveBeenCalledWith('confirmed', '你更看重可验证的进展');
   });
 
   it('allows editing preview text before sending', () => {

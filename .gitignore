@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local HTTPS development certificates and private keys
+.cert/
+
 # Build artefacts and reports
 coverage/
 test-results/

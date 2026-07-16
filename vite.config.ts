@@ -131,6 +131,20 @@ export default defineConfig(({ mode }) => {
           // an offline state instead of getting a fake 200.
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [
+            // The local semantic model is intentionally lazy: it must not
+            // inflate first-install precache, but once used it should remain
+            // available offline without contacting a third-party CDN.
+            {
+              urlPattern: /(?:\/models\/|\/assets\/ort-wasm-simd-threaded[^/]*\.(?:mjs|wasm)$)/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'vector-local-semantic-model',
+                expiration: {
+                  maxEntries: 16,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+              },
+            },
             // Same-origin static assets the dev server / SSR might
             // produce (the precache covers most production assets).
             {

@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Suspense } from 'react';
-import type { Container, DiaryEntry, Language, Principle, Theme } from '../types';
+import type { ActionItem, Container, DiaryEntry, Language, Principle, Theme } from '../types';
 import { AppState } from '../types';
 import type { MobileMainTab } from '../features/mobile/types';
 import type { NowRoute } from '../features/now/types/now';
@@ -13,9 +13,14 @@ import {
 import { NowFlow } from '../features/now/nowLazyComponents';
 import { DesktopNowFrame } from '../features/now/components/DesktopNowFrame';
 import { ScreenLoader } from './ScreenLoader';
+import type { AvatarLaunchContext } from '../features/avatar/types';
 
 type AppMainModuleScreensProps = {
   addContainer: (name: string) => void;
+  actions: ActionItem[];
+  onAddAction: (action: Omit<ActionItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ActionItem>;
+  onUpdateAction: (action: ActionItem) => Promise<void> | void;
+  onActionResultRecorded: (actionId: string, resultEntryId: string) => Promise<void> | void;
   addPrinciple: (
     text: string,
     year: number,
@@ -37,17 +42,21 @@ type AppMainModuleScreensProps = {
   onNowRouteChange: (route: NowRoute) => void;
   onPersistNowRecord: (
     payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
-  ) => Promise<string>;
+  ) => Promise<DiaryEntry>;
+  onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void;
   onSelectEntry: (entry: DiaryEntry) => void;
   principles: Principle[];
   theme: Theme;
   updateEntry: (entry: DiaryEntry) => void;
   updatePrinciple: (principle: Principle) => void;
   useMobileShell: boolean;
+  avatarLaunchContext: AvatarLaunchContext;
+  onOpenAvatar: (context: AvatarLaunchContext) => void;
 };
 
 export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   addContainer,
+  actions,
   addPrinciple,
   appState,
   containers,
@@ -62,13 +71,19 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   onMobileTabChange,
   onNowRecordComplete,
   onNowRouteChange,
+  onAddAction,
+  onUpdateAction,
+  onActionResultRecorded,
   onPersistNowRecord,
+  onRelatedEntriesResolved,
   onSelectEntry,
   principles,
   theme,
   updateEntry,
   updatePrinciple,
   useMobileShell,
+  avatarLaunchContext,
+  onOpenAvatar,
 }) => (
   <>
     {useMobileShell && mobileMainTab && (
@@ -88,6 +103,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               containers={containers}
               onAddContainer={addContainer}
               onDeleteContainer={deleteContainer}
+              onOpenAvatar={onOpenAvatar}
             />
           )}
           {appState === AppState.FUTURE && (
@@ -95,8 +111,13 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               language={language}
               entries={entries}
               principles={principles}
+              actions={actions}
+              onAddAction={onAddAction}
+              onUpdateAction={onUpdateAction}
               onOpenPast={() => onMobileTabChange('past')}
               onOpenNow={() => onMobileTabChange('now')}
+              onOpenAvatar={onOpenAvatar}
+              onSelectEntry={onSelectEntry}
             />
           )}
           {isNowSurfaceState(appState) && (
@@ -107,10 +128,18 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               mobileShell
               pastEntries={entries}
               principles={principles}
+              actions={actions}
               onRouteChange={onNowRouteChange}
               onExit={onExitNow}
               onPersistRecord={onPersistNowRecord}
+              onRelatedEntriesResolved={onRelatedEntriesResolved}
               onRecordComplete={onNowRecordComplete}
+              onActionResultRecorded={onActionResultRecorded}
+              avatarLaunchContext={avatarLaunchContext}
+              onSelectEntry={(entryId) => {
+                const entry = entries.find((item) => item.id === entryId);
+                if (entry) onSelectEntry(entry);
+              }}
             />
           )}
         </MobileShell>
@@ -133,6 +162,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             containers={containers}
             onAddContainer={addContainer}
             onDeleteContainer={deleteContainer}
+            onOpenAvatar={onOpenAvatar}
           />
         </div>
       </Suspense>
@@ -146,10 +176,18 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
           language={language}
           pastEntries={entries}
           principles={principles}
+          actions={actions}
           onRouteChange={onNowRouteChange}
           onExit={onExitNow}
           onPersistRecord={onPersistNowRecord}
+          onRelatedEntriesResolved={onRelatedEntriesResolved}
           onRecordComplete={onNowRecordComplete}
+          onActionResultRecorded={onActionResultRecorded}
+          avatarLaunchContext={avatarLaunchContext}
+          onSelectEntry={(entryId) => {
+            const entry = entries.find((item) => item.id === entryId);
+            if (entry) onSelectEntry(entry);
+          }}
         />
       </Suspense>
     )}
@@ -161,9 +199,14 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             language={language}
             entries={entries}
             principles={principles}
+            actions={actions}
+            onAddAction={onAddAction}
+            onUpdateAction={onUpdateAction}
             onBack={() => onMainModuleNavigate('past')}
             onOpenPast={() => onMainModuleNavigate('past')}
             onOpenNow={() => onMainModuleNavigate('now')}
+            onOpenAvatar={onOpenAvatar}
+            onSelectEntry={onSelectEntry}
           />
         </div>
       </Suspense>

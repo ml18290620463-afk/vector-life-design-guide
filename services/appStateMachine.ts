@@ -50,7 +50,13 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
     AppState.NOW_TAGS,
     AppState.NOW_AVATAR_CHAT,
   ],
-  [AppState.VIEWER]: [AppState.COVER, AppState.DASHBOARD, AppState.PAST, AppState.NOW],
+  [AppState.VIEWER]: [
+    AppState.COVER,
+    AppState.DASHBOARD,
+    AppState.PAST,
+    AppState.NOW,
+    AppState.NOW_AVATAR_CHAT,
+  ],
   [AppState.ARCHIVE]: [
     AppState.COVER,
     AppState.DASHBOARD,

@@ -92,6 +92,40 @@ describe('useDiaryData', () => {
     expect(result.current.entries.every((e) => e.isSample)).toBe(true);
   });
 
+  it('persists an action and closes it when a result entry is recorded', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    let actionId = '';
+    await act(async () => {
+      const action = await result.current.addAction({
+        title: '先确认会议目标',
+        status: 'active',
+        question: '如何避免讨论失焦？',
+        principleId: 'principle-1',
+      });
+      actionId = action.id;
+    });
+
+    expect(result.current.actions[0]).toMatchObject({
+      id: actionId,
+      status: 'active',
+      principleId: 'principle-1',
+    });
+
+    await act(async () => {
+      await result.current.recordActionResult(actionId, 'result-entry');
+    });
+
+    expect(result.current.actions[0]).toMatchObject({
+      status: 'completed',
+      resultEntryId: 'result-entry',
+    });
+    expect(idb.set).toHaveBeenCalledWith(getDiaryStorageKeys(userId).actions, expect.any(Array));
+  });
+
   it('should update an entry', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
@@ -308,6 +342,8 @@ describe('useDiaryData', () => {
 
     expect(idb.del).toHaveBeenCalledWith(keys.selectedStars);
     expect(idb.del).toHaveBeenCalledWith(keys.materials);
+    expect(idb.del).toHaveBeenCalledWith(keys.actions);
+    expect(idb.del).toHaveBeenCalledWith(keys.semanticEmbeddings);
     expect(localStorage.getItem(DiaryStorageKeys.initializedFlag)).toBeNull();
   });
 

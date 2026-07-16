@@ -210,10 +210,13 @@ export interface AvatarStructuredInsight {
 
 export interface AvatarRecallMemory {
   id: string;
+  sourceEntryId: string;
   title: string;
   excerpt: string;
   tags: string[];
   score: number;
+  createdAt: number;
+  reason: string;
 }
 
 const compactRecordLine = (line: string, maxLength = 68): string => {
@@ -256,22 +259,31 @@ export const selectAvatarRecallMemories = (
       const tags = entry.tags.map(stripNowTagPrefix).filter(Boolean);
       const bodyTerms = new Set(tokenizeRecallText(`${entry.title} ${body} ${tags.join(' ')}`));
       const keywordScore = [...queryTermSet].filter((term) => bodyTerms.has(term)).length;
-      const moodScore = queryMoodTags.filter((tag) => tags.includes(tag)).length * 3;
-      const eventScore = queryEventTags.filter((tag) => tags.includes(tag)).length * 2;
+      const matchedMoodTags = queryMoodTags.filter((tag) => tags.includes(tag));
+      const matchedEventTags = queryEventTags.filter((tag) => tags.includes(tag));
+      const moodScore = matchedMoodTags.length * 3;
+      const eventScore = matchedEventTags.length * 2;
       const score = keywordScore + moodScore + eventScore;
+      const matchedTags = [...matchedMoodTags, ...matchedEventTags];
+      const reason = matchedTags.length > 0
+        ? `与你当前表达的「${matchedTags.join('、')}」信号一致`
+        : keywordScore > 0
+          ? `标题或正文包含 ${keywordScore} 个共同关键信号`
+          : '与当前问题有可验证的关联';
       return {
         id: entry.id,
+        sourceEntryId: entry.id,
         title: entry.title,
         excerpt: compactRecordLine(body, 42),
         tags: tags.slice(0, 3),
         score,
         createdAt: entry.createdAt,
+        reason,
       };
     })
     .filter((memory) => memory.score > 0)
     .sort((first, second) => second.score - first.score || second.createdAt - first.createdAt)
-    .slice(0, limit)
-    .map(({ createdAt: _createdAt, ...memory }) => memory);
+    .slice(0, limit);
 };
 
 export const buildAvatarRecallHint = (memories: AvatarRecallMemory[]): string | null => {

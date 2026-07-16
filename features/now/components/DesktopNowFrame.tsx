@@ -1,18 +1,26 @@
 import type { FC } from 'react';
-import type { DiaryEntry, Language, Principle, Theme } from '../../../types';
+import type { ActionItem, DiaryEntry, Language, Principle, Theme } from '../../../types';
 import type { NowRoute } from '../types/now';
 import { NowFlow } from '../nowLazyComponents';
+import type { AvatarLaunchContext } from '../../avatar/types';
 
 type DesktopNowFrameProps = {
   language: Language;
   nowRoute: NowRoute;
   onExit: () => void;
-  onPersistRecord: (payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => Promise<string>;
+  onPersistRecord: (
+    payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
+  ) => Promise<DiaryEntry>;
+  onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void;
   onRecordComplete: () => void;
   onRouteChange: (route: NowRoute) => void;
   pastEntries: DiaryEntry[];
   principles: Principle[];
+  actions: ActionItem[];
+  onActionResultRecorded: (actionId: string, resultEntryId: string) => Promise<void> | void;
   theme: Theme;
+  avatarLaunchContext?: AvatarLaunchContext;
+  onSelectEntry?: (entryId: string) => void;
 };
 
 export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
@@ -20,11 +28,16 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
   nowRoute,
   onExit,
   onPersistRecord,
+  onRelatedEntriesResolved,
   onRecordComplete,
   onRouteChange,
   pastEntries,
   principles,
+  actions,
+  onActionResultRecorded,
   theme,
+  avatarLaunchContext,
+  onSelectEntry,
 }) => (
   <div
     className={`desktop-main-module-frame desktop-main-module-frame--now ${
@@ -48,10 +61,15 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
       language={language}
       pastEntries={pastEntries}
       principles={principles}
+      actions={actions}
       onRouteChange={onRouteChange}
       onExit={onExit}
       onPersistRecord={onPersistRecord}
+      onRelatedEntriesResolved={onRelatedEntriesResolved}
       onRecordComplete={onRecordComplete}
+      onActionResultRecorded={onActionResultRecorded}
+      avatarLaunchContext={avatarLaunchContext}
+      onSelectEntry={onSelectEntry}
     />
   </div>
 );

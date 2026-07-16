@@ -3,6 +3,7 @@ import { AppState, DiaryEntry, Language, Theme } from '../types';
 import { AppStorageKeys } from '../services/appSettings';
 import { getStoredString, setStoredString } from '../services/browserStorage';
 import { canTransitionAppState } from '../services/appStateMachine';
+import type { AvatarLaunchContext } from '../features/avatar/types';
 
 interface AppStore {
   appState: AppState;
@@ -13,6 +14,7 @@ interface AppStore {
   masterPassword: string | null;
   isUnlocked: boolean;
   selectedEntry: DiaryEntry | null;
+  avatarLaunchContext: AvatarLaunchContext | null;
   setAppState: (state: AppState) => void;
   setLanguage: (lang: Language) => void;
   setTheme: (theme: Theme) => void;
@@ -21,6 +23,7 @@ interface AppStore {
   setMasterPassword: (password: string | null) => void;
   setIsUnlocked: (isUnlocked: boolean) => void;
   setSelectedEntry: (entry: DiaryEntry | null) => void;
+  setAvatarLaunchContext: (context: AvatarLaunchContext | null) => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -32,6 +35,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   masterPassword: null,
   isUnlocked: false,
   selectedEntry: null,
+  avatarLaunchContext: null,
   setAppState: (state) => {
     const currentState = get().appState;
     if (!canTransitionAppState(currentState, state)) {
@@ -55,4 +59,5 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setMasterPassword: (masterPassword) => set({ masterPassword }),
   setIsUnlocked: (isUnlocked) => set({ isUnlocked }),
   setSelectedEntry: (selectedEntry) => set({ selectedEntry }),
+  setAvatarLaunchContext: (avatarLaunchContext) => set({ avatarLaunchContext }),
 }));

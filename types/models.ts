@@ -41,12 +41,17 @@ export interface ActionItem {
   id: string;
   title: string;
   status: ActionItemStatus;
+  question?: string;
+  rationale?: string;
   principleId?: string;
   sourceEntryId?: string;
+  evidenceEntryIds?: string[];
+  resultEntryId?: string;
   createdAt: number;
   updatedAt?: number;
   dueAt?: number;
   completedAt?: number;
+  reviewedAt?: number;
 }
 
 export interface Container {
@@ -97,6 +102,10 @@ export interface DiaryEntry {
   attachment?: Attachment; // New: Media attachment
   nowMaterials?: EntryMaterial[];
   containerId?: string; // New: The storage package this entry belongs to
+  /** Locally derived semantic neighbours. This stores ids, never vector payloads. */
+  relatedEntryIds?: string[];
+  /** Explicit Future actions whose result is recorded by this entry. */
+  relatedActionIds?: string[];
   /** Principles that this experience may validate or challenge. */
   relatedPrincipleIds?: string[];
   /** User-confirmed outcomes collected in the context of this entry. */

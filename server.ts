@@ -82,7 +82,9 @@ const env = {
   httpsCertPath: sanitizeEnv(process.env.HTTPS_CERT),
   aiAccessToken:
     sanitizeEnv(process.env.AI_ACCESS_TOKEN) || sanitizeEnv(process.env.MORNING_STAR_ACCESS_TOKEN),
-  aiAllowedOrigins: parseList(process.env.AI_ALLOWED_ORIGINS || process.env.MORNING_STAR_ALLOWED_ORIGINS),
+  aiAllowedOrigins: parseList(
+    process.env.AI_ALLOWED_ORIGINS || process.env.MORNING_STAR_ALLOWED_ORIGINS,
+  ),
   // Phase 5.2 — Stripe billing. All four are optional; when ANY
   // is missing, the Stripe routes are not registered and the
   // /pricing UI surfaces "billing not configured on this server".
@@ -105,9 +107,7 @@ const buildDefaultAllowedOrigins = (): string[] => {
 };
 
 const allowedOriginSet = new Set(
-  env.aiAllowedOrigins.length > 0
-    ? env.aiAllowedOrigins
-    : buildDefaultAllowedOrigins(),
+  env.aiAllowedOrigins.length > 0 ? env.aiAllowedOrigins : buildDefaultAllowedOrigins(),
 );
 
 const nowMoodTags = new Set([
@@ -357,7 +357,9 @@ async function startServer() {
 
   const aiRequestLimiter = rateLimit({
     windowMs: Number(
-      process.env.AI_RATE_LIMIT_WINDOW_MS || process.env.MORNING_STAR_RATE_LIMIT_WINDOW_MS || 60_000,
+      process.env.AI_RATE_LIMIT_WINDOW_MS ||
+        process.env.MORNING_STAR_RATE_LIMIT_WINDOW_MS ||
+        60_000,
     ),
     limit: Number(process.env.AI_RATE_LIMIT_MAX || process.env.MORNING_STAR_RATE_LIMIT_MAX || 5),
     standardHeaders: true,
@@ -387,7 +389,7 @@ async function startServer() {
     mediaSrc: ["'self'", 'data:', 'blob:'],
     fontSrc: ["'self'", 'data:'],
     styleSrc: ["'self'", "'unsafe-inline'"],
-    scriptSrc: ["'self'"],
+    scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
     connectSrc: ["'self'", 'https://openrouter.ai', 'https://generativelanguage.googleapis.com'],
     workerSrc: ["'self'", 'blob:'],
     upgradeInsecureRequests: [],

@@ -1,20 +1,32 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Compass, Sparkles, TrendingUp } from 'lucide-react';
-import type { DiaryEntry, Language, Principle } from '../../types';
+import type { ActionItem, DiaryEntry, Language, Principle } from '../../types';
+import type { AvatarLaunchContext } from '../avatar/types';
+import { buildFutureDecision, type FutureDecision } from '../../services/futureDecision';
+import { searchNeuralRelatedEntryIds } from '../../services/neuralSemanticRecall';
+import { getPrincipleConfidence } from '../../services/experienceFeedback';
 
 interface FuturePlaceholderProps {
   language: Language;
   entries?: DiaryEntry[];
   principles?: Principle[];
+  actions?: ActionItem[];
+  onAddAction?: (action: Omit<ActionItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ActionItem>;
+  onUpdateAction?: (action: ActionItem) => Promise<void> | void;
   onBack?: () => void;
   onOpenPast?: () => void;
   onOpenNow?: () => void;
+  onOpenAvatar?: (context: AvatarLaunchContext) => void;
+  onSelectEntry?: (entry: DiaryEntry) => void;
 }
 
 const stripTagPrefix = (tag: string) => tag.replace(/^(心情|事件)\s*[:：]\s*/, '').trim();
 
 const summarizeEntry = (entry: DiaryEntry) => {
-  const compact = entry.content.replace(/\n素材:\n[\s\S]*$/m, '').replace(/\s+/g, ' ').trim();
+  const compact = entry.content
+    .replace(/\n素材:\n[\s\S]*$/m, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (compact.length <= 58) return compact || entry.title;
   return `${compact.slice(0, 58)}…`;
 };
@@ -38,10 +50,20 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
   language,
   entries = [],
   principles = [],
+  actions = [],
+  onAddAction,
+  onUpdateAction,
   onBack,
   onOpenPast,
   onOpenNow,
+  onOpenAvatar,
+  onSelectEntry,
 }) => {
+  const [question, setQuestion] = useState('');
+  const [decision, setDecision] = useState<FutureDecision | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const analysisRequestRef = useRef(0);
   const isZh = language === 'zh';
   const activeEntries = useMemo(
     () =>
@@ -52,13 +74,70 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
   );
   const topSignals = useMemo(() => buildTopSignals(activeEntries), [activeEntries]);
   const latestPrinciples = useMemo(
-    () => [...principles].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3),
+    () =>
+      [...principles]
+        .sort(
+          (a, b) =>
+            getPrincipleConfidence(b) - getPrincipleConfidence(a) || b.createdAt - a.createdAt,
+        )
+        .slice(0, 3),
     [principles],
   );
   const latestEntries = activeEntries.slice(0, 3);
   const hasMaterial = activeEntries.length > 0 || principles.length > 0;
   const primaryPrinciple = latestPrinciples[0] ?? null;
   const primarySignal = topSignals[0] ?? null;
+  const activeAction = useMemo(
+    () =>
+      [...actions]
+        .filter((action) => action.status === 'active')
+        .sort((a, b) => b.createdAt - a.createdAt)[0] ?? null,
+    [actions],
+  );
+  const completedActionCount = actions.filter((action) => action.status === 'completed').length;
+
+  const analyzeQuestion = () => {
+    const normalizedQuestion = question.trim();
+    if (!normalizedQuestion) return;
+    const requestId = analysisRequestRef.current + 1;
+    analysisRequestRef.current = requestId;
+    setDecision(buildFutureDecision(normalizedQuestion, activeEntries, principles));
+    setAnalyzing(true);
+    void searchNeuralRelatedEntryIds(
+      { title: normalizedQuestion, content: normalizedQuestion, tags: [] },
+      activeEntries,
+    )
+      .then((entryIds) => {
+        if (analysisRequestRef.current !== requestId) return;
+        setDecision(buildFutureDecision(normalizedQuestion, activeEntries, principles, entryIds));
+      })
+      .catch(() => {
+        // The deterministic local decision is already visible.
+      })
+      .finally(() => {
+        if (analysisRequestRef.current === requestId) setAnalyzing(false);
+      });
+  };
+
+  const claimDecision = async () => {
+    if (!decision || !onAddAction || activeAction) return;
+    setClaiming(true);
+    try {
+      await onAddAction({
+        title: decision.actionTitle,
+        status: 'active',
+        question: decision.question,
+        rationale: decision.rationale,
+        principleId: decision.principle?.id,
+        sourceEntryId: decision.evidenceEntries[0]?.id,
+        evidenceEntryIds: decision.evidenceEntries.map((entry) => entry.id),
+      });
+      setDecision(null);
+      setQuestion('');
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   return (
     <main className="mobile-future-page" data-testid="future-page">
@@ -73,9 +152,7 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
         </button>
       )}
       <header className="mobile-future-page__header">
-        <p className="mobile-future-page__eyebrow">
-          {isZh ? 'VECTOR · 未来' : 'VECTOR · Future'}
-        </p>
+        <p className="mobile-future-page__eyebrow">{isZh ? 'VECTOR · 未来' : 'VECTOR · Future'}</p>
         <h1>{isZh ? '分析转化' : 'Analysis & Transformation'}</h1>
         <p className="mobile-future-page__subtitle">
           {isZh
@@ -85,6 +162,103 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
       </header>
 
       <section className="mobile-future-page__body">
+        <section
+          className="future-avatar-question"
+          aria-label={isZh ? '当前问题' : 'Current question'}
+        >
+          <div>
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
+            <div>
+              <h2>{isZh ? '你现在想解决什么？' : 'What are you trying to solve?'}</h2>
+              <p>
+                {isZh
+                  ? '只在你发起时调用过去经验，先给一个可验证的下一步。'
+                  : 'Use your past only when requested, then propose one testable next step.'}
+              </p>
+            </div>
+          </div>
+          <textarea
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder={
+              isZh
+                ? '例如：我该继续这个项目，还是收缩方向？'
+                : 'e.g. Should I continue or narrow this project?'
+            }
+          />
+          <button type="button" disabled={!question.trim()} onClick={analyzeQuestion}>
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            {isZh ? '基于我的经验分析' : 'Analyze from my experience'}
+          </button>
+        </section>
+
+        {decision && (
+          <section className="future-decision" aria-live="polite">
+            <div className="future-decision__head">
+              <span>{isZh ? '一个可验证的下一步' : 'One testable next step'}</span>
+              {analyzing && <small>{isZh ? '正在校准依据…' : 'Refining evidence…'}</small>}
+            </div>
+            <h2>{decision.actionTitle}</h2>
+            <p>{decision.rationale}</p>
+            {decision.principle && (
+              <blockquote>
+                <span>{isZh ? '调用原则' : 'Applied principle'}</span>“{decision.principle.text}”
+              </blockquote>
+            )}
+            {decision.evidenceEntries.length > 0 && (
+              <div className="future-decision__evidence">
+                <span>{isZh ? '经验依据' : 'Experience evidence'}</span>
+                {decision.evidenceEntries.slice(0, 2).map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    disabled={!onSelectEntry}
+                    onClick={() => onSelectEntry?.(entry)}
+                  >
+                    <strong>{entry.title}</strong>
+                    <small>
+                      {new Date(entry.createdAt).toLocaleDateString(isZh ? 'zh-CN' : 'en-US')}
+                    </small>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="future-decision__actions">
+              <button
+                type="button"
+                disabled={!onAddAction || Boolean(activeAction) || claiming}
+                onClick={() => void claimDecision()}
+              >
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                {activeAction
+                  ? isZh
+                    ? '先回写当前行动'
+                    : 'Review current action first'
+                  : claiming
+                    ? isZh
+                      ? '正在认领…'
+                      : 'Claiming…'
+                    : isZh
+                      ? '认领这一步'
+                      : 'Claim this step'}
+              </button>
+              {onOpenAvatar && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenAvatar({
+                      mode: 'decide',
+                      source: 'future',
+                      prompt: decision.question,
+                    })
+                  }
+                >
+                  {isZh ? '与分身继续分析' : 'Continue with Avatar'}
+                </button>
+              )}
+            </div>
+          </section>
+        )}
         <div className="future-insight-grid">
           <article className="future-insight-card future-insight-card--hero">
             <div className="future-insight-card__icon">
@@ -143,7 +317,11 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
                 ))}
               </ul>
             ) : (
-              <p>{isZh ? '过去页确认原则后，会在这里参与转化。' : 'Confirmed Past principles appear here.'}</p>
+              <p>
+                {isZh
+                  ? '过去页确认原则后，会在这里参与转化。'
+                  : 'Confirmed Past principles appear here.'}
+              </p>
             )}
           </article>
         </div>
@@ -161,7 +339,59 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
             </div>
           </div>
           <div className="future-action-panel__body">
-            {primaryPrinciple ? (
+            {activeAction ? (
+              <div className="future-action-item future-action-item--active">
+                <span>
+                  {isZh ? '正在验证' : 'Active experiment'}
+                  {completedActionCount > 0
+                    ? isZh
+                      ? ` · 已回写 ${completedActionCount} 次`
+                      : ` · ${completedActionCount} reviewed`
+                    : ''}
+                </span>
+                <strong>{activeAction.title}</strong>
+                <p>
+                  {activeAction.question
+                    ? isZh
+                      ? `来自问题：${activeAction.question}`
+                      : `From: ${activeAction.question}`
+                    : activeAction.rationale}
+                </p>
+                <div className="future-action-item__controls">
+                  {onOpenAvatar && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenAvatar({
+                          mode: 'review',
+                          source: 'action-review',
+                          actionId: activeAction.id,
+                          prompt: isZh
+                            ? `请回顾行动「${activeAction.title}」的实际结果。`
+                            : `Review the actual result of "${activeAction.title}".`,
+                        })
+                      }
+                    >
+                      {isZh ? '记录实际结果' : 'Record actual result'}
+                    </button>
+                  )}
+                  {onUpdateAction && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void onUpdateAction({
+                          ...activeAction,
+                          status: 'abandoned',
+                          updatedAt: Date.now(),
+                        })
+                      }
+                    >
+                      {isZh ? '停止验证' : 'Stop experiment'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : primaryPrinciple ? (
               <div className="future-action-item future-action-item--principle">
                 <span>{isZh ? '基于已确认原则' : 'Based on confirmed principle'}</span>
                 <strong>{primaryPrinciple.text}</strong>
@@ -178,7 +408,9 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
             ) : latestEntries.length > 0 ? (
               latestEntries.map((entry) => (
                 <div key={entry.id} className="future-action-item">
-                  <span>{new Date(entry.createdAt).toLocaleDateString(isZh ? 'zh-CN' : 'en-US')}</span>
+                  <span>
+                    {new Date(entry.createdAt).toLocaleDateString(isZh ? 'zh-CN' : 'en-US')}
+                  </span>
                   <strong>{entry.title}</strong>
                   <p>{summarizeEntry(entry)}</p>
                 </div>

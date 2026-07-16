@@ -10,9 +10,11 @@ import { ArchiveVaultEntries } from '../../components/ArchiveVaultEntries';
 import { ExperienceFeedbackPrompt } from '../../components/ExperienceFeedbackPrompt';
 import { FilterHub } from '../../components/FilterHub';
 import { PastExperienceWorkbench } from '../../components/PastExperienceWorkbench';
+import { RelatedExperienceDisclosure } from '../../components/RelatedExperienceDisclosure';
 import { applyPrincipleFeedback, hasFeedbackForPrinciple } from '../../services/experienceFeedback';
 import { MobilePastTimelineEntry } from './MobilePastTimelineEntry';
 import type { PastRepositorySection } from './types';
+import type { AvatarLaunchContext } from '../avatar/types';
 
 interface PastRepositoryProps {
   language: Language;
@@ -32,6 +34,7 @@ interface PastRepositoryProps {
   containers: Container[];
   onAddContainer: (name: string) => void;
   onDeleteContainer: (id: string) => void;
+  onOpenAvatar?: (context: AvatarLaunchContext) => void;
 }
 
 export const PastRepository: React.FC<PastRepositoryProps> = ({
@@ -47,6 +50,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   containers,
   onAddContainer,
   onDeleteContainer,
+  onOpenAvatar,
 }) => {
   const t = TRANSLATIONS[language];
   const [section, setSection] = useState<PastRepositorySection>('timeline');
@@ -70,6 +74,14 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
 
   const archivedEntries = useMemo(() => entries.filter((entry) => entry.isArchived), [entries]);
   const latestEntry = timelineEntries[0] ?? null;
+  const relatedExperiences = useMemo(() => {
+    if (!latestEntry) return [];
+    const entriesById = new Map(entries.map((entry) => [entry.id, entry]));
+    return (latestEntry.relatedEntryIds ?? []).flatMap((entryId) => {
+      const relatedEntry = entriesById.get(entryId);
+      return relatedEntry && relatedEntry.id !== latestEntry.id ? [relatedEntry] : [];
+    });
+  }, [entries, latestEntry]);
   const pendingFeedbackPrinciple = useMemo(() => {
     if (!latestEntry || !onUpdateEntry) return null;
     return (
@@ -179,6 +191,15 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       <section className="mobile-past-page__body">
         {section === 'timeline' && (
           <div className="mobile-past-timeline">
+            {latestEntry && relatedExperiences.length > 0 && (
+              <RelatedExperienceDisclosure
+                entry={latestEntry}
+                language={language}
+                onSelectEntry={onSelectEntry}
+                relatedEntries={relatedExperiences}
+                theme={theme}
+              />
+            )}
             {latestEntry && pendingFeedbackPrinciple && (
               <ExperienceFeedbackPrompt
                 entry={latestEntry}
@@ -209,16 +230,34 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 </button>
               </section>
             )}
-            <label className="mobile-past-search">
-              <Search className="h-4 w-4" />
-              <input
-                value={timelineQuery}
-                onChange={(event) => setTimelineQuery(event.target.value)}
-                placeholder={
-                  language === 'zh' ? '搜索标题 / 内容 / 标签' : 'Search title / content / tags'
-                }
-              />
-            </label>
+            <div className="mobile-past-search-row">
+              <label className="mobile-past-search">
+                <Search className="h-4 w-4" />
+                <input
+                  value={timelineQuery}
+                  onChange={(event) => setTimelineQuery(event.target.value)}
+                  placeholder={
+                    language === 'zh' ? '搜索标题 / 内容 / 标签' : 'Search title / content / tags'
+                  }
+                />
+              </label>
+              {onOpenAvatar && (
+                <button
+                  type="button"
+                  className="mobile-past-ask-avatar"
+                  onClick={() =>
+                    onOpenAvatar({
+                      mode: 'recall',
+                      source: 'past-search',
+                      query: timelineQuery.trim(),
+                    })
+                  }
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  {language === 'zh' ? '问问过去' : 'Ask Past'}
+                </button>
+              )}
+            </div>
             {timelineEntries.length === 0 ? (
               <p className="mobile-past-empty">
                 {language === 'zh'

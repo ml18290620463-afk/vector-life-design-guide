@@ -1,4 +1,5 @@
 import type { DiaryEntry, ExperienceFeedbackOutcome, Principle } from '../types';
+import { principleToSemanticSource, semanticSimilarity } from './localSemanticIndex';
 
 export const DEFAULT_PRINCIPLE_CONFIDENCE = 0.5;
 
@@ -73,10 +74,12 @@ const scorePrincipleForEntry = (
 ): number => {
   const entryTags = getEntryTags(entry);
   const evidenceTags = new Set<string>();
+  const evidenceEntries: DiaryEntry[] = [];
 
   for (const entryId of principle.derivedFromEntryIds ?? []) {
     const evidence = entriesById.get(entryId);
     if (!evidence) continue;
+    evidenceEntries.push(evidence);
     for (const tag of getEntryTags(evidence)) evidenceTags.add(tag);
   }
 
@@ -87,13 +90,25 @@ const scorePrincipleForEntry = (
   const directTextMatch =
     principle.text.trim().length >= 4 &&
     `${entry.title} ${entry.content}`.toLowerCase().includes(principle.text.trim().toLowerCase());
+  const semanticScore = semanticSimilarity(
+    {
+      text: `${entry.title} ${entry.content}`,
+      tags: entry.tags,
+    },
+    principleToSemanticSource(principle, evidenceEntries),
+  );
 
-  return tagOverlap * 5 + Math.min(textOverlap, 4) + (directTextMatch ? 6 : 0);
+  return (
+    tagOverlap * 5 +
+    Math.min(textOverlap, 4) +
+    (directTextMatch ? 6 : 0) +
+    (semanticScore >= 0.24 ? semanticScore * 8 : 0)
+  );
 };
 
 /**
- * Conservative rule-based association for P1. It intentionally returns at
- * most a few strong candidates; weak matches are worse than no feedback.
+ * Conservative hybrid association: evidence links remain authoritative while
+ * the local semantic fingerprint can recover differently worded experiences.
  */
 export const findRelatedPrinciples = (
   entry: Pick<DiaryEntry, 'title' | 'content' | 'tags'>,
