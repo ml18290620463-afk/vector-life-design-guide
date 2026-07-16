@@ -1,11 +1,29 @@
 # VECTOR Roadmap // VECTOR 路线图
 
-> Source of truth for "what we ship next". Each Phase has a hard exit
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](./README.md), [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), and [docs/archive/README.md](./docs/archive/README.md).
+
+## Phase 2 candidate: recording and speech-to-text
+
+Recording, audio import, browser speech recognition, and cloud transcription were removed from the current product on 2026-07-13 because their provider cost and mobile compatibility were not appropriate for an ordinary-user release. Historical audio entries remain readable for data compatibility.
+
+Reconsider this feature only in Phase 2 after all of the following are true:
+
+- a sustainable per-user cost ceiling and abuse-control model exists;
+- iOS Safari, Android Chrome, and embedded-browser behavior is verified;
+- recording works independently from transcription and never risks losing captured audio;
+- privacy, consent, retention, accessibility, and failure-state copy are reviewed;
+- the feature is shipped behind an explicit feature flag with measurable usage and cost telemetry.
+
+录音、音频导入、浏览器语音识别与云端转写已于 2026-07-13 从当前版本撤下，原因是成本与移动端兼容性不适合面向普通用户发布。旧音频记录仍保持可读，避免破坏历史数据。第二期只有在成本上限、三端兼容、录音不丢失、隐私合规与功能开关全部具备后才重新评估。
+
+
+> Historical source for what earlier phases planned to ship. Each Phase has a hard exit
 > checklist; **do not start Phase N+1 until every checkbox in Phase N is
 > green**. Items map back to [`EVALUATION.md`](./EVALUATION.md) section
 > numbers in parentheses.
 >
-> 本文件为**双语版**：英文是规范性 checklist（authoritative），中文是
+> 本文件为**历史双语版**：英文 checklist 记录当时的执行约束，中文是
 > 「执行要点 / 关键信息 / 工时估算 / 验证脚本」补充材料，方便协作与
 > 异步交接。两个语言版本若出现冲突，以英文 checklist 为准。
 

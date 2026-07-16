@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { FileText, Lock, Paperclip, Shield } from 'lucide-react';
+import { Lock, Paperclip, Shield } from 'lucide-react';
 import type { DiaryEntry, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
+import { buildArchiveId } from '../lib/archiveId';
+import { formatDateDots } from '../lib/dateFormat';
+import { PastEntryPreview } from './PastEntryPreview';
 
 interface ArchiveEntryCardProps {
   theme: Theme;
@@ -24,47 +27,6 @@ interface ArchiveEntryCardProps {
    *  surface a toast etc.; the card visually disables itself). */
   onSelect: (entry: DiaryEntry) => void;
 }
-
-const buildArchiveId = (entry: DiaryEntry): string => {
-  const yearSuffix = new Date(entry.createdAt).getFullYear().toString().slice(2);
-  return `AR-${yearSuffix}-${entry.id.slice(0, 4).toUpperCase()}`;
-};
-
-const ArchiveAttachmentPreview: React.FC<{
-  entry: DiaryEntry;
-  theme: Theme;
-  compact?: boolean;
-}> = ({ entry, theme, compact = false }) => {
-  if (!entry.attachment) return null;
-
-  if (entry.attachment.type === 'image') {
-    return (
-      <figure className={compact ? 'mt-3' : 'mt-4'}>
-        <img
-          src={entry.attachment.data}
-          alt={entry.attachment.name}
-          loading="lazy"
-          className={`w-full rounded-lg border object-cover ${
-            compact ? 'max-h-56' : 'max-h-80'
-          } ${theme === 'light' ? 'border-slate-200 bg-slate-100' : 'border-cyan-900/30 bg-black/30'}`}
-        />
-      </figure>
-    );
-  }
-
-  return (
-    <div
-      className={`mt-3 inline-flex max-w-full items-center gap-2 rounded-md border px-3 py-2 text-xs ${
-        theme === 'light'
-          ? 'border-slate-200 bg-slate-50 text-slate-500'
-          : 'border-cyan-900/30 bg-black/20 text-cyan-300/70'
-      }`}
-    >
-      <FileText className="h-3.5 w-3.5 shrink-0" />
-      <span className="truncate">{entry.attachment.name}</span>
-    </div>
-  );
-};
 
 /**
  * Single entry inside an ArchiveVault year/month/day bucket. Renders
@@ -156,20 +118,15 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
           />
 
           <div className="relative z-10 flex flex-col gap-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div
-                  className={`mb-1 font-mono text-[10px] opacity-50 ${theme === 'light' ? 'text-slate-500' : 'text-green-700'}`}
-                >
-                  {new Date(entry.createdAt).toLocaleDateString()} · {archiveId}
-                </div>
-                <h4
-                  className={`text-base font-bold leading-snug tracking-tight ${theme === 'light' ? 'text-vector-ink-strong group-hover/item:text-vector-cyan-brand' : 'text-cyan-100 group-hover/item:text-cyan-50'}`}
-                >
-                  {entry.title}
-                </h4>
-              </div>
-              {entry.isSample && (
+            <PastEntryPreview
+              entry={entry}
+              variant="archive-list"
+              theme={theme}
+              archiveId={archiveId}
+              isTimeLocked={isTimeLocked}
+              t={t}
+              sampleBadge={
+                entry.isSample ? (
                 <span
                   data-testid="archive-sample-badge"
                   title={t.sampleBadgeAria ?? 'Sample reflection'}
@@ -177,25 +134,9 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
                 >
                   {t.sampleBadge ?? 'Sample'}
                 </span>
-              )}
-            </div>
-
-            <ArchiveAttachmentPreview entry={entry} theme={theme} compact />
-
-            <p
-              className={`whitespace-pre-wrap break-words text-sm leading-7 ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}
-            >
-              {entry.content}
-            </p>
-
-            {isTimeLocked && (
-              <div className="flex items-center gap-1.5 text-vector-magenta transition-colors neon-glow-alert">
-                <Lock className="w-3 h-3" />
-                <span className="text-[9px] font-bold tracking-tighter uppercase px-1 border border-vector-magenta/30 neon-border-alert">
-                  {t.encryptedRecord || 'RESTRICTED'}
-                </span>
-              </div>
-            )}
+                ) : undefined
+              }
+            />
           </div>
         </div>
       </motion.div>
@@ -276,20 +217,10 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
         <span
           className={`text-[10px] border px-1.5 py-0.5 rounded-sm font-mono tracking-tighter ${theme === 'light' ? 'text-vector-slate-soft border-vector-cyan-brand/10' : 'text-green-800 border-green-900/40'}`}
         >
-          {new Date(entry.createdAt).toLocaleDateString()}
+          {formatDateDots(entry.createdAt)}
         </span>
       </div>
-      <h4
-        className={`font-bold mb-2 tracking-tight text-sm ${theme === 'light' ? 'text-vector-ink-strong group-hover/item:text-vector-cyan-brand' : 'text-cyan-100 group-hover/item:text-cyan-50'}`}
-      >
-        {entry.title}
-      </h4>
-      <ArchiveAttachmentPreview entry={entry} theme={theme} />
-      <p
-        className={`mt-3 whitespace-pre-wrap break-words text-sm leading-7 ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}
-      >
-        {entry.content}
-      </p>
+      <PastEntryPreview entry={entry} variant="archive-grid" theme={theme} />
       <div className="flex items-center justify-end border-t border-dashed mt-4 pt-2 border-vector-cyan-brand/5">
         <span
           className={`text-[8px] font-black uppercase tracking-tighter sm:opacity-0 group-hover/item:opacity-100 transition-opacity ${isTimeLocked ? 'text-vector-magenta neon-glow-alert' : 'text-teal-500'}`}

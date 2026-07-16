@@ -1,5 +1,9 @@
 # Memoir Long-Term Memory System
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](../README.md), [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md), and [docs/archive/README.md](./archive/README.md).
+
+
 > Phase 4 Week 4-5 design note. Companion to
 > [`docs/product-vision-2026Q2.md`](./product-vision-2026Q2.md) §5.1.B
 > and the Week 3 + Week 3.5 entries in

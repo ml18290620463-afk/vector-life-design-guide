@@ -4,7 +4,7 @@ import {
   parseBackupImport,
   type BackupParseFailure,
 } from '../services/dashboardImport';
-import type { CustomPersona, DiaryEntry, Memory } from '../types';
+import type { DiaryEntry } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 
 export type BackupImportMode = 'merge' | 'replace';
@@ -30,13 +30,6 @@ export interface UseBackupImportArgs {
   confirm?: (message: string) => boolean | Promise<boolean>;
   /** Pluggable error reporter so callers can wire Sentry / lib/error. */
   reportError?: (error: unknown) => void;
-  /** Phase 4 §5.1.A — restore custom 启明星 from a v2+ backup. Called
-   *  once `onImportBackup` resolves successfully. Optional: callers
-   *  that don't pass it match the legacy "entries-only" import shape. */
-  onImportCustomPersonas?: (personas: CustomPersona[]) => Promise<void> | void;
-  /** Phase 4 §5.1.B — restore Memoir long-term memories from a v3+
-   *  backup. Same posture as `onImportCustomPersonas`. */
-  onImportMemories?: (memories: Memory[]) => Promise<void> | void;
 }
 
 const REASON_LABEL_KEYS: Record<BackupParseFailure, string> = {
@@ -69,8 +62,6 @@ export const useBackupImport = ({
       ? window.confirm(message)
       : true,
   reportError,
-  onImportCustomPersonas,
-  onImportMemories,
 }: UseBackupImportArgs) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<BackupImportStatus | null>(null);
@@ -111,18 +102,6 @@ export const useBackupImport = ({
         }
 
         const summary = await onImportBackup(parsed.entries, 'merge');
-        // Phase 4 §5.1.A / §5.1.B — restore the v2+ `customPersonas`
-        // and v3+ `memories` arrays alongside the entries. Both are
-        // optional callbacks so legacy callers (that only wired the
-        // entries restore) keep compiling — they just lose the
-        // persona / memory carry-over on those callsites until they
-        // pass the new handlers.
-        if (onImportCustomPersonas && parsed.customPersonas.length > 0) {
-          await Promise.resolve(onImportCustomPersonas(parsed.customPersonas));
-        }
-        if (onImportMemories && parsed.memories.length > 0) {
-          await Promise.resolve(onImportMemories(parsed.memories));
-        }
         const successTemplate = t.importSuccess ?? 'Imported {count} entries (now {total} total).';
         setStatus({
           kind: 'success',
@@ -140,7 +119,7 @@ export const useBackupImport = ({
         resetInput();
       }
     },
-    [onImportBackup, onImportCustomPersonas, onImportMemories, t, confirm, reportError, resetInput],
+    [onImportBackup, t, confirm, reportError, resetInput],
   );
 
   return {

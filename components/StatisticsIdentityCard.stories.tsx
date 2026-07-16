@@ -12,14 +12,12 @@ const meta = {
     theme: { control: 'inline-radio', options: ['dark', 'light'] },
     isUnlocked: { control: 'boolean' },
     customIdentity: { control: 'text' },
-    dynamicVersion: { control: 'text' },
   },
   args: {
     theme: 'dark',
     t: tZh,
     customIdentity: 'Captain Marlow',
     setCustomIdentity: fn(),
-    dynamicVersion: 'v1.0.5 — Stardust',
     isUnlocked: true,
     onOpenSecuritySetup: fn(),
   },
@@ -28,8 +26,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Default rendering: encrypted vault is unlocked, custom
- *  identity is filled in, dynamic version label visible. */
+/** Default rendering: encrypted vault is unlocked and identity is filled in. */
 export const UnlockedDark: Story = {};
 
 /** Light-mode paper variant. */

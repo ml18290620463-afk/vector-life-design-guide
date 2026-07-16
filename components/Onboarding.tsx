@@ -70,9 +70,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     'idle' | 'rendering' | 'success' | 'error'
   >('idle');
   const [issueFlash, setIssueFlash] = useState(false);
-  const [releasePhase, setReleasePhase] = useState<'calibration' | 'backup' | 'entry'>(
-    'calibration',
-  );
+  const [releasePhase, setReleasePhase] = useState<'calibration' | 'backup'>('calibration');
   const credentialCardRef = useRef<HTMLDivElement | null>(null);
   const completingOnboardingRef = useRef(false);
   const recoveryKeyRef = useRef(recoveryKey);
@@ -114,27 +112,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({
   const hasIssuedAccessPass = Boolean(recoveryKey && credentialExportStatus === 'success');
   const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
 
-  const entryChecklist = useMemo(
-    () =>
-      language === 'zh'
-        ? [
-            {
-              label: '密令已确认',
-              done: getPasswordStrength(password) === 100 && password === confirmPassword,
-            },
-            { label: '恢复私钥已签发', done: Boolean(recoveryKey) },
-            { label: '离线凭证已保存', done: hasIssuedAccessPass },
-          ]
-        : [
-            {
-              label: 'Access code confirmed',
-              done: getPasswordStrength(password) === 100 && password === confirmPassword,
-            },
-            { label: 'Recovery key issued', done: Boolean(recoveryKey) },
-            { label: 'Offline pass saved', done: hasIssuedAccessPass },
-          ],
-    [hasIssuedAccessPass, language, password, confirmPassword, recoveryKey],
-  );
   const isCredentialInputReady = validatePassword(password) && password === confirmPassword;
   const accessPassCopy = useMemo(() => {
     const copy = {
@@ -660,17 +637,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         title: language === 'zh' ? '保存离线凭证' : 'Save offline pass',
         subtitle:
           language === 'zh'
-            ? '请将恢复私钥导出为离线图片。保存成功后再前往进入界面。'
-            : 'Export your recovery key as an offline image before continuing to the entry screen.',
-      };
-    }
-    if (releasePhase === 'entry') {
-      return {
-        title: language === 'zh' ? '进入入口' : 'Entry gate',
-        subtitle:
-          language === 'zh'
-            ? '离线凭证已保存。确认后进入主界面。'
-            : 'Your offline pass is saved. Confirm below to enter the app.',
+            ? '请将恢复私钥导出为离线图片。保存成功后即可进入主界面。'
+            : 'Export your recovery key as an offline image before entering the app.',
       };
     }
     return { title: onboardingCopy.title, subtitle: onboardingCopy.subtitle };
@@ -798,9 +766,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     if (completingOnboardingRef.current) return;
 
     const activeRecoveryKey = recoveryKeyRef.current;
-    const backupReady = Boolean(
-      activeRecoveryKey && credentialExportStatusRef.current === 'success',
-    );
+    const backupReady = Boolean(activeRecoveryKey);
 
     completingOnboardingRef.current = true;
     setIsCompletingOnboarding(true);
@@ -821,32 +787,22 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       resetEnteringState();
       return;
     }
-    if (releasePhase !== 'entry') {
-      setError(
-        language === 'zh' ? '请先完成凭证保存并前往进入界面' : 'Complete the backup step first.',
-      );
-      resetEnteringState();
-      return;
-    }
+    void SecurityService.hashRecoveryKey(activeRecoveryKey)
+      .then((recoveryHash) => {
+        const saved = setStoredString(AppStorageKeys.recoveryVerifier, recoveryHash);
+        if (!saved) {
+          console.warn('Onboarding: recovery verifier could not be persisted');
+        }
+      })
+      .catch((err) => console.warn('Onboarding: recovery verifier failed', err));
 
     try {
-      const recoveryHash = await SecurityService.hashRecoveryKey(activeRecoveryKey);
-      setStoredString(AppStorageKeys.recoveryVerifier, recoveryHash);
       await onComplete(password, [], []);
     } catch (err) {
       console.warn('Onboarding: complete failed', err);
       setError(language === 'zh' ? '进入失败，请再试一次' : 'Could not enter. Please try again.');
       resetEnteringState();
     }
-  };
-
-  const handleContinueToEntry = () => {
-    if (!hasIssuedAccessPass) {
-      setError(onboardingCopy.savePngFirst);
-      return;
-    }
-    setError(null);
-    setReleasePhase('entry');
   };
 
   const handleEnterApp = () => {
@@ -871,6 +827,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       await downloadBlob(blob, sanitizeDownloadFilename(`VECTOR_ACCESS_PASS_${Date.now()}.png`));
       setCredentialExportStatus('success');
       credentialExportStatusRef.current = 'success';
+      window.scrollTo(0, 0);
+      requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>('.onboarding-frame')?.scrollTo(0, 0);
+        document.querySelector<HTMLElement>('.onboarding-step')?.scrollTo(0, 0);
+      });
     } catch (err) {
       console.warn('Onboarding: credential PNG export failed', err);
       setCredentialExportStatus('error');
@@ -896,7 +857,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         <div className="pointer-events-none absolute -left-16 top-16 h-36 w-36 rounded-full border border-cyan-300/10" />
         <div className="pointer-events-none absolute -right-20 bottom-24 h-44 w-44 rounded-full border border-indigo-300/10" />
 
-        <div className="flex flex-col">
+        <div className="onboarding-step-stack flex flex-col">
           <motion.div
             key="step1"
             initial={{ opacity: 0, x: -20 }}
@@ -1662,33 +1623,48 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         {recoveryKey}
                       </div>
                     </div>
-                    {!hasIssuedAccessPass ? (
-                      <motion.button
-                        type="button"
-                        data-testid="onboarding-save-png"
-                        onClick={() => {
-                          void issueCredentialAsPng();
-                        }}
-                        disabled={credentialExportStatus === 'rendering'}
-                        className="relative mt-3 inline-flex w-full items-center justify-center gap-3 rounded-full border border-cyan-400/40 bg-cyan-400/12 px-4 py-4 text-sm uppercase tracking-[0.18em] text-cyan-100"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span>
-                          {credentialExportStatus === 'rendering'
-                            ? onboardingCopy.savingPng
+                    <motion.button
+                      type="button"
+                      data-testid="onboarding-save-png"
+                      onClick={() => {
+                        void issueCredentialAsPng();
+                      }}
+                      disabled={credentialExportStatus === 'rendering'}
+                      className="relative mt-3 inline-flex w-full items-center justify-center gap-3 rounded-full border border-cyan-400/40 bg-cyan-400/12 px-4 py-4 text-sm uppercase tracking-[0.18em] text-cyan-100 disabled:cursor-wait disabled:opacity-70"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>
+                        {credentialExportStatus === 'rendering'
+                          ? onboardingCopy.savingPng
+                          : hasIssuedAccessPass
+                            ? onboardingCopy.confirmBackupStatus
                             : onboardingCopy.savePng}
-                        </span>
-                      </motion.button>
-                    ) : (
+                      </span>
+                    </motion.button>
+                    {recoveryKey && (
                       <button
                         type="button"
-                        data-testid="onboarding-continue-entry"
-                        onClick={handleContinueToEntry}
-                        className="relative z-30 mt-3 flex w-full min-h-[48px] items-center justify-center gap-2 rounded-full border border-green-300/36 bg-green-300/10 px-4 py-3 text-sm uppercase tracking-widest text-green-100 touch-manipulation"
+                        data-testid="onboarding-recovery-saved"
+                        data-backup-ready="true"
+                        onClick={handleEnterApp}
+                        disabled={isCompletingOnboarding}
+                        className="onboarding-enter-button relative z-30 mt-3 flex w-full min-h-[48px] items-center justify-center gap-2 rounded-full border border-green-300/36 bg-green-300/10 px-4 py-3 text-sm uppercase tracking-widest text-green-100 touch-manipulation disabled:cursor-wait disabled:opacity-70"
                       >
-                        <Check className="h-4 w-4" />
-                        <span>{language === 'zh' ? '前往进入界面' : 'Continue to entry'}</span>
-                        <ArrowRight className="h-4 w-4" />
+                        {isCompletingOnboarding ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border border-white border-t-transparent" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                        <span>
+                          {isCompletingOnboarding
+                            ? language === 'zh'
+                              ? '正在进入...'
+                              : 'Entering...'
+                            : language === 'zh'
+                              ? '进入主界面'
+                              : 'Enter app'}
+                        </span>
+                        {!isCompletingOnboarding && <ArrowRight className="h-4 w-4" />}
                       </button>
                     )}
                     {credentialExportStatus === 'error' && (
@@ -1696,66 +1672,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         {onboardingCopy.pngError}
                       </div>
                     )}
-                  </div>
-                </motion.div>
-              )}
-
-              {releasePhase === 'entry' && hasIssuedAccessPass && (
-                <motion.div
-                  key="entry-phase"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="onboarding-entry-gate mx-auto w-full max-w-md text-left"
-                  data-testid="onboarding-entry-gate"
-                >
-                  <div className="rounded-[28px] border border-green-300/20 bg-[radial-gradient(circle_at_0%_0%,rgba(134,239,172,0.10),transparent_42%),rgba(0,5,9,0.58)] p-5 font-mono shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-md">
-                    <ul className="space-y-3">
-                      {entryChecklist.map((item) => (
-                        <li
-                          key={item.label}
-                          className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-xs uppercase tracking-widest ${
-                            item.done
-                              ? 'border-green-300/30 bg-green-300/8 text-green-100'
-                              : 'border-cyan-400/14 bg-cyan-400/5 text-cyan-700'
-                          }`}
-                        >
-                          <Check
-                            className={`h-4 w-4 ${item.done ? 'text-green-300' : 'opacity-30'}`}
-                          />
-                          <span>{item.label}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={handleEnterApp}
-                      disabled={isCompletingOnboarding || !hasIssuedAccessPass}
-                      data-testid="onboarding-recovery-saved"
-                      data-backup-ready="true"
-                      className="onboarding-enter-button relative z-30 mt-5 flex w-full min-h-[52px] items-center justify-center gap-3 rounded-full border border-green-300/40 bg-green-300/12 px-4 py-3 text-sm uppercase tracking-[0.2em] text-green-50 touch-manipulation disabled:cursor-wait disabled:opacity-70"
-                    >
-                      {isCompletingOnboarding ? (
-                        <span className="h-4 w-4 animate-spin rounded-full border border-white border-t-transparent" />
-                      ) : (
-                        <ArrowRight className="h-5 w-5" />
-                      )}
-                      <span>
-                        {isCompletingOnboarding
-                          ? language === 'zh'
-                            ? '正在进入...'
-                            : 'Entering...'
-                          : language === 'zh'
-                            ? '进入现在'
-                            : 'Enter now'}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReleasePhase('backup')}
-                      className="mt-3 w-full text-center text-[10px] uppercase tracking-widest text-cyan-500/80 underline-offset-2 hover:text-cyan-300 hover:underline"
-                    >
-                      {language === 'zh' ? '返回重新保存凭证' : 'Back to save pass again'}
-                    </button>
                   </div>
                 </motion.div>
               )}

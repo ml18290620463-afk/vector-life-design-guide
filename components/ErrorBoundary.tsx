@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { AlertCircle, RotateCcw } from 'lucide-react';
 import { CyberButton } from './CyberButton';
 import { AppError, reportError } from '../lib/error';
+import { generateTraceId } from '../services/idGenerator';
 
 interface Props {
   children: ReactNode;
@@ -12,17 +13,6 @@ interface State {
   hasError: boolean;
   traceId: string | null;
 }
-
-const generateTraceId = (): string => {
-  try {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-      return crypto.randomUUID().split('-')[0].toUpperCase();
-    }
-  } catch {
-    // fall through
-  }
-  return Math.random().toString(36).slice(2, 10).toUpperCase();
-};
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {

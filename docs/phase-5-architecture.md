@@ -1,5 +1,9 @@
 # Phase 5 — Architecture decision document
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](../README.md), [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md), and [docs/archive/README.md](./archive/README.md).
+
+
 > **Status**: Approved by the user on 2026-05-03.
 > **Owner**: VECTOR maintainer.
 > **Companion docs**: [`phase-5-sku-matrix.md`](./phase-5-sku-matrix.md),
@@ -10,11 +14,12 @@
 > **Status of code**: This is a **decision-only document**. Phase 5
 > code starts in §5.1. No production secrets are checked in.
 
-This document locks the architecture for VECTOR's commercialisation
-phase. It is the **single source of truth** every later Phase 5
-sprint (§5.1 - §5.9) reads from. Changes here require an explicit
-re-approval; sub-sprints don't get to retroactively change billing
-provider, SKU shape, account model, or the zero-knowledge invariant.
+This document records the architecture that was approved for VECTOR's
+earlier commercialisation phase. It was the **single source of truth**
+for that historical Phase 5 plan; it is not the current product truth
+after the cleanup pass. Current product-facing billing and capability
+descriptions live in `README.md`, `PROJECT_OVERVIEW.md`, and the active
+pricing/i18n files.
 
 ---
 

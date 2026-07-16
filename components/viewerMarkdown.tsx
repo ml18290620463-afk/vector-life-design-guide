@@ -18,8 +18,7 @@ const Blocked: React.FC<{ label: string }> = ({ label }) => (
  * Markdown component overrides for the entry viewer. Extracted from Viewer.tsx
  * so the schema-specific renderers (audio/video/pdf/img) live close to the
  * URL-scheme allow lists in `lib/markdownSchemes.ts`. Behaviour is unchanged;
- * the only difference is that this module is now independently testable and
- * can be reused by MorningStarPanel without dragging the whole Viewer in.
+ * the only difference is that this module is now independently testable.
  */
 export const buildViewerMarkdownComponents = (theme: Theme): Components => ({
   a: (props) => {

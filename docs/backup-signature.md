@@ -1,5 +1,9 @@
 # Backup integrity (Ed25519 signed migration packages)
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](../README.md), [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md), and [docs/archive/README.md](./archive/README.md).
+
+
 > Phase 4 §4.b-3. Companion design note for `services/deviceKeypair.ts`,
 > `services/backupSignature.ts`, `services/trustedDevices.ts`, and the
 > Phase 4.5 §E migration wizard's verify-trust phase. Privacy framing

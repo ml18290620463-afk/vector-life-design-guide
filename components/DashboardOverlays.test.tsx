@@ -7,7 +7,6 @@ const t = TRANSLATIONS.zh;
 
 const baseProps = {
   theme: 'dark' as const,
-  language: 'zh' as const,
   t,
   backupReminderActive: false,
   daysSinceBackup: null as number | null,
@@ -17,12 +16,6 @@ const baseProps = {
   onPwaInstallDismiss: vi.fn(),
   importPending: null as { message: string } | null,
   onResolveImport: vi.fn(),
-  isVerifyingVault: false,
-  vaultPassword: '',
-  setVaultPassword: vi.fn(),
-  vaultError: false,
-  onUnlockVault: vi.fn(),
-  onCancelVault: vi.fn(),
 };
 
 describe('DashboardOverlays', () => {
@@ -53,25 +46,6 @@ describe('DashboardOverlays', () => {
     expect(screen.getByText(/Replace 12 entries\?/)).toBeTruthy();
     fireEvent.click(screen.getByText(t.confirmImport ?? 'Import'));
     expect(onResolveImport).toHaveBeenCalledWith(true);
-  });
-
-  it('renders the vault-unlock modal only when isVerifyingVault is true', () => {
-    const { rerender, container } = render(<DashboardOverlays {...baseProps} />);
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
-    rerender(<DashboardOverlays {...baseProps} isVerifyingVault />);
-    const dialog = container.querySelector('[role="dialog"]');
-    expect(dialog).not.toBeNull();
-    expect(dialog!.getAttribute('aria-modal')).toBe('true');
-  });
-
-  it('typing into the vault password input flows back through setVaultPassword', () => {
-    const setVaultPassword = vi.fn();
-    const { container } = render(
-      <DashboardOverlays {...baseProps} isVerifyingVault setVaultPassword={setVaultPassword} />,
-    );
-    const input = container.querySelector('input[type="password"]') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'pw' } });
-    expect(setVaultPassword).toHaveBeenCalledWith('pw');
   });
 
   it('clicking the banner "open settings" link routes onOpenSettings', () => {

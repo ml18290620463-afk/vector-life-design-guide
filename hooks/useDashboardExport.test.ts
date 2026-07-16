@@ -25,39 +25,11 @@ const baseEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 });
 
 describe('useDashboardExport', () => {
-  it('dynamicVersion encodes year-count.totalEntries.archivedEntries', () => {
-    const { result } = renderHook(() =>
-      useDashboardExport({
-        entries: [
-          baseEntry({ id: 'a', createdAt: Date.UTC(2024, 0, 1) }),
-          baseEntry({ id: 'b', createdAt: Date.UTC(2025, 0, 1) }),
-          baseEntry({ id: 'c', createdAt: Date.UTC(2025, 6, 1), isArchived: true }),
-        ],
-        filteredEntries: [],
-        currentUser: 'me',
-        t,
-        recordBackup: vi.fn(),
-      }),
-    );
-    expect(result.current.dynamicVersion).toBe('v2.3.1');
-  });
-
-  it('dynamicVersion floors yearCount at 1 even for an empty entry list', () => {
-    const { result } = renderHook(() =>
-      useDashboardExport({
-        entries: [],
-        filteredEntries: [],
-        currentUser: null,
-        t,
-        recordBackup: vi.fn(),
-      }),
-    );
-    expect(result.current.dynamicVersion).toBe('v1.0.0');
-  });
-
   it('handleExport triggers downloadTextFile + recordBackup', () => {
     const recordBackup = vi.fn();
-    const downloadSpy = vi.spyOn(fileDownload, 'downloadTextFile').mockImplementation(() => {});
+    const downloadSpy = vi
+      .spyOn(fileDownload, 'downloadTextFile')
+      .mockImplementation(() => Promise.resolve());
     const { result } = renderHook(() =>
       useDashboardExport({
         entries: [baseEntry()],
@@ -69,11 +41,15 @@ describe('useDashboardExport', () => {
     );
     act(() => result.current.handleExport());
     expect(downloadSpy).toHaveBeenCalled();
+    const [content] = downloadSpy.mock.calls[0];
+    expect(JSON.parse(content).version).toBe('1.1.0');
     expect(recordBackup).toHaveBeenCalledTimes(1);
   });
 
   it('handleDownloadNotes triggers downloadTextFile for the active subset', () => {
-    const downloadSpy = vi.spyOn(fileDownload, 'downloadTextFile').mockImplementation(() => {});
+    const downloadSpy = vi
+      .spyOn(fileDownload, 'downloadTextFile')
+      .mockImplementation(() => Promise.resolve());
     const entry = baseEntry({ id: 'one', title: 'Title', content: 'Body' });
     const { result } = renderHook(() =>
       useDashboardExport({

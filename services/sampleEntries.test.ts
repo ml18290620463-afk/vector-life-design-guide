@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getSampleEntries, isSampleId, SAMPLE_PERSONA_PLACEHOLDER } from './sampleEntries';
+import { getSampleEntries, isSampleId } from './sampleEntries';
 
 describe('services/sampleEntries', () => {
   it('returns exactly two seeded reflections per supported language', () => {
@@ -24,26 +24,19 @@ describe('services/sampleEntries', () => {
     }
   });
 
-  it('first sample is the memoir teaser, second is the daily reflection', () => {
+  it('first sample is the family memory, second is the daily reflection', () => {
     // The Dashboard shows newest first; getSampleEntries returns
-    // [memoir, daily] so the more emotionally weighty teaser sits on
-    // top. This pin protects the ordering contract relied on by
-    // `useDiaryData` seeding logic.
+    // [family, daily] so the most recent sample sits on top. This pin
+    // protects the ordering contract relied on by `useDiaryData` seeding.
     const zh = getSampleEntries('zh');
-    expect(zh[0].id).toBe('sample-memoir-zh');
+    expect(zh[0].id).toBe('sample-family-zh');
     expect(zh[1].id).toBe('sample-daily-zh');
   });
 
-  it('memoir teaser uses the placeholder persona, daily uses Camus', () => {
-    const [memoir, daily] = getSampleEntries('zh');
-    expect(memoir.morningStarPersonas).toContain(SAMPLE_PERSONA_PLACEHOLDER);
-    expect(daily.morningStarPersonas).toContain('Albert Camus');
-  });
-
-  it('every sample ships a pre-attached morningStarAnalysis (no live AI call)', () => {
+  it('samples are plain records without retired AI-analysis fields', () => {
     for (const entry of getSampleEntries('zh')) {
-      expect(entry.morningStarAnalysis).toBeTruthy();
-      expect(entry.morningStarAnalysis!.length).toBeGreaterThan(50);
+      expect('morningStarAnalysis' in entry).toBe(false);
+      expect('morningStarPersonas' in entry).toBe(false);
     }
   });
 
@@ -59,9 +52,9 @@ describe('services/sampleEntries', () => {
   it('falls back to English samples for unsupported languages', () => {
     const ja = getSampleEntries('ja');
     expect(ja).toHaveLength(2);
-    // The English memoir teaser id stays as `sample-memoir-en` (not
-    // `sample-memoir-ja`) so consumers can detect the locale fallback.
-    expect(ja[0].id).toBe('sample-memoir-en');
+    // The English family-memory id stays as `sample-family-en` (not
+    // `sample-family-ja`) so consumers can detect the locale fallback.
+    expect(ja[0].id).toBe('sample-family-en');
   });
 
   it('isSampleId correctly classifies user-generated ids', () => {

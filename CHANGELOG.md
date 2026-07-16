@@ -1,10 +1,21 @@
 # Changelog
 
-All notable changes to this project are documented in this file. Format
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](./README.md), [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), and [docs/archive/README.md](./docs/archive/README.md).
+
+
+Historical notable changes to this project are documented in this file. Format
 loosely follows [Keep a Changelog](https://keepachangelog.com/) and
 versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+### Removed
+
+- Removed recording, audio import, browser speech recognition, cloud transcription routes,
+  provider configuration, quotas, and current-product UI. Historical audio entries remain
+  playable for data compatibility; a cost-controlled redesign is documented only as a Phase 2
+  candidate in `ROADMAP.md`.
 
 ### Added (Phase 5.2 — Stripe Checkout (USD), 商业化通路打通)
 
@@ -2697,7 +2708,7 @@ ViewerAttachmentPanel) was migrated in a single sweep using a
   `--color-vector-magenta-bright`, etc.). The value stays at the
   call site for visual review, but every alpha now flows through
   the same `--color-*` graph as the rest of the design system.
-  Both Tailwind arbitrary brackets (`shadow-[0_0_8px_color-mix(in_srgb,_var(...)_30%,_transparent)]`)
+  Both Tailwind arbitrary brackets (`shadow-[0_0_8px_color-mix(in_srgb,_var(--token)_30%,_transparent)]`)
   and inline `style={{ ... }}` strings (with real spaces) are
   handled by the migration script.
 - **Hex inside arbitrary brackets** — converted to either token

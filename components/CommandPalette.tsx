@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Command } from 'cmdk';
 import {
   ArrowLeft,
-  Archive as ArchiveIcon,
-  FilePlus,
   Languages,
   LockKeyhole,
   Moon,
@@ -14,6 +12,8 @@ import {
 } from 'lucide-react';
 import { AppState, type DiaryEntry, type Language, type Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
+import { getMainModules } from '../features/mobile/mainModules';
+import type { MobileMainTab } from '../features/mobile/types';
 
 /**
  * W3.1 — global command palette (⌘K / Ctrl+K).
@@ -45,8 +45,7 @@ export interface CommandPaletteProps {
   appState: AppState;
   t: TranslationDictionary;
   entries: DiaryEntry[];
-  onNewEntry: () => void;
-  onOpenArchive: () => void;
+  onNavigateMainModule: (tab: MobileMainTab) => void;
   onBackToDashboard: () => void;
   onReplayIntro: () => void;
   onSelectEntry: (entry: DiaryEntry) => void;
@@ -76,8 +75,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   appState,
   t,
   entries,
-  onNewEntry,
-  onOpenArchive,
+  onNavigateMainModule,
   onBackToDashboard,
   onReplayIntro,
   onSelectEntry,
@@ -99,6 +97,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   }, [open]);
 
   const recentEntries = useMemo(() => entries.slice(0, RECENT_ENTRIES_CAP), [entries]);
+  const mainModules = useMemo(() => getMainModules(language), [language]);
 
   if (!open) return null;
 
@@ -120,8 +119,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     recent: t.commandPaletteRecent || 'Recent entries',
     languagePage: t.commandPaletteLanguage || 'Language',
     back: t.cancel || 'Back',
-    newEntry: t.newEntry || 'New entry',
-    openArchive: t.archive || 'Open archive',
     backToDashboard: t.dashboard || 'Back to dashboard',
     replayIntro: t.replayIntro || 'Replay intro',
     toggleTheme:
@@ -189,22 +186,24 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           {page === 'root' && (
             <>
               <Command.Group heading={labels.navigation}>
-                {appState !== AppState.EDITOR && (
+                {mainModules.map(({ id, commandLabel, Icon }) => {
+                  const isCurrent =
+                    (id === 'past' && (appState === AppState.PAST || appState === AppState.ARCHIVE)) ||
+                    (id === 'now' &&
+                      (appState === AppState.NOW || appState === AppState.NOW_TAGS)) ||
+                    (id === 'future' && appState === AppState.FUTURE) ||
+                    (id === 'avatar' && appState === AppState.NOW_AVATAR_CHAT);
+                  if (isCurrent) return null;
+                  return (
                   <PaletteItem
+                    key={id}
                     theme={theme}
-                    icon={<FilePlus className="w-4 h-4" />}
-                    label={labels.newEntry}
-                    onSelect={() => run(onNewEntry)}
+                    icon={<Icon className="w-4 h-4" />}
+                    label={commandLabel}
+                    onSelect={() => run(() => onNavigateMainModule(id))}
                   />
-                )}
-                {appState !== AppState.ARCHIVE && (
-                  <PaletteItem
-                    theme={theme}
-                    icon={<ArchiveIcon className="w-4 h-4" />}
-                    label={labels.openArchive}
-                    onSelect={() => run(onOpenArchive)}
-                  />
-                )}
+                  );
+                })}
                 {appState !== AppState.DASHBOARD && (
                   <PaletteItem
                     theme={theme}

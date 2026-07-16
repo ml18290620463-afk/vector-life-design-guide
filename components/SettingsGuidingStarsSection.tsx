@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Plus, Sparkles, Star, X } from 'lucide-react';
+import { Plus, Star, X } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { CyberButton } from './CyberButton';
@@ -28,15 +28,6 @@ interface SettingsGuidingStarsSectionProps {
   onAddCustomStar: () => void;
   /** Persist the working draft. */
   onSave: () => void;
-  /** Phase 4 §5.1.A — open the AI-assisted Persona Builder modal.
-   *  Renders an extra "Sparkles + AI 启明星" CTA next to the existing
-   *  "+ free-text" affordance. Optional so legacy callers compile. */
-  onOpenPersonaBuilder?: () => void;
-  /** Phase 4 §5.1.B — open the Memoir (心象) Builder modal. Renders
-   *  a separate Heart-icon CTA so users perceive Memoirs as a
-   *  distinct, weightier surface from the AI 启明星 builder.
-   *  Optional so legacy callers compile. */
-  onOpenMemoirBuilder?: () => void;
 }
 
 /**
@@ -59,8 +50,6 @@ export const SettingsGuidingStarsSection: React.FC<SettingsGuidingStarsSectionPr
   onDeleteCustomStar,
   onAddCustomStar,
   onSave,
-  onOpenPersonaBuilder,
-  onOpenMemoirBuilder,
 }) => (
   <div
     className={`rounded-2xl border p-6 space-y-4 transition-all ${theme === 'light' ? 'bg-white/80 border-slate-100 shadow-sm' : 'bg-black/40 border-cyan-900/20'}`}
@@ -145,28 +134,6 @@ export const SettingsGuidingStarsSection: React.FC<SettingsGuidingStarsSectionPr
             <Plus className="w-3 h-3" />
           </CyberButton>
         </div>
-        {onOpenPersonaBuilder && (
-          <button
-            type="button"
-            onClick={onOpenPersonaBuilder}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border-2 border-dashed transition-colors ${theme === 'light' ? 'border-vector-cyan-brand/30 text-vector-cyan-brand hover:bg-vector-cyan-brand/5' : 'border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10'}`}
-            data-testid="open-persona-builder"
-          >
-            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-            {t.personaBuilderTitle ?? 'Add a custom guiding star'}
-          </button>
-        )}
-        {onOpenMemoirBuilder && (
-          <button
-            type="button"
-            onClick={onOpenMemoirBuilder}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border-2 border-dashed transition-colors ${theme === 'light' ? 'border-rose-300/60 text-rose-500 hover:bg-rose-50' : 'border-rose-500/40 text-rose-300 hover:bg-rose-500/10'}`}
-            data-testid="open-memoir-builder"
-          >
-            <Heart className="w-3.5 h-3.5" aria-hidden="true" />
-            {t.memoirBuilderTitle ?? 'Create a memoir'}
-          </button>
-        )}
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={() => setIsEditing(false)}

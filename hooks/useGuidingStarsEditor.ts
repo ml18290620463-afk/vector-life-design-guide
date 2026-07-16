@@ -69,8 +69,7 @@ export const useGuidingStarsEditor = ({
   // Whenever the settings drawer closes, snap temp state back to the
   // persisted values so the next opening starts from a clean slate.
   // We compare arrays by content (join) to avoid the "new array reference
-  // every render → infinite reset loop" trap that bit `useMorningStarPipeline`
-  // in Phase 2 §2.b.
+  // every render → infinite reset loop" trap.
   const guidingKey = guidingStars.join('|');
   const selectedKey = selectedStars.join('|');
   useEffect(() => {

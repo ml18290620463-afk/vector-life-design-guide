@@ -21,11 +21,12 @@ public chat. Instead:
 
 ## In scope / 漏洞范围
 
-- The Express AI proxy (`server.ts`, `server/aiProxyAuth.ts`,
-  `server/promptEnvelope.ts`).
+- The Express backend (`server.ts`, `server/aiProxyAuth.ts`) including
+  origin allow-listing, bearer-token protection, avatar summary,
+  model listing, and billing routes.
 - Cryptographic primitives in `services/securityService.ts`.
-- Browser storage and migration logic in `hooks/useDiaryData.ts` and
-  `services/diaryStorage.ts`, `services/diaryMigration.ts`.
+- Browser storage and legacy-entry import logic in `hooks/useDiaryData.ts`
+  and `services/diaryStorage.ts`, `services/diaryMigration.ts`.
 - The default Dockerfile / docker-compose / nginx sample under `deploy/`.
 - Markdown / attachment rendering surface (`components/viewerMarkdown.tsx`,
   `components/ViewerAttachmentPanel.tsx`, `components/PdfAttachmentViewer.tsx`).

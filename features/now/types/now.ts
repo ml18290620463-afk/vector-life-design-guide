@@ -9,6 +9,7 @@ export interface Material {
     width?: number;
     height?: number;
     duration_ms?: number;
+    mime_type?: string;
     title?: string;
   };
   sort_order: number;

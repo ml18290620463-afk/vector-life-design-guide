@@ -10,8 +10,6 @@ import { SettingsMaterialSection } from './SettingsMaterialSection';
 import { SettingsScanRepair } from './SettingsScanRepair';
 import { SettingsBackupSection } from './SettingsBackupSection';
 import { SettingsWipeSection } from './SettingsWipeSection';
-import { FingerprintQr } from './FingerprintQr';
-import { MemoirsPickerSection } from './MemoirsPickerSection';
 import { LicenseSection } from './LicenseSection';
 import type { CurrentTier } from '../hooks/useLicense';
 import type { LicensePayload } from '../services/licenseToken';
@@ -29,7 +27,6 @@ interface SettingsPanelProps {
   passwordHash: string | null;
   customIdentity: string;
   setCustomIdentity: (ident: string) => void;
-  dynamicVersion: string;
   isUnlocked: boolean;
   onSetTheme: (theme: Theme) => void;
   onSetLanguage: (lang: Language) => void;
@@ -57,13 +54,6 @@ interface SettingsPanelProps {
   handleAddCustomStar: () => void;
   handleSaveStars: () => void;
   selectedStars: string[];
-  /** Phase 4 §5.1.A — handler for the "AI 启明星" CTA inside the
-   *  star editor. Optional so legacy callers compile without
-   *  modification. */
-  onOpenPersonaBuilder?: () => void;
-  /** Phase 4 §5.1.B — handler for the "心象 (Memoir)" CTA inside the
-   *  star editor. Optional. */
-  onOpenMemoirBuilder?: () => void;
 
   // Material / staged upload
   mediaInputRef: React.RefObject<HTMLInputElement | null>;
@@ -113,41 +103,6 @@ interface SettingsPanelProps {
     mergedContainers: number;
     error?: string;
   } | null;
-
-  /** Phase 4.5 §E — open the cross-device migration EXPORT modal
-   *  (mounted on Dashboard so it can read live entries / personas
-   *  / memories / letters). Optional. */
-  onOpenMigrationExport?: () => void;
-  /** Phase 4.5 §E — open the cross-device migration IMPORT wizard
-   *  (mounted on App). Optional. */
-  onOpenMigrationImport?: () => void;
-
-  /** Phase 4 §4.b-3 — current device fingerprint (16-char string
-   *  like `ABCD-EFGH-IJKL-MNOP`). When null, no keypair has been
-   *  generated yet (pre-§4.b-3 install / wiped). Surfaced in the
-   *  Settings migration row so users can read it on their source
-   *  device when the target wizard asks "is this your device?". */
-  deviceFingerprint?: string | null;
-  /** Phase 4 §4.b-3 — when set, the modal exposes a "Regenerate
-   *  device keys" CTA. Wraps `regenerateDeviceKeypair(password)`
-   *  on the App layer. */
-  onRegenerateDeviceKeys?: () => Promise<void> | void;
-
-  /** Phase 4 §4.b-3 follow-up (K1) — open the Trusted Devices
-   *  panel for revoke / relabel. Optional: hidden when the
-   *  callback is omitted (legacy storybook stories etc.). */
-  onOpenTrustedDevices?: () => void;
-
-  /** Phase 4.5 §E follow-up (L1) — full custom-persona list (the
-   *  picker section filters down to `kind === 'memoir'`). When
-   *  omitted, the picker section is hidden. */
-  customPersonas?: import('../types').CustomPersona[];
-  /** Phase 4.5 §E follow-up (L1) — open the Memory Management
-   *  panel (Phase 4 W3 + F2 cascade) for the picked memoir id. */
-  onOpenMemoirMemories?: (memoirId: string) => void;
-  /** Phase 4.5 §E follow-up (L1) — open the Letter History panel
-   *  (Phase 4.5 F1) for the picked memoir id. */
-  onOpenMemoirLetters?: (memoirId: string) => void;
 
   /** Phase 5 §5.1 — license / subscription state, plumbed from
    *  `useLicense`. When ALL three of `licenseInstallId` /
@@ -257,7 +212,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
                 onSetLanguage={props.onSetLanguage}
                 customIdentity={props.customIdentity}
                 setCustomIdentity={props.setCustomIdentity}
-                dynamicVersion={props.dynamicVersion}
                 isUnlocked={props.isUnlocked}
                 onSetTheme={props.onSetTheme}
                 setSecurityMode={props.setSecurityMode}
@@ -280,8 +234,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
                 onDeleteCustomStar={props.handleDeleteCustomStar}
                 onAddCustomStar={props.handleAddCustomStar}
                 onSave={props.handleSaveStars}
-                onOpenPersonaBuilder={props.onOpenPersonaBuilder}
-                onOpenMemoirBuilder={props.onOpenMemoirBuilder}
               />
 
               <SettingsMaterialSection
@@ -323,130 +275,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
                   onImportBackup={props.handleImportBackup}
                   importStatus={props.importStatus}
                 />
-
-                {/* Phase 4.5 §E — cross-device migration entries.
-                    Two thin CTAs sit between Backup and Wipe so the
-                    user reads them as "Move device-to-device" rather
-                    than as a backup variant. The buttons are
-                    skipped when the consumer didn't pass the
-                    callbacks (legacy hosts / storybook). */}
-                {(props.onOpenMigrationExport || props.onOpenMigrationImport) && (
-                  <div
-                    className={`flex flex-col gap-2 border rounded-lg p-3 ${props.theme === 'light' ? 'bg-amber-50/40 border-amber-200' : 'bg-amber-500/5 border-amber-500/30'}`}
-                    data-testid="settings-migration-row"
-                  >
-                    <p
-                      className={`text-[11px] font-bold uppercase tracking-widest ${props.theme === 'light' ? 'text-amber-900/80' : 'text-amber-200/80'}`}
-                    >
-                      {(t.migrationSettingsTitle as string) ?? 'Cross-device migration'}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {props.onOpenMigrationExport && (
-                        <button
-                          type="button"
-                          onClick={props.onOpenMigrationExport}
-                          className={`text-[11px] px-3 py-2 rounded-md border transition-colors ${props.theme === 'light' ? 'bg-white border-amber-200 hover:border-amber-300 text-amber-900' : 'bg-vector-night-deep/40 border-amber-500/30 hover:border-amber-500/50 text-amber-200'}`}
-                          data-testid="settings-migration-export-cta"
-                        >
-                          {(t.migrationExportTitle as string) ?? 'Migrate to a new device'}
-                        </button>
-                      )}
-                      {props.onOpenMigrationImport && (
-                        <button
-                          type="button"
-                          onClick={props.onOpenMigrationImport}
-                          className={`text-[11px] px-3 py-2 rounded-md border transition-colors ${props.theme === 'light' ? 'bg-white border-amber-200 hover:border-amber-300 text-amber-900' : 'bg-vector-night-deep/40 border-amber-500/30 hover:border-amber-500/50 text-amber-200'}`}
-                          data-testid="settings-migration-import-cta"
-                        >
-                          {(t.migrationImportTitle as string) ?? 'Migrate from another device'}
-                        </button>
-                      )}
-                    </div>
-                    {/* Phase 4 §4.b-3 — device fingerprint chip */}
-                    {props.deviceFingerprint && (
-                      <div
-                        className={`mt-1 pt-2 border-t ${props.theme === 'light' ? 'border-amber-200' : 'border-amber-500/20'}`}
-                        data-testid="settings-device-fingerprint"
-                      >
-                        <p
-                          className={`text-[10px] uppercase tracking-widest mb-1 ${props.theme === 'light' ? 'text-amber-900/60' : 'text-amber-200/60'}`}
-                        >
-                          {(t.deviceFingerprintLabel as string) ?? 'This device fingerprint'}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <p
-                            className={`flex-1 text-xs font-mono font-bold tracking-[0.25em] ${props.theme === 'light' ? 'text-amber-900' : 'text-amber-200'}`}
-                          >
-                            {props.deviceFingerprint}
-                          </p>
-                          {/* K2 — QR for one-glance scan from another device. */}
-                          <FingerprintQr
-                            fingerprint={props.deviceFingerprint}
-                            size={80}
-                            ariaLabel={
-                              (t.fingerprintQrAria as string | undefined)?.replace(
-                                '{fingerprint}',
-                                props.deviceFingerprint,
-                              ) ?? `QR of fingerprint ${props.deviceFingerprint}`
-                            }
-                            className={
-                              props.theme === 'light' ? 'text-amber-900' : 'text-amber-200'
-                            }
-                          />
-                        </div>
-                        <p
-                          className={`text-[10px] mt-1 ${props.theme === 'light' ? 'text-amber-900/60' : 'text-amber-200/60'}`}
-                        >
-                          {(t.deviceFingerprintHint as string) ??
-                            'Read this on your other device when the migration wizard asks to confirm the source.'}
-                        </p>
-                        <div className="flex flex-wrap gap-3 mt-2">
-                          {props.onRegenerateDeviceKeys && (
-                            <button
-                              type="button"
-                              onClick={() => void props.onRegenerateDeviceKeys?.()}
-                              className={`text-[10px] underline-offset-4 hover:underline ${props.theme === 'light' ? 'text-amber-900/60 hover:text-amber-900' : 'text-amber-200/60 hover:text-amber-200'}`}
-                              data-testid="settings-regenerate-device-keys"
-                            >
-                              {(t.regenerateDeviceKeys as string) ?? 'Regenerate device keys'}
-                            </button>
-                          )}
-                          {props.onOpenTrustedDevices && (
-                            <button
-                              type="button"
-                              onClick={() => props.onOpenTrustedDevices?.()}
-                              className={`text-[10px] underline-offset-4 hover:underline ${props.theme === 'light' ? 'text-amber-900/60 hover:text-amber-900' : 'text-amber-200/60 hover:text-amber-200'}`}
-                              data-testid="settings-open-trusted-devices"
-                              aria-label={
-                                (t.trustedDevicesOpenAria as string) ?? 'Open trusted devices list'
-                              }
-                            >
-                              {(t.trustedDevicesOpenLabel as string) ?? 'Trusted devices'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Phase 4.5 §E follow-up (L1) — Memoirs picker.
-                    Only renders when both callbacks are wired AND
-                    the persona list contains at least one memoir.
-                    The section itself returns null when the
-                    filter yields zero rows, so we don't have to
-                    duplicate the no-memoir guard here. */}
-                {props.customPersonas &&
-                  props.onOpenMemoirMemories &&
-                  props.onOpenMemoirLetters && (
-                    <MemoirsPickerSection
-                      theme={props.theme}
-                      t={t}
-                      personas={props.customPersonas}
-                      onOpenMemories={props.onOpenMemoirMemories}
-                      onOpenLetters={props.onOpenMemoirLetters}
-                    />
-                  )}
 
                 {/* Phase 5 §5.1 — license / subscription card. */}
                 {props.licenseInstallId && props.onActivateLicense && props.onDeactivateLicense && (

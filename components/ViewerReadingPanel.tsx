@@ -9,11 +9,6 @@ import { CyberButton } from './CyberButton';
 import { DecryptionText } from './DecryptionText';
 import { ViewerAttachmentPanel } from './ViewerAttachmentPanel';
 import { ViewerActionFooter } from './ViewerActionFooter';
-import type {
-  MorningStarAnalyzeInput,
-  ParsedMorningStarAnalysis,
-} from '../hooks/useMorningStarPipeline';
-import type { PostEngraveDestination } from './Editor';
 
 interface DecodedStar {
   top: string;
@@ -24,7 +19,6 @@ interface DecodedStar {
 
 export type BurnMode = 'idle' | 'confirm' | 'igniting' | 'burning' | 'ashed';
 export type ArchiveState = 'idle' | 'scanning' | 'uploading' | 'completed';
-export type ReadingStep = 'reading' | 'reflecting' | 'evaluation';
 
 interface ViewerReadingPanelProps {
   theme: Theme;
@@ -45,22 +39,6 @@ interface ViewerReadingPanelProps {
   /** Phase 3 §3.h — open the share-card preview / export modal.
    *  Optional so existing tests / call sites compile unchanged. */
   onShareCard?: () => void;
-  // Morning Star
-  guidingStars: string[];
-  readingStep: ReadingStep;
-  setReadingStep: (step: ReadingStep) => void;
-  reflectionText: string;
-  setReflectionText: (value: string) => void;
-  morningStarPersonas: string[];
-  setMorningStarPersonas: (personas: string[]) => void;
-  morningStarLoading: boolean;
-  morningStarError: string | null;
-  /** W2.4 — incremental SSE preview text. Empty when streaming is off. */
-  morningStarStreamingPreview?: string;
-  parsedAnalysis: ParsedMorningStarAnalysis | null;
-  postEngraveDestination?: PostEngraveDestination | null;
-  onAnalyze: (input?: MorningStarAnalyzeInput) => void | Promise<void>;
-  onDeleteAnalysis: () => void;
   // Burn / nav
   onBack: () => void;
   /** Footer "burn" button — moves into the confirmation overlay. */
@@ -97,10 +75,10 @@ const computeContainerStyles = (burnMode: BurnMode, archiveState: ArchiveState):
 
 /**
  * The decrypted "letter open" view: header / metadata / Markdown body /
- * attachment / Morning Star / action footer / burn confirmation overlay.
+ * attachment / action footer / burn confirmation overlay.
  *
  * Pure stateless — every interaction goes back to the parent's hooks
- * (`useViewerAccess`, `useMorningStarPipeline`) so the panel can be
+ * (`useViewerAccess`) so the panel can be
  * mounted/unmounted by `AnimatePresence` without losing workflow state.
  */
 export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
@@ -119,7 +97,6 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   onMoveToContainer,
   onArchiveOrRestore,
   onDownload,
-  readingStep,
   onBack,
   onRequestBurn,
   onCancelBurn,
@@ -277,29 +254,6 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
       </div>
 
       <div className="relative z-10">
-        {/* Phase 4.5 follow-ups (F3) — Echo Chamber preface.
-            When the user opens an entry that captured a round-table
-            session (`entry.isEchoChamber === true`), surface the
-            **original question** they asked at the very top so the
-            consensus / divergence body has its anchor. The block
-            uses a quiet bordered card to read as "context", not
-            content. */}
-        {entry.isEchoChamber && entry.echoChamberQuery && decrypted && (
-          <div
-            className={`mb-6 p-4 rounded-md border-l-4 ${theme === 'light' ? 'bg-vector-cyan-brand/5 border-vector-cyan-brand/40 text-vector-slate-soft' : 'bg-cyan-500/5 border-cyan-500/40 text-cyan-200/80'}`}
-            data-testid="viewer-echo-preface"
-          >
-            <p
-              className={`text-[10px] uppercase tracking-widest mb-1 font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-300'}`}
-            >
-              {(t.echoChamberPrefaceLabel as string) ?? 'Round-table prompt'}
-            </p>
-            <p className="text-[13px] italic leading-relaxed whitespace-pre-wrap">
-              {entry.echoChamberQuery}
-            </p>
-          </div>
-        )}
-
         {decrypted ? (
           <div className="space-y-6">
             <div
@@ -327,24 +281,21 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
         )}
       </div>
 
-      {decrypted &&
-        burnMode === 'idle' &&
-        archiveState === 'idle' &&
-        (readingStep === 'reading' || readingStep === 'evaluation') && (
-          <ViewerActionFooter
-            theme={theme}
-            t={t}
-            entry={entry}
-            containers={containers}
-            showPackingMenu={showPackingMenu}
-            onTogglePackingMenu={onTogglePackingMenu}
-            onMoveToContainer={onMoveToContainer}
-            onArchiveOrRestore={onArchiveOrRestore}
-            onDownload={onDownload}
-            onRequestBurn={onRequestBurn}
-            onShareCard={onShareCard}
-          />
-        )}
+      {decrypted && burnMode === 'idle' && archiveState === 'idle' && (
+        <ViewerActionFooter
+          theme={theme}
+          t={t}
+          entry={entry}
+          containers={containers}
+          showPackingMenu={showPackingMenu}
+          onTogglePackingMenu={onTogglePackingMenu}
+          onMoveToContainer={onMoveToContainer}
+          onArchiveOrRestore={onArchiveOrRestore}
+          onDownload={onDownload}
+          onRequestBurn={onRequestBurn}
+          onShareCard={onShareCard}
+        />
+      )}
 
       <AnimatePresence>
         {burnMode === 'confirm' && (

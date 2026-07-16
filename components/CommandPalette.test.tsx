@@ -16,9 +16,7 @@ const baseT: TranslationDictionary = {
   toggleTheme: 'Toggle theme',
   switchLanguage: 'Switch language',
   lockVault: 'Lock vault',
-  newEntry: 'New entry',
   replayIntro: 'Replay intro',
-  archive: 'Open archive',
   dashboard: 'Back to dashboard',
   wipeData: 'Wipe data',
   cancel: 'Back',
@@ -32,8 +30,7 @@ const baseProps = {
   appState: AppState.DASHBOARD,
   t: baseT,
   entries: [],
-  onNewEntry: vi.fn(),
-  onOpenArchive: vi.fn(),
+  onNavigateMainModule: vi.fn(),
   onBackToDashboard: vi.fn(),
   onReplayIntro: vi.fn(),
   onSelectEntry: vi.fn(),
@@ -64,26 +61,26 @@ describe('CommandPalette', () => {
   it('hides the "back to dashboard" command when already on dashboard', () => {
     render(<CommandPalette {...baseProps} appState={AppState.DASHBOARD} />);
     expect(screen.queryByText('Back to dashboard')).toBeNull();
-    expect(screen.queryByText('New entry')).not.toBeNull();
+    expect(screen.queryByText('Open Now')).not.toBeNull();
   });
 
-  it('hides the "new entry" command when already in editor', () => {
-    render(<CommandPalette {...baseProps} appState={AppState.EDITOR} />);
-    expect(screen.queryByText('New entry')).toBeNull();
-    expect(screen.queryByText('Back to dashboard')).not.toBeNull();
-  });
-
-  it('triggers onNewEntry and closes the palette when the command is selected', () => {
+  it('triggers main-module navigation and closes the palette when the command is selected', () => {
     vi.useFakeTimers();
-    const onNewEntry = vi.fn();
+    const onNavigateMainModule = vi.fn();
     const onOpenChange = vi.fn();
-    render(<CommandPalette {...baseProps} onNewEntry={onNewEntry} onOpenChange={onOpenChange} />);
-    fireEvent.click(screen.getByText('New entry'));
+    render(
+      <CommandPalette
+        {...baseProps}
+        onNavigateMainModule={onNavigateMainModule}
+        onOpenChange={onOpenChange}
+      />,
+    );
+    fireEvent.click(screen.getByText('Open Now'));
     expect(onOpenChange).toHaveBeenCalledWith(false);
     // requestAnimationFrame defers the action; flush it.
     vi.runAllTimers();
     vi.useRealTimers();
-    expect(onNewEntry).toHaveBeenCalledTimes(1);
+    expect(onNavigateMainModule).toHaveBeenCalledWith('now');
   });
 
   it('renders recent entries (capped at 8)', () => {

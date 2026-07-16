@@ -1,5 +1,9 @@
 # VECTOR 产品深度评估报告（投资人视角 · 通俗版）
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](./README.md), [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), and [docs/archive/README.md](./docs/archive/README.md).
+
+
 > **报告人**：投资人 + 工程师 + 设计师三栖视角
 > **被评估对象**：VECTOR 矢量空间启航日志 v1.0.5（截至 2026-05-03，本地 33 commits 待 push）
 > **评估方法**：源码 100% 自读、test 自跑、commit history 全审、UI 通过代码层信号反推（**无法实际运行 + 真人测试**，这是最大局限）

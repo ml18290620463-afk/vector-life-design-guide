@@ -134,7 +134,7 @@ export default [
   // Cover hero is a dense single-screen composition; splitting would churn
   // layout timing. Keep lint strict elsewhere; exempt only this file.
   {
-    files: ['components/CoverScreen.tsx'],
+    files: ['components/CoverScreen.tsx', 'components/KleinBottleFoldSpace.tsx'],
     rules: {
       'max-lines': 'off',
     },

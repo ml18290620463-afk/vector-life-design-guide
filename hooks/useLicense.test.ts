@@ -10,18 +10,20 @@ import { ed } from '../services/edBootstrap';
 import { signLicenseToken, type LicensePayload } from '../services/licenseToken';
 import * as keyringModule from '../lib/licenseKeyring';
 
-const NOW_S = Math.floor(Date.UTC(2026, 4, 1) / 1000);
 const validPayload = (
   installId: string,
   overrides: Partial<LicensePayload> = {},
-): LicensePayload => ({
-  tier: 'stardust',
-  sub: installId,
-  iat: NOW_S - 3600,
-  exp: NOW_S + 30 * 86400,
-  kid: 'test-kid',
-  ...overrides,
-});
+): LicensePayload => {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    tier: 'stardust',
+    sub: installId,
+    iat: now - 3600,
+    exp: now + 30 * 86400,
+    kid: 'test-kid',
+    ...overrides,
+  };
+};
 
 describe('useLicense', () => {
   let secretKey: Uint8Array;

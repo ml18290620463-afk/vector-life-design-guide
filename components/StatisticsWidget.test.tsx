@@ -7,7 +7,6 @@ const mockProps = {
   language: 'zh' as const,
   customIdentity: 'User',
   setCustomIdentity: vi.fn(),
-  dynamicVersion: 'v1.0.0',
   isUnlocked: true,
   onSetTheme: vi.fn(),
   onSetLanguage: vi.fn(),

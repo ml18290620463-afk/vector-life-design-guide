@@ -51,8 +51,6 @@ const defaultProps = {
   onSelectEntry: vi.fn(),
   onUpdateEntry: vi.fn(),
   onBulkUpdateEntries: vi.fn(),
-  onNewEntry: vi.fn(),
-  onOpenArchive: vi.fn(),
   onReplayIntro: vi.fn(),
   onWipeData: vi.fn(),
   onCreateMaterialEntry: vi.fn(),
@@ -65,8 +63,6 @@ const defaultProps = {
   onSaveGuidingStars: vi.fn(),
   selectedStars: [],
   onSaveSelectedStars: vi.fn(),
-  customPersonas: [],
-  onAddCustomPersona: vi.fn(),
   containers: [],
   onAddContainer: vi.fn(),
   onDeleteContainer: vi.fn(),
@@ -86,12 +82,12 @@ describe('Dashboard', () => {
     }
   });
 
-  it('renders correctly with entries in list view', () => {
+  it('renders as a system hub instead of the retired record list', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByText(t.appTitle)).toBeDefined();
-    // In List View, entry titles ARE rendered directly
-    expect(screen.getByText('Test Entry 1')).toBeDefined();
-    expect(screen.getByText('Test Entry 12')).toBeDefined();
+    expect(screen.getByText('系统中心')).toBeDefined();
+    expect(screen.getByTestId('dashboard-system-hub')).toBeDefined();
+    expect(screen.getByText('管理本地数据与运行状态')).toBeDefined();
+    expect(screen.queryByText('Test Entry 1')).toBeNull();
   });
 
   it('does not render the removed header new entry button', () => {
@@ -99,48 +95,23 @@ describe('Dashboard', () => {
     expect(screen.queryByTestId('dashboard-new-entry')).toBeNull();
   });
 
-  it('shows quick capture by default before opening the vault', () => {
+  it('does not duplicate the Now capture surface', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByTestId('quick-capture-bar')).toBeDefined();
-    expect(screen.getByPlaceholderText('快速记录一句此刻想法，然后进入完整编辑...')).toBeDefined();
+    expect(screen.queryByTestId('quick-capture-bar')).toBeNull();
+    expect(screen.queryByText('刻录此刻')).toBeNull();
   });
 
-  it('opens depth selection before entering the editor from quick capture', () => {
+  it('does not duplicate the four main-module navigation', () => {
     render(<Dashboard {...defaultProps} />);
-    fireEvent.change(screen.getByPlaceholderText('快速记录一句此刻想法，然后进入完整编辑...'), {
-      target: { value: '今天有点乱' },
-    });
-    fireEvent.click(screen.getByText('刻录此刻'));
-
-    expect(screen.getByTestId('reflection-depth-modal')).toBeDefined();
-    expect(screen.getByText('第二步')).toBeDefined();
-    expect(screen.getByText('只是放下')).toBeDefined();
-    expect(screen.getByText('陪我理一理')).toBeDefined();
-    expect(screen.getByText('帮我看清')).toBeDefined();
+    expect(screen.queryByLabelText('整体模块引导')).toBeNull();
+    expect(screen.queryByText('整体框架')).toBeNull();
   });
 
-  it('continues with the release depth when "只是放下" is selected', () => {
-    render(<Dashboard {...defaultProps} />);
-    fireEvent.click(screen.getByText('刻录此刻'));
-    fireEvent.click(screen.getByText('只是放下'));
-    fireEvent.click(screen.getByText('继续刻录'));
-
-    expect(defaultProps.onOpenComposerWithSeed).toHaveBeenCalledWith({
-      content: '',
-      reflectionDepth: 'release',
-    });
-  });
-
-  it('triggers onSelectEntry when an entry is clicked', async () => {
+  it('does not select entries from Dashboard anymore', async () => {
     render(<Dashboard {...defaultProps} />);
 
-    // Find the first entry and click it
-    // In List View, entry tiles have entry.title
-    const entry = screen.getAllByText('Test Entry 1')[0];
-    fireEvent.click(entry);
-
-    expect(defaultProps.onSelectEntry).toHaveBeenCalled();
-    // It should be called with the entry object, but we just check if it's called
+    expect(screen.queryByText('Test Entry 1')).toBeNull();
+    expect(defaultProps.onSelectEntry).not.toHaveBeenCalled();
   });
 
   it('opens settings panel when settings button is clicked', async () => {
@@ -155,7 +126,7 @@ describe('Dashboard', () => {
   it('triggers onSetLanguage in guest mode', () => {
     render(<Dashboard {...defaultProps} isGuest={true} />);
     // In guest mode some things might differ, but header is mostly same
-    expect(screen.getAllByText(t.appTitle)[0]).toBeDefined();
+    expect(screen.getByText('系统中心')).toBeDefined();
   });
 
   it('triggers toggleFullScreen when clicking expand button', () => {

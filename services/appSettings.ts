@@ -5,9 +5,6 @@ export const AppStorageKeys = {
   aiProvider: 'user_ai_provider',
   legacyAiApiKey: 'user_ai_key',
   vaultUnlocked: 'vector_vault_unlocked',
-  draftTitle: 'neonlog_draft_title',
-  draftContent: 'neonlog_draft_content',
-  draftTags: 'neonlog_draft_tags',
   /**
    * Timestamp (`Date.now()` ms) of the last successful "Export Star Map"
    * backup. Used by `Dashboard` to show a "you haven't exported in
@@ -48,19 +45,6 @@ export const AppStorageKeys = {
    * this through `SecurityService.setArgon2idMinterEnabled`.
    */
   argon2MinterEnabled: 'vector_argon2_minter',
-  /**
-   * Phase 4 §W2.4 — per-installation opt-in for the streaming Morning
-   * Star endpoint. When set to `"1"`, the Viewer flow uses
-   * `POST /api/morning-star/stream` (SSE) and shows an incremental
-   * "thinking" preview as deltas arrive. When unset, falls back to
-   * the buffered `POST /api/morning-star`.
-   *
-   * The streaming code path always attempts the SSE call first and
-   * silently falls back to buffered on any transport failure, so this
-   * flag only controls the UI affordance — turning it off does not
-   * disable the streaming endpoint server-side.
-   */
-  morningStarStreamingEnabled: 'vector_morning_star_stream',
 } as const;
 
 /** How stale a backup must be before the Dashboard banner appears. */

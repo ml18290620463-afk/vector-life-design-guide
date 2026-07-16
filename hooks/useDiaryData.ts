@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { del, get, set } from 'idb-keyval';
+import { del, set } from 'idb-keyval';
 import { DiaryEntry, Language, Principle, Attachment, Container } from '../types';
 import { AppError, reportError } from '../lib/error';
 import { getSampleEntries } from '../services/sampleEntries';
@@ -9,7 +9,6 @@ import {
   entriesPayloadExceedsMirror,
   getDiaryStorageKeys,
   mirrorDiaryValue,
-  readDiaryJson,
   readDiaryString,
   removeDiaryMirror,
 } from '../services/diaryStorage';
@@ -22,7 +21,14 @@ import {
   scanLegacyDiaryData,
   delayMigrationStep,
 } from '../services/diaryMigration';
-import { asLegacyEntry } from '../services/entryCompat';
+import {
+  readStoredArray,
+  readStoredOptionalArray,
+  readStoredScalar,
+  sanitizeDiaryEntry,
+  sanitizePrinciple,
+} from '../services/diaryDataRead';
+import { DEFAULT_PRINCIPLE_CONFIDENCE } from '../services/experienceFeedback';
 
 export type ImportBackupMode = 'merge' | 'replace';
 
@@ -42,59 +48,6 @@ export interface ScanSummary {
   /** Present when status === 'error'. */
   error?: string;
 }
-
-const sanitizeEntry = (entry: unknown): DiaryEntry => {
-  const safeEntry = asLegacyEntry(entry);
-  const now = Date.now();
-  return {
-    id: safeEntry.id || generateSecureId('rec'),
-    title: safeEntry.title || safeEntry.name || 'Trace Record',
-    content: safeEntry.content || safeEntry.text || safeEntry.body || '',
-    createdAt:
-      typeof safeEntry.createdAt === 'number' && !Number.isNaN(safeEntry.createdAt)
-        ? safeEntry.createdAt
-        : now,
-    updatedAt:
-      typeof safeEntry.updatedAt === 'number' && !Number.isNaN(safeEntry.updatedAt)
-        ? safeEntry.updatedAt
-        : now,
-    tags: Array.isArray(safeEntry.tags) ? safeEntry.tags : [],
-    isLocked: Boolean(safeEntry.isLocked),
-    isEncrypted: Boolean(safeEntry.isEncrypted),
-    isArchived: Boolean(safeEntry.isArchived),
-    migrated: Boolean(safeEntry.migrated),
-    archivedToShip: Boolean(safeEntry.archivedToShip),
-    containerId: safeEntry.containerId || undefined,
-    attachment: safeEntry.attachment || undefined,
-    unlockAt:
-      typeof safeEntry.unlockAt === 'number' && !Number.isNaN(safeEntry.unlockAt)
-        ? safeEntry.unlockAt
-        : undefined,
-    isSample: Boolean(safeEntry.isSample),
-  };
-};
-
-const readStoredArray = async <T>(key: string): Promise<T[]> => {
-  const idbValue = await get(key).catch(() => undefined);
-  if (Array.isArray(idbValue)) return idbValue as T[];
-
-  const localValue = readDiaryJson<T[]>(key);
-  return Array.isArray(localValue) ? localValue : [];
-};
-
-const readStoredOptionalArray = async <T>(key: string): Promise<T[] | undefined> => {
-  const idbValue = await get(key).catch(() => undefined);
-  if (Array.isArray(idbValue)) return idbValue as T[];
-
-  const localValue = readDiaryJson<T[]>(key);
-  return Array.isArray(localValue) ? localValue : undefined;
-};
-
-const readStoredScalar = async (key: string): Promise<string | null> => {
-  const idbValue = await get(key).catch(() => undefined);
-  if (typeof idbValue === 'string') return idbValue;
-  return readDiaryString(key) || null;
-};
 
 export const useDiaryData = (userId: string | undefined, language: Language = 'zh') => {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
@@ -190,8 +143,8 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
 
         if (isStale()) return;
 
-        setEntries((currentEntries || []).map(sanitizeEntry));
-        setPrinciples(currentPrinciples);
+        setEntries((currentEntries || []).map(sanitizeDiaryEntry));
+        setPrinciples(currentPrinciples.map(sanitizePrinciple));
         setPasswordHash(currentPasswordHash);
         setPasswordSalt(currentPasswordSalt);
         setGuidingStars(currentGuidingStars);
@@ -406,9 +359,8 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     [persistContainersArray, persistEntries],
   );
 
-  // Phase 4.5 §A — `data.id` is optional; when omitted (the legacy
-  // editor path), we mint one. The letter-delivery sweep pre-mints
-  // an id so it can record `PendingLetter.replyEntryId` atomically.
+  // `data.id` is optional so Now can pre-mint ids for record/material
+  // flows while ordinary callers can still let the store mint one.
   const addEntry = useCallback(
     async (data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'> & { id?: string }) => {
       const now = Date.now();
@@ -489,13 +441,25 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   );
 
   const addPrinciple = useCallback(
-    async (text: string, year: number, showOnHome: boolean = true) => {
+    async (
+      text: string,
+      year: number,
+      showOnHome: boolean = true,
+      derivedFromEntryIds: string[] = [],
+    ) => {
       const newPrinciple: Principle = {
         id: generateSecureId(),
         text,
         year,
         createdAt: Date.now(),
         showOnHome,
+        derivedFromEntryIds:
+          derivedFromEntryIds.length > 0 ? [...new Set(derivedFromEntryIds)] : undefined,
+        confidence: DEFAULT_PRINCIPLE_CONFIDENCE,
+        recallCount: 0,
+        helpfulCount: 0,
+        partialCount: 0,
+        unhelpfulCount: 0,
       };
       persistPrinciples([newPrinciple, ...principles]);
     },
@@ -616,7 +580,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       incoming: DiaryEntry[],
       mode: ImportBackupMode = 'merge',
     ): Promise<ImportBackupSummary> => {
-      const sanitized = incoming.map(sanitizeEntry);
+      const sanitized = incoming.map(sanitizeDiaryEntry);
       const next = mode === 'replace' ? sanitized : mergeMigrationEntries(sanitized, entries);
       await persistEntries(next);
       return {

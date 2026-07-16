@@ -5,6 +5,7 @@ import { NOISE_BG_STYLE } from '../lib/noiseTexture';
 import { Language, Principle, Theme } from '../types';
 import { useTimeoutManager } from '../hooks/useTimeoutManager';
 import { createSeededRandom } from '../lib/random';
+import { VectorSeededStarfieldBackdrop } from './VectorStarfieldBackdrop';
 
 interface CoverScreenProps {
   onStart: () => void;
@@ -44,72 +45,8 @@ type FateSignal = {
   tone: 'cyan' | 'violet';
 };
 
-const VectorCoreHudMark: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 96 96"
-    fill="none"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <defs>
-      <linearGradient id="coreHudStroke" x1="14" y1="26" x2="82" y2="70">
-        <stop stopColor="#d9e7f2" stopOpacity="0.94" />
-        <stop offset="0.46" stopColor="#9fcfff" stopOpacity="0.92" />
-        <stop offset="1" stopColor="#6faee8" stopOpacity="0.76" />
-      </linearGradient>
-      <linearGradient id="coreHudQuiet" x1="14" y1="82" x2="82" y2="14">
-        <stop stopColor="#c9d8e5" stopOpacity="0.34" />
-        <stop offset="0.55" stopColor="#86bff2" stopOpacity="0.26" />
-        <stop offset="1" stopColor="#d7e4ef" stopOpacity="0.42" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M17.5 58.5C14.3 35.7 30.9 15.5 53.8 13.4C74.7 11.5 91 27.2 90 48.1"
-      stroke="url(#coreHudQuiet)"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-    />
-    <path
-      d="M20.5 23.8L14.2 31.4L24.1 30.4"
-      stroke="url(#coreHudStroke)"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M12.3 47.8C21.4 23.7 36.8 29.3 49.2 48C61.6 66.7 78.4 72.2 86.7 48.2"
-      stroke="url(#coreHudStroke)"
-      strokeWidth="3.2"
-      strokeLinecap="round"
-    />
-    <path
-      d="M9.8 48.1C18.4 72 35.6 66.6 48.4 48C61.1 29.4 77 23.7 86.7 48.1"
-      stroke="url(#coreHudStroke)"
-      strokeWidth="2.35"
-      strokeLinecap="round"
-      opacity="0.82"
-    />
-    <path
-      d="M32.5 48C32.5 39 41.5 39 48 48C54.5 57 63.5 57 63.5 48"
-      stroke="#d8e6f1"
-      strokeWidth="1.35"
-      strokeLinecap="round"
-      opacity="0.72"
-    />
-    <circle cx="48" cy="48" r="3.2" fill="#d8e6f1" opacity="0.74" />
-    <circle cx="87" cy="48" r="2.1" fill="#a9d4ff" opacity="0.75" />
-  </svg>
-);
-
 const VectorEntryHudMark: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 64 64"
-    fill="none"
-    aria-hidden="true"
-    focusable="false"
-  >
+  <svg className={className} viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="entryHudStroke" x1="10" y1="20" x2="54" y2="44">
         <stop stopColor="#d9e7f2" stopOpacity="0.94" />
@@ -165,6 +102,16 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
   const handleInitialize = () => {
     if (isLaunchSliding || isWarping) return;
+    const fastMobileEntry =
+      typeof window !== 'undefined' &&
+      (window.matchMedia('(max-width: 767px)').matches ||
+        document.documentElement.classList.contains('vector-force-mobile'));
+    if (fastMobileEntry) {
+      setIsLaunchSliding(true);
+      setIsWarping(true);
+      scheduleTimeout(onStart, 80);
+      return;
+    }
     setIsLaunchSliding(true);
     scheduleTimeout(() => {
       setIsWarping(true);
@@ -517,6 +464,13 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           className={`absolute inset-0 mix-blend-soft-light ${theme === 'light' ? 'opacity-[0.055]' : 'opacity-[0.05]'}`}
           style={NOISE_BG_STYLE}
         ></div>
+        <VectorSeededStarfieldBackdrop
+          theme={theme}
+          seed="cover-entry"
+          fixedCount={52}
+          twinklingCount={14}
+          className={`${theme === 'light' ? 'opacity-25 mix-blend-multiply' : 'opacity-60 mix-blend-screen'}`}
+        />
       </div>
 
       {theme === 'light' && (
@@ -1029,7 +983,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               <span
                 className={`cover-core-scan pointer-events-none absolute inset-[7px] rounded-full ${theme === 'light' ? 'bg-[linear-gradient(180deg,transparent_0%,rgba(134,180,187,0.16)_48%,rgba(255,255,255,0.32)_51%,transparent_56%)]' : 'bg-[linear-gradient(180deg,transparent_0%,rgba(123,109,255,0.16)_47%,rgba(94,234,242,0.12)_50%,transparent_55%)]'}`}
               ></span>
-              <VectorCoreHudMark className="cover-core-hud-mark pointer-events-none relative z-[1] h-8 w-8 opacity-95 motion-reduce:animate-none md:h-9 md:w-9" />
+              <Cpu className="cover-core-hud-mark pointer-events-none relative z-[1] h-8 w-8 opacity-95 motion-reduce:animate-none md:h-9 md:w-9" />
             </div>
           </button>
           <div className="cover-core-status cover-core-status--identity absolute left-[calc(100%+2.75rem)] top-2 flex flex-col items-start gap-2 min-w-[180px]">
@@ -1114,12 +1068,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               r="2"
               fill={theme === 'light' ? '#86b4bb' : 'var(--color-vector-cyan-pure)'}
             />
-            <circle
-              cx="40"
-              cy="240"
-              r="2"
-              fill={theme === 'light' ? '#dbe9e6' : '#7b6dff'}
-            />
+            <circle cx="40" cy="240" r="2" fill={theme === 'light' ? '#dbe9e6' : '#7b6dff'} />
           </svg>
         </div>
 
@@ -1146,7 +1095,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           <span
             className={`${theme === 'light' ? 'text-[#3f4b62]' : 'text-[color:var(--color-cover-hero-subtitle)]'}`}
           >
-            {t.vectorLife}
+            {language === 'zh' ? '矢量空间' : 'Vector Space'}
           </span>
           <span
             className={`h-[1px] w-24 md:w-36 ${theme === 'light' ? 'bg-gradient-to-r from-[#3f4b62]/28 via-[#86b4bb]/12 to-transparent' : 'bg-gradient-to-r from-[color:var(--color-cover-hero-rule)] via-[#7b6dff]/55 to-transparent shadow-[0_0_12px_rgba(0,200,232,0.26),0_0_18px_rgba(123,109,255,0.20)]'}`}
@@ -2148,6 +2097,220 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 	                animation: none !important;
 	                filter: drop-shadow(0 0 9px rgba(134,180,187,0.34)) !important;
 	              }
+              html.vector-force-mobile .cover-hero-stack {
+                padding-top: 150px !important;
+              }
+              html.vector-force-mobile .cover-core-stage {
+                width: 250px !important;
+                height: 250px !important;
+                margin-bottom: 58px !important;
+                transform: translateY(0) !important;
+              }
+              html.vector-force-mobile .cover-core-stage > div[class*='inset-\\[24px\\]'] span {
+                transform-origin: 50% 101px !important;
+              }
+              html.vector-force-mobile .cover-core-status--identity {
+                top: -39px !important;
+              }
+              html.vector-force-mobile .cover-core-status--identity > div:first-child {
+                gap: 9px !important;
+                font-size: 12px !important;
+                letter-spacing: 0.08em !important;
+                opacity: 0.88 !important;
+                color: rgba(194, 236, 255, 0.82) !important;
+                text-shadow: 0 0 14px rgba(143, 216, 255, 0.18) !important;
+              }
+              html.vector-force-mobile .cover-core-status--observation {
+                left: -7px !important;
+                bottom: 28px !important;
+              }
+              html.vector-force-mobile .cover-core-status--observation > div {
+                padding: 5px 8px 5px 7px !important;
+                border: 1px solid rgba(143, 216, 255, 0.24) !important;
+                background: rgba(4, 23, 45, 0.62) !important;
+                font-size: 10px !important;
+                letter-spacing: 0.08em !important;
+                opacity: 0.78 !important;
+                box-shadow: 0 0 16px rgba(143, 216, 255, 0.11) !important;
+              }
+              html.vector-force-mobile .cover-title {
+                width: 390px !important;
+                margin-bottom: 18px !important;
+                font-size: 39px !important;
+                font-weight: 400 !important;
+                letter-spacing: 0.22em !important;
+                line-height: 1 !important;
+                text-indent: 0.22em !important;
+                background-image: linear-gradient(100deg, #ffd79a 0%, #fff1cf 17%, #dbe9f5 48%, #c2ecff 73%, #7fbaff 100%) !important;
+                -webkit-background-clip: text !important;
+                background-clip: text !important;
+                color: transparent !important;
+                -webkit-text-fill-color: transparent !important;
+                text-shadow: 0 0 14px rgba(255, 215, 154, 0.18), 0 0 18px rgba(143, 216, 255, 0.13), 0 11px 26px rgba(0, 0, 0, 0.4) !important;
+              }
+              html.vector-force-mobile .cover-subtitle {
+                width: 360px !important;
+                margin-bottom: 21px !important;
+                gap: 17px !important;
+                font-size: 23px !important;
+                font-weight: 500 !important;
+                letter-spacing: 0.24em !important;
+                text-indent: 0.24em !important;
+                background-image: linear-gradient(100deg, #ffd79a 0%, #e8edf2 48%, #9fd6ff 100%) !important;
+                -webkit-background-clip: text !important;
+                background-clip: text !important;
+                color: transparent !important;
+                -webkit-text-fill-color: transparent !important;
+              }
+              html.vector-force-mobile .cover-subtitle > span:first-child,
+              html.vector-force-mobile .cover-subtitle > span:last-child {
+                width: 78px !important;
+                height: 1px !important;
+              }
+              html.vector-force-mobile .cover-subtitle > span:first-child {
+                background: linear-gradient(90deg, transparent, rgba(255, 215, 154, 0.74)) !important;
+              }
+              html.vector-force-mobile .cover-subtitle > span:last-child {
+                background: linear-gradient(90deg, rgba(143, 216, 255, 0.74), transparent) !important;
+              }
+              html.vector-force-mobile .cover-narrative {
+                font-size: 16px !important;
+                font-weight: 600 !important;
+                letter-spacing: 0.17em !important;
+                color: rgba(219, 233, 245, 0.88) !important;
+                text-shadow: 0 0 14px rgba(143, 216, 255, 0.16) !important;
+              }
+              html.vector-force-mobile .cover-launch-tunnel {
+                width: 266px !important;
+                min-height: 56px !important;
+                margin-top: 78px !important;
+                padding: 9px 18px 9px 17px !important;
+              }
+              html.vector-force-mobile .cover-launch-label {
+                min-width: 140px !important;
+                font-size: 12px !important;
+                font-weight: 700 !important;
+                letter-spacing: 0.22em !important;
+              }
+              @media (max-width: 640px) {
+                .cover-hero-stack {
+                  padding-top: 150px !important;
+                }
+                .cover-core-stage {
+                  width: 250px !important;
+                  height: 250px !important;
+                  margin-bottom: 58px !important;
+                  transform: translateY(0) !important;
+                }
+                [data-testid='cover-toggle-custom-principles'] {
+                  width: 58px !important;
+                  height: 58px !important;
+                  z-index: 39 !important;
+                }
+                [data-testid='cover-toggle-custom-principles'] > div:first-of-type,
+                [data-testid='cover-toggle-custom-principles'] > div:nth-of-type(2) {
+                  opacity: 0.34 !important;
+                }
+                [data-testid='cover-toggle-custom-principles'] > div:last-of-type {
+                  border-color: rgba(169, 212, 255, 0.72) !important;
+                  background: radial-gradient(circle, rgba(20, 72, 118, 0.82) 0%, rgba(7, 31, 64, 0.88) 58%, rgba(4, 20, 43, 0.76) 100%) !important;
+                  box-shadow: 0 0 22px rgba(143, 216, 255, 0.3), inset 0 0 16px rgba(143, 216, 255, 0.12) !important;
+                }
+                .cover-core-hud-mark {
+                  width: 34px !important;
+                  height: 34px !important;
+                  opacity: 1 !important;
+                  color: rgba(169, 212, 255, 0.94) !important;
+                  filter: drop-shadow(0 0 8px rgba(143, 216, 255, 0.34)) !important;
+                  stroke-width: 1.8 !important;
+                }
+                .cover-core-stage > div[class*='inset-\\[24px\\]'] span {
+                  transform-origin: 50% 101px !important;
+                }
+                .cover-core-status--identity {
+                  top: -39px !important;
+                }
+                .cover-core-status--identity > div:first-child {
+                  gap: 9px !important;
+                  font-size: 12px !important;
+                  letter-spacing: 0.08em !important;
+                  opacity: 0.88 !important;
+                  color: rgba(194, 236, 255, 0.82) !important;
+                  text-shadow: 0 0 14px rgba(143, 216, 255, 0.18) !important;
+                }
+                .cover-core-status--observation {
+                  left: -7px !important;
+                  bottom: 28px !important;
+                }
+                .cover-core-status--observation > div {
+                  padding: 5px 8px 5px 7px !important;
+                  border: 1px solid rgba(143, 216, 255, 0.24) !important;
+                  background: rgba(4, 23, 45, 0.62) !important;
+                  font-size: 10px !important;
+                  letter-spacing: 0.08em !important;
+                  opacity: 0.78 !important;
+                  box-shadow: 0 0 16px rgba(143, 216, 255, 0.11) !important;
+                }
+                .cover-title {
+                  width: 390px !important;
+                  margin-bottom: 18px !important;
+                  font-size: 39px !important;
+                  font-weight: 400 !important;
+                  letter-spacing: 0.22em !important;
+                  line-height: 1 !important;
+                  text-indent: 0.22em !important;
+                  background-image: linear-gradient(100deg, #ffd79a 0%, #fff1cf 17%, #dbe9f5 48%, #c2ecff 73%, #7fbaff 100%) !important;
+                  -webkit-background-clip: text !important;
+                  background-clip: text !important;
+                  color: transparent !important;
+                  -webkit-text-fill-color: transparent !important;
+                  text-shadow: 0 0 14px rgba(255, 215, 154, 0.18), 0 0 18px rgba(143, 216, 255, 0.13), 0 11px 26px rgba(0, 0, 0, 0.4) !important;
+                }
+                .cover-subtitle {
+                  width: 360px !important;
+                  margin-bottom: 21px !important;
+                  gap: 17px !important;
+                  font-size: 23px !important;
+                  font-weight: 500 !important;
+                  letter-spacing: 0.24em !important;
+                  text-indent: 0.24em !important;
+                  background-image: linear-gradient(100deg, #ffd79a 0%, #e8edf2 48%, #9fd6ff 100%) !important;
+                  -webkit-background-clip: text !important;
+                  background-clip: text !important;
+                  color: transparent !important;
+                  -webkit-text-fill-color: transparent !important;
+                }
+                .cover-subtitle > span:first-child,
+                .cover-subtitle > span:last-child {
+                  width: 78px !important;
+                  height: 1px !important;
+                }
+                .cover-subtitle > span:first-child {
+                  background: linear-gradient(90deg, transparent, rgba(255, 215, 154, 0.74)) !important;
+                }
+                .cover-subtitle > span:last-child {
+                  background: linear-gradient(90deg, rgba(143, 216, 255, 0.74), transparent) !important;
+                }
+                .cover-narrative {
+                  font-size: 16px !important;
+                  font-weight: 600 !important;
+                  letter-spacing: 0.17em !important;
+                  color: rgba(219, 233, 245, 0.88) !important;
+                  text-shadow: 0 0 14px rgba(143, 216, 255, 0.16) !important;
+                }
+                .cover-launch-tunnel {
+                  width: 266px !important;
+                  min-height: 56px !important;
+                  margin-top: 78px !important;
+                  padding: 9px 18px 9px 17px !important;
+                }
+                .cover-launch-label {
+                  min-width: 140px !important;
+                  font-size: 12px !important;
+                  font-weight: 700 !important;
+                  letter-spacing: 0.22em !important;
+                }
+              }
             `}</style>
     </div>
   );

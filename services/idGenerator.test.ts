@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { generateSecureId } from './idGenerator';
+import { generateSecureId, generateTraceId } from './idGenerator';
 
 describe('idGenerator', () => {
   afterEach(() => {
@@ -21,5 +21,13 @@ describe('idGenerator', () => {
     expect(first).not.toBe(second);
     expect(first.startsWith('entry-')).toBe(true);
     expect(second.startsWith('entry-')).toBe(true);
+  });
+
+  it('returns a compact uppercase trace id', () => {
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
+      '123e4567-e89b-12d3-a456-426614174000',
+    );
+
+    expect(generateTraceId()).toBe('123E4567');
   });
 });

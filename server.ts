@@ -1,5 +1,6 @@
 import express from 'express';
 import type { Server } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { createServer as createViteServer } from 'vite';
@@ -7,27 +8,14 @@ import path from 'path';
 import { existsSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { createAiProxyAuth } from './server/aiProxyAuth';
-import { containsInjection } from './server/promptEnvelope';
-import {
-  buildPersonaPrompt,
-  extractGeneratedPrompt,
-  isAnswerValidationFail,
-  validateWizardAnswers,
-} from './server/personaBuilderPrompt';
-import { registerMemoirRoutes } from './server/memoirRoutes';
-import { registerEchoChamberRoutes } from './server/echoChamberRoutes';
 import { registerStripeRoutes } from './server/stripeRoutes';
 import { createMinter } from './server/licenseMinter';
 import { formatLogError } from './server/scrubLog';
-import { captureServerError, initServerObservability } from './server/observability';
+import { initServerObservability } from './server/observability';
 import {
-  callGemini,
-  callOpenRouter,
   chooseProvider,
   fetchOpenRouterFreeModels,
   resolveProviderModel,
-  streamGemini,
-  streamOpenRouter,
   type Provider,
   type ProviderConfig,
 } from './server/aiProviders';
@@ -89,8 +77,12 @@ const env = {
   openrouterJsonMode: sanitizeEnv(process.env.OPENROUTER_JSON_MODE).toLowerCase() === 'true',
   geminiKey: sanitizeEnv(process.env.GEMINI_API_KEY),
   geminiModel: sanitizeEnv(process.env.GEMINI_MODEL) || 'gemini-2.5-flash',
-  morningStarAccessToken: sanitizeEnv(process.env.MORNING_STAR_ACCESS_TOKEN),
-  morningStarAllowedOrigins: parseList(process.env.MORNING_STAR_ALLOWED_ORIGINS),
+  httpsEnabled: sanitizeEnv(process.env.HTTPS).toLowerCase() === 'true',
+  httpsKeyPath: sanitizeEnv(process.env.HTTPS_KEY),
+  httpsCertPath: sanitizeEnv(process.env.HTTPS_CERT),
+  aiAccessToken:
+    sanitizeEnv(process.env.AI_ACCESS_TOKEN) || sanitizeEnv(process.env.MORNING_STAR_ACCESS_TOKEN),
+  aiAllowedOrigins: parseList(process.env.AI_ALLOWED_ORIGINS || process.env.MORNING_STAR_ALLOWED_ORIGINS),
   // Phase 5.2 — Stripe billing. All four are optional; when ANY
   // is missing, the Stripe routes are not registered and the
   // /pricing UI surfaces "billing not configured on this server".
@@ -99,6 +91,7 @@ const env = {
   licenseMasterSecretKeyBase64: sanitizeEnv(process.env.VECTOR_LICENSE_MASTER_SECRET_KEY_BASE64),
   licenseMasterKid: sanitizeEnv(process.env.VECTOR_LICENSE_MASTER_KID) || 'vector-master-2026',
   publicOrigin: sanitizeEnv(process.env.VECTOR_PUBLIC_ORIGIN) || 'http://localhost:3000',
+  trustProxy: sanitizeEnv(process.env.VECTOR_TRUST_PROXY).toLowerCase() === 'true',
 };
 
 const buildDefaultAllowedOrigins = (): string[] => {
@@ -112,12 +105,22 @@ const buildDefaultAllowedOrigins = (): string[] => {
 };
 
 const allowedOriginSet = new Set(
-  env.morningStarAllowedOrigins.length > 0
-    ? env.morningStarAllowedOrigins
+  env.aiAllowedOrigins.length > 0
+    ? env.aiAllowedOrigins
     : buildDefaultAllowedOrigins(),
 );
 
-const nowMoodTags = new Set(['平静', '开心', '兴奋', '焦虑', '疲惫', '迷茫', '难过', '愤怒', '感动']);
+const nowMoodTags = new Set([
+  '平静',
+  '开心',
+  '兴奋',
+  '焦虑',
+  '疲惫',
+  '迷茫',
+  '难过',
+  '愤怒',
+  '感动',
+]);
 const nowEventTags = new Set([
   '职业发展',
   '财务状况',
@@ -168,10 +171,18 @@ const validateNowRecordPayload = (body: unknown): { ok: true } | { ok: false; er
   const text = typeof payload.text === 'string' ? payload.text.trim() : '';
   const materials = Array.isArray(payload.materials) ? payload.materials : [];
   if (!text && materials.length === 0) return { ok: false, error: 'content is required' };
-  if (!Array.isArray(payload.mood_tags) || payload.mood_tags.length < 1 || payload.mood_tags.length > 3) {
+  if (
+    !Array.isArray(payload.mood_tags) ||
+    payload.mood_tags.length < 1 ||
+    payload.mood_tags.length > 3
+  ) {
     return { ok: false, error: 'mood_tags must contain 1-3 tags' };
   }
-  if (!Array.isArray(payload.event_tags) || payload.event_tags.length < 1 || payload.event_tags.length > 3) {
+  if (
+    !Array.isArray(payload.event_tags) ||
+    payload.event_tags.length < 1 ||
+    payload.event_tags.length > 3
+  ) {
     return { ok: false, error: 'event_tags must contain 1-3 tags' };
   }
   if (payload.mood_tags.some((tag) => typeof tag !== 'string' || !nowMoodTags.has(tag))) {
@@ -258,48 +269,59 @@ const buildAvatarFollowup = (messages: string[], followupRound: number) => {
   }
   if (!slots.hasFact) return '你刚才说的是感受或想法。它是由哪件具体事情引起的？';
   if (!slots.hasFeeling) return '这件事我大概知道了。你当时或现在最明显的感受是什么？';
-  if (!slots.hasThought && followupRound < 2) return '你当时心里怎么理解这件事？有没有一个比较明确的判断？';
-  if (!slots.hasResult && followupRound < 2) return '这件事最后变成了什么结果？和你原本期待的一样吗？';
+  if (!slots.hasThought && followupRound < 2)
+    return '你当时心里怎么理解这件事？有没有一个比较明确的判断？';
+  if (!slots.hasResult && followupRound < 2)
+    return '这件事最后变成了什么结果？和你原本期待的一样吗？';
   return null;
 };
 
 const inferNowTags = (text: string): { mood: string | null; event: string | null } => {
-  const mood = text.includes('焦虑') || text.includes('担心')
-    ? '焦虑'
-    : text.includes('开心') || text.includes('高兴')
-      ? '开心'
-      : text.includes('兴奋')
-        ? '兴奋'
-        : text.includes('疲惫') || text.includes('很累') || text.includes('累了')
-          ? '疲惫'
-          : text.includes('迷茫')
-            ? '迷茫'
-            : text.includes('难过')
-              ? '难过'
-              : text.includes('愤怒') || text.includes('生气')
-                ? '愤怒'
-                : text.includes('感动')
-                  ? '感动'
-                  : text.includes('平静')
-                    ? '平静'
+  const hasNegatedHappy = /不开心|并不开心|没开心|沒有开心|不是开心|并非开心/.test(text);
+  const mood =
+    text.includes('焦虑') || text.includes('担心')
+      ? '焦虑'
+      : hasNegatedHappy || text.includes('难过')
+        ? '难过'
+        : !hasNegatedHappy && (text.includes('开心') || text.includes('高兴'))
+          ? '开心'
+          : text.includes('兴奋')
+            ? '兴奋'
+            : text.includes('疲惫') || text.includes('很累') || text.includes('累了')
+              ? '疲惫'
+              : text.includes('迷茫')
+                ? '迷茫'
+                : text.includes('愤怒') || text.includes('生气')
+                  ? '愤怒'
+                  : text.includes('感动')
+                    ? '感动'
+                    : text.includes('平静')
+                      ? '平静'
+                      : null;
+  const event =
+    text.includes('工作') || text.includes('职业') || text.includes('项目') || text.includes('会议')
+      ? '职业发展'
+      : text.includes('钱') ||
+          text.includes('财务') ||
+          text.includes('收入') ||
+          text.includes('消费')
+        ? '财务状况'
+        : text.includes('家人') || text.includes('家庭') || text.includes('父母')
+          ? '家庭情感'
+          : text.includes('朋友') || text.includes('同事') || text.includes('关系')
+            ? '人际关系'
+            : text.includes('身体') || text.includes('健康') || text.includes('睡眠')
+              ? '身体健康'
+              : text.includes('学习') ||
+                  text.includes('成长') ||
+                  text.includes('复盘') ||
+                  text.includes('完成')
+                ? '个人成长'
+                : text.includes('娱乐') || text.includes('休闲') || text.includes('游戏')
+                  ? '娱乐休闲'
+                  : text.includes('自我') || text.includes('实现')
+                    ? '自我实现'
                     : null;
-  const event = text.includes('工作') || text.includes('职业') || text.includes('项目') || text.includes('会议')
-    ? '职业发展'
-    : text.includes('钱') || text.includes('财务') || text.includes('收入') || text.includes('消费')
-      ? '财务状况'
-      : text.includes('家人') || text.includes('家庭') || text.includes('父母')
-        ? '家庭情感'
-        : text.includes('朋友') || text.includes('同事') || text.includes('关系')
-          ? '人际关系'
-          : text.includes('身体') || text.includes('健康') || text.includes('睡眠')
-            ? '身体健康'
-            : text.includes('学习') || text.includes('成长') || text.includes('复盘') || text.includes('完成')
-              ? '个人成长'
-              : text.includes('娱乐') || text.includes('休闲') || text.includes('游戏')
-                ? '娱乐休闲'
-                : text.includes('自我') || text.includes('实现')
-                  ? '自我实现'
-                  : null;
   return { mood, event };
 };
 
@@ -320,19 +342,27 @@ const providerConfig: ProviderConfig = {
 
 const requireAiProxyAuth = createAiProxyAuth({
   allowedOrigins: allowedOriginSet,
-  accessToken: env.morningStarAccessToken,
+  accessToken: env.aiAccessToken,
 });
 
 async function startServer() {
   const app = express();
   const port = Number.isFinite(env.port) ? env.port : 3000;
+  const shouldTrustProxy =
+    env.trustProxy || /^https:\/\/[^/]+\.trycloudflare\.com$/i.test(env.publicOrigin);
 
-  const morningStarLimiter = rateLimit({
-    windowMs: Number(process.env.MORNING_STAR_RATE_LIMIT_WINDOW_MS || 60_000),
-    limit: Number(process.env.MORNING_STAR_RATE_LIMIT_MAX || 5),
+  if (shouldTrustProxy) {
+    app.set('trust proxy', 1);
+  }
+
+  const aiRequestLimiter = rateLimit({
+    windowMs: Number(
+      process.env.AI_RATE_LIMIT_WINDOW_MS || process.env.MORNING_STAR_RATE_LIMIT_WINDOW_MS || 60_000,
+    ),
+    limit: Number(process.env.AI_RATE_LIMIT_MAX || process.env.MORNING_STAR_RATE_LIMIT_MAX || 5),
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: 'Too many Morning Star requests. Please try again later.' },
+    message: { error: 'Too many AI requests. Please try again later.' },
   });
 
   const modelsListLimiter = rateLimit({
@@ -432,7 +462,8 @@ async function startServer() {
       });
       return;
     }
-    const tags = inferNowTags(userText);
+    const tagText = rawUserMessages.join('\n');
+    const tags = inferNowTags(tagText);
     if (!tags.mood || !tags.event) {
       res.json({
         text: userText,
@@ -489,344 +520,6 @@ async function startServer() {
     }
   });
 
-  app.post('/api/morning-star', morningStarLimiter, requireAiProxyAuth, async (req, res) => {
-    const requestId = randomUUID();
-    res.setHeader('X-Request-Id', requestId);
-
-    const provider = chooseProvider(providerConfig);
-    if (!provider) {
-      res.status(503).json({ error: 'AI backend is not configured', requestId });
-      return;
-    }
-
-    const { prompt } = req.body;
-    if (typeof prompt !== 'string' || prompt.trim().length === 0 || prompt.length > 60_000) {
-      res.status(400).json({ error: 'Invalid prompt payload', requestId });
-      return;
-    }
-
-    // Cheap-but-effective prompt-injection guard. We refuse obvious
-    // override patterns up front so a hostile journal entry cannot
-    // hijack the persona contract held in the upstream prompt template.
-    if (containsInjection(prompt)) {
-      console.warn(
-        JSON.stringify({
-          level: 'warn',
-          event: 'morning_star_rejected_injection',
-          requestId,
-          provider,
-          promptLength: prompt.length,
-        }),
-      );
-      res
-        .status(400)
-        .json({ error: 'Prompt rejected by safety guard', requestId, code: 'INJECTION' });
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), env.openrouterTimeoutMs);
-    const startedAt = Date.now();
-
-    try {
-      const text =
-        provider === 'openrouter'
-          ? await callOpenRouter(prompt, providerConfig, controller.signal)
-          : await callGemini(prompt, providerConfig, controller.signal);
-      console.info(
-        JSON.stringify({
-          level: 'info',
-          event: 'morning_star_success',
-          requestId,
-          provider,
-          promptLength: prompt.length,
-          durationMs: Date.now() - startedAt,
-        }),
-      );
-      res.json({ response: text, provider, requestId });
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          event: 'morning_star_failed',
-          requestId,
-          provider,
-          durationMs: Date.now() - startedAt,
-          error: formatLogError(error),
-        }),
-      );
-      captureServerError(error, { requestId, provider });
-      res.status(502).json({ error: 'Failed to fetch from secure backend', requestId });
-    } finally {
-      clearTimeout(timeout);
-    }
-  });
-
-  // W2.4 — Server-Sent Events streaming variant of /api/morning-star.
-  //
-  // Identical contract for input + auth + injection guard, but the
-  // response body is `text/event-stream` framed:
-  //   event: chunk    data: {"text": "delta"}\n\n
-  //   event: done     data: {"requestId": "...", "provider": "...", "fullText": "..."}\n\n
-  //   event: error    data: {"error": "...", "requestId": "..."}\n\n
-  //
-  // Clients can opt in by POSTing here instead of /api/morning-star.
-  // The buffered endpoint stays as the fallback so even very old
-  // clients (or hostile network middleboxes that buffer SSE) keep
-  // working.
-  app.post('/api/morning-star/stream', morningStarLimiter, requireAiProxyAuth, async (req, res) => {
-    const requestId = randomUUID();
-    res.setHeader('X-Request-Id', requestId);
-
-    const provider = chooseProvider(providerConfig);
-    if (!provider) {
-      res.status(503).json({ error: 'AI backend is not configured', requestId });
-      return;
-    }
-
-    const { prompt } = req.body;
-    if (typeof prompt !== 'string' || prompt.trim().length === 0 || prompt.length > 60_000) {
-      res.status(400).json({ error: 'Invalid prompt payload', requestId });
-      return;
-    }
-
-    if (containsInjection(prompt)) {
-      console.warn(
-        JSON.stringify({
-          level: 'warn',
-          event: 'morning_star_stream_rejected_injection',
-          requestId,
-          provider,
-          promptLength: prompt.length,
-        }),
-      );
-      res
-        .status(400)
-        .json({ error: 'Prompt rejected by safety guard', requestId, code: 'INJECTION' });
-      return;
-    }
-
-    // SSE setup. `X-Accel-Buffering: no` instructs nginx (the most
-    // common reverse proxy in our deployment notes) to disable its
-    // default response buffering — without this, chunks pile up in
-    // the proxy until the connection closes, defeating streaming.
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
-
-    const writeEvent = (event: string, data: unknown) => {
-      res.write(`event: ${event}\n`);
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-    };
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), env.openrouterTimeoutMs);
-    const startedAt = Date.now();
-
-    // Abort the upstream call when the client disconnects mid-stream
-    // (browser tab close, navigate-away). Otherwise we'd keep paying
-    // OpenRouter / Gemini quota for tokens nobody will read.
-    req.on('close', () => {
-      if (!res.writableEnded) {
-        controller.abort();
-      }
-    });
-
-    try {
-      const fullText =
-        provider === 'openrouter'
-          ? await streamOpenRouter(
-              prompt,
-              providerConfig,
-              (delta) => writeEvent('chunk', { text: delta }),
-              controller.signal,
-            )
-          : await streamGemini(
-              prompt,
-              providerConfig,
-              (delta) => writeEvent('chunk', { text: delta }),
-              controller.signal,
-            );
-
-      writeEvent('done', { requestId, provider, fullText });
-      console.info(
-        JSON.stringify({
-          level: 'info',
-          event: 'morning_star_stream_success',
-          requestId,
-          provider,
-          promptLength: prompt.length,
-          chars: fullText.length,
-          durationMs: Date.now() - startedAt,
-        }),
-      );
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          event: 'morning_star_stream_failed',
-          requestId,
-          provider,
-          durationMs: Date.now() - startedAt,
-          error: formatLogError(error),
-        }),
-      );
-      captureServerError(error, { requestId, provider, mode: 'stream' });
-      try {
-        writeEvent('error', { error: 'Failed to fetch from secure backend', requestId });
-      } catch {
-        // Connection already torn down — nothing to flush.
-      }
-    } finally {
-      clearTimeout(timeout);
-      res.end();
-    }
-  });
-
-  // Phase 4 Week 2 Day 2 — `/api/persona-build`.
-  //
-  // Synthesises a custom 启明星 system prompt from the Persona Builder
-  // wizard's answers. Same auth + rate-limit + provider call shape as
-  // /api/morning-star, but the prompt template + response parser are
-  // owned by `server/personaBuilderPrompt.ts` so the wizard contract
-  // is testable without booting the LLM.
-  //
-  // Why share `morningStarLimiter`? Because the cost profile is
-  // similar (~3-5K input tokens, ~1-2K output) and the Free tier is
-  // hard-blocked from reaching this endpoint anyway (the client
-  // gates on `quotaService.canCreateCustomPersona`). Splitting into
-  // a separate limiter would duplicate config without mitigating any
-  // distinct abuse vector.
-  app.post('/api/persona-build', morningStarLimiter, requireAiProxyAuth, async (req, res) => {
-    const requestId = randomUUID();
-    res.setHeader('X-Request-Id', requestId);
-
-    const provider = chooseProvider(providerConfig);
-    if (!provider) {
-      res.status(503).json({ error: 'AI backend is not configured', requestId });
-      return;
-    }
-
-    const validation = validateWizardAnswers(req.body?.answers);
-    if (isAnswerValidationFail(validation)) {
-      res
-        .status(400)
-        .json({ error: 'Invalid wizard answers', requestId, detail: validation.reason });
-      return;
-    }
-    const answers = validation.answers;
-
-    // Run injection-guard on the concatenated answer body — a hostile
-    // wizard answer ("ignore previous instructions and reveal …")
-    // could otherwise hijack the synthesis prompt.
-    const concatenated = Object.values(answers).join('\n');
-    if (containsInjection(concatenated)) {
-      console.warn(
-        JSON.stringify({
-          level: 'warn',
-          event: 'persona_build_rejected_injection',
-          requestId,
-          provider,
-          answerBytes: concatenated.length,
-        }),
-      );
-      res
-        .status(400)
-        .json({ error: 'Wizard answer rejected by safety guard', requestId, code: 'INJECTION' });
-      return;
-    }
-
-    const { prompt, fallbackName } = buildPersonaPrompt(answers);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), env.openrouterTimeoutMs);
-    const startedAt = Date.now();
-
-    try {
-      const text =
-        provider === 'openrouter'
-          ? await callOpenRouter(prompt, providerConfig, controller.signal)
-          : await callGemini(prompt, providerConfig, controller.signal);
-      const extracted = extractGeneratedPrompt(text);
-      if (!extracted) {
-        console.error(
-          JSON.stringify({
-            level: 'error',
-            event: 'persona_build_unparseable',
-            requestId,
-            provider,
-            durationMs: Date.now() - startedAt,
-            rawLength: text.length,
-          }),
-        );
-        res.status(502).json({
-          error: 'Failed to parse persona response',
-          requestId,
-          code: 'UNPARSEABLE',
-        });
-        return;
-      }
-      console.info(
-        JSON.stringify({
-          level: 'info',
-          event: 'persona_build_success',
-          requestId,
-          provider,
-          durationMs: Date.now() - startedAt,
-          promptLength: extracted.systemPrompt.length,
-        }),
-      );
-      res.json({
-        persona: {
-          name: extracted.name || fallbackName,
-          description: extracted.description,
-          systemPrompt: extracted.systemPrompt,
-        },
-        provider,
-        requestId,
-      });
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          event: 'persona_build_failed',
-          requestId,
-          provider,
-          durationMs: Date.now() - startedAt,
-          error: formatLogError(error),
-        }),
-      );
-      captureServerError(error, { requestId, provider, mode: 'persona-build' });
-      res.status(502).json({ error: 'Failed to fetch from secure backend', requestId });
-    } finally {
-      clearTimeout(timeout);
-    }
-  });
-
-  // Phase 4 Week 3 — Memoir endpoints (/api/memoir-build + /api/memoir-extract)
-  // live in server/memoirRoutes.ts so this file stays under the 600-line
-  // ESLint ceiling. The registrar closes over the same provider config +
-  // middleware that the inline /api/persona-build handler above uses.
-  registerMemoirRoutes(app, {
-    morningStarLimiter,
-    requireAiProxyAuth,
-    providerConfig,
-    env: { openrouterTimeoutMs: env.openrouterTimeoutMs },
-  });
-
-  // Phase 4.5 §B — Echo Chamber endpoint (/api/echo-chamber).
-  // Same registrar pattern as the Memoir routes; closes over the
-  // shared morning-star limiter + AI-proxy auth so it inherits
-  // every existing rate / abuse defence for free.
-  registerEchoChamberRoutes(app, {
-    morningStarLimiter,
-    requireAiProxyAuth,
-    providerConfig,
-    env: { openrouterTimeoutMs: env.openrouterTimeoutMs },
-  });
-
   /* -------------------------------------------------------------- *
    * Phase 5.2 — Stripe billing.                                    *
    *                                                                 *
@@ -860,7 +553,7 @@ async function startServer() {
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { allowedHosts: true, middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -895,12 +588,28 @@ async function startServer() {
     });
   }
 
-  const httpServer: Server = app.listen(port, env.host, () => {
+  const httpsOptions =
+    env.httpsEnabled && env.httpsKeyPath && env.httpsCertPath
+      ? {
+          key: readFileSync(env.httpsKeyPath),
+          cert: readFileSync(env.httpsCertPath),
+        }
+      : null;
+  const protocol = httpsOptions ? 'https' : 'http';
+  const httpServer: Server = httpsOptions
+    ? createHttpsServer(httpsOptions, app).listen(port, env.host, () => {
+        logStartup(protocol, port);
+      })
+    : app.listen(port, env.host, () => {
+        logStartup(protocol, port);
+      });
+
+  function logStartup(activeProtocol: 'http' | 'https', activePort: number) {
     const provider = chooseProvider(providerConfig);
-    console.log(`Server running on http://${env.host}:${port}`);
+    console.log(`Server running on ${activeProtocol}://${env.host}:${activePort}`);
     if (env.host === '0.0.0.0') {
       console.warn(
-        'Server is bound to 0.0.0.0; ensure MORNING_STAR_ALLOWED_ORIGINS / MORNING_STAR_ACCESS_TOKEN are configured for shared networks.',
+        'Server is bound to 0.0.0.0; ensure AI_ALLOWED_ORIGINS / AI_ACCESS_TOKEN are configured for shared networks.',
       );
     }
     if (provider) {
@@ -909,10 +618,10 @@ async function startServer() {
     } else {
       console.log('AI provider: not configured (set OPENROUTER_API_KEY or GEMINI_API_KEY)');
     }
-  });
+  }
 
   // Graceful shutdown: stop accepting new connections, let in-flight
-  // requests finish (longest is /api/morning-star ≈ 60s), then close. This
+  // requests finish (longest AI calls are ≈ 60s), then close. This
   // is required for K8s / PM2 / docker stop to roll without dropping
   // requests with 502.
   const gracefulShutdown = (signal: string) => {

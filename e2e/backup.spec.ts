@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { seedOnboardedApp } from './seedHelpers';
 
 /**
  * Restore-backup happy path. We don't drive the full onboarding flow here -
@@ -45,40 +46,15 @@ test.describe('Backup import modal', () => {
   test('completes onboarding, opens settings, and restores from a JSON backup', async ({
     page,
   }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
-
-    // Cover screen → Onboarding intro.
-    await page.getByRole('button', { name: /起航|initialize/i }).dispatchEvent('click');
-
-    // Onboarding step 1 → next.
-    await page.getByRole('button', { name: /下一步|next/i }).click();
-
-    // Onboarding step 2: master password.
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.nth(0).fill('Vector123!');
-    await passwordInputs.nth(1).fill('Vector123!');
-    await page.getByRole('button', { name: /下一步|next/i }).click();
-
-    // Onboarding step 3: acknowledge recovery code.
-    await page.getByText('我已保存好这把钥匙').click();
-    await page.getByRole('button', { name: /下一步|next/i }).click();
-
-    // Onboarding step 4: pick a few guiding stars then enter the dashboard.
-    await page
-      .getByRole('button', { name: /马斯克|Elon Musk/i })
-      .first()
-      .click();
-    await page.getByRole('button', { name: /留下判断|start/i }).click();
-    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
+    await seedOnboardedApp(page, { password: 'Vector123!' });
+    await page.goto('/?preview=web&screen=dashboard', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('dashboard-system-hub')).toBeVisible();
 
     // Open the settings panel and trigger the hidden file input directly,
     // then confirm via the new in-app modal (no window.confirm anymore).
     // Open settings panel by clicking the settings cog (titled with the
     // localized `settingsTitle` translation, e.g. "认知切片 / 逻辑自检").
-    await page
-      .getByTitle(/认知切片|cognitive|logic|settings/i)
-      .first()
-      .click();
+    await page.getByRole('button', { name: /系统设置|System settings/i }).click();
 
     // Scroll to the storage section so the hidden file input becomes
     // attached and clickable in headless mode.

@@ -15,7 +15,7 @@ export const getInitialViewerAccessState = (
   now = Date.now(),
 ): ViewerAccessState => {
   const timeLocked = isEntryTimeLocked(entry, now);
-  const canReadImmediately = !timeLocked && !entry.isEncrypted;
+  const canReadImmediately = !timeLocked && !masterPassword && !entry.isEncrypted;
 
   return {
     viewState: canReadImmediately ? 'reading' : 'sealed',

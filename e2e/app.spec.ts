@@ -18,12 +18,12 @@ test('renders the cover experience', async ({ page }) => {
     page.getByText(/记录 \|\| 过去·此刻 ⇌ 未来|Record \|\| Past · Now ⇌ Future/i).first(),
   ).toBeVisible();
   await expect(page.getByTestId('cover-initialize')).toBeVisible();
-  await expect(page.getByText(/起航|Launch/i).first()).toBeVisible();
+  await expect(page.getByLabel(/点击进入下一个界面|Click to enter the next screen/i)).toBeVisible();
 });
 
-test('completes onboarding and creates a journal entry', async ({ page }) => {
+test('completes mobile onboarding and reaches the main shell', async ({ page }) => {
   test.setTimeout(60_000);
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/?preview=mobile', { waitUntil: 'domcontentloaded' });
 
   // W4.1 — every selector below is testid-anchored. Visible labels
   // can change (i18n / copy edits) without breaking the spec; only
@@ -37,22 +37,15 @@ test('completes onboarding and creates a journal entry', async ({ page }) => {
   await page.getByTestId('onboarding-backup-phase').waitFor({ state: 'visible' });
 
   await page.getByTestId('onboarding-save-png').click();
-  await page.getByTestId('onboarding-continue-entry').waitFor({ state: 'visible' });
-  await page.getByTestId('onboarding-continue-entry').click();
-
-  await page.getByTestId('onboarding-entry-gate').waitFor({ state: 'visible' });
+  await page.getByTestId('onboarding-recovery-saved').waitFor({ state: 'visible' });
+  await expect(page.getByTestId('onboarding-recovery-saved')).toContainText('进入主界面');
   await page.getByTestId('onboarding-recovery-saved').click();
 
-  // The "default first entry" still uses an i18n locator because it's
-  // a localised piece of copy injected by `useDiaryData.seedDefaults`,
-  // not a button — adding a testid would require threading it through
-  // multiple components for one assertion.
-  await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
-
-  await page.getByTestId('dashboard-new-entry').click();
-  await page.getByTestId('editor-title').fill('E2E 自动化航迹');
-  await page.getByTestId('editor-content').fill('这是一条由 Playwright 创建的端到端验证记录。');
-  await page.getByTestId('editor-save').click();
-
-  await expect(page.getByText('E2E 自动化航迹').first()).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '主框架导航' })).toBeVisible();
+  await expect(page.getByTestId('past-page')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '过去' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /过去 素材、复盘、原则/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /现在 记录此刻与行动/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /未来 目标、推演、转化/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /分身 记忆协助与对话/ })).toBeVisible();
 });

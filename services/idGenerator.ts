@@ -27,3 +27,7 @@ export function generateSecureId(prefix?: string): string {
   const token = randomHexToken();
   return prefix ? `${prefix}-${token}` : token;
 }
+
+export function generateTraceId(length = 8): string {
+  return generateSecureId().replace(/-/g, '').slice(0, length).toUpperCase();
+}

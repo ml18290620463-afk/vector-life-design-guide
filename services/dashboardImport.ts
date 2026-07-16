@@ -1,8 +1,5 @@
-import { CustomPersona, DiaryEntry, Memory, PendingLetter } from '../types';
+import { DiaryEntry } from '../types';
 import { BACKUP_TYPE, BACKUP_SCHEMA_VERSION } from './dashboardExport';
-import { hydratePersonas } from './personaService';
-import { hydrateMemories } from './memoryService';
-import { hydrateLetters } from './letterService';
 
 export type BackupParseFailure =
   | 'invalid-json'
@@ -14,25 +11,6 @@ export type BackupParseFailure =
 export interface BackupParseSuccess {
   ok: true;
   entries: DiaryEntry[];
-  /** Phase 4 §5.1.A — user-created custom 启明星 from v2+ backups.
-   *  Empty array for v1 / legacy backups (which predate the field).
-   *  Always passes through `hydratePersonas` so corrupted entries
-   *  inside the payload don't poison the import. */
-  customPersonas: CustomPersona[];
-  /** Phase 4 §5.1.B — Memoir long-term memories from v3+ backups.
-   *  Empty array for v1 / v2 / legacy backups. Always passes
-   *  through `hydrateMemories` so corrupted entries are dropped. */
-  memories: Memory[];
-  /** Phase 4.5 §E — pending Memoir letters from v4+ backups.
-   *  Empty array for v1-v3 / legacy backups. Hydrated through
-   *  `letterService.hydrateLetters` for shape validation. */
-  letters: PendingLetter[];
-  /** Phase 4.5 §E — opt-in credential snapshot from v4+ migration
-   *  backups. Both fields are present **only** when the source
-   *  device used the migration export path; the regular Settings
-   *  "Export Star Map" leaves them undefined. */
-  passwordHashSnapshot?: string;
-  passwordSaltSnapshot?: string;
   /** When the file is from a known schema, expose meta so callers can show it. */
   meta: {
     version?: string;
@@ -127,36 +105,9 @@ export const parseBackupImport = (raw: string): BackupParseResult => {
       };
     }
 
-    // Phase 4 §5.1.A — read the optional v2+ `customPersonas` field.
-    // Validation lives in `personaService.hydratePersonas` which
-    // silently drops malformed personas. v1 backups missing the
-    // field land here as `[]`, which is the documented contract.
-    const customPersonas = hydratePersonas(value.customPersonas);
-    // Phase 4 §5.1.B — read the optional v3+ `memories` field. Same
-    // posture as `customPersonas`: pre-v3 backups land as `[]`.
-    const memories = hydrateMemories(value.memories);
-    // Phase 4.5 §E — read the optional v4+ `letters` field.
-    const letters = hydrateLetters(value.letters);
-    // Phase 4.5 §E — read the optional v4+ credential snapshot.
-    // Defensive: only surface when both fields are non-empty
-    // strings (a half-set pair is meaningless to the importer).
-    const passwordHashSnapshot =
-      typeof value.passwordHashSnapshot === 'string' && value.passwordHashSnapshot.length > 0
-        ? value.passwordHashSnapshot
-        : undefined;
-    const passwordSaltSnapshot =
-      typeof value.passwordSaltSnapshot === 'string' && value.passwordSaltSnapshot.length > 0
-        ? value.passwordSaltSnapshot
-        : undefined;
-
     return {
       ok: true,
       entries,
-      customPersonas,
-      memories,
-      letters,
-      passwordHashSnapshot,
-      passwordSaltSnapshot,
       meta: {
         version: typeof value.version === 'string' ? value.version : undefined,
         exportedAt: typeof value.exportedAt === 'string' ? value.exportedAt : undefined,
@@ -175,9 +126,6 @@ export const parseBackupImport = (raw: string): BackupParseResult => {
   return {
     ok: true,
     entries,
-    customPersonas: [],
-    memories: [],
-    letters: [],
     meta: {
       version: typeof value.version === 'string' ? value.version : undefined,
       legacy: true,

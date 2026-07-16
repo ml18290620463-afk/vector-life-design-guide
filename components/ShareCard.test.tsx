@@ -130,7 +130,7 @@ describe('ShareCard (Phase 3 §3.h)', () => {
     expect(screen.queryByText('Has attachment')).toBeNull();
   });
 
-  it('renders SEALED / TIMELOCK / ARCHIVED / ANALYSED status flags', () => {
+  it('renders SEALED / TIMELOCK / ARCHIVED status flags', () => {
     render(
       <ShareCard
         entry={baseEntry({
@@ -138,7 +138,6 @@ describe('ShareCard (Phase 3 §3.h)', () => {
           isEncrypted: true,
           unlockAt: Date.UTC(2030, 0, 1),
           isArchived: true,
-          morningStarAnalysis: 'analysis blob',
         })}
         options={SHARE_CARD_DEFAULT_OPTIONS}
         displayIdentity="x"
@@ -148,7 +147,7 @@ describe('ShareCard (Phase 3 §3.h)', () => {
     expect(screen.getByText('SEALED')).toBeTruthy();
     expect(screen.getByText('TIMELOCK')).toBeTruthy();
     expect(screen.getByText('ARCHIVED')).toBeTruthy();
-    expect(screen.getByText('ANALYSED')).toBeTruthy();
+    expect(screen.queryByText('ANALYSED')).toBeNull();
   });
 
   it('falls back to the empty-body placeholder when entry.content is blank', () => {

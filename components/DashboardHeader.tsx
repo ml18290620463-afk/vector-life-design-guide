@@ -1,17 +1,15 @@
 import React from 'react';
-import { Maximize, Minimize, Archive } from 'lucide-react';
+import { Maximize, Minimize } from 'lucide-react';
 import { Language, Theme } from '../types';
-import { CyberButton } from './CyberButton';
 import { TRANSLATIONS } from '../constants';
+import { APP_VERSION } from '../constants';
 
 type SyncStatus = 'synced' | 'local-only' | 'error' | 'merging' | 'mirror-skipped';
 
 interface DashboardHeaderProps {
   theme: Theme;
   language: Language;
-  dynamicVersion: string;
   isFullscreen: boolean;
-  onOpenArchive: () => void;
   toggleFullScreen: () => void;
   syncStatus?: SyncStatus;
 }
@@ -56,9 +54,7 @@ const buildSyncBadge = (status: SyncStatus | undefined, language: Language): Syn
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   theme,
   language,
-  dynamicVersion,
   isFullscreen,
-  onOpenArchive,
   toggleFullScreen,
   syncStatus,
 }) => {
@@ -73,19 +69,21 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <h2
             className={`vector-dashboard-title text-3xl sm:text-4xl font-black uppercase ${theme === 'light' ? 'text-slate-950' : 'text-slate-50'}`}
           >
-            {t.appTitle}
+            {language === 'zh' ? '系统中心' : 'System Center'}
           </h2>
           <span
             className={`text-[10px] font-mono uppercase tracking-[0.18em] px-2 py-1 border rounded-md ${theme === 'light' ? 'text-slate-500 border-slate-200 bg-white shadow-sm' : 'text-cyan-300/80 border-cyan-500/20 bg-cyan-500/5'}`}
           >
-            {dynamicVersion}
+            v{APP_VERSION}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <p
             className={`text-[10px] font-mono tracking-[0.24em] uppercase opacity-70 ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}
           >
-            {t.archiveStatus}
+            {language === 'zh'
+              ? '设置 · 备份 · 安全 · 全局状态'
+              : 'Settings · Backup · Security · Global status'}
           </p>
           <div className={`h-[1px] w-24 ${theme === 'light' ? 'bg-slate-200' : 'bg-white/10'}`} />
           {(() => {
@@ -127,16 +125,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         >
           {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
         </button>
-
-        <CyberButton
-          data-testid="dashboard-open-archive"
-          onClick={onOpenArchive}
-          variant="ghost"
-          className="text-[10px] tracking-[0.18em] h-11 px-5"
-          theme={theme}
-        >
-          <Archive className="w-4 h-4 mr-2" /> {t.archive}
-        </CyberButton>
       </div>
     </header>
   );

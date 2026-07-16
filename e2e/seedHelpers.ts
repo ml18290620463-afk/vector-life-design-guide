@@ -34,7 +34,10 @@ export const seedOnboardedApp = async (
   // Cover screen → Onboarding intro.
   // W4.1 — keep the cover entry anchored on the initialize testid so
   // copy changes on the homepage do not break all onboarding specs.
-  await page.getByTestId('cover-initialize').dispatchEvent('click');
+  const coverEntry = page.getByTestId('cover-initialize');
+  await coverEntry.waitFor({ state: 'visible' });
+  await coverEntry.click();
+  await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
 
   // Calibration: master password (twice) then issue recovery key.
   await page.getByTestId('onboarding-password').fill(password);
@@ -42,12 +45,8 @@ export const seedOnboardedApp = async (
   await page.getByTestId('onboarding-issue-key').click();
   await page.getByTestId('onboarding-backup-phase').waitFor({ state: 'visible' });
 
-  // Backup: save offline PNG, then continue to entry gate.
+  // Backup: save offline PNG, then enter the app directly.
   await page.getByTestId('onboarding-save-png').click();
-  await page.getByTestId('onboarding-continue-entry').waitFor({ state: 'visible' });
-  await page.getByTestId('onboarding-continue-entry').click();
-
-  // Entry: confirm checklist and enter the app.
-  await page.getByTestId('onboarding-entry-gate').waitFor({ state: 'visible' });
+  await page.getByTestId('onboarding-recovery-saved').waitFor({ state: 'visible' });
   await page.getByTestId('onboarding-recovery-saved').click();
 };

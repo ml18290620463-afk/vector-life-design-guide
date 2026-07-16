@@ -1,11 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Archive, BookOpen, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { useNowTick } from '../../hooks/useNowTick';
 import { useArchiveGrouping } from '../../hooks/useArchiveGrouping';
 import { TRANSLATIONS } from '../../constants';
 import type { Container, DiaryEntry, Language, Principle, Theme } from '../../types';
+import type { ExperienceFeedbackOutcome } from '../../types';
 import { ArchivePrinciplesView } from '../../components/ArchivePrinciplesView';
 import { ArchiveVaultEntries } from '../../components/ArchiveVaultEntries';
+import { ExperienceFeedbackPrompt } from '../../components/ExperienceFeedbackPrompt';
+import { FilterHub } from '../../components/FilterHub';
+import { PastExperienceWorkbench } from '../../components/PastExperienceWorkbench';
+import { applyPrincipleFeedback, hasFeedbackForPrinciple } from '../../services/experienceFeedback';
+import { MobilePastTimelineEntry } from './MobilePastTimelineEntry';
 import type { PastRepositorySection } from './types';
 
 interface PastRepositoryProps {
@@ -13,18 +19,20 @@ interface PastRepositoryProps {
   theme?: Theme;
   entries: DiaryEntry[];
   principles: Principle[];
-  onAddPrinciple: (text: string, year: number, showOnHome: boolean) => void;
+  onAddPrinciple: (
+    text: string,
+    year: number,
+    showOnHome: boolean,
+    derivedFromEntryIds?: string[],
+  ) => void;
   onDeletePrinciple: (id: string) => void;
   onUpdatePrinciple: (principle: Principle) => void;
+  onUpdateEntry?: (entry: DiaryEntry) => void;
   onSelectEntry: (entry: DiaryEntry) => void;
   containers: Container[];
+  onAddContainer: (name: string) => void;
+  onDeleteContainer: (id: string) => void;
 }
-
-const SECTIONS: Array<{ id: PastRepositorySection; label: string }> = [
-  { id: 'timeline', label: '时间线' },
-  { id: 'principles', label: '原则' },
-  { id: 'archive', label: '归档' },
-];
 
 export const PastRepository: React.FC<PastRepositoryProps> = ({
   language,
@@ -34,12 +42,17 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   onAddPrinciple,
   onDeletePrinciple,
   onUpdatePrinciple,
+  onUpdateEntry,
   onSelectEntry,
   containers,
+  onAddContainer,
+  onDeleteContainer,
 }) => {
   const t = TRANSLATIONS[language];
   const [section, setSection] = useState<PastRepositorySection>('timeline');
+  const [experienceView, setExperienceView] = useState<'distill' | 'principles'>('distill');
   const [timelineQuery, setTimelineQuery] = useState('');
+  const [showArchiveFilter, setShowArchiveFilter] = useState(false);
 
   const timelineEntries = useMemo(() => {
     const active = entries
@@ -56,16 +69,71 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   }, [entries, timelineQuery]);
 
   const archivedEntries = useMemo(() => entries.filter((entry) => entry.isArchived), [entries]);
+  const latestEntry = timelineEntries[0] ?? null;
+  const pendingFeedbackPrinciple = useMemo(() => {
+    if (!latestEntry || !onUpdateEntry) return null;
+    return (
+      (latestEntry.relatedPrincipleIds ?? [])
+        .map((principleId) => principles.find((principle) => principle.id === principleId))
+        .find(
+          (principle): principle is Principle =>
+            Boolean(principle) && !hasFeedbackForPrinciple(latestEntry, principle.id),
+        ) ?? null
+    );
+  }, [latestEntry, onUpdateEntry, principles]);
+  const distillableEntriesCount = useMemo(
+    () =>
+      entries.filter(
+        (entry) => !entry.isArchived && (!entry.unlockAt || entry.unlockAt <= Date.now()),
+      ).length,
+    [entries],
+  );
 
   const hasPendingTimeLock = useMemo(
     () =>
-      archivedEntries.some(
-        (entry) => typeof entry.unlockAt === 'number' && entry.unlockAt > Date.now(),
-      ),
-    [archivedEntries],
+      entries.some((entry) => typeof entry.unlockAt === 'number' && entry.unlockAt > Date.now()),
+    [entries],
   );
   const now = useNowTick(hasPendingTimeLock);
   const grouping = useArchiveGrouping({ entries: archivedEntries });
+  const handleExperienceFeedback = (
+    entry: DiaryEntry,
+    principle: Principle,
+    outcome: ExperienceFeedbackOutcome,
+  ) => {
+    if (!onUpdateEntry) return;
+    const createdAt = Date.now();
+    onUpdateEntry({
+      ...entry,
+      principleFeedback: [
+        ...(entry.principleFeedback ?? []),
+        { principleId: principle.id, outcome, createdAt },
+      ],
+    });
+    if (outcome !== 'unrelated') {
+      onUpdatePrinciple(applyPrincipleFeedback(principle, outcome, createdAt));
+    }
+  };
+  const sections = [
+    {
+      id: 'timeline' as const,
+      label: language === 'zh' ? '记录' : 'Records',
+      detail: timelineEntries.length,
+      Icon: BookOpen,
+    },
+    {
+      id: 'experience' as const,
+      label: language === 'zh' ? '经验' : 'Insights',
+      detail: principles.length,
+      Icon: Sparkles,
+    },
+    {
+      id: 'archive' as const,
+      label: language === 'zh' ? '归档' : 'Archive',
+      detail: archivedEntries.length,
+      Icon: Archive,
+    },
+  ];
 
   return (
     <main className="mobile-past-page" data-testid="past-page">
@@ -73,9 +141,16 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
         <p className="mobile-past-page__eyebrow">
           {language === 'zh' ? 'VECTOR · 过去' : 'VECTOR · Past'}
         </p>
-        <h1>{language === 'zh' ? '仓库' : 'Repository'}</h1>
+        <div className="mobile-past-page__heading-row">
+          <h1>{language === 'zh' ? '过去' : 'Past'}</h1>
+          <span>
+            {language === 'zh' ? `${entries.length} 条记录` : `${entries.length} records`}
+          </span>
+        </div>
         <p className="mobile-past-page__subtitle">
-          {language === 'zh' ? '时间线 · 原则 · 归档' : 'Timeline · Principles · Archive'}
+          {language === 'zh'
+            ? '回看记录，提炼经验，整理长期记忆'
+            : 'Review records, distill insights, organize long-term memory'}
         </p>
       </header>
 
@@ -84,16 +159,19 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
         role="tablist"
         aria-label={language === 'zh' ? '过去分区' : 'Past sections'}
       >
-        {SECTIONS.map((item) => (
+        {sections.map(({ id, label, detail, Icon }) => (
           <button
-            key={item.id}
+            key={id}
             type="button"
             role="tab"
-            aria-selected={section === item.id}
-            className={section === item.id ? 'mobile-past-page__segment--active' : ''}
-            onClick={() => setSection(item.id)}
+            aria-label={label}
+            aria-selected={section === id}
+            className={section === id ? 'mobile-past-page__segment--active' : ''}
+            onClick={() => setSection(id)}
           >
-            {item.label}
+            <Icon className="h-4 w-4" />
+            <span>{label}</span>
+            <small>{detail}</small>
           </button>
         ))}
       </div>
@@ -101,6 +179,36 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       <section className="mobile-past-page__body">
         {section === 'timeline' && (
           <div className="mobile-past-timeline">
+            {latestEntry && pendingFeedbackPrinciple && (
+              <ExperienceFeedbackPrompt
+                entry={latestEntry}
+                language={language}
+                principle={pendingFeedbackPrinciple}
+                theme={theme}
+                onFeedback={handleExperienceFeedback}
+              />
+            )}
+            {latestEntry && (
+              <section
+                className="mobile-past-continuity"
+                aria-label={language === 'zh' ? '记录闭环引导' : 'Record loop guidance'}
+              >
+                <div>
+                  <span>{language === 'zh' ? '下一步' : 'Next step'}</span>
+                  <strong>
+                    {language === 'zh' ? '从记录中提炼可复用经验' : 'Distill reusable insight'}
+                  </strong>
+                  <p>
+                    {language === 'zh'
+                      ? `已有 ${distillableEntriesCount} 条素材可用，需要时再处理。`
+                      : `${distillableEntriesCount} materials are ready when you are.`}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setSection('experience')}>
+                  {language === 'zh' ? '去提炼' : 'Distill'}
+                </button>
+              </section>
+            )}
             <label className="mobile-past-search">
               <Search className="h-4 w-4" />
               <input
@@ -119,32 +227,14 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               </p>
             ) : (
               <ul className="mobile-past-timeline__list">
-                {timelineEntries.map((entry) => (
+                {timelineEntries.map((entry, index) => (
                   <li key={entry.id}>
-                    <button
-                      type="button"
-                      className="mobile-past-timeline__item"
-                      onClick={() => onSelectEntry(entry)}
-                    >
-                      <span className="mobile-past-timeline__time">
-                        {new Date(entry.createdAt).toLocaleString(
-                          language === 'zh' ? 'zh-CN' : 'en-US',
-                          {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          },
-                        )}
-                      </span>
-                      <strong>
-                        {entry.title || (language === 'zh' ? '未命名记录' : 'Untitled')}
-                      </strong>
-                      <p>
-                        {entry.content.slice(0, 96) ||
-                          (language === 'zh' ? '（无正文）' : '(empty)')}
-                      </p>
-                    </button>
+                    <MobilePastTimelineEntry
+                      entry={entry}
+                      highlight={index === 0}
+                      language={language}
+                      onSelect={onSelectEntry}
+                    />
                   </li>
                 ))}
               </ul>
@@ -152,19 +242,103 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
           </div>
         )}
 
-        {section === 'principles' && (
-          <ArchivePrinciplesView
-            theme={theme}
-            t={t}
-            principles={principles}
-            onAddPrinciple={onAddPrinciple}
-            onDeletePrinciple={onDeletePrinciple}
-            onUpdatePrinciple={onUpdatePrinciple}
-          />
+        {section === 'experience' && (
+          <div className="mobile-past-experience">
+            <div
+              className="mobile-past-subnav"
+              role="tablist"
+              aria-label={language === 'zh' ? '经验工作区' : 'Insight workspace'}
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={experienceView === 'distill'}
+                onClick={() => setExperienceView('distill')}
+              >
+                {language === 'zh' ? '待提炼' : 'To distill'}
+                <small>{distillableEntriesCount}</small>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={experienceView === 'principles'}
+                onClick={() => setExperienceView('principles')}
+              >
+                {language === 'zh' ? '原则库' : 'Principles'}
+                <small>{principles.length}</small>
+              </button>
+            </div>
+            {experienceView === 'distill' ? (
+              <PastExperienceWorkbench
+                language={language}
+                theme={theme}
+                entries={entries}
+                principles={principles}
+                now={now}
+                onAddPrinciple={onAddPrinciple}
+                onSelectEntry={onSelectEntry}
+              />
+            ) : (
+              <ArchivePrinciplesView
+                theme={theme}
+                language={language}
+                t={t}
+                principles={principles}
+                onAddPrinciple={onAddPrinciple}
+                onDeletePrinciple={onDeletePrinciple}
+                onUpdatePrinciple={onUpdatePrinciple}
+              />
+            )}
+          </div>
         )}
 
         {section === 'archive' && (
           <div className="mobile-past-archive">
+            <div className="mobile-past-archive__tools">
+              <label className="mobile-past-search">
+                <Search className="h-4 w-4" />
+                <input
+                  value={grouping.searchQuery}
+                  onChange={(event) => grouping.setSearchQuery(event.target.value)}
+                  placeholder={
+                    language === 'zh' ? '搜索归档 / 标签 / 日期' : 'Search archive / tags / date'
+                  }
+                />
+              </label>
+              <button
+                type="button"
+                className={`mobile-past-filter ${showArchiveFilter ? 'mobile-past-filter--active' : ''}`}
+                aria-label={language === 'zh' ? '打开归档筛选' : 'Open archive filters'}
+                aria-pressed={showArchiveFilter}
+                onClick={() => setShowArchiveFilter((current) => !current)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+            </div>
+            {showArchiveFilter && (
+              <div className="mobile-past-filter-panel">
+                <FilterHub
+                  entries={grouping.archivedEntriesBase}
+                  language={language}
+                  theme={theme}
+                  searchQuery={grouping.searchQuery}
+                  onSearchChange={grouping.setSearchQuery}
+                  selectedTag={grouping.selectedTag}
+                  onSelectTag={grouping.setSelectedTag}
+                  selectedCategory={grouping.selectedCategory}
+                  onSelectCategory={grouping.setSelectedCategory}
+                  containers={containers}
+                  onAddContainer={onAddContainer}
+                  onDeleteContainer={onDeleteContainer}
+                  onClose={() => setShowArchiveFilter(false)}
+                  accentColor="green"
+                  groupingMode={grouping.groupingMode}
+                  onGroupingModeChange={(mode) =>
+                    grouping.setGroupingMode(mode === 'none' ? 'year' : mode)
+                  }
+                />
+              </div>
+            )}
             <div
               className="mobile-past-page__segments mobile-past-page__segments--compact"
               role="tablist"

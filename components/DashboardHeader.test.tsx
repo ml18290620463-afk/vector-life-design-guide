@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { DashboardHeader } from './DashboardHeader';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TRANSLATIONS } from '../constants';
@@ -6,9 +6,7 @@ import { TRANSLATIONS } from '../constants';
 const mockProps = {
   language: 'zh' as const,
   theme: 'dark' as const,
-  dynamicVersion: 'v1.0.0',
   isFullscreen: false,
-  onOpenArchive: vi.fn(),
   toggleFullScreen: vi.fn(),
 };
 
@@ -19,7 +17,8 @@ describe('DashboardHeader', () => {
 
   it('renders title correctly', () => {
     render(<DashboardHeader {...mockProps} />);
-    expect(screen.getByText(t.appTitle)).toBeDefined();
+    expect(screen.getByText('系统中心')).toBeDefined();
+    expect(screen.getByText('v1.1.0')).toBeDefined();
   });
 
   it('does not render the header new entry button', () => {
@@ -27,11 +26,10 @@ describe('DashboardHeader', () => {
     expect(screen.queryByTestId('dashboard-new-entry')).toBeNull();
   });
 
-  it('triggers onOpenArchive when archive button clicked', () => {
+  it('does not duplicate the Past archive entry in the header', () => {
     render(<DashboardHeader {...mockProps} />);
-    const btn = screen.getByText(t.archive);
-    fireEvent.click(btn);
-    expect(mockProps.onOpenArchive).toHaveBeenCalled();
+    expect(screen.queryByTestId('dashboard-open-archive')).toBeNull();
+    expect(screen.queryByText(t.archive)).toBeNull();
   });
 
   it('does not render the settings boat in the header', () => {

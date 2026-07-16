@@ -10,7 +10,6 @@ const baseProps = {
   t,
   customIdentity: 'AGENT_42',
   setCustomIdentity: vi.fn(),
-  dynamicVersion: 'v1.5.2',
   isUnlocked: true,
   onOpenSecuritySetup: vi.fn(),
 };
@@ -29,9 +28,9 @@ describe('StatisticsIdentityCard', () => {
     expect(setCustomIdentity).toHaveBeenCalledWith('NEW_IDENT');
   });
 
-  it('renders the dynamic version chip', () => {
+  it('renders the package version chip', () => {
     render(<StatisticsIdentityCard {...baseProps} />);
-    expect(screen.getByText(/v1\.5\.2/)).toBeTruthy();
+    expect(screen.getByText(/1\.1\.0/)).toBeTruthy();
   });
 
   it('shows the unlocked status copy when isUnlocked=true', () => {

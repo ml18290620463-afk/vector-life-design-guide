@@ -1,15 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { DiaryEntry, Language, Theme, Attachment, CustomPersona } from '../types';
+import React, { useState } from 'react';
+import { DiaryEntry, Language, Theme, Attachment } from '../types';
 import { TranslationDictionary } from '../i18n/translations';
 import { useTransientState } from '../hooks/useTransientState';
 import { useAttachmentUpload } from '../hooks/useAttachmentUpload';
 import { useDashboardSecurity } from '../hooks/useDashboardSecurity';
 import { useGuidingStarsEditor } from '../hooks/useGuidingStarsEditor';
 import { useDashboardWipeFlow } from '../hooks/useDashboardWipeFlow';
-import { canCreateCustomPersona, canCreateMemoir } from '../services/quotaService';
 import { SettingsPanel } from './SettingsPanel';
-import { PersonaBuilderModal } from './PersonaBuilderModal';
-import { MemoirBuilderModal } from './MemoirBuilderModal';
 
 interface DashboardSettingsModalProps {
   // ----- Visibility / shell -----
@@ -26,7 +23,6 @@ interface DashboardSettingsModalProps {
   // ----- Identity (kept in Dashboard so the header can also display it) -----
   customIdentity: string;
   setCustomIdentity: (next: string) => void;
-  dynamicVersion: string;
 
   // ----- Security primitives (from App / data layer) -----
   passwordHash: string | null;
@@ -46,10 +42,6 @@ interface DashboardSettingsModalProps {
   selectedStars: string[];
   onSaveGuidingStars: (stars: string[]) => void;
   onSaveSelectedStars: (stars: string[]) => void;
-  /** Phase 4 §5.1.A — user-created custom 启明星 (Persona Builder). */
-  customPersonas: CustomPersona[];
-  /** Persist a freshly minted persona. */
-  onAddCustomPersona: (persona: CustomPersona) => Promise<void> | void;
 
   // ----- Backup / scan / sync -----
   isScanning?: boolean;
@@ -83,37 +75,6 @@ interface DashboardSettingsModalProps {
   // ----- Fullscreen control plumbed into useDashboardSecurity for password
   // change cancel-from-fullscreen flow -----
   setIsFullscreen: (next: boolean) => void;
-
-  /**
-   * Mirrors `useGuidingStarsEditor.isEditing` upward so FilterBar (a
-   * sibling of this modal) can toggle its bottom-border accordingly.
-   * Optional because not every host needs the signal.
-   */
-  onEditingStarsChange?: (editing: boolean) => void;
-
-  /** Phase 4.5 §E — open the cross-device migration EXPORT modal
-   *  (anchored on Dashboard so it can read live entries / personas
-   *  / memories / letters props). Optional so legacy callers compile. */
-  onOpenMigrationExport?: () => void;
-  /** Phase 4.5 §E — open the cross-device migration IMPORT wizard.
-   *  Anchored at App-level (so the cover screen can also reach
-   *  it). Optional so legacy callers compile. */
-  onOpenMigrationImport?: () => void;
-  /** Phase 4 §4.b-3 — current device's Ed25519 fingerprint, for
-   *  display in the Settings migration row. Null when no keypair
-   *  exists yet. */
-  deviceFingerprint?: string | null;
-  /** Phase 4 §4.b-3 — wraps `regenerateDeviceKeypair(password)`. */
-  onRegenerateDeviceKeys?: () => Promise<void> | void;
-  /** Phase 4 §4.b-3 follow-up (K1) — open the Trusted Devices
-   *  audit / revoke panel. */
-  onOpenTrustedDevices?: () => void;
-
-  /** Phase 4.5 §E follow-up (L1) — Memoirs picker callbacks.
-   *  When set, the SettingsPanel renders a Memoirs management
-   *  section with per-memoir Memories / Letters CTAs. */
-  onOpenMemoirMemories?: (memoirId: string) => void;
-  onOpenMemoirLetters?: (memoirId: string) => void;
 
   /** Phase 5 §5.1 — license / subscription state passed through
    *  to `SettingsPanel.LicenseSection`. */
@@ -149,8 +110,8 @@ interface DashboardSettingsModalProps {
  *     LOC) reachable.
  *
  * The bridge does NOT own anything that the dashboard chrome (header /
- * footer / vault content) also needs (e.g. `customIdentity`,
- * `dynamicVersion`, the backup-import confirm modal). Those stay in
+ * footer / vault content) also needs (e.g. `customIdentity` and the
+ * backup-import confirm modal). Those stay in
  * Dashboard so multiple consumers can share them.
  */
 export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
@@ -163,7 +124,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
   t,
   customIdentity,
   setCustomIdentity,
-  dynamicVersion,
   passwordHash,
   passwordSalt,
   isUnlocked,
@@ -177,8 +137,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
   selectedStars,
   onSaveGuidingStars,
   onSaveSelectedStars,
-  customPersonas,
-  onAddCustomPersona,
   isScanning,
   scanProgress,
   onTriggerScan,
@@ -196,14 +154,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
   handleGoHomeClick,
   isSailingHome,
   setIsFullscreen,
-  onEditingStarsChange,
-  onOpenMigrationExport,
-  onOpenMigrationImport,
-  deviceFingerprint,
-  onRegenerateDeviceKeys,
-  onOpenTrustedDevices,
-  onOpenMemoirMemories,
-  onOpenMemoirLetters,
   licenseInstallId,
   licenseCurrentTier,
   licensePayload,
@@ -214,20 +164,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
 }) => {
   const [isViewingRecovery, setIsViewingRecovery] = useState(false);
   const [stagedMaterial, setStagedMaterial] = useState<Attachment | null>(null);
-
-  // Phase 4 §5.1.A — Persona Builder modal toggle. Living here (not
-  // in `useGuidingStarsEditor`) because the modal sits as a sibling
-  // overlay to SettingsPanel, not inside the star editor.
-  const [showPersonaBuilder, setShowPersonaBuilder] = useState(false);
-  const personaPaywall = canCreateCustomPersona(customPersonas);
-
-  // Phase 4 §5.1.B — Memoir Builder modal toggle. Mirrors the
-  // Persona Builder shape so users perceive the two surfaces as
-  // parallel-but-distinct (different paywall verdict, different
-  // post-create persistence path on the backend, but identical
-  // open/close UX).
-  const [showMemoirBuilder, setShowMemoirBuilder] = useState(false);
-  const memoirPaywall = canCreateMemoir(customPersonas);
 
   const {
     value: mediaError,
@@ -270,15 +206,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
     setIsFullscreen,
   });
 
-  // Phase 4 §5.1.A — fold AI-generated custom persona names into the
-  // editor's `guidingStars` directory so they render alongside
-  // free-text custom names + built-in stars. The editor itself is
-  // unchanged; this is a pre-merge convenience.
-  const guidingStarsWithPersonas = React.useMemo(
-    () => Array.from(new Set([...guidingStars, ...customPersonas.map((p) => p.name)])),
-    [guidingStars, customPersonas],
-  );
-
   const {
     isEditing: isEditingStars,
     setIsEditing: setIsEditingStars,
@@ -291,7 +218,7 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
     handleAddCustomStar,
     handleSaveStars,
   } = useGuidingStarsEditor({
-    guidingStars: guidingStarsWithPersonas,
+    guidingStars,
     selectedStars,
     language,
     showSettings,
@@ -327,10 +254,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
 
   void wipeMode; // tracked by SettingsPanel via setWipeMode for symmetry; kept stable for future surfacing.
 
-  useEffect(() => {
-    onEditingStarsChange?.(isEditingStars);
-  }, [isEditingStars, onEditingStarsChange]);
-
   return (
     <>
       <SettingsPanel
@@ -346,7 +269,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
         passwordHash={passwordHash}
         customIdentity={customIdentity}
         setCustomIdentity={setCustomIdentity}
-        dynamicVersion={dynamicVersion}
         isUnlocked={isUnlocked}
         onSetTheme={onSetTheme}
         oldPassword={oldPassword}
@@ -369,8 +291,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
         handleAddCustomStar={handleAddCustomStar}
         handleSaveStars={handleSaveStars}
         selectedStars={selectedStars}
-        onOpenPersonaBuilder={() => setShowPersonaBuilder(true)}
-        onOpenMemoirBuilder={() => setShowMemoirBuilder(true)}
         mediaInputRef={mediaInputRef}
         handleMediaUpload={handleMediaUpload}
         isUploading={isUploading}
@@ -408,14 +328,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
         scanProgress={scanProgress}
         onTriggerScan={onTriggerScan}
         lastScanSummary={lastScanSummary}
-        onOpenMigrationExport={onOpenMigrationExport}
-        onOpenMigrationImport={onOpenMigrationImport}
-        deviceFingerprint={deviceFingerprint}
-        onRegenerateDeviceKeys={onRegenerateDeviceKeys}
-        onOpenTrustedDevices={onOpenTrustedDevices}
-        customPersonas={customPersonas}
-        onOpenMemoirMemories={onOpenMemoirMemories}
-        onOpenMemoirLetters={onOpenMemoirLetters}
         licenseInstallId={licenseInstallId}
         licenseCurrentTier={licenseCurrentTier}
         licensePayload={licensePayload}
@@ -423,32 +335,6 @@ export const DashboardSettingsModal: React.FC<DashboardSettingsModalProps> = ({
         onActivateLicense={onActivateLicense}
         onDeactivateLicense={onDeactivateLicense}
         onOpenPricing={onOpenPricing}
-      />
-      <PersonaBuilderModal
-        open={showPersonaBuilder}
-        onClose={() => setShowPersonaBuilder(false)}
-        theme={theme}
-        language={language}
-        t={t}
-        paywallVerdict={personaPaywall}
-        onPersonaCreated={async (persona) => {
-          await onAddCustomPersona(persona);
-        }}
-      />
-      <MemoirBuilderModal
-        open={showMemoirBuilder}
-        onClose={() => setShowMemoirBuilder(false)}
-        theme={theme}
-        language={language}
-        t={t}
-        paywallVerdict={memoirPaywall}
-        onMemoirCreated={async (memoir) => {
-          // Memoirs are persisted on the same `customPersonas` list
-          // (with `kind === 'memoir'`) — `useCustomPersonas` is the
-          // single source of truth for both surfaces. This keeps
-          // backup serialisation and Settings rendering symmetric.
-          await onAddCustomPersona(memoir);
-        }}
       />
     </>
   );

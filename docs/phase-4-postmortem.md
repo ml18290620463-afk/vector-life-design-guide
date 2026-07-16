@@ -1,5 +1,9 @@
 # Phase 4 — Postmortem
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](../README.md), [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md), and [docs/archive/README.md](./archive/README.md).
+
+
 > **Phase:** 4 — 1-Month Engineer Roadmap (W1–W4)
 > **Window:** May 2026, single-engineer + Cursor agent collaboration
 > **Status:** 15/16 engineering checklist items closed. The

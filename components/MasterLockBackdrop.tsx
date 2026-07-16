@@ -1,29 +1,12 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { Theme } from '../types';
-import { createSeededRandom } from '../lib/random';
 import { useMotionPreference } from '../hooks/useMotionPreference';
+import { VectorSeededStarfieldBackdrop } from './VectorStarfieldBackdrop';
 
 interface MasterLockBackdropProps {
   theme: Theme;
 }
-
-const FIXED_STAR_COUNT = 60;
-const TWINKLING_STAR_COUNT = 20;
-
-const buildStarPosition = (seed: string, index: number) => {
-  const random = createSeededRandom(seed);
-  const column = index % 5;
-  const row = Math.floor(index / 5) % 4;
-  const left = (column + random() * 0.94) * 20 + (random() - 0.5) * 8;
-  const top = (row + random() * 0.92) * 25 + (random() - 0.5) * 10;
-
-  return {
-    random,
-    left: `${Math.max(1, Math.min(99, left))}%`,
-    top: `${Math.max(1, Math.min(99, top))}%`,
-  };
-};
 
 /**
  * Fullscreen starfield decoration sitting behind the MasterLock card.
@@ -42,45 +25,6 @@ const buildStarPosition = (seed: string, index: number) => {
  */
 export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme }) => {
   const reduceMotion = useMotionPreference();
-
-  const fixedStars = useMemo(
-    () =>
-      Array.from({ length: FIXED_STAR_COUNT }, (_, i) => {
-        const { random, left, top } = buildStarPosition(`master-fixed-${i}`, i);
-        const size = 0.6 + random() * 1.2;
-        return {
-          left,
-          top,
-          width: `${size}px`,
-          height: `${size}px`,
-          opacity: 0.05 + random() * 0.38,
-          filter: random() > 0.72 ? 'blur(1px)' : 'none',
-        };
-      }),
-    [],
-  );
-
-  const twinklingStars = useMemo(
-    () =>
-      Array.from({ length: TWINKLING_STAR_COUNT }, (_, i) => {
-        const { random, left, top } = buildStarPosition(`master-twinkle-${i}`, i + 7);
-        const size = 1.4 + random() * 2.6;
-        const peakOpacity = 0.36 + random() * 0.54;
-        return {
-          left,
-          top,
-          width: `${size}px`,
-          height: `${size}px`,
-          duration: 3.2 + random() * 5.8,
-          delay: random() * 8,
-          repeatDelay: random() * 6,
-          peakOpacity,
-          x: (random() - 0.5) * 12,
-          y: (random() - 0.5) * 10,
-        };
-      }),
-    [],
-  );
 
   return (
     <div className="absolute inset-0 pointer-events-none" aria-hidden>
@@ -157,53 +101,7 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
         ))}
       </div>
 
-      {/* Fixed Stars */}
-      <div className="absolute inset-0">
-        {fixedStars.map((star, i) => (
-          <div
-            key={`star-fix-${i}`}
-            className={`absolute w-px h-px rounded-full ${theme === 'light' ? 'bg-cyan-700/35' : 'bg-white/40'}`}
-            style={star}
-          />
-        ))}
-      </div>
-
-      {/* Twinkling Stars */}
-      <div className="absolute inset-0">
-        {twinklingStars.map((star, i) => (
-          <motion.div
-            key={`star-twinkle-${i}`}
-            animate={
-              reduceMotion
-                ? { opacity: 0.4, scale: 1 }
-                : {
-                    opacity: [0, star.peakOpacity, 0],
-                    scale: [0.35, 1, 0.45],
-                    x: [0, star.x, 0],
-                    y: [0, star.y, 0],
-                  }
-            }
-            transition={
-              reduceMotion
-                ? { duration: 0 }
-                : {
-                    duration: star.duration,
-                    repeat: Infinity,
-                    delay: star.delay,
-                    repeatDelay: star.repeatDelay,
-                  }
-            }
-            className={`absolute rounded-full blur-[1px] ${theme === 'light' ? 'bg-cyan-500' : 'bg-cyan-300'}`}
-            style={{
-              left: star.left,
-              top: star.top,
-              width: star.width,
-              height: star.height,
-              opacity: star.peakOpacity,
-            }}
-          />
-        ))}
-      </div>
+      <VectorSeededStarfieldBackdrop theme={theme} seed="master-lock" />
 
       {/* Floating Spacetime Dust */}
       <motion.div

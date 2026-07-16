@@ -47,6 +47,29 @@ describe('SecurityService', () => {
     await expect(SecurityService.verifyPassword(password, salt, hash1)).resolves.toBe(true);
   });
 
+  it('hashes password and recovery keys when subtle crypto is unavailable', async () => {
+    const originalCrypto = window.crypto;
+    Object.defineProperty(window, 'crypto', {
+      value: {},
+      configurable: true,
+    });
+
+    try {
+      const salt = 'lan-http-salt';
+      const hash = await SecurityService.hashPassword(password, salt);
+      expect(hash.startsWith('pbkdf2-sha256:v1:')).toBe(true);
+
+      const recoveryKey = 'ABCD-1234-EFGH-5678-IJKL-9012-MNOP-3456';
+      const stored = await SecurityService.hashRecoveryKey(recoveryKey);
+      expect(SecurityService.recoveryKeyIsHashed(stored)).toBe(true);
+    } finally {
+      Object.defineProperty(window, 'crypto', {
+        value: originalCrypto,
+        configurable: true,
+      });
+    }
+  });
+
   it('should produce different hashes for different passwords with same salt', async () => {
     const salt = 'constant-salt';
     const hash1 = await SecurityService.hashPassword(password, salt);

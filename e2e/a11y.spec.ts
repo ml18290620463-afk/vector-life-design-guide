@@ -39,7 +39,7 @@ test.describe('axe accessibility', () => {
 
   test('onboarding intro has no serious or critical violations', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /起航|initialize/i }).dispatchEvent('click');
+    await page.getByTestId('cover-initialize').dispatchEvent('click');
     await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
 
     const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();

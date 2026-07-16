@@ -1,15 +1,12 @@
 import { AppState } from '../../types';
+import { getMainTabFromPathname, getMainTabPathname } from '../../lib/appPathRules';
 import { pushAppPath, replaceAppPath } from '../../lib/previewMode';
 import type { MobileMainTab } from './types';
+import type { NowRoute } from '../now/types/now';
 
 export const getMobileTabFromPath = (): MobileMainTab | null => {
   if (typeof window === 'undefined') return null;
-  const { pathname } = window.location;
-  if (pathname === '/past') return 'past';
-  if (pathname === '/future') return 'future';
-  if (pathname === '/avatar') return 'avatar';
-  if (pathname === '/now' || pathname.startsWith('/now/')) return 'now';
-  return null;
+  return getMainTabFromPathname(window.location.pathname);
 };
 
 export const getMobileMainTab = (appState: AppState): MobileMainTab | null => {
@@ -31,9 +28,21 @@ export const getMobileMainTab = (appState: AppState): MobileMainTab | null => {
 
 export const isMobileMainAppState = (appState: AppState) => getMobileMainTab(appState) !== null;
 
+export const getNowRouteAppState = (route: NowRoute): AppState => {
+  if (route === 'tags') return AppState.NOW_TAGS;
+  if (route === 'avatar-chat') return AppState.NOW_AVATAR_CHAT;
+  return AppState.NOW;
+};
+
+export const getMobileTabAppState = (tab: MobileMainTab): AppState => {
+  if (tab === 'past') return AppState.PAST;
+  if (tab === 'future') return AppState.FUTURE;
+  if (tab === 'avatar') return AppState.NOW_AVATAR_CHAT;
+  return AppState.NOW;
+};
+
 export const navigateMobileTab = (tab: MobileMainTab, options: { replace?: boolean } = {}) => {
-  const path =
-    tab === 'now' ? '/now' : tab === 'past' ? '/past' : tab === 'future' ? '/future' : '/avatar';
+  const path = getMainTabPathname(tab);
   const state =
     tab === 'avatar' ? { nowRoute: 'avatar-chat' } : tab === 'now' ? { nowRoute: 'now' } : {};
   if (options.replace) {

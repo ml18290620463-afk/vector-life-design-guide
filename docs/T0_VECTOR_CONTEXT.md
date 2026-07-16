@@ -1,10 +1,14 @@
 # T0 - VECTOR 矢量人生经验进化系统
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](../README.md), [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md), and [docs/archive/README.md](./archive/README.md).
+
+
 ## 定位
 
 VECTOR 是一个帮助用户把真实生活经验转化为自我理解，并让这些理解在时间中持续生长的系统。
 
-## 当前范围
+## 当时范围（历史记录）
 
 1. 产品核心流程。
 2. 启明星、心象、星图、未来回声。

@@ -1,6 +1,6 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import type { Theme } from '../types';
+import { VectorStarfieldLayer } from './VectorStarfieldBackdrop';
 
 interface FixedStar {
   left: string;
@@ -41,37 +41,14 @@ export const ViewerStarfield: React.FC<ViewerStarfieldProps> = React.memo(
       <div
         className={`absolute inset-0 opacity-30 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-vector-cyan-brand)_8%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_4%,_transparent),transparent_50%)]' : 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-cyan-500)_12%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_6%,_transparent),transparent_50%)]'}`}
       />
-
-      {/* Static (non-animated) stars */}
-      <div className="absolute inset-0">
-        {fixedStars.map((star, i) => (
-          <div
-            key={`star-fix-${i}`}
-            className={`absolute w-px h-px rounded-full ${theme === 'light' ? 'bg-slate-400' : 'bg-white/30'}`}
-            style={star}
-          />
-        ))}
-      </div>
-
-      {/* Animated twinkling stars */}
-      <div className="absolute inset-0">
-        {twinklingStars.map((star, i) => (
-          <motion.div
-            key={`star-twinkle-${i}`}
-            animate={{
-              opacity: [0.1, 0.7, 0.1],
-              scale: [0.8, 1.1, 0.8],
-            }}
-            transition={{
-              duration: star.duration,
-              repeat: Infinity,
-              delay: star.delay,
-            }}
-            className={`absolute w-[2px] h-[2px] rounded-full blur-[1px] ${theme === 'light' ? 'bg-cyan-600/60' : 'bg-cyan-300/60'}`}
-            style={{ left: star.left, top: star.top }}
-          />
-        ))}
-      </div>
+      <VectorStarfieldLayer
+        theme={theme}
+        fixedStars={fixedStars}
+        twinklingStars={twinklingStars}
+        className="absolute inset-0"
+        fixedStarClassName={`absolute w-px h-px rounded-full ${theme === 'light' ? 'bg-slate-400' : 'bg-white/30'}`}
+        twinklingStarClassName={`absolute w-[2px] h-[2px] rounded-full blur-[1px] ${theme === 'light' ? 'bg-cyan-600/60' : 'bg-cyan-300/60'}`}
+      />
     </div>
   ),
 );

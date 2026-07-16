@@ -68,7 +68,7 @@ describe('useRecoveryFlow', () => {
       await result.current.submitRecovery();
     });
 
-    expect(result.current.resetError).toBe('Emergency Anchor verification failed');
+    expect(result.current.resetError).toBe('Recovery key verification failed');
     expect(onReset).not.toHaveBeenCalled();
   });
 

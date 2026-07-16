@@ -1,5 +1,9 @@
 # VECTOR v1.0.5 上线就绪度评估
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](./README.md), [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), and [docs/archive/README.md](./docs/archive/README.md).
+
+
 > **评估对象**：`vector-life-design-guide v1.0.5`
 > **评估日期**：2026-05-01
 > **评估锚点**：以"开放注册的小型公开 SaaS / 个人 PWA 上线"为基准，而非自用 demo

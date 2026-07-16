@@ -142,4 +142,60 @@ describe('ArchiveEntryCard', () => {
     expect(image.getAttribute('src')).toBe('data:');
     expect(container.querySelector('.lucide-paperclip')).toBeNull();
   });
+
+  it('renders now audio materials as playable media without legacy prefixes', () => {
+    const { container } = render(
+      <ArchiveEntryCard
+        theme="dark"
+        t={t}
+        entry={baseEntry({
+          content: '正文\n素材:\n- audio: 录音 5s',
+          nowMaterials: [
+            {
+              id: 'audio-1',
+              type: 'audio',
+              url: 'data:audio/webm;base64,AAAA',
+              meta: { title: '录音 5s' },
+              sort_order: 0,
+            },
+          ],
+        })}
+        index={1}
+        isListView={false}
+        delayIndex={0}
+        now={Date.now()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const audio = container.querySelector('audio');
+    expect(audio).not.toBeNull();
+    expect(audio?.controls).toBe(true);
+    expect(audio?.getAttribute('src')).toBe('data:audio/webm;base64,AAAA');
+    expect(screen.getByText('正文')).toBeTruthy();
+    expect(screen.queryByText(/audio:/i)).toBeNull();
+    expect(screen.queryByText(/素材/)).toBeNull();
+  });
+
+  it('renders legacy audio data urls as playable media', () => {
+    const { container } = render(
+      <ArchiveEntryCard
+        theme="dark"
+        t={t}
+        entry={baseEntry({
+          content: '\n素材:\n- audio: data:audio/webm;base64,BBBB',
+        })}
+        index={1}
+        isListView
+        delayIndex={0}
+        now={Date.now()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const audio = container.querySelector('audio');
+    expect(audio).not.toBeNull();
+    expect(audio?.getAttribute('src')).toBe('data:audio/webm;base64,BBBB');
+    expect(screen.queryByText(/audio:/i)).toBeNull();
+  });
 });

@@ -24,7 +24,6 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
   [AppState.ONBOARDING]: [
     AppState.COVER,
     AppState.DASHBOARD,
-    AppState.ARCHIVE,
     AppState.PAST,
     AppState.FUTURE,
     AppState.NOW,
@@ -43,7 +42,6 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
   ],
   [AppState.DASHBOARD]: [
     AppState.COVER,
-    AppState.EDITOR,
     AppState.VIEWER,
     AppState.ARCHIVE,
     AppState.PAST,
@@ -52,18 +50,10 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
     AppState.NOW_TAGS,
     AppState.NOW_AVATAR_CHAT,
   ],
-  [AppState.EDITOR]: [
-    AppState.COVER,
-    AppState.DASHBOARD,
-    AppState.ARCHIVE,
-    AppState.PAST,
-    AppState.NOW,
-  ],
   [AppState.VIEWER]: [AppState.COVER, AppState.DASHBOARD, AppState.PAST, AppState.NOW],
   [AppState.ARCHIVE]: [
     AppState.COVER,
     AppState.DASHBOARD,
-    AppState.EDITOR,
     AppState.VIEWER,
     AppState.PAST,
     AppState.NOW,
@@ -73,7 +63,6 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
   [AppState.PAST]: [
     AppState.COVER,
     AppState.DASHBOARD,
-    AppState.EDITOR,
     AppState.VIEWER,
     AppState.ARCHIVE,
     AppState.NOW,

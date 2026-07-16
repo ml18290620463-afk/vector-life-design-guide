@@ -17,7 +17,6 @@ const mockProps: ComponentProps<typeof SettingsPanel> = {
   passwordHash: null,
   customIdentity: '',
   setCustomIdentity: vi.fn(),
-  dynamicVersion: '1.0',
   isUnlocked: true,
   onSetTheme: vi.fn(),
   oldPassword: '',

@@ -13,7 +13,6 @@ interface StatisticsWidgetProps {
   onSetLanguage: (lang: Language) => void;
   customIdentity: string;
   setCustomIdentity: (identity: string) => void;
-  dynamicVersion: string;
   isUnlocked: boolean;
   onSetTheme: (theme: Theme) => void;
   setSecurityMode: (mode: 'idle' | 'setup' | 'confirm') => void;
@@ -39,7 +38,6 @@ export const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({
   onSetLanguage,
   customIdentity,
   setCustomIdentity,
-  dynamicVersion,
   isUnlocked,
   onSetTheme,
   setSecurityMode,
@@ -96,7 +94,6 @@ export const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({
           t={t}
           customIdentity={customIdentity}
           setCustomIdentity={setCustomIdentity}
-          dynamicVersion={dynamicVersion}
           isUnlocked={isUnlocked}
           onOpenSecuritySetup={() => setSecurityMode('setup')}
         />

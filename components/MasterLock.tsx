@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Check, Globe } from 'lucide-react';
 import { Language, Theme } from '../types';
 import { NATIVE_LANG_NAMES, TRANSLATIONS } from '../constants';
+import { isMobileExperience } from '../lib/previewMode';
 import { useLockoutTimer } from '../hooks/useLockoutTimer';
 import { useRecoveryFlow } from '../hooks/useRecoveryFlow';
 import { useBiometricAuth } from '../hooks/useBiometricAuth';
@@ -81,6 +82,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
     disabled: lockout.isLocked || biometric.isScanning,
     onUnlock,
     onEnterFailure: lockout.registerFailure,
+    enterUnlockDelayMs: isMobileExperience() ? 0 : undefined,
   });
 
   const cancelConfirm = useDoubleClickConfirm({

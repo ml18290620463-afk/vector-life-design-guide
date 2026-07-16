@@ -5,6 +5,8 @@ import {
   ShareCardPalette,
   getShareCardPalette,
 } from '../lib/shareCardPalette';
+import { buildArchiveId } from '../lib/archiveId';
+import { formatDateDots } from '../lib/dateFormat';
 import type { ShareCardOptions } from '../hooks/useShareCardOptions';
 import { APP_VERSION } from '../constants';
 
@@ -41,19 +43,6 @@ export interface ShareCardLabels {
   /** Empty-content fallback for entries with no body. */
   emptyBodyPlaceholder: string;
 }
-
-const formatDate = (timestamp: number): string => {
-  const d = new Date(timestamp);
-  const yyyy = d.getFullYear();
-  const mm = `${d.getMonth() + 1}`.padStart(2, '0');
-  const dd = `${d.getDate()}`.padStart(2, '0');
-  return `${yyyy}.${mm}.${dd}`;
-};
-
-const buildArchiveId = (entry: DiaryEntry): string => {
-  const yearSuffix = new Date(entry.createdAt).getFullYear().toString().slice(2);
-  return `AR-${yearSuffix}-${entry.id.slice(0, 4).toUpperCase()}`;
-};
 
 /**
  * Phase 3 §3.h — pure 1080 × 1920 share-card.
@@ -204,7 +193,7 @@ const ShareCardArchiveBadge: React.FC<{
       color: palette.textMuted,
     }}
   >
-    {buildArchiveId(entry)} · {formatDate(entry.createdAt)}
+    {buildArchiveId(entry)} · {formatDateDots(entry.createdAt)}
   </div>
 );
 
@@ -216,7 +205,6 @@ const ShareCardMeta: React.FC<{ entry: DiaryEntry; palette: ShareCardPalette }> 
   if (entry.isLocked || entry.isEncrypted) flags.push('SEALED');
   if (entry.unlockAt) flags.push('TIMELOCK');
   if (entry.isArchived) flags.push('ARCHIVED');
-  if (entry.morningStarAnalysis) flags.push('ANALYSED');
   if (flags.length === 0) return null;
   return (
     <div
@@ -390,7 +378,7 @@ const ShareCardFooter: React.FC<{
   >
     <span style={{ color: palette.textSecondary }}>@{identity}</span>
     <span>
-      {attribution} · v{APP_VERSION}
+      {attribution} · v{APP_VERSION.replace(/^v/, '')}
     </span>
   </div>
 );

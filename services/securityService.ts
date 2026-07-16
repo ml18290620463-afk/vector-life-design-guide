@@ -417,11 +417,13 @@ export class SecurityService {
 
   static async hashRecoveryKey(recoveryKey: string): Promise<string> {
     const normalized = this.normalizeRecoveryKey(recoveryKey);
-    const digest = await window.crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(normalized),
-    );
-    return `${this.RECOVERY_HASH_PREFIX}:${this.uint8ToBase64(new Uint8Array(digest))}`;
+    const data = new TextEncoder().encode(normalized);
+    if (this.hasSubtleCrypto()) {
+      const digest = await window.crypto.subtle.digest('SHA-256', data);
+      return `${this.RECOVERY_HASH_PREFIX}:${this.uint8ToBase64(new Uint8Array(digest))}`;
+    }
+    const { sha256 } = await import('@noble/hashes/sha2.js');
+    return `${this.RECOVERY_HASH_PREFIX}:${this.uint8ToBase64(sha256(data))}`;
   }
 
   static async verifyRecoveryKey(
@@ -453,6 +455,17 @@ export class SecurityService {
     iterations = this.ITERATIONS,
   ): Promise<Uint8Array> {
     const passwordData = new TextEncoder().encode(password);
+    if (!this.hasSubtleCrypto()) {
+      const { pbkdf2Async } = await import('@noble/hashes/pbkdf2.js');
+      const { sha256 } = await import('@noble/hashes/sha2.js');
+      const bits = await pbkdf2Async(sha256, passwordData, salt, {
+        c: iterations,
+        dkLen: 32,
+        asyncTick: 10,
+      });
+      this.wipeSensitive(passwordData);
+      return bits;
+    }
     const passwordKey = await window.crypto.subtle.importKey('raw', passwordData, 'PBKDF2', false, [
       'deriveBits',
     ]);
@@ -484,6 +497,10 @@ export class SecurityService {
     this.wipeSensitive(data);
 
     return this.uint8ToBase64(new Uint8Array(hash));
+  }
+
+  private static hasSubtleCrypto(): boolean {
+    return typeof window !== 'undefined' && Boolean(window.crypto?.subtle);
   }
 
   private static normalizeRecoveryKey(recoveryKey: string): string {

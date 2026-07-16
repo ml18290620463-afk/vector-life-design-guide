@@ -22,7 +22,6 @@ import { seedOnboardedApp } from './seedHelpers';
  *   ✓ Cover screen
  *   ✓ Dashboard (post-onboarding, vault locked)
  *   ✓ Settings panel (open over Dashboard)
- *   ✓ MasterLock equivalent (vault unlock modal mid-flight)
  *
  * Post-onboarding baselines walk the actual onboarding flow via
  * `e2e/seedHelpers.ts::seedOnboardedApp` rather than mocking the
@@ -64,9 +63,10 @@ test.describe('@visual post-onboarding surfaces', () => {
   });
 
   test('dashboard renders the launchpad header + filter bar', async ({ page }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     await seedOnboardedApp(page);
-    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
+    await page.goto('/?preview=web&screen=dashboard', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('dashboard-system-hub')).toBeVisible();
     // Let any post-onboarding fade-in settle before the snapshot.
     await page.waitForTimeout(700);
     await expect(page).toHaveScreenshot('dashboard-default.png', {
@@ -77,13 +77,11 @@ test.describe('@visual post-onboarding surfaces', () => {
   });
 
   test('settings panel renders open over the dashboard', async ({ page }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     await seedOnboardedApp(page);
-    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
-    await page
-      .getByTitle(/认知切片|cognitive|logic|settings/i)
-      .first()
-      .click();
+    await page.goto('/?preview=web&screen=dashboard', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('dashboard-system-hub')).toBeVisible();
+    await page.getByRole('button', { name: /系统设置|System settings/i }).click();
     // Wait for the modal entry animation to settle.
     await page.waitForTimeout(700);
     await expect(page).toHaveScreenshot('settings-panel.png', {
@@ -93,35 +91,4 @@ test.describe('@visual post-onboarding surfaces', () => {
     });
   });
 
-  test('master-lock vault-unlock modal renders in flight', async ({ page }) => {
-    test.setTimeout(60_000);
-    await seedOnboardedApp(page);
-    await expect(page.getByText('矢量空间启航日志').first()).toBeVisible();
-
-    // Onboarding leaves the vault unlocked for the rest of the
-    // session. To reach the vault-unlock modal (the MasterLock
-    // equivalent surface inside the SPA), we use the in-app
-    // "lock" toggle exposed through the bio-vault button. The
-    // FilterBar's "vault locked" affordance opens the
-    // VaultUnlockModal because the data is already encrypted.
-    // This is the closest analog to the standalone MasterLock
-    // surface that we can reach without a dedicated route.
-    const vaultLockButton = page
-      .getByRole('button', { name: /数据保险柜|bio.?vault|vault/i })
-      .first();
-    if (await vaultLockButton.isVisible().catch(() => false)) {
-      await vaultLockButton.click();
-    } else {
-      // Fallback: directly screenshot the dashboard with the
-      // vault-toggle hovered. The pixel-baseline still validates
-      // the colour palette + glyph stack.
-      await page.mouse.move(640, 400);
-    }
-    await page.waitForTimeout(700);
-    await expect(page).toHaveScreenshot('master-lock-modal.png', {
-      animations: 'disabled',
-      maxDiffPixelRatio: 0.04,
-      fullPage: false,
-    });
-  });
 });

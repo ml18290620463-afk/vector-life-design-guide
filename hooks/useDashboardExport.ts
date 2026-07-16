@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
-import type { CustomPersona, DiaryEntry, Memory } from '../types';
+import { useCallback, useState } from 'react';
+import { APP_VERSION } from '../constants';
+import type { DiaryEntry } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { downloadTextFile } from '../services/fileDownload';
 import {
@@ -15,20 +16,9 @@ export interface UseDashboardExportArgs {
   t: TranslationDictionary;
   /** Marks "the user just exported" so the backup-recency banner clears. */
   recordBackup: () => void;
-  /** Phase 4 §5.1.A — user-created custom 启明星. Bundled into the v2+
-   *  backup so a restore on a new device carries them across.
-   *  Optional so legacy callers compile unchanged. */
-  customPersonas?: CustomPersona[];
-  /** Phase 4 §5.1.B — Memoir long-term memories. Bundled into the
-   *  v3+ backup so Memoirs keep "remembering" past conversations
-   *  after a restore. Optional. */
-  memories?: Memory[];
 }
 
 export interface DashboardExport {
-  /** A `vMAJOR.MINOR.PATCH`-shaped string derived from entry counts;
-   *  used as both the in-app version chip and the backup filename version. */
-  dynamicVersion: string;
   /** Trigger the JSON Star Map download. */
   handleExport: () => void;
   /** Trigger the Markdown notes download for the chosen mode. */
@@ -45,7 +35,7 @@ export interface DashboardExport {
 
 /**
  * Owns the dashboard's "export Star Map" + "download notes" workflow
- * plus the dynamic version label derived from entry counts.
+ * using the package version as the backup-format provenance label.
  *
  * Pulled out of `Dashboard.tsx` as part of Phase 2 §2.h. Pure
  * computation — no effects beyond the file-download side effect.
@@ -56,28 +46,16 @@ export const useDashboardExport = ({
   currentUser,
   t,
   recordBackup,
-  customPersonas,
-  memories,
 }: UseDashboardExportArgs): DashboardExport => {
-  const dynamicVersion = useMemo(() => {
-    const years = new Set(entries.map((e) => new Date(e.createdAt).getFullYear()));
-    const yearCount = Math.max(1, years.size);
-    const totalEntries = entries.length;
-    const deepArchiveCount = entries.filter((e) => e.isArchived).length;
-    return `v${yearCount}.${totalEntries}.${deepArchiveCount}`;
-  }, [entries]);
-
   const handleExport = useCallback(() => {
     const backup = buildBackupExport({
-      version: dynamicVersion,
+      version: APP_VERSION,
       entries,
       currentUser,
-      customPersonas,
-      memories,
     });
     downloadTextFile(backup.content, backup.filename);
     recordBackup();
-  }, [currentUser, customPersonas, dynamicVersion, entries, memories, recordBackup]);
+  }, [currentUser, entries, recordBackup]);
 
   const handleDownloadNotes = useCallback(
     (mode: NotesExportMode = 'all') => {
@@ -97,7 +75,6 @@ export const useDashboardExport = ({
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
 
   return {
-    dynamicVersion,
     handleExport,
     handleDownloadNotes,
     exportTarget,

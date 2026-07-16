@@ -1,5 +1,9 @@
 # VECTOR · 产品愿景与工程对齐 (2026 Q2)
 
+> [!IMPORTANT]
+> Historical document. This file is kept for project memory and link stability. It may describe retired features such as Morning Star / 启明星, Memoir / 心象, Echo Chamber / 圆桌, letter mode, cross-device migration, trusted devices, or advanced signed backup. For current product truth, read [README.md](../README.md), [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md), and [docs/archive/README.md](./archive/README.md).
+
+
 > **这文档是什么 / 不是什么**
 >
 > **是**:你（创始人/PM）和工程师之间的对齐文档。读完后工程师应该

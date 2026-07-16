@@ -2,13 +2,13 @@ import React from 'react';
 import { Fingerprint, ShieldAlert } from 'lucide-react';
 import type { Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
+import { APP_VERSION } from '../constants';
 
 interface StatisticsIdentityCardProps {
   theme: Theme;
   t: TranslationDictionary;
   customIdentity: string;
   setCustomIdentity: (next: string) => void;
-  dynamicVersion: string;
   isUnlocked: boolean;
   /** Open the master-password setup flow. Promoted from `<div onClick>`
    *  to a real `<button>` here so screen readers announce it correctly. */
@@ -78,7 +78,6 @@ export const StatisticsIdentityCard: React.FC<StatisticsIdentityCardProps> = ({
   t,
   customIdentity,
   setCustomIdentity,
-  dynamicVersion,
   isUnlocked,
   onOpenSecuritySetup,
 }) => (
@@ -104,7 +103,7 @@ export const StatisticsIdentityCard: React.FC<StatisticsIdentityCardProps> = ({
         <span
           className={`text-xs font-mono opacity-60 ${theme === 'light' ? 'text-slate-500' : 'text-vector-slate-chrome'}`}
         >
-          · {t.version} {dynamicVersion}
+          · {t.version} {APP_VERSION}
         </span>
       </div>
       <div

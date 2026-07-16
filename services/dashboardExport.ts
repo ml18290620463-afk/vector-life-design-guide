@@ -1,4 +1,4 @@
-import { CustomPersona, DiaryEntry, Memory, PendingLetter } from '../types';
+import { DiaryEntry } from '../types';
 import { TranslationDictionary } from '../i18n/translations';
 import { asLegacyEntry, getEntryTimestamp, getEntryTitle } from './entryCompat';
 
@@ -10,54 +10,12 @@ export type NotesExportMode = 'all' | 'filtered' | string;
  * payloads instead of half-importing them. Bump `BACKUP_SCHEMA_VERSION` and
  * the importer when the on-disk format changes.
  *
- * **v2 (Phase 4 §5.1.A)** — adds the optional `customPersonas` array
- * for user-created custom 启明星. Backwards-compatible.
- *
- * **v3 (Phase 4 §5.1.B)** — adds the optional `memories` array for
- * **心象 (Memoir)** long-term memories. Backwards-compatible the same
- * way `customPersonas` was: v1 / v2 importers reading a v3 file
- * silently ignore the new field; v3 importers reading a v1 / v2 file
- * treat `memories` as `[]`. The version bump is needed only because
- * the on-disk shape grew.
- *
- * **v4 (Phase 4.5 §E)** — adds three optional fields, all in
- * service of the cross-device migration wizard:
- *   - `letters`: pending Memoir letters from §A so the wizard
- *     carries the unsent / delivered queue across the move.
- *   - `passwordHashSnapshot` / `passwordSaltSnapshot`: opt-in
- *     credential carry so the user can unlock the migrated vault
- *     on the new device with the same master password — without
- *     these fields the user would have to re-bootstrap the
- *     password and lose access to encrypted entries. **Only the
- *     migration export path emits these**; the regular Settings
- *     "Export Star Map" path leaves them out (defence in depth:
- *     the credential snapshot doesn't end up in casual backups).
- * Backwards-compatible: v1-v3 importers ignore the new fields,
- * and a v4-aware importer reading a v1-v3 file treats them as
- * undefined.
- *
- * **v5 (Phase 4 §4.b-3)** — adds two optional fields for Ed25519
- * backup integrity:
- *   - `signature`: 64-byte Ed25519 signature, base64. Covers the
- *     canonical body (this same JSON, with `signature` and
- *     `publicKey` stripped before re-stringify-ing).
- *   - `publicKey`: 32-byte raw Ed25519 public key, base64. The
- *     verifier consults this against the local TOFU trust store
- *     (see `services/trustedDevices.ts`) to decide auto-pass vs
- *     show-fingerprint-confirmation.
- * Both fields are optional; an unsigned v5 file is still valid
- * (it just falls back to the v4 short-code-only verification
- * posture). Sign / verify implementation lives in
- * `services/backupSignature.ts`.
- *
- * Why bundle memories into the backup at all (vs. asking the user to
- * regenerate from scratch on a new device): the whole VECTOR value
- * proposition is "the memoir remembers" — losing the memory bank on
- * restore would erase that. The backup is the only path through
- * which a Memoir's history can leave the device, by design.
+ * B4 keeps this as the lightweight, ordinary backup path for entries.
+ * Retired advanced payloads were intentionally removed from this schema so
+ * casual users get a smaller, easier-to-trust export.
  */
 export const BACKUP_TYPE = 'vector-vault-backup' as const;
-export const BACKUP_SCHEMA_VERSION = 5 as const;
+export const BACKUP_SCHEMA_VERSION = 1 as const;
 
 export interface BackupPayload {
   type: typeof BACKUP_TYPE;
@@ -69,30 +27,6 @@ export interface BackupPayload {
   /** Length of `entries`; importers cross-check this. */
   entryCount: number;
   entries: DiaryEntry[];
-  /** Phase 4 §5.1.A — user-created custom 启明星. Optional so v1
-   *  imports continue to work and consumers without any custom
-   *  personas don't bloat the file. */
-  customPersonas?: CustomPersona[];
-  /** Phase 4 §5.1.B — Memoir long-term memories. Optional;
-   *  consumers without any Memoirs don't bloat the file. The
-   *  importer pipes these through `memoryService.hydrateMemories`
-   *  before persisting so a hostile or corrupted backup cannot
-   *  poison the runtime list. */
-  memories?: Memory[];
-  /** Phase 4.5 §E — pending Memoir letters (from §A "Letter Mode").
-   *  Optional, only present in v4+ payloads. */
-  letters?: PendingLetter[];
-  /** Phase 4.5 §E — opt-in credential carry for the cross-device
-   *  migration wizard. The hash is the SAME format
-   *  `SecurityService.hashPassword` produces (PBKDF2 or Argon2id —
-   *  both verifiable on the new device). The salt is the legacy
-   *  PBKDF2 salt; Argon2id self-describing hashes ignore it but
-   *  it's still carried so a downgrade verification path works.
-   *  Only emitted by the migration export path; the regular
-   *  `Settings → Export Star Map` flow OMITS these fields so
-   *  casual backups never carry credential material. */
-  passwordHashSnapshot?: string;
-  passwordSaltSnapshot?: string;
 }
 
 interface BuildBackupExportArgs {
@@ -100,19 +34,6 @@ interface BuildBackupExportArgs {
   entries: DiaryEntry[];
   currentUser: string | null;
   now?: Date;
-  /** Phase 4 §5.1.A — bundle the user's custom 启明星 into the
-   *  backup so a restore on a new device carries them across. */
-  customPersonas?: CustomPersona[];
-  /** Phase 4 §5.1.B — bundle Memoir memories into the backup so
-   *  Memoirs keep "remembering" past conversations after restore. */
-  memories?: Memory[];
-  /** Phase 4.5 §E — bundle pending Memoir letters into the backup. */
-  letters?: PendingLetter[];
-  /** Phase 4.5 §E — opt-in credential carry. Only the migration
-   *  wizard sets these; regular Settings "Export Star Map" leaves
-   *  them undefined. */
-  passwordHashSnapshot?: string;
-  passwordSaltSnapshot?: string;
 }
 
 interface BuildNotesExportArgs {
@@ -139,11 +60,6 @@ export const buildBackupExport = ({
   entries,
   currentUser,
   now,
-  customPersonas,
-  memories,
-  letters,
-  passwordHashSnapshot,
-  passwordSaltSnapshot,
 }: BuildBackupExportArgs) => {
   const exportedAt = (now ?? new Date()).toISOString();
   const payload: BackupPayload = {
@@ -153,17 +69,6 @@ export const buildBackupExport = ({
     exportedAt,
     entryCount: entries.length,
     entries,
-    // Only emit when there's something to ship; keeps exports compact
-    // for the common case (a fresh user with zero custom personas /
-    // zero Memoirs / zero letters).
-    ...(customPersonas && customPersonas.length > 0 ? { customPersonas } : {}),
-    ...(memories && memories.length > 0 ? { memories } : {}),
-    ...(letters && letters.length > 0 ? { letters } : {}),
-    // Phase 4.5 §E — credential snapshot is opt-in per call (never
-    // emitted by the regular Settings export path). The migration
-    // export path passes both fields when it has them.
-    ...(passwordHashSnapshot ? { passwordHashSnapshot } : {}),
-    ...(passwordSaltSnapshot ? { passwordSaltSnapshot } : {}),
   };
   const content = JSON.stringify(payload, null, 2);
   const filename = `VECTOR_${exportUser(currentUser)}_BACKUP_${exportTimestamp(now)}.json`;

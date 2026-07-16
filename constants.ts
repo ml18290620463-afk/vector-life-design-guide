@@ -1,6 +1,8 @@
 import { Language } from './types';
+import packageMetadata from './package.json';
 
-export const APP_VERSION = 'vector_core_v0.2.8';
+/** The package manifest is the single source of truth for every user-facing version. */
+export const APP_VERSION = packageMetadata.version;
 
 export const NATIVE_LANG_NAMES: Record<Language, string> = {
   zh: '中文',

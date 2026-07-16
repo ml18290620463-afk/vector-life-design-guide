@@ -254,10 +254,9 @@ describe('useDiaryData', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
-    // Phase 4 §4.a-1: empty IDB now seeds the two sample reflections
-    // from `services/sampleEntries.ts` instead of the old MOCK_ENTRIES.
-    // The first entry (memoir teaser) sits at index 0 since
-    // `getSampleEntries` orders [memoir, daily] for the descending UI.
+    // Empty IDB now seeds the two sample reflections from
+    // `services/sampleEntries.ts` instead of the old MOCK_ENTRIES.
+    // The first entry is the newest sample in the descending UI.
     const expectedFirstTitle = getSampleEntries('en')[0].title;
     expect(result.current.entries[0]?.title).toBe(expectedFirstTitle);
 

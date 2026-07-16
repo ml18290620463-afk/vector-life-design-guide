@@ -28,7 +28,11 @@ export const replaceAppPath = (pathname: string, state: Record<string, unknown> 
   if (typeof window === 'undefined') return;
   const nextUrl = buildPreviewAwarePath(pathname);
   if (window.location.pathname + window.location.search !== nextUrl) {
-    window.history.replaceState(state, '', nextUrl);
+    try {
+      window.history.replaceState(state, '', nextUrl);
+    } catch (err) {
+      console.warn('previewMode: replaceState failed; continuing without URL sync', err);
+    }
   }
 };
 
@@ -36,6 +40,10 @@ export const pushAppPath = (pathname: string, state: Record<string, unknown> = {
   if (typeof window === 'undefined') return;
   const nextUrl = buildPreviewAwarePath(pathname);
   if (window.location.pathname + window.location.search !== nextUrl) {
-    window.history.pushState(state, '', nextUrl);
+    try {
+      window.history.pushState(state, '', nextUrl);
+    } catch (err) {
+      console.warn('previewMode: pushState failed; continuing without URL sync', err);
+    }
   }
 };

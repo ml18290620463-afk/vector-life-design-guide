@@ -228,7 +228,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
               className={`font-mono text-xs md:text-sm tracking-widest leading-loose ${theme === 'light' ? 'text-slate-600' : 'text-cyan-400'}`}
             >
               <TypewriterText
-                text={`✦ 时空信件加载中  。。。\n来自 ${new Date(entry.createdAt).toLocaleDateString('zh-CN')} 信件\n信件主题：${entry.title}\n签收人：${displayIdentity}`}
+                text={`✦ 加密记录加载中  。。。\n来自 ${new Date(entry.createdAt).toLocaleDateString('zh-CN')} 的记录\n记录主题：${entry.title}\n签收人：${displayIdentity}`}
                 speed={60}
               />
             </div>

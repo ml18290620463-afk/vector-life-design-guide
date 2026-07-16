@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { DiaryEntry, GroupingMode } from '../types';
 import { useSearch } from './useSearch';
 import { asLegacyEntry, getEntryTimestamp, isMemoryBoatEntry } from '../services/entryCompat';
+import { formatDateKey, formatMonthKey } from '../lib/dateFormat';
 
 export type ArchiveGroupingMode = Exclude<GroupingMode, 'none'>;
 
@@ -41,12 +42,8 @@ export interface ArchiveGrouping {
 const buildBucketKey = (entry: DiaryEntry, mode: ArchiveGroupingMode): string => {
   const date = new Date(entry.createdAt);
   if (mode === 'year') return date.getFullYear().toString();
-  if (mode === 'month') {
-    return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-  }
-  return `${date.getFullYear()}-${(date.getMonth() + 1)
-    .toString()
-    .padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+  if (mode === 'month') return formatMonthKey(entry.createdAt);
+  return formatDateKey(entry.createdAt);
 };
 
 /**

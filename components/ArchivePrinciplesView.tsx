@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Book, Plus, Shield, Star, Trash2 } from 'lucide-react';
-import type { Principle, Theme } from '../types';
+import type { Language, Principle, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
+import { getPrincipleConfidence } from '../services/experienceFeedback';
 import { CyberButton } from './CyberButton';
 
 interface ArchivePrinciplesViewProps {
   theme: Theme;
+  language?: Language;
   t: TranslationDictionary;
   principles: Principle[];
   onAddPrinciple: (text: string, year: number, showOnHome: boolean) => void;
@@ -26,6 +28,7 @@ const PRINCIPLE_MAX_LENGTH = 30;
  */
 export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   theme,
+  language = 'zh',
   t,
   principles,
   onAddPrinciple,
@@ -205,11 +208,35 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                           <div
                             className={`mt-1 w-1.5 h-1.5 rounded-full ${theme === 'light' ? 'bg-vector-cyan-brand' : 'bg-green-500'}`}
                           />
-                          <p
-                            className={`text-sm leading-relaxed tracking-wide ${theme === 'light' ? 'text-vector-slate-mid' : 'text-green-300'}`}
-                          >
-                            {principle.text}
-                          </p>
+                          <div>
+                            <p
+                              className={`text-sm leading-relaxed tracking-wide ${theme === 'light' ? 'text-vector-slate-mid' : 'text-green-300'}`}
+                            >
+                              {principle.text}
+                            </p>
+                            <span
+                              className={`principle-health ${theme === 'light' ? 'principle-health--light' : ''}`}
+                              title={
+                                language === 'zh'
+                                  ? `可信度 ${Math.round(getPrincipleConfidence(principle) * 100)}%`
+                                  : `Reliability ${Math.round(getPrincipleConfidence(principle) * 100)}%`
+                              }
+                            >
+                              {getPrincipleConfidence(principle) >= 0.7
+                                ? language === 'zh'
+                                  ? '经验证'
+                                  : 'Validated'
+                                : getPrincipleConfidence(principle) <= 0.35
+                                  ? language === 'zh'
+                                    ? '待复核'
+                                    : 'Review'
+                                  : language === 'zh'
+                                    ? '积累中'
+                                    : 'Learning'}
+                              {(principle.recallCount ?? 0) > 0 &&
+                                ` · ${principle.recallCount}${language === 'zh' ? ' 次' : '×'}`}
+                            </span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button

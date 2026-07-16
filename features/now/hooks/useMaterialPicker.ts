@@ -2,11 +2,15 @@ import { useCallback, useRef } from 'react';
 import type { Material, MaterialType } from '../types/now';
 import { CONFIG } from '../constants/config';
 import { canAddMaterialType } from '../state/nowRules';
+import { generateSecureId } from '../../../services/idGenerator';
 
-const makeId = () =>
-  typeof crypto !== 'undefined' && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `material-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const readFileAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 
 export const useMaterialPicker = (args: {
   materials: Material[];
@@ -26,7 +30,7 @@ export const useMaterialPicker = (args: {
     if (!url) return;
     args.onAdd([
       {
-        id: makeId(),
+        id: generateSecureId('material'),
         type: 'link',
         url,
         meta: { title: url },
@@ -36,26 +40,32 @@ export const useMaterialPicker = (args: {
   }, [args]);
 
   const addFiles = useCallback(
-    (files: FileList | null, type: Extract<MaterialType, 'image' | 'video'>) => {
+    async (files: FileList | null, type: Extract<MaterialType, 'image' | 'video'>) => {
       if (!files?.length) return;
       const check = canAddMaterialType(args.materials, type);
       if (check.ok === false) {
         args.onError(check.message);
         return;
       }
-      const maxCount = type === 'image' ? CONFIG.MAX_IMAGES - args.materials.filter((m) => m.type === 'image').length : 1;
+      const maxCount =
+        type === 'image'
+          ? CONFIG.MAX_IMAGES - args.materials.filter((m) => m.type === 'image').length
+          : 1;
       const maxBytes = type === 'image' ? 10 * 1024 * 1024 : 100 * 1024 * 1024;
       const picked = Array.from(files).slice(0, maxCount);
       const oversized = picked.find((file) => file.size > maxBytes);
       if (oversized) {
-        args.onError(type === 'image' ? '单图不能超过 10MB' : '视频不能超过 100MB');
+        args.onError(
+          type === 'image' ? '单图不能超过 10MB' : '视频不能超过 100MB',
+        );
         return;
       }
+      const urls = await Promise.all(picked.map((file) => readFileAsDataUrl(file)));
       args.onAdd(
         picked.map((file, index) => ({
-          id: makeId(),
+          id: generateSecureId('material'),
           type,
-          url: URL.createObjectURL(file),
+          url: urls[index],
           local_path: file.name,
           meta: { title: file.name },
           sort_order: args.materials.length + index,

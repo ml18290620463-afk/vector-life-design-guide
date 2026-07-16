@@ -34,9 +34,9 @@ export interface DashboardWipeFlowState {
  * `onWipeData` typically tears down the entire data layer — keeping
  * the field controlled simply lets the parent decide on remount.
  *
- * Pulled out as part of Phase 2 §2.h tail (after VaultContent /
- * DashboardFooter / useClickOutside) so Dashboard.tsx can clear the
- * 350-LOC bar.
+ * Pulled out as part of the Dashboard shell thinning work so
+ * Dashboard.tsx can stay focused on navigation, settings entry points,
+ * and system-hub composition.
  */
 export const useDashboardWipeFlow = ({
   onWipeData,
