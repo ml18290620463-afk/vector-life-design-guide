@@ -28,14 +28,13 @@ export const isDraftEmpty = (draft: NowDraft): boolean =>
 
 export const getCanSend = (
   draft: Pick<NowDraft, 'text' | 'materials' | 'mood_tags' | 'event_tags'>,
-): boolean => hasDraftContent(draft) && draft.mood_tags.length >= 1 && draft.event_tags.length >= 1;
+): boolean => hasDraftContent(draft) && draft.event_tags.length >= CONFIG.MIN_EVENT_TAGS;
 
 export const getDisabledSendReason = (
   draft: Pick<NowDraft, 'text' | 'materials' | 'mood_tags' | 'event_tags'>,
 ): string | null => {
   if (!hasDraftContent(draft)) return '请先输入内容或添加素材';
-  if (draft.mood_tags.length < 1) return '请选择心情标签';
-  if (draft.event_tags.length < 1) return '请选择事件标签';
+  if (draft.event_tags.length < CONFIG.MIN_EVENT_TAGS) return '请选择事件标签';
   return null;
 };
 
@@ -49,7 +48,7 @@ export const validateTags = (
   if (moodTags.length > CONFIG.MAX_MOOD_TAGS) return { ok: false, message: '心情标签最多 3 个' };
   if (eventTags.length > CONFIG.MAX_EVENT_TAGS) return { ok: false, message: '事件标签最多 3 个' };
   const custom = new Set(customAnchors);
-  if (moodTags.some((tag) => !MOOD_TAGS.includes(tag))) {
+  if (moodTags.some((tag) => !MOOD_TAGS.includes(tag) && !custom.has(tag))) {
     return { ok: false, message: '存在未知心情标签' };
   }
   if (eventTags.some((tag) => !EVENT_TAGS.includes(tag) && !custom.has(tag))) {

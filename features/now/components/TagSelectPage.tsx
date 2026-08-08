@@ -40,7 +40,7 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
     setValues([...values, tag]);
   };
 
-  const addCustomAnchor = () => {
+  const addCustomAnchor = (target: 'mood' | 'event') => {
     const value = window.prompt('输入自定义锚点，2～12 字')?.trim();
     if (!value) return;
     if (value.length < 2 || value.length > 12) {
@@ -50,7 +50,12 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
     const next = Array.from(new Set([...customAnchors, value]));
     setCustomAnchors(next);
     writeCustomAnchors(next);
-    if (!eventTags.includes(value)) toggle(value, eventTags, setEventTags, CONFIG.MAX_EVENT_TAGS);
+    if (target === 'mood' && !moodTags.includes(value)) {
+      toggle(value, moodTags, setMoodTags, CONFIG.MAX_MOOD_TAGS);
+    }
+    if (target === 'event' && !eventTags.includes(value)) {
+      toggle(value, eventTags, setEventTags, CONFIG.MAX_EVENT_TAGS);
+    }
   };
 
   const confirm = () => {
@@ -78,7 +83,7 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
         <p>{TAG_SLOGAN}</p>
         <h2>心情</h2>
         <div className="now-chip-grid">
-          {MOOD_TAGS.map((tag) => (
+          {Array.from(new Set([...MOOD_TAGS, ...customAnchors])).map((tag) => (
             <button
               key={tag}
               type="button"
@@ -88,10 +93,19 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
               {tag}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => addCustomAnchor('mood')}
+            aria-label="为心情添加自定义锚点"
+          >
+            <Plus size={14} /> 自定义锚点
+          </button>
         </div>
         <h2>事件</h2>
         <div className="now-chip-grid">
-          {[...EVENT_TAGS.filter((tag) => tag !== '自定义锚点'), ...customAnchors].map((tag) => (
+          {Array.from(
+            new Set([...EVENT_TAGS.filter((tag) => tag !== '自定义锚点'), ...customAnchors]),
+          ).map((tag) => (
             <button
               key={tag}
               type="button"
@@ -101,7 +115,11 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
               {tag}
             </button>
           ))}
-          <button type="button" onClick={addCustomAnchor}>
+          <button
+            type="button"
+            onClick={() => addCustomAnchor('event')}
+            aria-label="为事件添加自定义锚点"
+          >
             <Plus size={14} /> 自定义锚点
           </button>
         </div>

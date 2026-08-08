@@ -38,19 +38,16 @@ const entry = (overrides: Partial<DiaryEntry>): DiaryEntry => ({
 });
 
 describe('nowRules', () => {
-  it('requires content, mood tag and event tag before sending', () => {
+  it('requires content and an event tag while keeping mood optional', () => {
     const draft = createEmptyDraft(new Date('2026-06-15T10:37:00+08:00'));
 
     expect(getCanSend(draft)).toBe(false);
     expect(getDisabledSendReason(draft)).toBe('请先输入内容或添加素材');
 
     const withText = { ...draft, text: '今天完成一次重要记录' };
-    expect(getDisabledSendReason(withText)).toBe('请选择心情标签');
+    expect(getDisabledSendReason(withText)).toBe('请选择事件标签');
 
-    const withMood = { ...withText, mood_tags: ['平静'] };
-    expect(getDisabledSendReason(withMood)).toBe('请选择事件标签');
-
-    expect(getCanSend({ ...withMood, event_tags: ['个人成长'] })).toBe(true);
+    expect(getCanSend({ ...withText, event_tags: ['个人成长'] })).toBe(true);
   });
 
   it('converts a now record into a past diary entry with materials and tags', () => {
@@ -97,7 +94,9 @@ describe('nowRules', () => {
 
   it('validates tag ranges and allows confirmed custom anchors', () => {
     expect(validateTags(['焦虑'], ['职业发展'])).toEqual({ ok: true });
-    expect(validateTags([], ['职业发展'])).toEqual({ ok: false, message: '请选择心情标签' });
+    expect(validateTags([], ['职业发展'])).toEqual({ ok: true });
+    expect(validateTags([], [])).toEqual({ ok: false, message: '请选择事件标签' });
+    expect(validateTags(['我的锚点'], ['职业发展'], ['我的锚点'])).toEqual({ ok: true });
     expect(validateTags(['焦虑'], ['我的锚点'], ['我的锚点'])).toEqual({ ok: true });
     expect(validateTags(['焦虑'], ['未知事件'])).toEqual({
       ok: false,
@@ -212,7 +211,10 @@ describe('nowRules', () => {
 
   it('anchors structured insight only to unique recalled entry ids', () => {
     const memory = selectAvatarRecallMemories([entry({ id: 'work-sad' })], '客户方案')[0]!;
-    const anchored = buildAvatarStructuredInsight([{ content: '今天客户方案又被否定' }], [memory, memory]);
+    const anchored = buildAvatarStructuredInsight(
+      [{ content: '今天客户方案又被否定' }],
+      [memory, memory],
+    );
     const conversationOnly = buildAvatarStructuredInsight([{ content: '今天有一场会议' }]);
 
     expect(anchored.evidenceEntryIds).toEqual(['work-sad']);

@@ -107,9 +107,7 @@ export const getPreviewScreenAction = (
   }
 
   if (screen === 'archive' || screen === 'past') {
-    return options.isMobile
-      ? { kind: 'route', states: [AppState.PAST], replacePath: getMainTabPathname('past') }
-      : { kind: 'route', states: [AppState.ARCHIVE], replacePath: getMainTabPathname('past') };
+    return { kind: 'route', states: [AppState.PAST], replacePath: getMainTabPathname('past') };
   }
 
   if (screen === 'future') {

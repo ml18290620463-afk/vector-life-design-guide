@@ -44,7 +44,7 @@ test('completes mobile onboarding and reaches the main shell', async ({ page }) 
   await expect(page.getByRole('navigation', { name: '主框架导航' })).toBeVisible();
   await expect(page.getByTestId('past-page')).toBeVisible();
   await expect(page.getByRole('heading', { name: '过去' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /过去 素材、复盘、原则/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /过去 记录与原则/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /现在 记录此刻与行动/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /未来 目标、推演、转化/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /分身 记忆协助与对话/ })).toBeVisible();

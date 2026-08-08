@@ -79,11 +79,11 @@ describe('SettingsBackupSection', () => {
     expect(screen.queryByRole('menu')).toBeNull();
     rerender(<SettingsBackupSection {...baseProps} isExportDropdownOpen />);
     const menuItems = screen.getAllByRole('menuitem');
-    // "Export all" + 2 non-archived entries (Alpha, Gamma) — Beta is archived.
-    expect(menuItems.length).toBe(3);
+    // "Export all" + every record, including entries carrying the legacy archived flag.
+    expect(menuItems.length).toBe(4);
     expect(screen.getByText('Alpha')).toBeTruthy();
+    expect(screen.getByText('Beta')).toBeTruthy();
     expect(screen.getByText('Gamma')).toBeTruthy();
-    expect(screen.queryByText('Beta')).toBeNull();
   });
 
   it('clicking a Notes menuitem flows through setExportTarget + onDownloadNotes + closes the dropdown', () => {

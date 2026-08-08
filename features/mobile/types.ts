@@ -1,3 +1,3 @@
 export type MobileMainTab = 'past' | 'now' | 'future' | 'avatar';
 
-export type PastRepositorySection = 'timeline' | 'experience' | 'archive';
+export type PastRepositorySection = 'timeline' | 'experience';

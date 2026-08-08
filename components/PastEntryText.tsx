@@ -24,13 +24,15 @@ interface PastEntryBodyProps {
   variant: PastEntryBodyVariant;
   language?: Language;
   theme?: Theme;
+  expanded?: boolean;
+  showToggle?: boolean;
 }
 
 interface PastEntryTagsProps {
   entry: DiaryEntry;
 }
 
-const TEXT_COLLAPSE_LIMIT = 200;
+const TEXT_COLLAPSE_LIMIT = 100;
 
 const getDisplayTitle = (entry: DiaryEntry, language: Language) =>
   entry.title || (language === 'zh' ? '未命名记录' : 'Untitled');
@@ -50,6 +52,7 @@ const CollapsibleRecordText: React.FC<{ text: string; language: Language }> = ({
         <button
           type="button"
           className="mobile-past-text-toggle"
+          aria-expanded={expanded}
           onClick={() => setExpanded((current) => !current)}
         >
           {expanded
@@ -138,14 +141,30 @@ export const PastEntryBody: React.FC<PastEntryBodyProps> = ({
   variant,
   language = 'zh',
   theme = 'dark',
+  expanded,
+  showToggle = true,
 }) => {
   const { body } = splitEntryContent(entry.content);
   if (!body) return null;
 
   if (variant === 'mobile') {
+    const isControlled = expanded !== undefined;
+    const visibleBody =
+      isControlled && !expanded && body.length > TEXT_COLLAPSE_LIMIT
+        ? `${body.slice(0, TEXT_COLLAPSE_LIMIT)}…`
+        : body;
+
     return (
       <div className="mobile-past-timeline__content">
-        <CollapsibleRecordText text={body} language={language} />
+        {isControlled ? (
+          <p>{visibleBody}</p>
+        ) : showToggle ? (
+          <CollapsibleRecordText text={body} language={language} />
+        ) : (
+          <p>
+            {body.length > TEXT_COLLAPSE_LIMIT ? `${body.slice(0, TEXT_COLLAPSE_LIMIT)}…` : body}
+          </p>
+        )}
       </div>
     );
   }

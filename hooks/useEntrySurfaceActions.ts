@@ -28,13 +28,13 @@ export const useEntrySurfaceActions = ({
   );
 
   const createMaterialEntry = useCallback(
-    (material: Attachment, isArchived: boolean) => {
+    (material: Attachment) => {
       void addEntry({
         title: material.name,
         content: `[Attachment: ${material.name}]`,
         tags: ['upload', 'material', material.type],
         attachment: material,
-        isArchived,
+        isArchived: false,
       });
     },
     [addEntry],
@@ -53,7 +53,7 @@ export const useEntrySurfaceActions = ({
     if (isMobileExperience()) {
       handleMobileTabChange('past');
     } else {
-      setAppState(AppState.ARCHIVE);
+      setAppState(AppState.PAST);
     }
     setSelectedEntry(null);
   }, [handleMobileTabChange, setAppState, setSelectedEntry]);

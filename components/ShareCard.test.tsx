@@ -130,7 +130,7 @@ describe('ShareCard (Phase 3 §3.h)', () => {
     expect(screen.queryByText('Has attachment')).toBeNull();
   });
 
-  it('renders SEALED / TIMELOCK / ARCHIVED status flags', () => {
+  it('renders security status flags without exposing the legacy archived state', () => {
     render(
       <ShareCard
         entry={baseEntry({
@@ -146,7 +146,7 @@ describe('ShareCard (Phase 3 §3.h)', () => {
     );
     expect(screen.getByText('SEALED')).toBeTruthy();
     expect(screen.getByText('TIMELOCK')).toBeTruthy();
-    expect(screen.getByText('ARCHIVED')).toBeTruthy();
+    expect(screen.queryByText('ARCHIVED')).toBeNull();
     expect(screen.queryByText('ANALYSED')).toBeNull();
   });
 

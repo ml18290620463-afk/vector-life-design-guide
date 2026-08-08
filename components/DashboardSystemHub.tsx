@@ -3,8 +3,6 @@ import { Database, Download, Settings, ShieldCheck } from 'lucide-react';
 import type { Language, Theme } from '../types';
 
 interface DashboardSystemHubProps {
-  activeEntriesCount: number;
-  archivedEntriesCount: number;
   language: Language;
   onOpenSettings: () => void;
   theme: Theme;
@@ -21,8 +19,6 @@ type HubAction = {
 };
 
 export const DashboardSystemHub: React.FC<DashboardSystemHubProps> = ({
-  activeEntriesCount,
-  archivedEntriesCount,
   language,
   onOpenSettings,
   theme,
@@ -40,8 +36,8 @@ export const DashboardSystemHub: React.FC<DashboardSystemHubProps> = ({
       id: 'status',
       title: isZh ? '记录状态' : 'Record status',
       body: isZh
-        ? '这里只显示全局记录计数；真正的时间线、蒸馏、原则和归档统一进入 Past。'
-        : 'This hub shows global counts only. Timeline, distillation, principles and archive live in Past.',
+        ? '这里只显示全局记录计数；真正的时间线与原则统一进入 Past。'
+        : 'This hub shows global counts only. The timeline and principles live in Past.',
       meta: isZh ? `${totalEntriesCount} 条记录` : `${totalEntriesCount} records`,
       icon: Database,
     },
@@ -106,28 +102,14 @@ export const DashboardSystemHub: React.FC<DashboardSystemHubProps> = ({
           </p>
         </div>
         <div
-          className={`grid grid-cols-3 gap-2 rounded-lg border p-3 text-center ${
+          className={`rounded-lg border px-6 py-3 text-center ${
             theme === 'light'
               ? 'border-slate-200 bg-slate-50 text-slate-600'
               : 'border-cyan-900/30 bg-black/20 text-cyan-100/70'
           }`}
         >
-          <div>
-            <strong className="block text-lg text-current">{totalEntriesCount}</strong>
-            <span className="text-[9px] uppercase tracking-widest">{isZh ? '总计' : 'Total'}</span>
-          </div>
-          <div>
-            <strong className="block text-lg text-current">{activeEntriesCount}</strong>
-            <span className="text-[9px] uppercase tracking-widest">
-              {isZh ? '活跃' : 'Active'}
-            </span>
-          </div>
-          <div>
-            <strong className="block text-lg text-current">{archivedEntriesCount}</strong>
-            <span className="text-[9px] uppercase tracking-widest">
-              {isZh ? '归档' : 'Archived'}
-            </span>
-          </div>
+          <strong className="block text-lg text-current">{totalEntriesCount}</strong>
+          <span className="text-[9px] uppercase tracking-widest">{isZh ? '记录' : 'Records'}</span>
         </div>
       </div>
 

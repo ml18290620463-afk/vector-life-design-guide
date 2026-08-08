@@ -154,7 +154,6 @@ export const buildLocalSemanticIndex = (entries: DiaryEntry[]): LocalSemanticInd
     .filter(
       (entry) =>
         !entry.isSample &&
-        !entry.isArchived &&
         (!entry.unlockAt || entry.unlockAt <= Date.now()) &&
         `${entry.title}${entry.content}`.trim().length > 0,
     )

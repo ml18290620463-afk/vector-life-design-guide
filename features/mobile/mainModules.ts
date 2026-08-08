@@ -17,7 +17,7 @@ export const getMainModules = (language: Language): MainModuleDefinition[] => {
     {
       id: 'past',
       title: isZh ? '过去' : 'Past',
-      hint: isZh ? '素材、复盘、原则' : 'Material, review, principles',
+      hint: isZh ? '记录与原则' : 'Records and principles',
       commandLabel: isZh ? '打开 Past' : 'Open Past',
       Icon: Archive,
     },

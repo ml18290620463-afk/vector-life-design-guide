@@ -204,7 +204,6 @@ const ShareCardMeta: React.FC<{ entry: DiaryEntry; palette: ShareCardPalette }> 
   const flags: string[] = [];
   if (entry.isLocked || entry.isEncrypted) flags.push('SEALED');
   if (entry.unlockAt) flags.push('TIMELOCK');
-  if (entry.isArchived) flags.push('ARCHIVED');
   if (flags.length === 0) return null;
   return (
     <div

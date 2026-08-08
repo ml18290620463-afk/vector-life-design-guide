@@ -19,7 +19,7 @@ export const buildAvatarProactiveInvitation = (
   entries: DiaryEntry[],
 ): AvatarProactiveInvitation => {
   const available = entries
-    .filter((entry) => !entry.isLocked && !entry.isArchived && !entry.isSample)
+    .filter((entry) => !entry.isLocked && !entry.isSample)
     .sort((left, right) => right.createdAt - left.createdAt)
     .slice(0, 8);
 

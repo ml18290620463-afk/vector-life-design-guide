@@ -35,7 +35,7 @@ interface DashboardSettingsModalProps {
   activeEntries: DiaryEntry[];
   onBulkUpdateEntries: (entries: DiaryEntry[]) => void;
   onWipeData: () => void;
-  onCreateMaterialEntry: (material: Attachment, isArchived: boolean) => void;
+  onCreateMaterialEntry: (material: Attachment) => void;
 
   // ----- Stars -----
   guidingStars: string[];

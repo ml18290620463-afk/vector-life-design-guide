@@ -86,7 +86,7 @@ export const buildNotesExport = ({
 }: BuildNotesExportArgs) => {
   const targetEntries =
     mode === 'all'
-      ? entries.filter((entry) => !entry.isArchived)
+      ? entries
       : mode === 'filtered'
         ? filteredEntries
         : entries.filter((entry) => entry.id === mode);

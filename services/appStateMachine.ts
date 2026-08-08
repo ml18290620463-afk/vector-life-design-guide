@@ -79,6 +79,7 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
   [AppState.FUTURE]: [
     AppState.COVER,
     AppState.DASHBOARD,
+    AppState.ARCHIVE,
     AppState.PAST,
     AppState.NOW,
     AppState.NOW_TAGS,
@@ -87,16 +88,24 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
   [AppState.NOW]: [
     AppState.COVER,
     AppState.DASHBOARD,
+    AppState.ARCHIVE,
     AppState.PAST,
     AppState.FUTURE,
     AppState.NOW_TAGS,
     AppState.NOW_AVATAR_CHAT,
   ],
-  [AppState.NOW_TAGS]: [AppState.NOW, AppState.DASHBOARD, AppState.PAST, AppState.FUTURE],
+  [AppState.NOW_TAGS]: [
+    AppState.NOW,
+    AppState.DASHBOARD,
+    AppState.ARCHIVE,
+    AppState.PAST,
+    AppState.FUTURE,
+  ],
   [AppState.NOW_AVATAR_CHAT]: [
     AppState.NOW,
     AppState.NOW_TAGS,
     AppState.DASHBOARD,
+    AppState.ARCHIVE,
     AppState.PAST,
     AppState.FUTURE,
   ],

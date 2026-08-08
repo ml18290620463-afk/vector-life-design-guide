@@ -63,6 +63,7 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
   const [decision, setDecision] = useState<FutureDecision | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState('');
   const analysisRequestRef = useRef(0);
   const isZh = language === 'zh';
   const activeEntries = useMemo(
@@ -121,6 +122,7 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
 
   const claimDecision = async () => {
     if (!decision || !onAddAction || activeAction) return;
+    setClaimError('');
     setClaiming(true);
     try {
       await onAddAction({
@@ -134,6 +136,10 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
       });
       setDecision(null);
       setQuestion('');
+    } catch {
+      setClaimError(
+        isZh ? '这一步还没有保存，请再试一次。' : 'This step was not saved. Please try again.',
+      );
     } finally {
       setClaiming(false);
     }
@@ -152,32 +158,39 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
         </button>
       )}
       <header className="mobile-future-page__header">
-        <p className="mobile-future-page__eyebrow">{isZh ? 'VECTOR · 未来' : 'VECTOR · Future'}</p>
-        <h1>{isZh ? '分析转化' : 'Analysis & Transformation'}</h1>
-        <p className="mobile-future-page__subtitle">
-          {isZh
-            ? '把过去的素材压缩为下一步行动。'
-            : 'Turn past material into the next useful move.'}
-        </p>
+        <div>
+          <p className="mobile-future-page__eyebrow">{isZh ? '决策实验室' : 'Decision lab'}</p>
+          <h1>{isZh ? '未来' : 'Future'}</h1>
+          <p className="mobile-future-page__subtitle">
+            {activeAction
+              ? isZh
+                ? '先完成当前实验，再开始下一个判断。'
+                : 'Finish the current experiment before opening another decision.'
+              : isZh
+                ? '用过去的经验，换一个可验证的下一步。'
+                : 'Turn past experience into one testable next step.'}
+          </p>
+        </div>
+        <span className="mobile-future-page__stage">
+          {activeAction ? (isZh ? '执行中' : 'In progress') : isZh ? '待分析' : 'Ready'}
+        </span>
       </header>
 
-      <section className="mobile-future-page__body">
+      <section
+        className={`mobile-future-page__body${activeAction ? ' mobile-future-page__body--executing' : ''}`}
+      >
         <section
-          className="future-avatar-question"
+          className={`future-avatar-question${activeAction ? ' future-avatar-question--secondary' : ''}`}
           aria-label={isZh ? '当前问题' : 'Current question'}
         >
           <div>
             <Sparkles className="h-5 w-5" aria-hidden="true" />
             <div>
               <h2>{isZh ? '你现在想解决什么？' : 'What are you trying to solve?'}</h2>
-              <p>
-                {isZh
-                  ? '只在你发起时调用过去经验，先给一个可验证的下一步。'
-                  : 'Use your past only when requested, then propose one testable next step.'}
-              </p>
             </div>
           </div>
           <textarea
+            aria-label={isZh ? '描述你要解决的问题' : 'Describe the problem to solve'}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             placeholder={
@@ -186,7 +199,12 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
                 : 'e.g. Should I continue or narrow this project?'
             }
           />
-          <button type="button" disabled={!question.trim()} onClick={analyzeQuestion}>
+          <button
+            type="button"
+            disabled={!question.trim() || analyzing}
+            aria-busy={analyzing}
+            onClick={analyzeQuestion}
+          >
             <Sparkles className="h-4 w-4" aria-hidden="true" />
             {isZh ? '基于我的经验分析' : 'Analyze from my experience'}
           </button>
@@ -257,76 +275,87 @@ export const FuturePlaceholder: React.FC<FuturePlaceholderProps> = ({
                 </button>
               )}
             </div>
+            {claimError && (
+              <p className="future-decision__error" role="alert">
+                {claimError}
+              </p>
+            )}
           </section>
         )}
-        <div className="future-insight-grid">
-          <article className="future-insight-card future-insight-card--hero">
-            <div className="future-insight-card__icon">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <span>{isZh ? '转化状态' : 'Transformation state'}</span>
-              <strong>
-                {hasMaterial
-                  ? isZh
-                    ? '可以开始提炼行动'
-                    : 'Ready to distill action'
-                  : isZh
-                    ? '等待素材进入'
-                    : 'Waiting for material'}
-              </strong>
-              <p>
-                {hasMaterial
-                  ? isZh
-                    ? `已读取 ${activeEntries.length} 条记录、${principles.length} 条原则，优先给出少量可确认的方向。`
-                    : `Reading ${activeEntries.length} records and ${principles.length} principles, with only a few confirmable directions.`
-                  : isZh
-                    ? '先在「现在」写入，再回到这里查看趋势与行动建议。'
-                    : 'Write in Now first, then return here for trends and next actions.'}
-              </p>
-            </div>
-          </article>
-
-          <article className="future-insight-card">
-            <div className="future-insight-card__icon">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <span>{isZh ? '近期信号' : 'Recent signals'}</span>
-            {topSignals.length > 0 ? (
-              <div className="future-chip-list">
-                {topSignals.map((signal) => (
-                  <span key={signal.label}>
-                    {signal.label} · {signal.count}
-                  </span>
-                ))}
+        <details className="future-context">
+          <summary>{isZh ? '查看判断依据' : 'View decision context'}</summary>
+          <div className="future-insight-grid">
+            <article className="future-insight-card future-insight-card--hero">
+              <div className="future-insight-card__icon">
+                <Sparkles className="h-5 w-5" />
               </div>
-            ) : (
-              <p>{isZh ? '暂无高频标签。' : 'No recurring tags yet.'}</p>
-            )}
-          </article>
+              <div>
+                <span>{isZh ? '转化状态' : 'Transformation state'}</span>
+                <strong>
+                  {hasMaterial
+                    ? isZh
+                      ? '可以开始提炼行动'
+                      : 'Ready to distill action'
+                    : isZh
+                      ? '等待素材进入'
+                      : 'Waiting for material'}
+                </strong>
+                <p>
+                  {hasMaterial
+                    ? isZh
+                      ? `已读取 ${activeEntries.length} 条记录、${principles.length} 条原则，优先给出少量可确认的方向。`
+                      : `Reading ${activeEntries.length} records and ${principles.length} principles, with only a few confirmable directions.`
+                    : isZh
+                      ? '先在「现在」写入，再回到这里查看趋势与行动建议。'
+                      : 'Write in Now first, then return here for trends and next actions.'}
+                </p>
+              </div>
+            </article>
 
-          <article className="future-insight-card">
-            <div className="future-insight-card__icon">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-            <span>{isZh ? '可用原则' : 'Usable principles'}</span>
-            {latestPrinciples.length > 0 ? (
-              <ul className="future-compact-list">
-                {latestPrinciples.map((principle) => (
-                  <li key={principle.id}>{principle.text}</li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                {isZh
-                  ? '过去页确认原则后，会在这里参与转化。'
-                  : 'Confirmed Past principles appear here.'}
-              </p>
-            )}
-          </article>
-        </div>
+            <article className="future-insight-card">
+              <div className="future-insight-card__icon">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <span>{isZh ? '近期信号' : 'Recent signals'}</span>
+              {topSignals.length > 0 ? (
+                <div className="future-chip-list">
+                  {topSignals.map((signal) => (
+                    <span key={signal.label}>
+                      {signal.label} · {signal.count}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p>{isZh ? '暂无高频标签。' : 'No recurring tags yet.'}</p>
+              )}
+            </article>
 
-        <section className="future-action-panel" aria-label={isZh ? '下一步建议' : 'Next actions'}>
+            <article className="future-insight-card">
+              <div className="future-insight-card__icon">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <span>{isZh ? '可用原则' : 'Usable principles'}</span>
+              {latestPrinciples.length > 0 ? (
+                <ul className="future-compact-list">
+                  {latestPrinciples.map((principle) => (
+                    <li key={principle.id}>{principle.text}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>
+                  {isZh
+                    ? '过去页确认原则后，会在这里参与转化。'
+                    : 'Confirmed Past principles appear here.'}
+                </p>
+              )}
+            </article>
+          </div>
+        </details>
+
+        <section
+          className={`future-action-panel${activeAction ? ' future-action-panel--priority' : ''}`}
+          aria-label={isZh ? '下一步建议' : 'Next actions'}
+        >
           <div className="future-action-panel__head">
             <Compass className="h-5 w-5" />
             <div>

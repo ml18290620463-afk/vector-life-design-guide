@@ -60,6 +60,65 @@ vi.mock('../../services/neuralSemanticRecall', () => ({
 }));
 
 describe('NowFlow action review', () => {
+  it('keeps semantic analysis running when its past-page presentation is hidden', async () => {
+    const pastEntry: DiaryEntry = {
+      id: 'past-meeting',
+      title: '2026年7月15日',
+      content: '会议先确认目标，讨论会更聚焦。',
+      createdAt: 1,
+      tags: ['心情:平静', '事件:个人成长'],
+      isLocked: false,
+    };
+    const onPersistRecord = vi.fn(
+      async (payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>): Promise<DiaryEntry> => ({
+        ...payload,
+        id: 'result-entry',
+        createdAt: 2,
+        isLocked: false,
+      }),
+    );
+
+    render(
+      <NowFlow
+        route="now"
+        theme="dark"
+        language="zh"
+        onRouteChange={vi.fn()}
+        onExit={vi.fn()}
+        onPersistRecord={onPersistRecord}
+        pastEntries={[pastEntry]}
+        principles={[
+          {
+            id: 'principle-1',
+            text: '重要沟通前先定义目标',
+            year: 2026,
+            createdAt: 1,
+            showOnHome: true,
+            derivedFromEntryIds: [pastEntry.id],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'save-result' }));
+
+    await waitFor(() =>
+      expect(onPersistRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          relatedEntryIds: [pastEntry.id],
+          relatedPrincipleIds: ['principle-1'],
+          experienceEdges: [
+            expect.objectContaining({
+              targetEntryId: pastEntry.id,
+              kind: 'sameTheme',
+              source: 'local-semantic',
+            }),
+          ],
+        }),
+      ),
+    );
+  });
+
   it('links a review entry to its action and principle before closing the action', async () => {
     const onPersistRecord = vi.fn(
       async (payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>): Promise<DiaryEntry> => ({

@@ -92,8 +92,6 @@ const App: React.FC = () => {
     updateEntryRelatedIds,
     bulkUpdateEntries,
     deleteEntry,
-    archiveEntry,
-    unarchiveEntry,
     addPrinciple,
     deletePrinciple,
     updatePrinciple,
@@ -243,7 +241,9 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <AppMotionConfig>
         <div
-          className={`vector-app-shell min-h-screen font-sans relative transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f6f8fb] text-[#1a202c] selection:bg-cyan-600/20 selection:text-cyan-900' : 'bg-[var(--background)] text-[color:var(--foreground)] selection:bg-[color-mix(in_srgb,var(--color-tech-cyan-energy)_38%,transparent)] selection:text-[var(--foreground)]'}`}
+          className={`vector-app-shell min-h-screen font-sans relative ${
+            theme === 'light' ? 'vector-app-shell--light' : ''
+          }`}
         >
           {showGlobalBackground && (
             <Suspense fallback={null}>
@@ -293,28 +293,20 @@ const App: React.FC = () => {
 
           <AppViewerScreen
             active={appState === AppState.VIEWER}
-            containers={containers}
             currentUser={currentUser}
             entry={selectedEntry}
             language={language}
             masterPassword={masterPassword}
-            onArchiveEntry={archiveEntry}
             onBack={handleBackToDashboard}
             onDeleteEntry={deleteEntry}
             onGoHome={() => setAppState(AppState.COVER)}
-            onRestoreEntry={unarchiveEntry}
-            onSelectEntry={setSelectedEntry}
-            onUpdateEntry={updateEntry}
             theme={theme}
             onOpenAvatar={openAvatar}
           />
 
           <AppMainModuleScreens
-            addContainer={addContainer}
             addPrinciple={addPrinciple}
             appState={appState}
-            containers={containers}
-            deleteContainer={deleteContainer}
             deletePrinciple={deletePrinciple}
             entries={entries}
             language={language}
@@ -334,7 +326,6 @@ const App: React.FC = () => {
             onSelectEntry={handleSelectEntry}
             principles={principles}
             theme={theme}
-            updateEntry={updateEntry}
             updatePrinciple={updatePrinciple}
             useMobileShell={useMobileShell}
             avatarLaunchContext={avatarLaunchContext ?? DEFAULT_AVATAR_CONTEXT}

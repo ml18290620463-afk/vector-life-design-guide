@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Suspense } from 'react';
-import type { ActionItem, Container, DiaryEntry, Language, Principle, Theme } from '../types';
+import type { ActionItem, DiaryEntry, Language, Principle, Theme } from '../types';
 import { AppState } from '../types';
 import type { MobileMainTab } from '../features/mobile/types';
 import type { NowRoute } from '../features/now/types/now';
@@ -13,10 +13,10 @@ import {
 import { NowFlow } from '../features/now/nowLazyComponents';
 import { DesktopNowFrame } from '../features/now/components/DesktopNowFrame';
 import { ScreenLoader } from './ScreenLoader';
+import { AppPageFrame } from './AppPageFrame';
 import type { AvatarLaunchContext } from '../features/avatar/types';
 
 type AppMainModuleScreensProps = {
-  addContainer: (name: string) => void;
   actions: ActionItem[];
   onAddAction: (action: Omit<ActionItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ActionItem>;
   onUpdateAction: (action: ActionItem) => Promise<void> | void;
@@ -28,8 +28,6 @@ type AppMainModuleScreensProps = {
     derivedFromEntryIds?: string[],
   ) => void;
   appState: AppState;
-  containers: Container[];
-  deleteContainer: (id: string) => void;
   deletePrinciple: (id: string) => void;
   entries: DiaryEntry[];
   language: Language;
@@ -47,7 +45,6 @@ type AppMainModuleScreensProps = {
   onSelectEntry: (entry: DiaryEntry) => void;
   principles: Principle[];
   theme: Theme;
-  updateEntry: (entry: DiaryEntry) => void;
   updatePrinciple: (principle: Principle) => void;
   useMobileShell: boolean;
   avatarLaunchContext: AvatarLaunchContext;
@@ -55,12 +52,9 @@ type AppMainModuleScreensProps = {
 };
 
 export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
-  addContainer,
   actions,
   addPrinciple,
   appState,
-  containers,
-  deleteContainer,
   deletePrinciple,
   entries,
   language,
@@ -79,7 +73,6 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   onSelectEntry,
   principles,
   theme,
-  updateEntry,
   updatePrinciple,
   useMobileShell,
   avatarLaunchContext,
@@ -97,12 +90,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               principles={principles}
               onAddPrinciple={addPrinciple}
               onDeletePrinciple={deletePrinciple}
-              onUpdateEntry={updateEntry}
               onUpdatePrinciple={updatePrinciple}
               onSelectEntry={onSelectEntry}
-              containers={containers}
-              onAddContainer={addContainer}
-              onDeleteContainer={deleteContainer}
               onOpenAvatar={onOpenAvatar}
             />
           )}
@@ -149,7 +138,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
 
     {!useMobileShell && isPastSurfaceState(appState) && (
       <Suspense fallback={<ScreenLoader language={language} />}>
-        <div className="desktop-main-module-frame">
+        <AppPageFrame activeTab="past" language={language} onNavigate={onMainModuleNavigate}>
           <PastRepository
             language={language}
             theme={theme}
@@ -157,15 +146,11 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             principles={principles}
             onAddPrinciple={addPrinciple}
             onDeletePrinciple={deletePrinciple}
-            onUpdateEntry={updateEntry}
             onUpdatePrinciple={updatePrinciple}
             onSelectEntry={onSelectEntry}
-            containers={containers}
-            onAddContainer={addContainer}
-            onDeleteContainer={deleteContainer}
             onOpenAvatar={onOpenAvatar}
           />
-        </div>
+        </AppPageFrame>
       </Suspense>
     )}
 
@@ -190,13 +175,14 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             const entry = entries.find((item) => item.id === entryId);
             if (entry) onSelectEntry(entry);
           }}
+          onNavigate={onMainModuleNavigate}
         />
       </Suspense>
     )}
 
     {!useMobileShell && appState === AppState.FUTURE && (
       <Suspense fallback={<ScreenLoader language={language} />}>
-        <div className="desktop-main-module-frame">
+        <AppPageFrame activeTab="future" language={language} onNavigate={onMainModuleNavigate}>
           <FuturePlaceholder
             language={language}
             entries={entries}
@@ -210,7 +196,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             onOpenAvatar={onOpenAvatar}
             onSelectEntry={onSelectEntry}
           />
-        </div>
+        </AppPageFrame>
       </Suspense>
     )}
   </>

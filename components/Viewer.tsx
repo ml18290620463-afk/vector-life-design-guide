@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { DiaryEntry, Language, Theme, Container } from '../types';
+import { DiaryEntry, Language, Theme } from '../types';
 import { AppStorageKeys } from '../services/appSettings';
 import { getStoredString } from '../services/browserStorage';
 import { downloadTextFile } from '../services/fileDownload';
@@ -21,11 +21,7 @@ interface ViewerProps {
   masterPassword: string | null;
   onBack: () => void;
   onGoHome?: () => void;
-  onUpdateEntry: (updatedEntry: DiaryEntry) => void;
   onDelete: (id: string) => void;
-  onArchive: (id: string) => void;
-  onRestore: (id: string) => void;
-  containers: Container[];
   onOpenAvatar?: () => void;
 }
 
@@ -41,11 +37,7 @@ export const Viewer: React.FC<ViewerProps> = ({
   masterPassword,
   onBack,
   onGoHome,
-  onUpdateEntry,
   onDelete,
-  onArchive,
-  onRestore,
-  containers,
   onOpenAvatar,
 }) => {
   const t = TRANSLATIONS[language];
@@ -58,15 +50,9 @@ export const Viewer: React.FC<ViewerProps> = ({
   );
   const { fixedStars, twinklingStars, decodedStars } = useViewerStars(entry.id);
 
-  const [showPackingMenu, setShowPackingMenu] = useState(false);
   const [showConfirmHome, setShowConfirmHome] = useState(false);
   const [lastClickTime, setLastClickTime] = useState(0);
   const [shareCardOpen, setShareCardOpen] = useState(false);
-
-  const handleMoveToContainer = (containerId: string | undefined) => {
-    onUpdateEntry({ ...entry, containerId });
-    setShowPackingMenu(false);
-  };
 
   const access = useViewerAccess({
     entry,
@@ -81,11 +67,6 @@ export const Viewer: React.FC<ViewerProps> = ({
     'idle',
   );
 
-  // Archival/Restore State
-  const [archiveState, setArchiveState] = useState<'idle' | 'scanning' | 'uploading' | 'completed'>(
-    'idle',
-  );
-
   useEffect(() => {
     if (!isTimeLocked) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -93,12 +74,10 @@ export const Viewer: React.FC<ViewerProps> = ({
   }, [isTimeLocked]);
 
   // Reset Viewer-local non-access state when navigating into a different
-  // entry. `burnMode` and `archiveState` are exclusive to Viewer so we
-  // mirror them here.
+  // entry. `burnMode` is exclusive to Viewer so we mirror it here.
   useEffect(() => {
     clearScheduledTimeouts();
     setBurnMode('idle');
-    setArchiveState('idle');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
 
@@ -116,33 +95,6 @@ export const Viewer: React.FC<ViewerProps> = ({
     }, 3000);
   };
 
-  // --- ARCHIVE LOGIC ---
-  const executeArchiveOrRestore = async () => {
-    if (archiveState !== 'idle') return;
-
-    setArchiveState('scanning');
-
-    setArchiveState('uploading');
-
-    // The DeepArchiveAnimation takes 3 seconds
-    scheduleTimeout(() => {
-      setArchiveState('completed');
-      scheduleTimeout(() => {
-        if (entry.isArchived) {
-          onRestore(entry.id);
-        } else {
-          // Save the entry when archiving
-          const updatedEntry = {
-            ...entry,
-            isArchived: true,
-          };
-          onUpdateEntry(updatedEntry);
-          onArchive(entry.id);
-        }
-      }, 800);
-    }, 3000); // Wait for the 3s animation
-  };
-
   const handleDownload = () => {
     downloadTextFile(decryptedContent, `${entry.title}.txt`);
   };
@@ -153,18 +105,6 @@ export const Viewer: React.FC<ViewerProps> = ({
     }
     if (burnMode === 'ashed') {
       return 'grayscale brightness-0 opacity-0 scale-90 blur-md';
-    }
-    if (archiveState !== 'idle') {
-      switch (archiveState) {
-        case 'scanning':
-          return 'relative after:absolute after:inset-0 after:bg-green-500/10 after:z-10';
-        case 'uploading':
-          return 'opacity-50 scale-95 blur-[1px] hue-rotate-[50deg] translate-y-[-20px] transition-all duration-[2000ms]';
-        case 'completed':
-          return 'opacity-0 scale-0 transition-all duration-500';
-        default:
-          return '';
-      }
     }
     return '';
   };
@@ -191,13 +131,7 @@ export const Viewer: React.FC<ViewerProps> = ({
             decryptedContent={decryptedContent}
             decodedStars={decodedStars}
             burnMode={burnMode}
-            archiveState={archiveState}
             showConfirmHome={showConfirmHome}
-            showPackingMenu={showPackingMenu}
-            containers={containers}
-            onTogglePackingMenu={() => setShowPackingMenu(!showPackingMenu)}
-            onMoveToContainer={handleMoveToContainer}
-            onArchiveOrRestore={executeArchiveOrRestore}
             onDownload={handleDownload}
             onBack={onBack}
             onRequestBurn={initBurn}

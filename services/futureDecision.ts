@@ -61,7 +61,6 @@ export const buildFutureDecision = (
   const availableEntries = entries.filter(
     (entry) =>
       !entry.isSample &&
-      !entry.isArchived &&
       (!entry.unlockAt || entry.unlockAt <= Date.now()) &&
       `${entry.title}${entry.content}`.trim().length > 0,
   );

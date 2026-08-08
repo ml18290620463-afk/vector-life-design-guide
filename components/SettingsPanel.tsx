@@ -61,7 +61,7 @@ interface SettingsPanelProps {
   isUploading: boolean;
   stagedMaterial: Attachment | null;
   setStagedMaterial: (a: Attachment | null) => void;
-  onCreateMaterialEntry: (a: Attachment, isArchived: boolean) => void;
+  onCreateMaterialEntry: (a: Attachment) => void;
   setMediaSuccess: (m: string | null) => void;
   mediaError: string | null;
   mediaSuccess: string | null;

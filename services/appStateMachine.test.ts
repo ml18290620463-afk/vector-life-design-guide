@@ -27,6 +27,13 @@ describe('appStateMachine', () => {
     expect(canTransitionAppState(AppState.VIEWER, AppState.NOW_AVATAR_CHAT)).toBe(true);
   });
 
+  it('allows every desktop main module to return to the archive-backed past screen', () => {
+    expect(canTransitionAppState(AppState.NOW, AppState.ARCHIVE)).toBe(true);
+    expect(canTransitionAppState(AppState.NOW_TAGS, AppState.ARCHIVE)).toBe(true);
+    expect(canTransitionAppState(AppState.FUTURE, AppState.ARCHIVE)).toBe(true);
+    expect(canTransitionAppState(AppState.NOW_AVATAR_CHAT, AppState.ARCHIVE)).toBe(true);
+  });
+
   it('blocks unsafe direct jumps', () => {
     expect(canTransitionAppState(AppState.COVER, AppState.VIEWER)).toBe(false);
     expect(canTransitionAppState(AppState.ONBOARDING, AppState.VIEWER)).toBe(false);

@@ -70,10 +70,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { isFullscreen, toggleFullScreen, setIsFullscreen } = useDashboardFullscreen();
 
   const activeEntries = useMemo(() => getActiveDashboardEntries(entries), [entries]);
-  const archivedEntriesCount = useMemo(
-    () => entries.filter((entry) => entry.isArchived).length,
-    [entries],
-  );
 
   // Settings-only state (security / stars editor / wipe / attachment +
   // media transient banners) lives inside DashboardSettingsModal so the
@@ -188,8 +184,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         theme={theme}
         language={language}
         totalEntriesCount={entries.length}
-        activeEntriesCount={activeEntries.length}
-        archivedEntriesCount={archivedEntriesCount}
         onOpenSettings={() => setShowSettings(true)}
       />
 

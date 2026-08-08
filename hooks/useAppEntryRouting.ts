@@ -73,14 +73,12 @@ export const useAppEntryRouting = ({
         return;
       }
       if (tab === 'past') {
-        if (isMobileExperience()) {
-          setAppState(AppState.PAST);
-        } else {
-          setAppState(AppState.ARCHIVE);
-        }
+        setNowRoute('now');
+        setAppState(AppState.PAST);
         return;
       }
       if (tab === 'future') {
+        setNowRoute('now');
         setAppState(getMobileTabAppState(tab));
         return;
       }

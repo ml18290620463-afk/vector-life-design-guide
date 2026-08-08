@@ -26,7 +26,7 @@ export interface DashboardProps {
   onBulkUpdateEntries: (entries: DiaryEntry[]) => void;
   onReplayIntro: () => void;
   onWipeData: () => void;
-  onCreateMaterialEntry: (material: Attachment, isArchived: boolean) => void;
+  onCreateMaterialEntry: (material: Attachment) => void;
   isUnlocked: boolean;
   passwordHash: string | null;
   passwordSalt: string | null;

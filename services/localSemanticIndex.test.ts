@@ -51,7 +51,7 @@ describe('localSemanticIndex', () => {
     expect(matches.some(({ entry }) => entry.id === healthEntry.id)).toBe(false);
   });
 
-  it('keeps samples, archived entries and future-locked entries out of the index', () => {
+  it('indexes legacy archived entries while excluding samples and future-locked entries', () => {
     const index = buildLocalSemanticIndex([
       buildEntry({ id: 'sample', isSample: true }),
       buildEntry({ id: 'archived', isArchived: true }),
@@ -59,6 +59,6 @@ describe('localSemanticIndex', () => {
       buildEntry({ id: 'available' }),
     ]);
 
-    expect(index.map(({ entry }) => entry.id)).toEqual(['available']);
+    expect(index.map(({ entry }) => entry.id)).toEqual(['archived', 'available']);
   });
 });

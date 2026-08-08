@@ -26,12 +26,7 @@ describe('TagSelectPage', () => {
     const onBack = vi.fn();
 
     render(
-      <TagSelectPage
-        draft={makeDraft()}
-        setDraft={setDraft}
-        onBack={onBack}
-        showToast={vi.fn()}
-      />,
+      <TagSelectPage draft={makeDraft()} setDraft={setDraft} onBack={onBack} showToast={vi.fn()} />,
     );
 
     fireEvent.click(screen.getByText('开心'));
@@ -45,7 +40,10 @@ describe('TagSelectPage', () => {
   });
 
   it('persists custom anchors and selects them immediately', () => {
-    vi.stubGlobal('prompt', vi.fn(() => '长期主义'));
+    vi.stubGlobal(
+      'prompt',
+      vi.fn(() => '长期主义'),
+    );
     const setDraft = vi.fn();
 
     render(
@@ -57,8 +55,7 @@ describe('TagSelectPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('开心'));
-    fireEvent.click(screen.getByText(/自定义锚点/));
+    fireEvent.click(screen.getByRole('button', { name: '为事件添加自定义锚点' }));
     fireEvent.click(screen.getByText('确定'));
 
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.customAnchors) ?? '[]')).toEqual([
@@ -68,8 +65,61 @@ describe('TagSelectPage', () => {
     expect(updater(makeDraft()).event_tags).toEqual(['长期主义']);
   });
 
+  it('allows a custom mood anchor while keeping mood optional', () => {
+    vi.stubGlobal(
+      'prompt',
+      vi.fn(() => '充满希望'),
+    );
+    const setDraft = vi.fn();
+
+    render(
+      <TagSelectPage
+        draft={makeDraft()}
+        setDraft={setDraft}
+        onBack={vi.fn()}
+        showToast={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '为心情添加自定义锚点' }));
+    fireEvent.click(screen.getByText('个人成长'));
+    fireEvent.click(screen.getByText('确定'));
+
+    const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
+    expect(updater(makeDraft()).mood_tags).toEqual(['充满希望']);
+    expect(updater(makeDraft()).event_tags).toEqual(['个人成长']);
+  });
+
+  it('requires an event tag but not a mood tag', () => {
+    const setDraft = vi.fn();
+    const onBack = vi.fn();
+    const showToast = vi.fn();
+
+    render(
+      <TagSelectPage
+        draft={makeDraft()}
+        setDraft={setDraft}
+        onBack={onBack}
+        showToast={showToast}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('确定'));
+    expect(showToast).toHaveBeenCalledWith('请选择事件标签');
+    expect(onBack).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('个人成长'));
+    fireEvent.click(screen.getByText('确定'));
+    const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
+    expect(updater(makeDraft()).mood_tags).toEqual([]);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it('shows a toast when custom anchor length is invalid', () => {
-    vi.stubGlobal('prompt', vi.fn(() => '长'));
+    vi.stubGlobal(
+      'prompt',
+      vi.fn(() => '长'),
+    );
     const showToast = vi.fn();
 
     render(
@@ -81,7 +131,7 @@ describe('TagSelectPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText(/自定义锚点/));
+    fireEvent.click(screen.getByRole('button', { name: '为心情添加自定义锚点' }));
 
     expect(showToast).toHaveBeenCalledWith('自定义锚点需为 2～12 字');
   });

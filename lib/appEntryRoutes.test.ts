@@ -54,7 +54,7 @@ describe('appEntryRoutes', () => {
   it('routes desktop past to the unified responsive Past surface', () => {
     expect(getPreviewScreenAction('past', { isMobile: false, isUnlocked: true })).toMatchObject({
       kind: 'route',
-      states: [AppState.ARCHIVE],
+      states: [AppState.PAST],
       replacePath: '/past',
     });
   });

@@ -3,6 +3,8 @@ import type { ActionItem, DiaryEntry, Language, Principle, Theme } from '../../.
 import type { NowRoute } from '../types/now';
 import { NowFlow } from '../nowLazyComponents';
 import type { AvatarLaunchContext } from '../../avatar/types';
+import { AppPageFrame } from '../../../components/AppPageFrame';
+import type { MobileMainTab } from '../../mobile/types';
 
 type DesktopNowFrameProps = {
   language: Language;
@@ -22,6 +24,7 @@ type DesktopNowFrameProps = {
   theme: Theme;
   avatarLaunchContext?: AvatarLaunchContext;
   onSelectEntry?: (entryId: string) => void;
+  onNavigate: (tab: MobileMainTab) => void;
 };
 
 export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
@@ -40,21 +43,21 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
   theme,
   avatarLaunchContext,
   onSelectEntry,
+  onNavigate,
 }) => (
-  <div
-    className={`desktop-main-module-frame desktop-main-module-frame--now ${
-      nowRoute === 'avatar-chat' ? 'desktop-main-module-frame--avatar' : ''
-    }`}
+  <AppPageFrame
+    variant={nowRoute === 'avatar-chat' ? 'avatar' : 'now'}
+    activeTab={nowRoute === 'avatar-chat' ? 'avatar' : 'now'}
+    language={language}
+    onNavigate={onNavigate}
   >
     {nowRoute === 'avatar-chat' && (
-      <section className="desktop-avatar-hero" aria-label="分身工作台说明">
+      <section
+        className="desktop-avatar-hero"
+        aria-label={language === 'zh' ? '记忆分身' : 'Memory avatar'}
+      >
         <span>VECTOR · 分身</span>
-        <h1>{language === 'zh' ? '记忆协助与结构化对话' : 'Memory-assisted avatar'}</h1>
-        <p>
-          {language === 'zh'
-            ? '分身会参考过去记录，顺着你的表达提炼事实、感受、想法、结果，并在你确认后保存为一条过去经验。'
-            : 'The avatar recalls past records, extracts facts, feelings, thoughts, and outcomes, then saves only after confirmation.'}
-        </p>
+        <h1>{language === 'zh' ? '记忆分身' : 'Memory avatar'}</h1>
       </section>
     )}
     <NowFlow
@@ -74,5 +77,5 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
       avatarLaunchContext={avatarLaunchContext}
       onSelectEntry={onSelectEntry}
     />
-  </div>
+  </AppPageFrame>
 );

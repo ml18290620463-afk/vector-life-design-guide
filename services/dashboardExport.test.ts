@@ -44,7 +44,7 @@ describe('dashboardExport', () => {
     });
   });
 
-  it('exports only non-archived notes for all mode and redacts embedded image data', () => {
+  it('exports all notes including legacy archived records and redacts embedded image data', () => {
     const result = buildNotesExport({
       mode: 'all',
       entries: [
@@ -64,7 +64,7 @@ describe('dashboardExport', () => {
     expect(result?.filename).toBe('VECTOR_ALL_NOTES_GUEST_2026-05-01T10-20-30-000Z.txt');
     expect(result?.content).toContain('【 Visible 】');
     expect(result?.content).toContain('[IMAGE_DATA]');
-    expect(result?.content).not.toContain('Archived');
+    expect(result?.content).toContain('【 Archived 】');
   });
 
   it('returns null when a requested single note does not exist', () => {

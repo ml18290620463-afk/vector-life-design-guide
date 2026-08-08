@@ -214,9 +214,7 @@ export const SettingsBackupSection: React.FC<SettingsBackupSectionProps> = ({
                 <div
                   className={`h-px my-2 ${theme === 'light' ? 'bg-slate-100' : 'bg-cyan-900/20'}`}
                 />
-                {entries
-                  .filter((e) => !e.isArchived)
-                  .map((entry) => (
+                {entries.map((entry) => (
                     <button
                       role="menuitem"
                       key={entry.id}
@@ -243,7 +241,7 @@ export const SettingsBackupSection: React.FC<SettingsBackupSectionProps> = ({
                         <CheckCircle className="w-4 h-4 text-cyan-500" />
                       )}
                     </button>
-                  ))}
+                ))}
               </div>
             </motion.div>
           )}

@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { AppState } from '../types';
 import { getMainTabPathname, isNowSurfacePathname } from '../lib/appPathRules';
 import { pushNowPath } from '../lib/appEntryRoutes';
-import { isMobileExperience, replaceAppPath } from '../lib/previewMode';
+import { isMobileExperience, pushAppPath } from '../lib/previewMode';
 import {
   getMobileTabAppState,
   getNowRouteAppState,
@@ -16,13 +16,10 @@ type UseAppMainNavigationOptions = {
   setNowRoute: (route: NowRoute) => void;
 };
 
-export const useAppMainNavigation = ({
-  setAppState,
-  setNowRoute,
-}: UseAppMainNavigationOptions) => {
+export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNavigationOptions) => {
   const handleMobileTabChange = useCallback(
     (tab: MobileMainTab) => {
-      navigateMobileTab(tab, { replace: true });
+      navigateMobileTab(tab);
       if (tab === 'avatar') {
         setNowRoute('avatar-chat');
       } else if (tab === 'now') {
@@ -37,7 +34,7 @@ export const useAppMainNavigation = ({
     (route: NowRoute) => {
       setNowRoute(route);
       if (isMobileExperience() && route === 'avatar-chat') {
-        navigateMobileTab('avatar', { replace: true });
+        navigateMobileTab('avatar');
         setAppState(getNowRouteAppState(route));
         return;
       }
@@ -59,7 +56,7 @@ export const useAppMainNavigation = ({
       handleMobileTabChange('past');
       return;
     }
-    setAppState(AppState.ARCHIVE);
+    setAppState(AppState.PAST);
   }, [handleMobileTabChange, setAppState]);
 
   const handleMainModuleNavigate = useCallback(
@@ -69,23 +66,25 @@ export const useAppMainNavigation = ({
         return;
       }
       if (tab === 'past') {
-        replaceAppPath(getMainTabPathname('past'), {});
-        setAppState(AppState.ARCHIVE);
+        pushAppPath(getMainTabPathname('past'), {});
+        setNowRoute('now');
+        setAppState(AppState.PAST);
         return;
       }
       if (tab === 'future') {
-        replaceAppPath(getMainTabPathname('future'), {});
+        pushAppPath(getMainTabPathname('future'), {});
+        setNowRoute('now');
         setAppState(AppState.FUTURE);
         return;
       }
       if (tab === 'avatar') {
-        replaceAppPath(getMainTabPathname('avatar'), { nowRoute: 'avatar-chat' });
+        pushAppPath(getMainTabPathname('avatar'), { nowRoute: 'avatar-chat' });
         setNowRoute('avatar-chat');
         setAppState(getMobileTabAppState(tab));
         return;
       }
       if (tab === 'now') {
-        replaceAppPath(getMainTabPathname('now'), { nowRoute: 'now' });
+        pushAppPath(getMainTabPathname('now'), { nowRoute: 'now' });
         setNowRoute('now');
         setAppState(getMobileTabAppState(tab));
       }
@@ -99,10 +98,10 @@ export const useAppMainNavigation = ({
       return;
     }
     if (typeof window !== 'undefined' && isNowSurfacePathname(window.location.pathname)) {
-      replaceAppPath(getMainTabPathname('past'), {});
+      pushAppPath(getMainTabPathname('past'), {});
     }
     setNowRoute('now');
-    setAppState(AppState.ARCHIVE);
+    setAppState(AppState.PAST);
   }, [handleMobileTabChange, setAppState, setNowRoute]);
 
   return {

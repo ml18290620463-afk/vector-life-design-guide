@@ -17,7 +17,6 @@ const DEFAULT_MINIMUM_SIMILARITY = 0.52;
 
 const isIndexableEntry = (entry: DiaryEntry): boolean =>
   !entry.isSample &&
-  !entry.isArchived &&
   (!entry.unlockAt || entry.unlockAt <= Date.now()) &&
   `${entry.title}${entry.content}`.trim().length > 0;
 

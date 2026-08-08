@@ -15,7 +15,7 @@ interface SettingsMaterialSectionProps {
   stagedMaterial: Attachment | null;
   setStagedMaterial: (value: Attachment | null) => void;
   /** Promote the staged attachment into a real diary entry. */
-  onCreateMaterialEntry: (material: Attachment, isArchived: boolean) => void;
+  onCreateMaterialEntry: (material: Attachment) => void;
   /** Surface a transient success message (e.g. "material saved"). */
   onMaterialSaved: () => void;
   /** Inline error / success banners (already-localised text from the
@@ -102,7 +102,7 @@ export const SettingsMaterialSection: React.FC<SettingsMaterialSectionProps> = (
           <div className="flex flex-col gap-2">
             <button
               onClick={() => {
-                onCreateMaterialEntry(stagedMaterial, false);
+                onCreateMaterialEntry(stagedMaterial);
                 setStagedMaterial(null);
                 onMaterialSaved();
               }}

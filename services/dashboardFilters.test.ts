@@ -13,9 +13,9 @@ const entry = (overrides: Partial<DiaryEntry>): DiaryEntry => ({
 });
 
 describe('dashboardFilters', () => {
-  it('returns non-archived entries for active dashboard surfaces', () => {
+  it('returns all records, including entries with the legacy archived flag', () => {
     const entries = [entry({ id: 'active' }), entry({ id: 'archived', isArchived: true })];
 
-    expect(getActiveDashboardEntries(entries).map((item) => item.id)).toEqual(['active']);
+    expect(getActiveDashboardEntries(entries).map((item) => item.id)).toEqual(['active', 'archived']);
   });
 });

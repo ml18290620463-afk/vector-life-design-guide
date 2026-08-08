@@ -69,7 +69,7 @@ describe('SettingsMaterialSection', () => {
       />,
     );
     fireEvent.click(screen.getByText(t.save));
-    expect(onCreate).toHaveBeenCalledWith(stagedMaterial, false);
+    expect(onCreate).toHaveBeenCalledWith(stagedMaterial);
     expect(setStaged).toHaveBeenCalledWith(null);
     expect(onSaved).toHaveBeenCalled();
   });

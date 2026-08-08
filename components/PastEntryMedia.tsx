@@ -117,16 +117,9 @@ const ArchiveInlineMedia: React.FC<{
   }
 
   return (
-    <div
-      className={`archive-entry-media ${compact ? 'archive-entry-media--compact' : ''}`}
-    >
+    <div className={`archive-entry-media ${compact ? 'archive-entry-media--compact' : ''}`}>
       {imageMaterials.map((material) => (
-        <img
-          key={material.id}
-          src={material.url}
-          alt={getMaterialAlt(material)}
-          loading="lazy"
-        />
+        <img key={material.id} src={material.url} alt={getMaterialAlt(material)} loading="lazy" />
       ))}
       {videoMaterials.map((material) => (
         // eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded video has no caption track
@@ -165,7 +158,10 @@ const ArchiveInlineMedia: React.FC<{
         <audio key={url} controls preload="metadata" src={url} onClick={stopPropagation} />
       ))}
       {[
-        ...linkMaterials.map((material) => ({ title: getMaterialTitle(material), url: material.url })),
+        ...linkMaterials.map((material) => ({
+          title: getMaterialTitle(material),
+          url: material.url,
+        })),
         ...legacyLinkMaterials.map((link) => ({ title: link, url: link })),
       ].map(({ title, url }) => (
         <a
@@ -229,6 +225,24 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
     legacyVideoUrls,
     legacyLinkMaterials,
   } = getEntryMediaGroups(entry, rawMaterials);
+  const attachmentImage =
+    entry.attachment?.type === 'image' && entry.attachment.data
+      ? {
+          id: `attachment-${entry.id}`,
+          url: entry.attachment.data,
+          alt: entry.attachment.name || (language === 'zh' ? '图片素材' : 'Image material'),
+        }
+      : null;
+  const allImages = [
+    ...imageMaterials.map((material) => ({
+      id: material.id,
+      url: material.url,
+      alt: getMaterialAlt(material, language),
+    })),
+    ...(attachmentImage ? [attachmentImage] : []),
+  ];
+  const visibleImages = allImages.slice(0, 9);
+  const hiddenImageCount = allImages.length - visibleImages.length;
   const hasMaterials =
     imageMaterials.length > 0 ||
     videoMaterials.length > 0 ||
@@ -244,16 +258,23 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
 
   return (
     <div className="mobile-past-timeline__materials">
-      {imageMaterials.length > 0 && (
+      {visibleImages.length > 0 && (
         <div
-          className={`mobile-past-image-gallery ${
-            imageMaterials.length > 1 ? 'mobile-past-image-gallery--scroll' : ''
-          }`}
+          className="mobile-past-image-gallery"
+          data-count={visibleImages.length}
           aria-label={language === 'zh' ? '图片素材' : 'Image materials'}
         >
-          {imageMaterials.map((material) => (
-            <figure key={material.id} className="mobile-past-image">
-              <img src={material.url} alt={getMaterialAlt(material, language)} />
+          {visibleImages.map((image, index) => (
+            <figure key={image.id} className="mobile-past-image">
+              <img src={image.url} alt={image.alt} loading="lazy" />
+              {index === visibleImages.length - 1 && hiddenImageCount > 0 && (
+                <span
+                  className="mobile-past-image__overflow"
+                  aria-label={`${hiddenImageCount} more images`}
+                >
+                  +{hiddenImageCount}
+                </span>
+              )}
             </figure>
           ))}
         </div>
@@ -284,13 +305,6 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
       )}
       {entry.attachment?.type === 'audio' && entry.attachment.data && (
         <MobileAudioPlayback src={entry.attachment.data} language={language} />
-      )}
-      {entry.attachment?.type === 'image' && entry.attachment.data && (
-        <div className="mobile-past-image-gallery">
-          <figure className="mobile-past-image">
-            <img src={entry.attachment.data} alt="图片素材" />
-          </figure>
-        </div>
       )}
       {entry.attachment && !['image', 'video', 'audio'].includes(entry.attachment.type) && (
         <div className="mobile-past-material">

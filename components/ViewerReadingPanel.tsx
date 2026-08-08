@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, AlertTriangle, Key } from 'lucide-react';
 import Markdown from 'react-markdown';
 import type { Components } from 'react-markdown';
-import type { DiaryEntry, Theme, Container } from '../types';
+import type { DiaryEntry, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { CyberButton } from './CyberButton';
 import { DecryptionText } from './DecryptionText';
@@ -18,7 +18,6 @@ interface DecodedStar {
 }
 
 export type BurnMode = 'idle' | 'confirm' | 'igniting' | 'burning' | 'ashed';
-export type ArchiveState = 'idle' | 'scanning' | 'uploading' | 'completed';
 
 interface ViewerReadingPanelProps {
   theme: Theme;
@@ -28,13 +27,7 @@ interface ViewerReadingPanelProps {
   decryptedContent: string;
   decodedStars: readonly DecodedStar[];
   burnMode: BurnMode;
-  archiveState: ArchiveState;
   showConfirmHome: boolean;
-  showPackingMenu: boolean;
-  containers: Container[];
-  onTogglePackingMenu: () => void;
-  onMoveToContainer: (containerId: string | undefined) => void;
-  onArchiveOrRestore: () => void | Promise<void>;
   onDownload: () => void;
   /** Phase 3 §3.h — open the share-card preview / export modal.
    *  Optional so existing tests / call sites compile unchanged. */
@@ -52,24 +45,12 @@ interface ViewerReadingPanelProps {
   markdownComponents: Components;
 }
 
-const computeContainerStyles = (burnMode: BurnMode, archiveState: ArchiveState): string => {
+const computeContainerStyles = (burnMode: BurnMode): string => {
   if (burnMode === 'igniting' || burnMode === 'burning') {
     return 'brightness-150 contrast-125 sepia-100 hue-rotate-[-50deg]';
   }
   if (burnMode === 'ashed') {
     return 'grayscale brightness-0 opacity-0 scale-90 blur-md';
-  }
-  if (archiveState !== 'idle') {
-    switch (archiveState) {
-      case 'scanning':
-        return 'relative after:absolute after:inset-0 after:bg-green-500/10 after:z-10';
-      case 'uploading':
-        return 'opacity-50 scale-95 blur-[1px] hue-rotate-[50deg] translate-y-[-20px] transition-all duration-[2000ms]';
-      case 'completed':
-        return 'opacity-0 scale-0 transition-all duration-500';
-      default:
-        return '';
-    }
   }
   return '';
 };
@@ -90,13 +71,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   decryptedContent,
   decodedStars,
   burnMode,
-  archiveState,
   showConfirmHome,
-  showPackingMenu,
-  containers,
-  onTogglePackingMenu,
-  onMoveToContainer,
-  onArchiveOrRestore,
   onDownload,
   onBack,
   onRequestBurn,
@@ -136,9 +111,9 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
       ease: [0.22, 1, 0.36, 1],
       opacity: { duration: 0.8 },
     }}
-    className={`container mx-auto px-4 py-4 md:py-6 max-w-3xl min-h-screen ${computeContainerStyles(burnMode, archiveState)}`}
+    className={`container mx-auto px-4 py-4 md:py-6 max-w-3xl min-h-screen ${computeContainerStyles(burnMode)}`}
   >
-    {burnMode === 'idle' && archiveState === 'idle' && (
+    {burnMode === 'idle' && (
       <div className="mb-8 flex justify-between items-center z-20 relative">
         <CyberButton
           variant="ghost"
@@ -174,9 +149,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
                   ? 'border-rose-500 shadow-glow-rose-strong'
                   : burnMode !== 'idle'
                     ? 'border-rose-500 bg-rose-950/20'
-                    : archiveState !== 'idle'
-                      ? 'border-green-500 bg-green-900/10'
-                      : ''
+                    : ''
               }
             `}
     >
@@ -245,11 +218,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
             <Key className="w-3 h-3" /> {new Date(entry.createdAt).toLocaleString('zh-CN')}
           </span>
           <span className={decrypted ? 'text-green-500 font-bold' : 'text-yellow-500 font-bold'}>
-            {decrypted
-              ? entry.isArchived
-                ? t.statusArchived
-                : t.statusUnlocked
-              : t.statusDecrypting}
+            {decrypted ? t.statusUnlocked : t.statusDecrypting}
           </span>
         </div>
 
@@ -283,16 +252,10 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
         )}
       </div>
 
-      {decrypted && burnMode === 'idle' && archiveState === 'idle' && (
+      {decrypted && burnMode === 'idle' && (
         <ViewerActionFooter
           theme={theme}
           t={t}
-          entry={entry}
-          containers={containers}
-          showPackingMenu={showPackingMenu}
-          onTogglePackingMenu={onTogglePackingMenu}
-          onMoveToContainer={onMoveToContainer}
-          onArchiveOrRestore={onArchiveOrRestore}
           onDownload={onDownload}
           onRequestBurn={onRequestBurn}
           onShareCard={onShareCard}

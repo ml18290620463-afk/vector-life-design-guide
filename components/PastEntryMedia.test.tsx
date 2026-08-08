@@ -31,7 +31,9 @@ const makeEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 
 describe('PastEntryMedia', () => {
   it('renders archive media with the archive class contract', () => {
-    const { container } = render(<PastEntryMedia entry={makeEntry()} variant="archive" theme="dark" />);
+    const { container } = render(
+      <PastEntryMedia entry={makeEntry()} variant="archive" theme="dark" />,
+    );
 
     expect(container.querySelector('.archive-entry-media')).not.toBeNull();
     expect(screen.getByAltText('图片素材')).toBeTruthy();
@@ -70,5 +72,37 @@ describe('PastEntryMedia', () => {
 
     rerender(<PastEntryMedia entry={entry} variant="mobile" language="zh" />);
     expect(container.querySelector('.mobile-past-image-gallery')).not.toBeNull();
+  });
+
+  it('limits mobile images to a nine-cell grid', () => {
+    const images = Array.from({ length: 10 }, (_, index) => ({
+      id: `image-${index + 1}`,
+      type: 'image' as const,
+      url: `data:image/png;base64,${index}`,
+      meta: { title: `图片 ${index + 1}` },
+      sort_order: index,
+    }));
+    const { container } = render(
+      <PastEntryMedia
+        entry={makeEntry({
+          content: '正文',
+          nowMaterials: images,
+          attachment: {
+            type: 'image',
+            name: 'attachment.png',
+            data: 'data:image/png;base64,attachment',
+            mimeType: 'image/png',
+          },
+        })}
+        variant="mobile"
+        language="zh"
+      />,
+    );
+
+    expect(container.querySelectorAll('.mobile-past-image')).toHaveLength(9);
+    expect(container.querySelector('.mobile-past-image-gallery')?.getAttribute('data-count')).toBe(
+      '9',
+    );
+    expect(screen.getByText('+2')).toBeTruthy();
   });
 });

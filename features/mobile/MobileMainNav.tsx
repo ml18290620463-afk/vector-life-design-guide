@@ -14,7 +14,10 @@ export const MobileMainNav: React.FC<MobileMainNavProps> = ({
   language,
   onTabChange,
 }) => (
-  <nav className="mobile-main-nav" aria-label="主框架导航">
+  <nav
+    className="mobile-main-nav"
+    aria-label={language === 'zh' ? '主页面导航' : 'Main page navigation'}
+  >
     {getMainModules(language).map(({ id, title, hint, Icon }) => {
       const isActive = activeTab === id;
       return (
@@ -22,12 +25,15 @@ export const MobileMainNav: React.FC<MobileMainNavProps> = ({
           key={id}
           type="button"
           className={`mobile-main-nav__item ${isActive ? 'mobile-main-nav__item--active' : ''}`}
+          aria-label={title}
           aria-current={isActive ? 'page' : undefined}
           onClick={() => onTabChange(id)}
         >
-          <Icon className="mobile-main-nav__icon" />
+          <Icon className="mobile-main-nav__icon" aria-hidden="true" />
           <span className="mobile-main-nav__label">{title}</span>
-          <span className="mobile-main-nav__hint">{hint}</span>
+          <span className="mobile-main-nav__hint" aria-hidden="true">
+            {hint}
+          </span>
         </button>
       );
     })}

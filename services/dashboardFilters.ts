@@ -1,4 +1,4 @@
 import { DiaryEntry } from '../types';
 
-export const getActiveDashboardEntries = (entries: DiaryEntry[]) =>
-  entries.filter((entry) => !entry.isArchived);
+// Legacy archived records now belong to the same unified record timeline.
+export const getActiveDashboardEntries = (entries: DiaryEntry[]) => entries;

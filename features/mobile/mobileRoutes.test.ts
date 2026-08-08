@@ -35,4 +35,20 @@ describe('mobileRoutes', () => {
 
     expect(replaceSpy).toHaveBeenCalledWith({ nowRoute: 'avatar-chat' }, '', '/avatar');
   });
+
+  it('pushes a new history entry when navigating between main tabs', () => {
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    navigateMobileTab('future');
+
+    expect(pushSpy).toHaveBeenCalledWith({}, '', '/future');
+  });
+
+  it('can replace the current history entry for route normalization', () => {
+    const replaceSpy = vi.spyOn(window.history, 'replaceState');
+
+    navigateMobileTab('now', { replace: true });
+
+    expect(replaceSpy).toHaveBeenCalledWith({ nowRoute: 'now' }, '', '/now');
+  });
 });
