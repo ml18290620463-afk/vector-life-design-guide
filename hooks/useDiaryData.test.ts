@@ -1,38 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import 'fake-indexeddb/auto';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useDiaryData } from './useDiaryData';
+import { useAppStore } from '../stores/appStore';
+import { SecurityService } from '../services/securityService';
 import * as idb from 'idb-keyval';
 import { DiaryStorageKeys, getDiaryStorageKeys } from '../services/diaryStorage';
 import { getSampleEntries } from '../services/sampleEntries';
+import { readAvatarUnderstandings, writeAvatarUnderstanding } from '../services/avatarMemory';
 
 // Mock idb-keyval
-vi.mock('idb-keyval', () => ({
-  get: vi.fn(),
-  set: vi.fn().mockResolvedValue(undefined),
-  del: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('idb-keyval', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('idb-keyval')>();
+  return { ...actual, get: vi.fn(actual.get) };
+});
 
 describe('useDiaryData', () => {
   const userId = 'test-user';
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+  beforeEach(async () => {
+    useAppStore.setState({ isUnlocked: false, masterPassword: null });
+    vi.mocked(idb.get).mockReset();
+    const actual = await vi.importActual<typeof import('idb-keyval')>('idb-keyval');
+    vi.mocked(idb.get).mockImplementation(actual.get);
+    await idb.clear();
     localStorage.clear();
-    vi.mocked(idb.get).mockResolvedValue(undefined);
   });
 
   it('should initialize with loading state', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
     expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.loading).toBe(false));
   });
 
   it('should load mock data if no storage data exists', async () => {
     const { result } = renderHook(() => useDiaryData(userId, 'zh'));
 
     // Wait for useEffect to finish
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.loading).toBe(false);
     expect(result.current.entries.length).toBeGreaterThan(0);
@@ -41,9 +46,7 @@ describe('useDiaryData', () => {
   it('should add an entry (and prune sample reflections — Phase 4 §4.a-1)', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Before the user's first real write, the seeded samples are
     // present. They all carry isSample=true.
@@ -65,7 +68,43 @@ describe('useDiaryData', () => {
     expect(result.current.entries[0].title).toBe('New Entry');
     // isSample is optional; undefined / false both mean "real entry".
     expect(result.current.entries[0].isSample).toBeFalsy();
-    expect(idb.set).toHaveBeenCalled();
+    expect(await idb.get(getDiaryStorageKeys(userId).entries)).toEqual(result.current.entries);
+  });
+
+  it('extracts pending avatar pattern candidates when records are saved', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.addEntry({
+        title: '演示前准备',
+        content: '我提前整理了材料。',
+        tags: ['事件:职业发展'],
+      });
+    });
+
+    expect(readAvatarUnderstandings()).toEqual([]);
+
+    await act(async () => {
+      await result.current.addEntry({
+        title: '出发前确认',
+        content: '我提前确认了路线和时间。',
+        tags: ['事件:职业发展'],
+      });
+    });
+
+    expect(readAvatarUnderstandings()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: 'pending',
+          sourceEntryIds: expect.arrayContaining([
+            result.current.entries[0].id,
+            result.current.entries[1].id,
+          ]),
+        }),
+      ]),
+    );
   });
 
   it('keeps samples when the entry being added is itself a sample', async () => {
@@ -74,9 +113,7 @@ describe('useDiaryData', () => {
     // prune. Adding an isSample entry leaves the existing samples
     // alone.
     const { result } = renderHook(() => useDiaryData(userId));
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
     const initialCount = result.current.entries.length;
 
     await act(async () => {
@@ -94,9 +131,7 @@ describe('useDiaryData', () => {
 
   it('persists an action and closes it when a result entry is recorded', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     let actionId = '';
     await act(async () => {
@@ -123,15 +158,13 @@ describe('useDiaryData', () => {
       status: 'completed',
       resultEntryId: 'result-entry',
     });
-    expect(idb.set).toHaveBeenCalledWith(getDiaryStorageKeys(userId).actions, expect.any(Array));
+    expect(await idb.get(getDiaryStorageKeys(userId).actions)).toEqual(result.current.actions);
   });
 
   it('should update an entry', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     const entryToUpdate = result.current.entries[0];
     const updatedTitle = 'Updated Title';
@@ -149,9 +182,7 @@ describe('useDiaryData', () => {
   it('should delete an entry', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     const initialCount = result.current.entries.length;
     const entryToDelete = result.current.entries[0];
@@ -163,12 +194,112 @@ describe('useDiaryData', () => {
     expect(result.current.entries.length).toBe(initialCount - 1);
   });
 
-  it('should wipe data', async () => {
+  it('should delete multiple entries in one update', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const idsToDelete = result.current.entries.slice(0, 2).map((entry) => entry.id);
+    const initialCount = result.current.entries.length;
+
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await result.current.deleteEntries(idsToDelete);
     });
+
+    expect(result.current.entries).toHaveLength(initialCount - idsToDelete.length);
+    expect(result.current.entries.some((entry) => idsToDelete.includes(entry.id))).toBe(false);
+  });
+
+  it('cascades record deletion to orphaned patterns, derived principles, and links', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const sourceEntryId = result.current.entries[0].id;
+    writeAvatarUnderstanding({
+      id: 'pattern-from-entry',
+      statement: '由该记录提取的模式',
+      status: 'confirmed',
+      sourceEntryIds: [sourceEntryId],
+      createdAt: Date.now(),
+      summaryKind: 'past-pattern',
+    });
+
+    await act(async () => {
+      await result.current.addPrinciple(
+        '由该记录萃取的原则',
+        2026,
+        true,
+        [sourceEntryId],
+        undefined,
+        ['pattern-from-entry'],
+      );
+      await result.current.addPrinciple('手写原则', 2026);
+    });
+
+    await act(async () => {
+      await result.current.deleteEntry(sourceEntryId);
+    });
+
+    expect(readAvatarUnderstandings()).toEqual([]);
+    expect(result.current.principles.map((principle) => principle.text)).toEqual(['手写原则']);
+    expect(result.current.patternPrincipleLinks).toEqual([]);
+  });
+
+  it('retains patterns, principles, and links when requested during record deletion', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const sourceEntryId = result.current.entries[0].id;
+    writeAvatarUnderstanding({
+      id: 'retained-pattern',
+      statement: '需要继续保留的模式',
+      status: 'confirmed',
+      sourceEntryIds: [sourceEntryId],
+      createdAt: Date.now(),
+      summaryKind: 'past-pattern',
+    });
+
+    await act(async () => {
+      await result.current.addPrinciple(
+        '需要继续保留的原则',
+        2026,
+        true,
+        [sourceEntryId],
+        undefined,
+        ['retained-pattern'],
+      );
+    });
+
+    await act(async () => {
+      await result.current.deleteEntries([sourceEntryId], true);
+    });
+
+    expect(result.current.entries.some((entry) => entry.id === sourceEntryId)).toBe(false);
+    expect(readAvatarUnderstandings()).toEqual([
+      expect.objectContaining({
+        id: 'retained-pattern',
+        sourceEntryIds: [],
+        retainedAfterSourceDeletion: true,
+      }),
+    ]);
+    expect(result.current.principles).toEqual([
+      expect.objectContaining({
+        text: '需要继续保留的原则',
+        derivedFromEntryIds: undefined,
+        sourcePatternIds: ['retained-pattern'],
+      }),
+    ]);
+    expect(result.current.patternPrincipleLinks).toEqual([
+      expect.objectContaining({
+        patternId: 'retained-pattern',
+        principleId: result.current.principles[0].id,
+      }),
+    ]);
+  });
+
+  it('should wipe data', async () => {
+    const keys = getDiaryStorageKeys(userId);
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
       await result.current.wipeData();
@@ -176,15 +307,14 @@ describe('useDiaryData', () => {
 
     expect(result.current.entries.length).toBe(0);
     expect(result.current.principles.length).toBe(0);
-    expect(idb.del).toHaveBeenCalled();
+    expect(await idb.get(keys.entries)).toEqual([]);
+    expect(await idb.get(keys.patternPrincipleLinks)).toEqual([]);
   });
 
   it('should handle principles', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
       await result.current.addPrinciple('Test Principle', 2024);
@@ -200,15 +330,139 @@ describe('useDiaryData', () => {
     expect(result.current.principles.length).toBe(0);
   });
 
+  it('creates an independent pattern-principle link while keeping legacy sourcePatternIds', async () => {
+    const keys = getDiaryStorageKeys(userId);
+    localStorage.setItem(keys.initializedFlag, 'true');
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.addPrinciple('先完成一个最小步骤', 2026, true, [], undefined, [
+        'pattern-1',
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.principles[0].sourcePatternIds).toEqual(['pattern-1']);
+    expect(result.current.patternPrincipleLinks[0]).toMatchObject({
+      patternId: 'pattern-1',
+      principleId: result.current.principles[0].id,
+      relation: 'adjust',
+      status: 'confirmed',
+      createdBy: 'user',
+    });
+    expect(await idb.get(keys.patternPrincipleLinks)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          patternId: 'pattern-1',
+          principleId: result.current.principles[0].id,
+        }),
+      ]),
+    );
+  });
+
+  it('validates a pattern-principle link after a helpful action result', async () => {
+    const keys = getDiaryStorageKeys(userId);
+    localStorage.setItem(keys.initializedFlag, 'true');
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.addPrinciple('先完成一个最小步骤', 2026, true, [], undefined, [
+        'pattern-1',
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const principle = result.current.principles[0];
+    await act(async () => {
+      await result.current.updatePrinciple({
+        ...principle,
+        helpfulCount: 1,
+        recallCount: 1,
+        lastFeedbackAt: 100,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.patternPrincipleLinks[0]).toMatchObject({
+      principleId: principle.id,
+      patternId: 'pattern-1',
+      status: 'validated',
+      updatedAt: 100,
+    });
+  });
+
+  it('hydrates legacy sourcePatternIds as effective pattern-principle links', async () => {
+    const keys = getDiaryStorageKeys(userId);
+    localStorage.setItem(keys.initializedFlag, 'true');
+    await idb.set(keys.entries, []);
+    await idb.set(keys.principles, [
+      {
+        id: 'principle-1',
+        text: '先完成一个最小步骤',
+        year: 2026,
+        createdAt: 1,
+        showOnHome: true,
+        sourcePatternIds: ['pattern-1'],
+      },
+    ]);
+
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.patternPrincipleLinks).toHaveLength(1);
+    expect(result.current.patternPrincipleLinks[0]).toMatchObject({
+      patternId: 'pattern-1',
+      principleId: 'principle-1',
+      relation: 'adjust',
+      status: 'confirmed',
+    });
+  });
+
+  it('keeps legacy knowledge without interpreting missing sources as consent to delete', async () => {
+    const keys = getDiaryStorageKeys(userId);
+    localStorage.setItem(keys.initializedFlag, 'true');
+    writeAvatarUnderstanding({
+      id: 'legacy-pattern',
+      statement: '已失去来源的模式',
+      status: 'confirmed',
+      sourceEntryIds: ['deleted-entry'],
+      createdAt: 1,
+    });
+    await idb.set(keys.entries, []);
+    await idb.set(keys.principles, [
+      {
+        id: 'legacy-principle',
+        text: '已失去来源的原则',
+        year: 2026,
+        createdAt: 1,
+        showOnHome: true,
+        derivedFromEntryIds: ['deleted-entry'],
+        sourcePatternIds: ['legacy-pattern'],
+      },
+    ]);
+
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(readAvatarUnderstandings()).toEqual([expect.objectContaining({ id: 'legacy-pattern' })]);
+    expect(result.current.principles).toEqual([
+      expect.objectContaining({ id: 'legacy-principle' }),
+    ]);
+    expect(result.current.patternPrincipleLinks).toHaveLength(1);
+  });
+
   it('should handle containers', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
-      result.current.addContainer('New Category');
+      await result.current.addContainer('New Category');
     });
 
     expect(result.current.containers.length).toBe(1);
@@ -216,25 +470,26 @@ describe('useDiaryData', () => {
 
     const c = result.current.containers[0];
     await act(async () => {
-      result.current.deleteContainer(c.id);
+      await result.current.deleteContainer(c.id);
     });
     expect(result.current.containers.length).toBe(0);
   });
 
   it('should handle passwords', async () => {
+    const password = 'Test-password1!';
+    const hash = await SecurityService.hashPassword(password, 'salt');
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
-      await result.current.savePasswordHash('hash');
+      await result.current.savePasswordHash(hash);
       await result.current.savePasswordSalt('salt');
     });
 
-    expect(result.current.passwordHash).toBe('hash');
+    expect(result.current.passwordHash).toBe(hash);
     expect(result.current.passwordSalt).toBe('salt');
+    useAppStore.setState({ isUnlocked: true, masterPassword: password });
 
     await act(async () => {
       await result.current.clearPasswordHash();
@@ -246,9 +501,7 @@ describe('useDiaryData', () => {
   it('should handle archive/unarchive', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     const entryId = result.current.entries[0].id;
 
@@ -265,28 +518,22 @@ describe('useDiaryData', () => {
 
   it('should ignore stale async loads after language changes', async () => {
     let resolveFirstGet: ((value: undefined) => void) | null = null;
-    let callCount = 0;
-
-    vi.mocked(idb.get).mockImplementation(() => {
-      callCount += 1;
-      if (callCount === 1) {
-        return new Promise((resolve) => {
+    vi.mocked(idb.get).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
           resolveFirstGet = resolve;
-        });
-      }
-      return Promise.resolve(undefined);
-    });
+        }),
+    );
 
     const { result, rerender } = renderHook(
       ({ language }: { language: 'zh' | 'en' }) => useDiaryData(userId, language),
       { initialProps: { language: 'zh' as const } },
     );
 
+    await waitFor(() => expect(resolveFirstGet).not.toBeNull());
     rerender({ language: 'en' as const });
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Empty IDB now seeds the two sample reflections from
     // `services/sampleEntries.ts` instead of the old MOCK_ENTRIES.
@@ -319,9 +566,7 @@ describe('useDiaryData', () => {
 
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.passwordHash).toBe('persisted-hash');
     expect(result.current.passwordSalt).toBe('persisted-salt');
@@ -335,24 +580,27 @@ describe('useDiaryData', () => {
     const keys = getDiaryStorageKeys(userId);
     const { result } = renderHook(() => useDiaryData(userId));
 
+    await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
       await result.current.wipeData();
     });
 
-    expect(idb.del).toHaveBeenCalledWith(keys.selectedStars);
-    expect(idb.del).toHaveBeenCalledWith(keys.materials);
-    expect(idb.del).toHaveBeenCalledWith(keys.actions);
-    expect(idb.del).toHaveBeenCalledWith(keys.semanticEmbeddings);
-    expect(localStorage.getItem(DiaryStorageKeys.initializedFlag)).toBeNull();
+    for (const key of [
+      keys.selectedStars,
+      keys.materials,
+      keys.actions,
+      keys.semanticEmbeddings,
+      keys.patternPrincipleLinks,
+    ]) {
+      expect(await idb.get(key)).toEqual([]);
+    }
+    expect(await idb.get(DiaryStorageKeys.initializedFlag)).toBe(true);
   });
 
   it('imports backup entries by merging with existing ones', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     const initialCount = result.current.entries.length;
     let summary: { mode: 'merge' | 'replace'; importedCount: number; totalAfter: number } | null =
@@ -382,9 +630,7 @@ describe('useDiaryData', () => {
   it('records a successful scan summary', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     let summary: Awaited<ReturnType<typeof result.current.triggerScan>> | null = null;
     await act(async () => {
@@ -399,9 +645,7 @@ describe('useDiaryData', () => {
   it('addMaterial preserves rapid successive entries (no stale closure)', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     const initial = result.current.materials.length;
 

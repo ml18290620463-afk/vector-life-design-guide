@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { AppState } from '../types';
 import { SecurityService } from '../services/securityService';
+import { changeFutureProtection } from '../services/vaultTransaction';
 
 type UseVaultAuthActionsOptions = {
   clearPasswordHash: () => Promise<void>;
@@ -26,6 +27,7 @@ const persistPassword = async (
   const salt = btoa(String.fromCharCode(...saltArray));
   SecurityService.wipeSensitive(saltArray);
   const hash = await SecurityService.hashPassword(password, salt);
+  await changeFutureProtection(password, hash, salt);
   await savePasswordSalt(salt);
   await savePasswordHash(hash);
 };
@@ -59,13 +61,13 @@ export const useVaultAuthActions = ({
 
   const handleOnboardingComplete = useCallback(
     async (password: string, directory: string[], selection: string[]) => {
+      await persistPassword(password, savePasswordHash, savePasswordSalt);
       setMasterPassword(password);
       setIsUnlocked(true);
       enterPendingOrPastMain();
 
       void (async () => {
         try {
-          await persistPassword(password, savePasswordHash, savePasswordSalt);
           await saveGuidingStars(directory);
           await saveSelectedStars(selection);
         } catch (err) {

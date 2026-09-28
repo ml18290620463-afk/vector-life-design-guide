@@ -26,12 +26,12 @@ describe('AvatarRecordPanels', () => {
       />,
     );
 
-    expect(screen.getByText('实时提炼')).not.toBeNull();
+    expect(screen.getByText('已识别')).not.toBeNull();
     expect(screen.getByText('80%')).not.toBeNull();
     expect(screen.getByText('完成了一次复盘')).not.toBeNull();
     expect(screen.getAllByText('感动').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('个人成长')).not.toBeNull();
-    expect(screen.getByText('仅基于本次对话，尚未引用过去记录')).not.toBeNull();
+    expect(screen.getByText('等待来源')).not.toBeNull();
   });
 
   it('shows inspectable confirmed evidence for an insight', () => {
@@ -51,7 +51,7 @@ describe('AvatarRecordPanels', () => {
       />,
     );
 
-    expect(screen.getByText('依据 1 条已确认记录')).not.toBeNull();
+    expect(screen.getByText('1 条来源')).not.toBeNull();
     fireEvent.click(screen.getByText('上次复盘'));
     expect(onSelectEntry).toHaveBeenCalledWith('entry-1');
   });
@@ -76,7 +76,7 @@ describe('AvatarRecordPanels', () => {
   it('requires explicit confirmation before accepting an understanding', () => {
     const onResolve = vi.fn();
     render(<AvatarUnderstandingCard statement="你更看重可验证的进展" onResolve={onResolve} />);
-    expect(screen.getByText('尚未写入长期记忆')).not.toBeNull();
+    expect(screen.getByText('待确认')).not.toBeNull();
     fireEvent.click(screen.getByText('确认'));
     expect(onResolve).toHaveBeenCalledWith('confirmed', '你更看重可验证的进展');
   });
@@ -104,7 +104,7 @@ describe('AvatarRecordPanels', () => {
     fireEvent.click(screen.getByText('修改'));
     fireEvent.change(screen.getByDisplayValue('原始记录'), { target: { value: '修改后记录' } });
     fireEvent.click(screen.getByText('保存'));
-    fireEvent.click(screen.getByText('发送过去'));
+    fireEvent.click(screen.getByText('保存到过去'));
 
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({

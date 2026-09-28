@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { del, set } from 'idb-keyval';
-import type { Attachment, Container, DiaryEntry, Language, Principle, PrincipleApplication } from '../types';
+import { get, set } from 'idb-keyval';
+import type {
+  Attachment,
+  Container,
+  DiaryEntry,
+  Language,
+  PatternPrincipleLink,
+  PatternPrincipleLinkStatus,
+  PatternPrincipleRelation,
+  Principle,
+  PrincipleApplication,
+} from '../types';
 import { AppError, reportError } from '../lib/error';
 import { getSampleEntries } from '../services/sampleEntries';
 import { getStoredString } from '../services/browserStorage';
 import {
   DiaryStorageKeys,
-  entriesPayloadExceedsMirror,
   getDiaryStorageKeys,
   mirrorDiaryValue,
   readDiaryString,
@@ -14,9 +23,7 @@ import {
 } from '../services/diaryStorage';
 import { generateSecureId } from '../services/idGenerator';
 import {
-  mergeMigrationContainers,
   mergeMigrationEntries,
-  mergeMigrationPrinciples,
   persistMigrationResult,
   scanLegacyDiaryData,
   delayMigrationStep,
@@ -26,11 +33,29 @@ import {
   readStoredOptionalArray,
   readStoredScalar,
   sanitizeDiaryEntry,
+  sanitizePatternPrincipleLink,
   sanitizePrinciple,
 } from '../services/diaryDataRead';
-import { DEFAULT_PRINCIPLE_CONFIDENCE } from '../services/experienceFeedback';
+import {
+  applyPrincipleFeedbackToLinks,
+  DEFAULT_PRINCIPLE_CONFIDENCE,
+} from '../services/experienceFeedback';
 import { updateRelatedEntryIds } from '../services/entryRelations';
+import {
+  pruneAvatarAtomicMemoriesBySourceIds,
+  invalidateAvatarEvidence,
+  readAvatarUnderstandings,
+  writeAvatarUnderstanding,
+} from '../services/avatarMemory';
+import { extractPastPatterns } from '../services/pastPatternExtraction';
 import { useActionItems } from './useActionItems';
+import { commitArrayDelta, subscribeVault, vaultTransaction } from '../services/vaultTransaction';
+import { stateFrom } from '../services/futureRepository';
+import { deleteSourceEntries, recoverSourceDeletion } from '../services/sourceDeletion';
+import { recoverBackupRestore } from '../services/vaultBackup';
+import { wipeVault, recoverVaultWipe } from '../services/vaultWipe';
+import { useDiaryProtection } from './useDiaryProtection';
+import { useDiaryCollections } from './useDiaryCollections';
 
 export type ImportBackupMode = 'merge' | 'replace';
 
@@ -51,30 +76,126 @@ export interface ScanSummary {
   error?: string;
 }
 
+const makePatternPrincipleLink = (
+  patternId: string,
+  principleId: string,
+  relation: PatternPrincipleRelation = 'adjust',
+  status: PatternPrincipleLinkStatus = 'confirmed',
+): PatternPrincipleLink => {
+  const now = Date.now();
+  return {
+    id: generateSecureId('pattern-principle-link'),
+    patternId,
+    principleId,
+    relation,
+    status,
+    createdBy: 'user',
+    createdAt: now,
+    updatedAt: now,
+  };
+};
+
+const linksFromLegacySourcePatternIds = (sourcePrinciples: Principle[]): PatternPrincipleLink[] =>
+  sourcePrinciples.flatMap((principle) =>
+    [...new Set(principle.sourcePatternIds ?? [])]
+      .filter((patternId) => patternId.trim().length > 0)
+      .map((patternId) => makePatternPrincipleLink(patternId, principle.id, 'adjust', 'confirmed')),
+  );
+
+const mergePatternPrincipleLinks = (
+  storedLinks: PatternPrincipleLink[],
+  legacyLinks: PatternPrincipleLink[],
+): PatternPrincipleLink[] => {
+  const byPair = new Map<string, PatternPrincipleLink>();
+  legacyLinks.forEach((link) => {
+    byPair.set(`${link.patternId}:${link.principleId}`, link);
+  });
+  storedLinks.forEach((link) => {
+    byPair.set(`${link.patternId}:${link.principleId}`, link);
+  });
+  return [...byPair.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+};
+
+const updateAvatarPatternCandidates = (nextEntries: DiaryEntry[]) => {
+  const existing = readAvatarUnderstandings();
+  extractPastPatterns(nextEntries, existing).forEach((pattern) => {
+    writeAvatarUnderstanding(pattern);
+  });
+};
+
 export const useDiaryData = (userId: string | undefined, language: Language = 'zh') => {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [principles, setPrinciples] = useState<Principle[]>([]);
-  const [passwordHash, setPasswordHash] = useState<string | null>(null);
-  const [passwordSalt, setPasswordSalt] = useState<string | null>(null);
+  const [patternPrincipleLinks, setPatternPrincipleLinks] = useState<PatternPrincipleLink[]>([]);
+  const {
+    passwordHash,
+    setPasswordHash,
+    passwordSalt,
+    setPasswordSalt,
+    syncStatus,
+    setSyncStatus,
+    savePasswordHash,
+    savePasswordSalt,
+    clearPasswordHash,
+  } = useDiaryProtection(userId);
   const [loading, setLoading] = useState(true);
-  const [guidingStars, setGuidingStars] = useState<string[]>([]);
-  const [selectedStars, setSelectedStars] = useState<string[]>([]);
-  const [materials, setMaterials] = useState<Attachment[]>([]);
-  const [containers, setContainers] = useState<Container[]>([]);
-  const [syncStatus, setSyncStatus] = useState<
-    'synced' | 'local-only' | 'error' | 'merging' | 'mirror-skipped'
-  >('local-only');
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [lastScanSummary, setLastScanSummary] = useState<ScanSummary | null>(null);
   const activeLoadIdRef = useRef(0);
   const entriesRef = useRef<DiaryEntry[]>([]);
-  const { actions, addAction, updateAction, recordActionResult, resetActions } =
+  const principlesRef = useRef<Principle[]>([]);
+  const linksRef = useRef<PatternPrincipleLink[]>([]);
+  principlesRef.current = principles;
+  linksRef.current = patternPrincipleLinks;
+  const { actions, actionsLoadError, addAction, updateAction, recordActionResult, resetActions } =
     useActionItems(userId);
 
   useEffect(() => {
     entriesRef.current = entries;
   }, [entries]);
+
+  const persistEntries = useCallback(
+    async (newEntries: DiaryEntry[]) => {
+      const keys = getDiaryStorageKeys(userId);
+      try {
+        const saved = await commitArrayDelta<DiaryEntry>(
+          keys.entries,
+          entriesRef.current,
+          newEntries,
+          keys.backup,
+          sanitizeDiaryEntry,
+        );
+        entriesRef.current = saved;
+        setEntries(saved);
+        removeDiaryMirror(keys.entries);
+        removeDiaryMirror(keys.backup);
+      } catch (error) {
+        setSyncStatus('error');
+        throw error;
+      }
+    },
+    [setSyncStatus, userId],
+  );
+
+  const {
+    guidingStars,
+    setGuidingStars,
+    selectedStars,
+    setSelectedStars,
+    materials,
+    setMaterials,
+    containers,
+    setContainers,
+    saveGuidingStars,
+    saveSelectedStars,
+    addMaterial,
+    deleteMaterial,
+    addContainer,
+    deleteContainer,
+  } = useDiaryCollections(userId, persistEntries, setEntries, entriesRef);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,17 +207,26 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
 
       try {
         setLoading(true);
+        setLoadError(null);
+        await recoverVaultWipe();
+        await recoverSourceDeletion();
+        await recoverBackupRestore();
 
         let currentEntries = await readStoredOptionalArray<DiaryEntry>(keys.entries);
-        const isInitialized = getStoredString(keys.initializedFlag);
+        const isInitialized =
+          (await get(keys.initializedFlag)) || getStoredString(keys.initializedFlag);
+        if (isStale()) return;
 
         if (!isInitialized) {
           console.log('Vector Vault: Starting deep migration scan...');
           const migrationResult = await scanLegacyDiaryData(userId);
-          await persistMigrationResult(userId, migrationResult);
-          if (migrationResult.entries.length > 0) currentEntries = migrationResult.entries;
-
-          mirrorDiaryValue(keys.initializedFlag, 'true');
+          if (isStale()) return;
+          const migrated = await persistMigrationResult(
+            userId,
+            migrationResult,
+            getSampleEntries(language),
+          );
+          currentEntries = migrated.entries;
           console.log(
             `Vector Vault: Migration complete. Merged ${migrationResult.entries.length} entries.`,
           );
@@ -106,24 +236,18 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
           currentEntries = await readStoredOptionalArray<DiaryEntry>(keys.entries);
         }
 
-        if (!currentEntries || currentEntries.length === 0) {
+        if (!currentEntries) {
           const backup = await readStoredOptionalArray<DiaryEntry>(keys.backup);
           if (backup && backup.length > 0) currentEntries = backup;
         }
 
-        if ((!currentEntries || currentEntries.length === 0) && !isInitialized) {
-          // Phase 4 §4.a-1 — seed two sample reflections so the user
-          // sees the value proposition the first time they land in the
-          // Dashboard (instead of an empty grid). Lifecycle option C:
-          // these are auto-pruned by `addEntry` once the user writes
-          // their first real (non-sample) entry. See
-          // `services/sampleEntries.ts` for the full rationale.
-          currentEntries = getSampleEntries(language);
-          await set(keys.entries, currentEntries).catch(() => {});
-          mirrorDiaryValue(keys.entries, JSON.stringify(currentEntries));
-        }
-
         const currentPrinciples = await readStoredArray<Principle>(keys.principles);
+        const sanitizedPrinciples = currentPrinciples.map(sanitizePrinciple);
+        const currentPatternPrincipleLinks = (
+          await readStoredArray<PatternPrincipleLink>(keys.patternPrincipleLinks)
+        )
+          .map(sanitizePatternPrincipleLink)
+          .filter((link): link is PatternPrincipleLink => Boolean(link));
         const currentPasswordHash = await readStoredScalar(keys.passwordHash);
         const currentPasswordSalt = await readStoredScalar(keys.passwordSalt);
 
@@ -133,15 +257,15 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         // them.
         const passwordHashMirror = readDiaryString(keys.passwordHash);
         if (passwordHashMirror) {
-          if (!currentPasswordHash) {
-            await set(keys.passwordHash, passwordHashMirror).catch(() => {});
+          if ((await get(keys.passwordHash)) === undefined) {
+            await set(keys.passwordHash, passwordHashMirror);
           }
           removeDiaryMirror(keys.passwordHash);
         }
         const passwordSaltMirror = readDiaryString(keys.passwordSalt);
         if (passwordSaltMirror) {
-          if (!currentPasswordSalt) {
-            await set(keys.passwordSalt, passwordSaltMirror).catch(() => {});
+          if ((await get(keys.passwordSalt)) === undefined) {
+            await set(keys.passwordSalt, passwordSaltMirror);
           }
           removeDiaryMirror(keys.passwordSalt);
         }
@@ -153,24 +277,30 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         if (isStale()) return;
 
         setEntries((currentEntries || []).map(sanitizeDiaryEntry));
-        setPrinciples(currentPrinciples.map(sanitizePrinciple));
+        setPrinciples(sanitizedPrinciples);
+        setPatternPrincipleLinks(
+          mergePatternPrincipleLinks(
+            currentPatternPrincipleLinks,
+            linksFromLegacySourcePatternIds(sanitizedPrinciples),
+          ),
+        );
         setPasswordHash(currentPasswordHash);
         setPasswordSalt(currentPasswordSalt);
         setGuidingStars(currentGuidingStars);
         setSelectedStars(currentSelectedStars);
         setMaterials(currentMaterials);
         setContainers(currentContainers);
+        setSyncStatus('local-only');
       } catch (error) {
         if (isStale()) return;
 
         reportError(AppError.fromError(error), 'loadData');
-        // If the IDB read pipeline crashed entirely, fall back to the
-        // same first-day sample reflections so the user still has
-        // something to look at (better than an empty error screen).
-        setEntries(getSampleEntries(language));
+        // Fail closed: a failed protection read must not unlock an apparently empty vault.
+        setLoadError('资料库读取失败，未打开或覆盖数据。请重新加载后重试。');
+        setEntries([]);
         setPrinciples([]);
-        setPasswordHash(null);
-        setPasswordSalt(null);
+        setPatternPrincipleLinks([]);
+        setSyncStatus('error');
         setGuidingStars([]);
         setSelectedStars([]);
         setMaterials([]);
@@ -178,7 +308,6 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       } finally {
         if (!isStale()) {
           setLoading(false);
-          setSyncStatus('local-only');
         }
       }
     };
@@ -188,186 +317,103 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     return () => {
       cancelled = true;
     };
-  }, [userId, language]);
+  }, [
+    language,
+    setContainers,
+    setGuidingStars,
+    setMaterials,
+    setPasswordHash,
+    setPasswordSalt,
+    setSelectedStars,
+    setSyncStatus,
+    userId,
+  ]);
 
-  const persistEntries = useCallback(
-    async (newEntries: DiaryEntry[]) => {
-      const keys = getDiaryStorageKeys(userId);
-      entriesRef.current = newEntries;
-      setEntries(newEntries);
+  useEffect(() => {
+    let live = true;
+    let generation = 0;
+    const refresh = async () => {
+      const request = ++generation;
       try {
-        let payload: string | null = null;
-        let mirrorSkipped = false;
-        await set(keys.entries, newEntries).catch((err) => {
-          console.warn('IndexedDB set failed, falling back to localStorage', err);
-          payload ??= JSON.stringify(newEntries);
-          if (entriesPayloadExceedsMirror(payload.length)) {
-            mirrorSkipped = true;
-          } else {
-            mirrorDiaryValue(keys.entries, payload);
-          }
-        });
-        await set(keys.backup, newEntries).catch(() => {});
-        if (mirrorSkipped) {
-          setSyncStatus('mirror-skipped');
-        } else if (payload !== null) {
-          // We had to use the localStorage fallback at least once; flag the
-          // session as local-only so callers know IDB is degraded.
-          setSyncStatus('local-only');
+        await recoverVaultWipe();
+        await recoverSourceDeletion();
+        await recoverBackupRestore();
+        const keys = getDiaryStorageKeys(userId);
+        const data = await vaultTransaction(
+          [
+            keys.entries,
+            keys.principles,
+            keys.patternPrincipleLinks,
+            keys.guidingStars,
+            keys.selectedStars,
+            keys.materials,
+            keys.containers,
+          ],
+          (values) => values,
+          true,
+        );
+        if (!live || request !== generation) return;
+        if (Array.isArray(data[keys.entries])) {
+          const next = (data[keys.entries] as DiaryEntry[]).map(sanitizeDiaryEntry);
+          entriesRef.current = next;
+          setEntries(next);
         }
+        if (Array.isArray(data[keys.principles]))
+          setPrinciples((data[keys.principles] as Principle[]).map(sanitizePrinciple));
+        if (Array.isArray(data[keys.patternPrincipleLinks]))
+          setPatternPrincipleLinks(data[keys.patternPrincipleLinks] as PatternPrincipleLink[]);
+        if (Array.isArray(data[keys.guidingStars]))
+          setGuidingStars(data[keys.guidingStars] as string[]);
+        if (Array.isArray(data[keys.selectedStars]))
+          setSelectedStars(data[keys.selectedStars] as string[]);
+        if (Array.isArray(data[keys.materials])) setMaterials(data[keys.materials] as Attachment[]);
+        if (Array.isArray(data[keys.containers]))
+          setContainers(data[keys.containers] as Container[]);
       } catch (error) {
-        reportError(AppError.fromError(error), 'persistEntries');
-        setSyncStatus('error');
+        if (live) {
+          setSyncStatus('error');
+          reportError(AppError.fromError(error), 'refreshVault');
+        }
       }
-    },
-    [userId],
-  );
+    };
+    const unsubscribe = subscribeVault(() => {
+      void refresh();
+    });
+    return () => {
+      live = false;
+      unsubscribe();
+    };
+  }, [setContainers, setGuidingStars, setMaterials, setSelectedStars, setSyncStatus, userId]);
+
 
   const persistPrinciples = useCallback(
-    async (newPrinciples: Principle[]) => {
-      const keys = getDiaryStorageKeys(userId);
-      setPrinciples(newPrinciples);
-      try {
-        await set(keys.principles, newPrinciples).catch((err) => {
-          console.warn('IndexedDB set failed for principles, falling back to localStorage', err);
-          mirrorDiaryValue(keys.principles, JSON.stringify(newPrinciples));
-        });
-      } catch (error) {
-        console.error('Failed to save principles', error);
-      }
-    },
-    [userId],
-  );
-
-  const savePasswordHash = async (hash: string) => {
-    const keys = getDiaryStorageKeys(userId);
-    setPasswordHash(hash);
-    try {
-      await set(keys.passwordHash, hash);
-    } catch (error) {
-      // Sensitive material must NEVER fall back to localStorage. We surface
-      // a sync error and keep the in-memory value so the user can still
-      // operate this session, but persistence has failed.
-      reportError(AppError.fromError(error), 'savePasswordHash');
-      setSyncStatus('error');
-    }
-    // Defensive: remove any pre-existing mirror written by older versions.
-    removeDiaryMirror(keys.passwordHash);
-  };
-
-  const savePasswordSalt = async (salt: string) => {
-    const keys = getDiaryStorageKeys(userId);
-    setPasswordSalt(salt);
-    try {
-      await set(keys.passwordSalt, salt);
-    } catch (error) {
-      reportError(AppError.fromError(error), 'savePasswordSalt');
-      setSyncStatus('error');
-    }
-    removeDiaryMirror(keys.passwordSalt);
-  };
-
-  const clearPasswordHash = async () => {
-    const keys = getDiaryStorageKeys(userId);
-    setPasswordHash(null);
-    setPasswordSalt(null);
-    await del(keys.passwordHash);
-    await del(keys.passwordSalt);
-    removeDiaryMirror(keys.passwordHash);
-    removeDiaryMirror(keys.passwordSalt);
-  };
-
-  const saveGuidingStars = async (stars: string[]) => {
-    const keys = getDiaryStorageKeys(userId);
-    setGuidingStars(stars);
-    await set(keys.guidingStars, stars).catch(() => {
-      mirrorDiaryValue(keys.guidingStars, JSON.stringify(stars));
-    });
-  };
-
-  const saveSelectedStars = async (stars: string[]) => {
-    const keys = getDiaryStorageKeys(userId);
-    setSelectedStars(stars);
-    await set(keys.selectedStars, stars).catch(() => {
-      mirrorDiaryValue(keys.selectedStars, JSON.stringify(stars));
-    });
-  };
-
-  const addMaterial = useCallback(
-    async (material: Attachment) => {
-      const keys = getDiaryStorageKeys(userId);
-      // Functional updater + reference capture: avoids the stale-closure
-      // window where a quick second tap would read an out-of-date
-      // `materials` snapshot and lose the previous addition (the bug
-      // tracked in EVALUATION §7 / Phase 2 follow-up F1.4).
-      let nextMaterials: Attachment[] = [];
-      setMaterials((prev) => {
-        nextMaterials = [material, ...prev];
-        return nextMaterials;
-      });
-      await set(keys.materials, nextMaterials).catch(() => {
-        console.warn('Failed to save materials to IndexedDB');
-      });
-    },
-    [userId],
-  );
-
-  const deleteMaterial = useCallback(
-    async (index: number) => {
-      const keys = getDiaryStorageKeys(userId);
-      let nextMaterials: Attachment[] = [];
-      setMaterials((prev) => {
-        nextMaterials = prev.filter((_, currentIndex) => currentIndex !== index);
-        return nextMaterials;
-      });
-      await set(keys.materials, nextMaterials).catch(() => {
-        console.warn('Failed to save materials to IndexedDB');
-      });
-    },
-    [userId],
-  );
-
-  const persistContainersArray = useCallback(
-    async (newContainers: Container[]) => {
-      const keys = getDiaryStorageKeys(userId);
-      try {
-        await set(keys.containers, newContainers).catch((err) => {
-          console.warn('IndexedDB set failed for containers, falling back to localStorage', err);
-          mirrorDiaryValue(keys.containers, JSON.stringify(newContainers));
-        });
-      } catch (error) {
-        reportError(AppError.fromError(error), 'persistContainers');
-      }
-    },
-    [userId],
-  );
-
-  const addContainer = useCallback(
-    (name: string) => {
-      const c: Container = { id: generateSecureId('container'), name, createdAt: Date.now() };
-      let next: Container[] = [];
-      setContainers((prev) => (next = [c, ...prev]));
-      void persistContainersArray(next);
-    },
-    [persistContainersArray],
-  );
-
-  const deleteContainer = useCallback(
-    (id: string) => {
-      let nextContainers: Container[] = [];
-      setContainers((prev) => (nextContainers = prev.filter((c) => c.id !== id)));
-      void persistContainersArray(nextContainers);
-      let nextEntries: DiaryEntry[] = [];
-      setEntries(
-        (prev) =>
-          (nextEntries = prev.map((e) =>
-            e.containerId === id ? { ...e, containerId: undefined } : e,
-          )),
+    async (next: Principle[]) => {
+      const saved = await commitArrayDelta(
+        getDiaryStorageKeys(userId).principles,
+        principlesRef.current,
+        next,
+        undefined,
+        sanitizePrinciple,
       );
-      void persistEntries(nextEntries);
+      principlesRef.current = saved;
+      setPrinciples(saved);
     },
-    [persistContainersArray, persistEntries],
+    [userId],
   );
+
+  const persistPatternPrincipleLinks = useCallback(
+    async (next: PatternPrincipleLink[]) => {
+      const saved = await commitArrayDelta(
+        getDiaryStorageKeys(userId).patternPrincipleLinks,
+        linksRef.current,
+        next,
+      );
+      linksRef.current = saved;
+      setPatternPrincipleLinks(saved);
+    },
+    [userId],
+  );
+
 
   // `data.id` is optional so Now can pre-mint ids for record/material
   // flows while ordinary callers can still let the store mint one.
@@ -387,11 +433,19 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       // Phase 4 §4.a-1 — first real entry prunes seeded samples
       // (option C in services/sampleEntries.ts). isSample additions
       // (e.g. future re-seed flow) leave samples alone.
-      const baseEntries = newEntry.isSample ? entries : entries.filter((e) => !e.isSample);
-      persistEntries([newEntry, ...baseEntries]);
+      const existing = data.id
+        ? entriesRef.current.find((entry) => entry.id === data.id)
+        : undefined;
+      if (existing) return existing;
+      const baseEntries = newEntry.isSample
+        ? entriesRef.current
+        : entriesRef.current.filter((e) => !e.isSample);
+      const nextEntries = [newEntry, ...baseEntries];
+      await persistEntries(nextEntries);
+      updateAvatarPatternCandidates(nextEntries);
       return newEntry;
     },
-    [entries, persistEntries],
+    [persistEntries],
   );
 
   const updateEntry = useCallback(
@@ -400,7 +454,11 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       const nextEntries = entries.map((entry) =>
         entry.id === updatedEntry.id ? { ...updatedEntry, updatedAt: now } : entry,
       );
-      persistEntries(nextEntries);
+      const previous = entries.find((entry) => entry.id === updatedEntry.id);
+      if (previous && previous.content !== updatedEntry.content)
+        invalidateAvatarEvidence(updatedEntry.id);
+      await persistEntries(nextEntries);
+      updateAvatarPatternCandidates(nextEntries);
     },
     [entries, persistEntries],
   );
@@ -419,16 +477,49 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         updatedEntries.map((entry) => [entry.id, { ...entry, updatedAt: now }]),
       );
       const nextEntries = entries.map((entry) => updatedEntriesMap.get(entry.id) || entry);
-      persistEntries(nextEntries);
+      await persistEntries(nextEntries);
     },
     [entries, persistEntries],
   );
 
-  const deleteEntry = useCallback(
-    async (id: string) => {
-      persistEntries(entries.filter((entry) => entry.id !== id));
+  const deleteEntries = useCallback(
+    async (ids: string[], retainDerivedKnowledge = false, retainGoalProgress?: boolean) => {
+      if (!ids.length) return;
+      const linked = await vaultTransaction(
+        [DiaryStorageKeys.future],
+        (v) =>
+          stateFrom(v[DiaryStorageKeys.future]).events.some(
+            (e) => e.status === 'valid' && e.sourceEntryId && ids.includes(e.sourceEntryId),
+          ),
+        true,
+      );
+      const retain =
+        retainGoalProgress ??
+        (linked
+          ? window.confirm(
+              '是否保留这些记录已计入的目标进度？\n\n确定：保留进度并解除记录关联。取消：撤回相应进度。',
+            )
+          : false);
+      await deleteSourceEntries(ids, retainDerivedKnowledge, retain);
+      const keys = getDiaryStorageKeys(userId);
+      const values = await vaultTransaction(
+        [keys.entries, keys.principles, keys.patternPrincipleLinks],
+        (v) => v,
+        true,
+      );
+      entriesRef.current = values[keys.entries] as DiaryEntry[];
+      setEntries(entriesRef.current);
+      setPrinciples(values[keys.principles] as Principle[]);
+      setPatternPrincipleLinks(values[keys.patternPrincipleLinks] as PatternPrincipleLink[]);
     },
-    [entries, persistEntries],
+    [userId],
+  );
+
+  const deleteEntry = useCallback(
+    async (id: string, retainDerivedKnowledge = false, retainGoalProgress?: boolean) => {
+      await deleteEntries([id], retainDerivedKnowledge, retainGoalProgress);
+    },
+    [deleteEntries],
   );
 
   const archiveEntry = useCallback(
@@ -439,7 +530,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
           ? { ...entry, isArchived: true, archivedToShip: true, updatedAt: now }
           : entry,
       );
-      persistEntries(nextEntries);
+      await persistEntries(nextEntries);
     },
     [entries, persistEntries],
   );
@@ -452,7 +543,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
           ? { ...entry, isArchived: false, archivedToShip: false, updatedAt: now }
           : entry,
       );
-      persistEntries(nextEntries);
+      await persistEntries(nextEntries);
     },
     [entries, persistEntries],
   );
@@ -464,43 +555,153 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       showOnHome: boolean = true,
       derivedFromEntryIds: string[] = [],
       application?: PrincipleApplication,
+      sourcePatternIds: string[] = [],
+      tags: string[] = [],
     ) => {
       const newPrinciple: Principle = {
         id: generateSecureId(),
         text,
+        tags:
+          tags.length > 0 ? [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))] : undefined,
         year,
         createdAt: Date.now(),
         showOnHome,
         derivedFromEntryIds:
           derivedFromEntryIds.length > 0 ? [...new Set(derivedFromEntryIds)] : undefined,
         application,
+        sourcePatternIds: sourcePatternIds.length > 0 ? [...new Set(sourcePatternIds)] : undefined,
         confidence: DEFAULT_PRINCIPLE_CONFIDENCE,
         recallCount: 0,
         helpfulCount: 0,
         partialCount: 0,
         unhelpfulCount: 0,
       };
-      persistPrinciples([newPrinciple, ...principles]);
+      const uniquePatternIds = [
+        ...new Set(sourcePatternIds.map((id) => id.trim()).filter(Boolean)),
+      ];
+      const nextPrinciples = [
+        {
+          ...newPrinciple,
+          sourcePatternIds: uniquePatternIds.length ? uniquePatternIds : undefined,
+        },
+        ...principles,
+      ];
+      const existingPairs = new Set(
+        patternPrincipleLinks.map((link) => `${link.patternId}:${link.principleId}`),
+      );
+      const nextLinks = [
+        ...uniquePatternIds
+          .filter((patternId) => !existingPairs.has(`${patternId}:${newPrinciple.id}`))
+          .map((patternId) => makePatternPrincipleLink(patternId, newPrinciple.id)),
+        ...patternPrincipleLinks,
+      ];
+      await persistPrinciples(nextPrinciples);
+      if (uniquePatternIds.length > 0) await persistPatternPrincipleLinks(nextLinks);
     },
-    [principles, persistPrinciples],
+    [patternPrincipleLinks, persistPatternPrincipleLinks, principles, persistPrinciples],
   );
 
   const deletePrinciple = useCallback(
     async (id: string) => {
-      persistPrinciples(principles.filter((principle) => principle.id !== id));
+      await persistPrinciples(principles.filter((principle) => principle.id !== id));
+      pruneAvatarAtomicMemoriesBySourceIds([id], false);
+      const now = Date.now();
+      const nextLinks = patternPrincipleLinks.map((link) =>
+        link.principleId === id ? { ...link, status: 'inactive' as const, updatedAt: now } : link,
+      );
+      if (nextLinks.some((link, index) => link !== patternPrincipleLinks[index])) {
+        await persistPatternPrincipleLinks(nextLinks);
+      }
     },
-    [principles, persistPrinciples],
+    [patternPrincipleLinks, persistPatternPrincipleLinks, principles, persistPrinciples],
+  );
+
+  const addPatternPrincipleLink = useCallback(
+    async (
+      patternId: string,
+      principleId: string,
+      relation: PatternPrincipleRelation = 'adjust',
+      status: PatternPrincipleLinkStatus = 'confirmed',
+    ) => {
+      const safePatternId = patternId.trim();
+      const safePrincipleId = principleId.trim();
+      if (!safePatternId || !safePrincipleId) return;
+      const pairKey = `${safePatternId}:${safePrincipleId}`;
+      const now = Date.now();
+      const existing = patternPrincipleLinks.find(
+        (link) => `${link.patternId}:${link.principleId}` === pairKey,
+      );
+      const nextLinks = existing
+        ? patternPrincipleLinks.map((link) =>
+            link.id === existing.id
+              ? { ...link, relation, status, updatedAt: now, createdBy: link.createdBy ?? 'user' }
+              : link,
+          )
+        : [
+            makePatternPrincipleLink(safePatternId, safePrincipleId, relation, status),
+            ...patternPrincipleLinks,
+          ];
+      await persistPatternPrincipleLinks(nextLinks);
+    },
+    [patternPrincipleLinks, persistPatternPrincipleLinks],
+  );
+
+  const updatePatternPrincipleLink = useCallback(
+    async (updatedLink: PatternPrincipleLink) => {
+      const sanitized = sanitizePatternPrincipleLink({ ...updatedLink, updatedAt: Date.now() });
+      if (!sanitized) return;
+      await persistPatternPrincipleLinks(
+        patternPrincipleLinks.map((link) => (link.id === sanitized.id ? sanitized : link)),
+      );
+    },
+    [patternPrincipleLinks, persistPatternPrincipleLinks],
+  );
+
+  const removePatternPrincipleLink = useCallback(
+    async (id: string) => {
+      const now = Date.now();
+      await persistPatternPrincipleLinks(
+        patternPrincipleLinks.map((link) =>
+          link.id === id ? { ...link, status: 'inactive', updatedAt: now } : link,
+        ),
+      );
+    },
+    [patternPrincipleLinks, persistPatternPrincipleLinks],
   );
 
   const updatePrinciple = useCallback(
     async (updatedPrinciple: Principle) => {
-      persistPrinciples(
+      const previousPrinciple = principles.find(
+        (principle) => principle.id === updatedPrinciple.id,
+      );
+      await persistPrinciples(
         principles.map((principle) =>
           principle.id === updatedPrinciple.id ? updatedPrinciple : principle,
         ),
       );
+      if (previousPrinciple) {
+        const outcome =
+          (updatedPrinciple.helpfulCount ?? 0) > (previousPrinciple.helpfulCount ?? 0)
+            ? 'helpful'
+            : (updatedPrinciple.partialCount ?? 0) > (previousPrinciple.partialCount ?? 0)
+              ? 'partial'
+              : (updatedPrinciple.unhelpfulCount ?? 0) > (previousPrinciple.unhelpfulCount ?? 0)
+                ? 'unhelpful'
+                : null;
+        if (outcome) {
+          const nextLinks = applyPrincipleFeedbackToLinks(
+            patternPrincipleLinks,
+            updatedPrinciple.id,
+            outcome,
+            updatedPrinciple.lastFeedbackAt ?? Date.now(),
+          );
+          if (nextLinks.some((link, index) => link !== patternPrincipleLinks[index])) {
+            await persistPatternPrincipleLinks(nextLinks);
+          }
+        }
+      }
     },
-    [principles, persistPrinciples],
+    [patternPrincipleLinks, persistPatternPrincipleLinks, principles, persistPrinciples],
   );
 
   const triggerScan = useCallback(async (): Promise<ScanSummary> => {
@@ -517,45 +718,18 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
 
       setScanProgress(90);
 
-      let mergedEntriesCount = 0;
-      let mergedPrinciplesCount = 0;
-      let mergedContainersCount = 0;
+      const migrated = await persistMigrationResult(userId, migrationResult);
+      setEntries(migrated.entries.map(sanitizeDiaryEntry));
+      setPrinciples(migrated.principles.map(sanitizePrinciple));
+      setContainers(migrated.containers);
 
-      if (migrationResult.entries.length > 0) {
-        const mergedEntries = mergeMigrationEntries(migrationResult.entries, entries);
-        mergedEntriesCount = Math.max(0, mergedEntries.length - entries.length);
-        await set(keys.entries, mergedEntries).catch(() => {});
-        mirrorDiaryValue(keys.entries, JSON.stringify(mergedEntries));
-        setEntries(mergedEntries);
-      }
-
-      if (migrationResult.principles.length > 0) {
-        const mergedPrinciples = mergeMigrationPrinciples(migrationResult.principles, principles);
-        mergedPrinciplesCount = Math.max(0, mergedPrinciples.length - principles.length);
-        await set(keys.principles, mergedPrinciples).catch(() => {});
-        mirrorDiaryValue(keys.principles, JSON.stringify(mergedPrinciples));
-        setPrinciples(mergedPrinciples);
-      }
-
-      if (migrationResult.containers.length > 0) {
-        const mergedContainers = mergeMigrationContainers(migrationResult.containers, containers);
-        mergedContainersCount = Math.max(0, mergedContainers.length - containers.length);
-        await set(keys.containers, mergedContainers).catch(() => {});
-        mirrorDiaryValue(keys.containers, JSON.stringify(mergedContainers));
-        setContainers(mergedContainers);
-      }
-
-      if (migrationResult.passwordHash) {
-        // Sensitive: never mirror password hash to localStorage.
-        await set(keys.passwordHash, migrationResult.passwordHash).catch(() => {});
+      if (typeof migrated.passwordHash === 'string') {
         removeDiaryMirror(keys.passwordHash);
-        setPasswordHash(migrationResult.passwordHash);
+        setPasswordHash(migrated.passwordHash);
       }
-
-      if (migrationResult.passwordSalt) {
-        await set(keys.passwordSalt, migrationResult.passwordSalt).catch(() => {});
+      if (typeof migrated.passwordSalt === 'string') {
         removeDiaryMirror(keys.passwordSalt);
-        setPasswordSalt(migrationResult.passwordSalt);
+        setPasswordSalt(migrated.passwordSalt);
       }
 
       mirrorDiaryValue(keys.initializedFlag, 'true');
@@ -571,9 +745,9 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       const summary: ScanSummary = {
         status: 'success',
         finishedAt: Date.now(),
-        mergedEntries: mergedEntriesCount,
-        mergedPrinciples: mergedPrinciplesCount,
-        mergedContainers: mergedContainersCount,
+        mergedEntries: migrated.mergedEntries,
+        mergedPrinciples: migrated.mergedPrinciples,
+        mergedContainers: migrated.mergedContainers,
       };
       setLastScanSummary(summary);
       return summary;
@@ -592,7 +766,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       setLastScanSummary(summary);
       return summary;
     }
-  }, [userId, entries, principles, containers]);
+  }, [setContainers, setPasswordHash, setPasswordSalt, userId]);
 
   const importBackup = useCallback(
     async (
@@ -612,10 +786,11 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   );
 
   const wipeData = useCallback(async () => {
-    const keys = getDiaryStorageKeys(userId);
+    await wipeVault(userId);
 
     setEntries([]);
     setPrinciples([]);
+    setPatternPrincipleLinks([]);
     setGuidingStars([]);
     setSelectedStars([]);
     setPasswordHash(null);
@@ -623,41 +798,34 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     setMaterials([]);
     setContainers([]);
     resetActions();
-
-    const storageKeys = [
-      keys.entries,
-      keys.principles,
-      keys.passwordHash,
-      keys.passwordSalt,
-      keys.guidingStars,
-      keys.selectedStars,
-      keys.materials,
-      keys.containers,
-      keys.actions,
-      keys.semanticEmbeddings,
-      keys.backup,
-    ];
-
-    for (const key of storageKeys) {
-      removeDiaryMirror(key);
-      await del(key);
-    }
-
-    removeDiaryMirror(DiaryStorageKeys.initializedFlag);
-  }, [resetActions, userId]);
+  }, [
+    resetActions,
+    setContainers,
+    setGuidingStars,
+    setMaterials,
+    setPasswordHash,
+    setPasswordSalt,
+    setSelectedStars,
+    userId,
+  ]);
 
   return {
     entries,
     principles,
+    patternPrincipleLinks,
     addEntry,
     updateEntry,
     updateEntryRelatedIds,
     bulkUpdateEntries,
     deleteEntry,
+    deleteEntries,
     archiveEntry,
     unarchiveEntry,
     addPrinciple,
     deletePrinciple,
+    addPatternPrincipleLink,
+    updatePatternPrincipleLink,
+    removePatternPrincipleLink,
     updatePrinciple,
     actions,
     addAction,
@@ -681,6 +849,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     addContainer,
     deleteContainer,
     loading,
+    loadError: loadError ?? actionsLoadError,
     syncStatus,
     isScanning,
     scanProgress,

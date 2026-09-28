@@ -14,17 +14,17 @@ const entry = (id: string, createdAt: number, tags: string[]): DiaryEntry => ({
 describe('buildAvatarProactiveInvitation', () => {
   it('offers a low-pressure opening when there is no usable history', () => {
     const invitation = buildAvatarProactiveInvitation([]);
-    expect(invitation.title).toContain('不用想好');
-    expect(invitation.prompts).toHaveLength(3);
+    expect(invitation.title).toContain('分身');
+    expect(invitation.prompts).toEqual(['认识我', '我在意什么', '如何开始']);
   });
 
-  it('uses a repeated signal without presenting it as a conclusion', () => {
+  it('uses a repeated signal as a compact entry point', () => {
     const invitation = buildAvatarProactiveInvitation([
       entry('1', 2, ['事件:职业发展']),
       entry('2', 1, ['事件:职业发展']),
     ]);
     expect(invitation.title).toContain('职业发展');
-    expect(invitation.context).toContain('不一定是结论');
+    expect(invitation.prompts).toEqual(['为什么反复出现', '和过去相比', '形成一条理解']);
   });
 
   it('ignores locked and sample entries', () => {

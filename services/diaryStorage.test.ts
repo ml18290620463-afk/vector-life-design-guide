@@ -22,6 +22,7 @@ describe('diaryStorage', () => {
       entries: DiaryStorageKeys.entries,
       selectedStars: 'vector_selected_stars_user-1',
       materials: 'vector_materials_user-1',
+      patternPrincipleLinks: DiaryStorageKeys.patternPrincipleLinks,
     });
   });
 

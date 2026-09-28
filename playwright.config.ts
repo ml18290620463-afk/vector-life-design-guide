@@ -2,7 +2,15 @@ import { defineConfig, devices } from '@playwright/test';
 
 process.env.NO_PROXY = [process.env.NO_PROXY, '127.0.0.1', 'localhost'].filter(Boolean).join(',');
 
-const port = Number(process.env.E2E_PORT || 3100);
+// Keep automated tests separate from the user-facing dev server (3010).
+// Parallel CI jobs can opt into their own port with E2E_PORT; a stable default
+// makes local runs repeatable and avoids attaching to a stale server.
+const requestedPort = process.env.E2E_PORT;
+const port = requestedPort ? Number(requestedPort) : 3710;
+
+if (!Number.isInteger(port) || port < 1024 || port > 65_535) {
+  throw new Error(`E2E_PORT must be a valid TCP port; received: ${requestedPort}`);
+}
 const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({

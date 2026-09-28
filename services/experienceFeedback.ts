@@ -1,4 +1,9 @@
-import type { DiaryEntry, ExperienceFeedbackOutcome, Principle } from '../types';
+import type {
+  DiaryEntry,
+  ExperienceFeedbackOutcome,
+  PatternPrincipleLink,
+  Principle,
+} from '../types';
 import { principleToSemanticSource, semanticSimilarity } from './localSemanticIndex';
 
 export const DEFAULT_PRINCIPLE_CONFIDENCE = 0.5;
@@ -32,6 +37,23 @@ export const applyPrincipleFeedback = (
     unhelpfulCount: (principle.unhelpfulCount ?? 0) + (outcome === 'unhelpful' ? 1 : 0),
     lastFeedbackAt: now,
   };
+};
+
+export const applyPrincipleFeedbackToLinks = (
+  links: PatternPrincipleLink[],
+  principleId: string,
+  outcome: ExperienceFeedbackOutcome,
+  now = Date.now(),
+): PatternPrincipleLink[] => {
+  if (outcome !== 'helpful' && outcome !== 'partial') return links;
+
+  return links.map((link) =>
+    link.principleId === principleId &&
+    link.status !== 'inactive' &&
+    link.status !== 'validated'
+      ? { ...link, status: 'validated', updatedAt: now }
+      : link,
+  );
 };
 
 const normalizeTag = (tag: string): string =>

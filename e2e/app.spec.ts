@@ -41,11 +41,11 @@ test('completes mobile onboarding and reaches the main shell', async ({ page }) 
   await expect(page.getByTestId('onboarding-recovery-saved')).toContainText('进入主界面');
   await page.getByTestId('onboarding-recovery-saved').click();
 
-  await expect(page.getByRole('navigation', { name: '主框架导航' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '主页面导航' })).toBeVisible();
   await expect(page.getByTestId('past-page')).toBeVisible();
   await expect(page.getByRole('heading', { name: '过去' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /过去 记录与原则/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /现在 记录此刻与行动/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /未来 目标、推演、转化/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /分身 记忆协助与对话/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: '过去', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '现在', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '未来', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '分身', exact: true })).toBeVisible();
 });

@@ -1,6 +1,7 @@
 import type { FC, ReactNode } from 'react';
 import type { MobileMainTab } from '../features/mobile/types';
 import type { Language } from '../types';
+import { getMainModules } from '../features/mobile/mainModules';
 import { DesktopMainNav } from './DesktopMainNav';
 
 type AppPageFrameProps = {
@@ -32,6 +33,11 @@ export const AppPageFrame: FC<AppPageFrameProps> = ({
       .join(' ')}
   >
     <DesktopMainNav activeTab={activeTab} language={language} onNavigate={onNavigate} />
-    {children}
+    <div className="desktop-workspace" data-workspace={activeTab}>
+      <h1 className="desktop-workspace__accessible-title">
+        {getMainModules(language).find((item) => item.id === activeTab)?.title}
+      </h1>
+      <div className="desktop-workspace__body">{children}</div>
+    </div>
   </div>
 );

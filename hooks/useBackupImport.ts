@@ -6,6 +6,7 @@ import {
 } from '../services/dashboardImport';
 import type { DiaryEntry } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
+import { importVaultBackup } from '../services/vaultBackup';
 
 export type BackupImportMode = 'merge' | 'replace';
 
@@ -21,6 +22,7 @@ export interface BackupImportStatus {
 }
 
 export interface UseBackupImportArgs {
+  currentUser?: string | null;
   /** Hook into useDiaryData.importBackup. When undefined the import flow
    *  is treated as disabled. */
   onImportBackup?: (entries: DiaryEntry[], mode: BackupImportMode) => Promise<BackupImportSummary>;
@@ -55,6 +57,7 @@ const REASON_LABEL_FALLBACKS: Record<BackupParseFailure, string> = {
  * message (success or failure), and a setter to clear it.
  */
 export const useBackupImport = ({
+  currentUser,
   onImportBackup,
   t,
   confirm = (message) =>
@@ -92,7 +95,7 @@ export const useBackupImport = ({
           return;
         }
 
-        const confirmTemplate = t.importConfirm ?? 'Import {count} entries (merged with existing)?';
+        const confirmTemplate = parsed.vaultBackup ? '导入完整备份（{count} 条记录、愿景、目标、行动、成果与知识），与现有数据合并？' : t.importConfirm ?? 'Import {count} entries (merged with existing)?';
         const confirmed = await Promise.resolve(
           confirm(confirmTemplate.replace('{count}', String(parsed.entries.length))),
         );
@@ -101,7 +104,7 @@ export const useBackupImport = ({
           return;
         }
 
-        const summary = await onImportBackup(parsed.entries, 'merge');
+        const summary = parsed.vaultBackup ? await importVaultBackup(parsed.vaultBackup, 'merge', currentUser ?? undefined) : await onImportBackup(parsed.entries, 'merge');
         const successTemplate = t.importSuccess ?? 'Imported {count} entries (now {total} total).';
         setStatus({
           kind: 'success',
@@ -112,14 +115,14 @@ export const useBackupImport = ({
       } catch (error) {
         setStatus({
           kind: 'error',
-          message: t.importUnknown ?? 'Backup import failed unexpectedly.',
+          message: error instanceof Error ? error.message : t.importUnknown ?? 'Backup import failed unexpectedly.',
         });
         reportError?.(error);
       } finally {
         resetInput();
       }
     },
-    [onImportBackup, t, confirm, reportError, resetInput],
+    [onImportBackup, currentUser, t, confirm, reportError, resetInput],
   );
 
   return {

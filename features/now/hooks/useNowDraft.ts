@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getStoredJson, removeStoredValue, setStoredJson } from '../../../services/browserStorage';
 import { STORAGE_KEYS } from '../constants/config';
 import type { NowDraft } from '../types/now';
-import { createEmptyDraft } from '../state/nowRules';
+import { createEmptyDraft, hasDraftContent } from '../state/nowRules';
 
 const readDraft = (): NowDraft => {
   if (typeof window === 'undefined') return createEmptyDraft();
@@ -21,6 +21,18 @@ const readDraft = (): NowDraft => {
 
 export const useNowDraft = () => {
   const [draft, setDraftState] = useState<NowDraft>(() => readDraft());
+
+  useEffect(() => {
+    const protectUnsavedDraft = (event: BeforeUnloadEvent) => {
+      if (!hasDraftContent(draft)) return;
+      const saved = getStoredJson<NowDraft>(STORAGE_KEYS.nowDraft);
+      if (saved && JSON.stringify(saved) === JSON.stringify(draft)) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', protectUnsavedDraft);
+    return () => window.removeEventListener('beforeunload', protectUnsavedDraft);
+  }, [draft]);
 
   const setDraft = useCallback((updater: NowDraft | ((draft: NowDraft) => NowDraft)) => {
     setDraftState((current) => {

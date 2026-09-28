@@ -10,9 +10,9 @@ export const AvatarRecallPanel: React.FC<{
 }> = ({ memories, onSelectEntry }) => {
   const top = memories.slice(0, 2);
   return (
-    <aside className="now-avatar-recall" aria-label="关联过去">
+    <aside className="now-avatar-recall" aria-label="已找到">
       <div className="now-avatar-recall__head">
-        <span>关联过去</span>
+        <span>已找到</span>
         <strong>{memories.length}</strong>
       </div>
       {top.map((memory) => (
@@ -29,8 +29,7 @@ export const AvatarRecallPanel: React.FC<{
             {new Date(memory.createdAt).toLocaleDateString('zh-CN')}
           </time>
           <span>{memory.excerpt}</span>
-          <small>{memory.reason}</small>
-          <code>ID · {memory.sourceEntryId}</code>
+          <small>可查看来源</small>
         </button>
       ))}
     </aside>
@@ -52,16 +51,14 @@ export const AvatarUnderstandingCard: React.FC<AvatarUnderstandingCardProps> = (
   const [value, setValue] = useState(statement);
   const isPending = status === 'pending';
   return (
-    <aside className="now-avatar-understanding" aria-label="候选理解">
+    <aside className="now-avatar-understanding" aria-label="理解">
       <div className="now-avatar-understanding__head">
-        <strong>我的候选理解</strong>
-        <span>
-          {isPending ? '尚未写入长期记忆' : status === 'confirmed' ? '已由你确认' : '已标记不准确'}
-        </span>
+        <strong>理解</strong>
+        <span>{isPending ? '待确认' : status === 'confirmed' ? '已归纳' : '已忽略'}</span>
       </div>
       {editing && isPending ? (
         <textarea
-          aria-label="修改候选理解"
+          aria-label="修改理解"
           value={value}
           onChange={(event) => setValue(event.target.value)}
         />
@@ -80,12 +77,12 @@ export const AvatarUnderstandingCard: React.FC<AvatarUnderstandingCardProps> = (
           </button>
           <button type="button" onClick={() => onResolve('rejected', value.trim() || statement)}>
             <X size={15} aria-hidden="true" />
-            不准确
+            忽略
           </button>
         </div>
       )}
       <p className="sr-only" aria-live="polite">
-        {status === 'confirmed' ? '已写入长期记忆' : status === 'rejected' ? '已否定该理解' : ''}
+        {status === 'confirmed' ? '已归纳' : status === 'rejected' ? '已忽略' : ''}
       </p>
     </aside>
   );
@@ -105,15 +102,15 @@ export const AvatarInsightPanel: React.FC<{
   ].filter(([, value]) => Boolean(value));
   const tags = [...insight.moodTags, ...insight.eventTags];
   return (
-    <aside className="now-avatar-insight" aria-label="实时提炼">
+    <aside className="now-avatar-insight" aria-label="已识别">
       <div className="now-avatar-insight__head">
-        <span>实时提炼</span>
+        <span>已识别</span>
         <strong>{insight.completeness}%</strong>
       </div>
       <div className="now-avatar-insight__evidence" aria-label="洞察依据">
         {insight.evidenceEntryIds.length > 0 ? (
           <>
-            <span>依据 {insight.evidenceEntryIds.length} 条已确认记录</span>
+            <span>{insight.evidenceEntryIds.length} 条来源</span>
             {evidence
               .filter((memory) => insight.evidenceEntryIds.includes(memory.sourceEntryId))
               .slice(0, 2)
@@ -129,7 +126,7 @@ export const AvatarInsightPanel: React.FC<{
               ))}
           </>
         ) : (
-          <span>仅基于本次对话，尚未引用过去记录</span>
+          <span>等待来源</span>
         )}
       </div>
       {rows.length > 0 ? (
@@ -142,7 +139,7 @@ export const AvatarInsightPanel: React.FC<{
           ))}
         </div>
       ) : (
-        <p className="now-avatar-insight__empty">继续说，我会自动抓取记录重点。</p>
+        <p className="now-avatar-insight__empty">继续输入</p>
       )}
       {tags.length > 0 && (
         <div className="now-avatar-insight__tags">
@@ -189,8 +186,7 @@ export const RecordPreviewCard: React.FC<RecordPreviewCardProps> = ({
       </div>
       {showPrincipleOutcome && (
         <fieldset className="now-preview-outcome">
-          <legend>这次行动验证了原则吗？</legend>
-          <p>可跳过；选择后只会在本地调整原则可信度。</p>
+          <legend>行动结果</legend>
           <div role="group" aria-label="评价行动所用原则">
             {[
               ['helpful', '有效'],
@@ -230,7 +226,7 @@ export const RecordPreviewCard: React.FC<RecordPreviewCardProps> = ({
           改标签
         </button>
         <button type="button" onClick={onSend} disabled={sending}>
-          发送过去
+          保存到过去
         </button>
       </div>
     </article>

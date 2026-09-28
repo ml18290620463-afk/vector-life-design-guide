@@ -90,7 +90,7 @@ describe('TagSelectPage', () => {
     expect(updater(makeDraft()).event_tags).toEqual(['个人成长']);
   });
 
-  it('requires an event tag but not a mood tag', () => {
+  it('allows confirming without mood or event tags', () => {
     const setDraft = vi.fn();
     const onBack = vi.fn();
     const showToast = vi.fn();
@@ -105,13 +105,10 @@ describe('TagSelectPage', () => {
     );
 
     fireEvent.click(screen.getByText('确定'));
-    expect(showToast).toHaveBeenCalledWith('请选择事件标签');
-    expect(onBack).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByText('个人成长'));
-    fireEvent.click(screen.getByText('确定'));
+    expect(showToast).not.toHaveBeenCalled();
     const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
     expect(updater(makeDraft()).mood_tags).toEqual([]);
+    expect(updater(makeDraft()).event_tags).toEqual([]);
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 

@@ -31,7 +31,6 @@ import {
   shouldShowLoadingOverlay,
   shouldUseMobileShell,
 } from './lib/appShellRules';
-import type { AvatarLaunchContext } from './features/avatar/types';
 import { DEFAULT_AVATAR_CONTEXT } from './features/avatar/types';
 
 const App: React.FC = () => {
@@ -87,13 +86,18 @@ const App: React.FC = () => {
   const {
     entries,
     principles,
+    patternPrincipleLinks,
     addEntry,
     updateEntry,
     updateEntryRelatedIds,
     bulkUpdateEntries,
     deleteEntry,
+    deleteEntries,
     addPrinciple,
     deletePrinciple,
+    addPatternPrincipleLink,
+    updatePatternPrincipleLink,
+    removePatternPrincipleLink,
     updatePrinciple,
     actions,
     addAction,
@@ -114,6 +118,7 @@ const App: React.FC = () => {
     addContainer,
     deleteContainer,
     loading,
+    loadError,
     isScanning,
     scanProgress,
     triggerScan,
@@ -181,10 +186,6 @@ const App: React.FC = () => {
   });
 
   const mobileMainTab = getMobileMainTab(appState);
-  const openAvatar = (context: AvatarLaunchContext) => {
-    setAvatarLaunchContext(context);
-    handleMainModuleNavigate('avatar');
-  };
   const navigateMainModule = (tab: Parameters<typeof handleMainModuleNavigate>[0]) => {
     if (tab === 'avatar') setAvatarLaunchContext(DEFAULT_AVATAR_CONTEXT);
     handleMainModuleNavigate(tab);
@@ -236,6 +237,14 @@ const App: React.FC = () => {
     loading,
     startInSettings: getPreviewScreen() === 'settings',
   } satisfies DashboardProps;
+
+  if (loadError) return (
+    <main className="min-h-screen grid place-content-center gap-4 p-6" role="alert">
+      <h1>暂时无法打开资料库</h1>
+      <p>{loadError}</p>
+      <button type="button" onClick={() => window.location.reload()}>重新加载</button>
+    </main>
+  );
 
   return (
     <ErrorBoundary>
@@ -301,13 +310,13 @@ const App: React.FC = () => {
             onDeleteEntry={deleteEntry}
             onGoHome={() => setAppState(AppState.COVER)}
             theme={theme}
-            onOpenAvatar={openAvatar}
           />
 
           <AppMainModuleScreens
             addPrinciple={addPrinciple}
             appState={appState}
             deletePrinciple={deletePrinciple}
+            deleteEntries={deleteEntries}
             entries={entries}
             language={language}
             mobileMainTab={mobileMainTab}
@@ -323,13 +332,17 @@ const App: React.FC = () => {
             onAddAction={addAction}
             onUpdateAction={updateAction}
             onActionResultRecorded={recordActionResult}
+            patternPrincipleLinks={patternPrincipleLinks}
+            onAddPatternPrincipleLink={addPatternPrincipleLink}
+            onUpdatePatternPrincipleLink={updatePatternPrincipleLink}
+            onRemovePatternPrincipleLink={removePatternPrincipleLink}
             onSelectEntry={handleSelectEntry}
             principles={principles}
+            guidingStars={selectedStars}
             theme={theme}
             updatePrinciple={updatePrinciple}
             useMobileShell={useMobileShell}
             avatarLaunchContext={avatarLaunchContext ?? DEFAULT_AVATAR_CONTEXT}
-            onOpenAvatar={openAvatar}
           />
 
           <AppOverlayLayer

@@ -32,7 +32,9 @@
     "billing:smoke-bootstrap": "node scripts/billing-smoke-bootstrap.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:e2e:core": "playwright test e2e/now-functional.spec.ts e2e/past-functional.spec.ts e2e/future-functional.spec.ts --project=chromium --workers=1",
+    "test:e2e:experience": "playwright test e2e/experience-layout.spec.ts e2e/a11y.spec.ts --project=chromium --workers=1"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs}": [
@@ -61,6 +63,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.4.1",
     "helmet": "^8.1.0",
+    "https-proxy-agent": "^7.0.6",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^1.7.0",
     "modern-screenshot": "^4.7.0",

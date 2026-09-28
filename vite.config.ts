@@ -1,5 +1,6 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { realpathSync } from 'node:fs';
+import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -10,6 +11,10 @@ export default defineConfig(({ mode }) => {
   const hmrPort = Number(env.VITE_HMR_PORT || 24678);
   return {
     server: {
+      // Worktrees may share dependencies through a node_modules symlink.
+      fs: {
+        allow: [searchForWorkspaceRoot(process.cwd()), realpathSync('node_modules')],
+      },
       port: Number.isFinite(devPort) ? devPort : 3000,
       host: env.VITE_DEV_HOST || '127.0.0.1',
       hmr: {

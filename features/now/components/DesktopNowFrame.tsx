@@ -51,16 +51,8 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
     language={language}
     onNavigate={onNavigate}
   >
-    {nowRoute === 'avatar-chat' && (
-      <section
-        className="desktop-avatar-hero"
-        aria-label={language === 'zh' ? '记忆分身' : 'Memory avatar'}
-      >
-        <span>VECTOR · 分身</span>
-        <h1>{language === 'zh' ? '记忆分身' : 'Memory avatar'}</h1>
-      </section>
-    )}
     <NowFlow
+      onNavigateModule={onNavigate}
       route={nowRoute}
       theme={theme}
       language={language}

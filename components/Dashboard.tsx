@@ -100,6 +100,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     status: importStatus,
   } = useBackupImport({
     onImportBackup,
+    currentUser,
     t,
     confirm: importConfirm.confirm,
     reportError: (error) => {

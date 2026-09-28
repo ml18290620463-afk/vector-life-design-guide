@@ -17,15 +17,21 @@ const renderEntry = (entry: DiaryEntry, options?: { highlight?: boolean }) =>
   render(<MobilePastTimelineEntry entry={entry} highlight={options?.highlight} language="zh" />);
 
 describe('MobilePastTimelineEntry', () => {
-  it('cleans generated titles and tag prefixes while keeping full dates', () => {
-    renderEntry(makeEntry('今天保存了一段录音。'));
+  it('shows cleaned tags directly below the content while keeping full dates', () => {
+    const { container } = renderEntry(makeEntry('今天保存了一段录音。'));
 
     expect(screen.getByText(/2026年7月6日/)).not.toBeNull();
     expect(screen.queryByText('2026年7月6日13点45分')).toBeNull();
-    expect(screen.queryByText('感动')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '展开记录内容' }));
     expect(screen.getByText('感动')).not.toBeNull();
     expect(screen.getByText('个人成长')).not.toBeNull();
+    expect(screen.queryByText('心情:感动')).toBeNull();
+    expect(screen.queryByText('事件:个人成长')).toBeNull();
+
+    const content = container.querySelector('.mobile-past-timeline__content');
+    const tags = container.querySelector('.mobile-past-timeline__tags');
+    expect(content).not.toBeNull();
+    expect(tags).not.toBeNull();
+    expect(content?.compareDocumentPosition(tags as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('collapses body text over 100 chars and can expand it', () => {
@@ -71,25 +77,25 @@ describe('MobilePastTimelineEntry', () => {
     expect(screen.getByAltText('现场照片.png')).not.toBeNull();
     expect(container.querySelector('video')).not.toBeNull();
     expect(screen.getByRole('link', { name: '参考链接' })).not.toBeNull();
-    expect(screen.getByRole('button', { name: '展开记录内容' }).getAttribute('aria-expanded')).toBe(
-      'false',
-    );
+    expect(screen.queryByRole('button', { name: '展开记录内容' })).toBeNull();
   });
 
-  it('marks the latest record and exposes its timeline timestamp', () => {
+  it('shows one timestamp without a redundant latest badge', () => {
     const { container } = renderEntry(makeEntry('刚刚写入。'), { highlight: true });
 
-    expect(screen.getByText('最新写入')).not.toBeNull();
-    const navigator = container.querySelector('.mobile-past-timeline__navigator');
+    expect(screen.queryByText('最新写入')).toBeNull();
+    expect(container.querySelectorAll('time')).toHaveLength(1);
+    expect(container.querySelector('.mobile-past-timeline__time')).toBeNull();
+    const navigator = container.querySelector('.past-record__date');
     expect(navigator?.getAttribute('datetime')).toBe('2026-07-06T05:45:00.000Z');
-    expect(navigator?.textContent).toContain('07.06');
+    expect(navigator?.textContent).toContain('2026年7月6日');
   });
 
-  it('uses one symbol control and removes the record detail action', () => {
+  it('does not show a detail action or expand control for a short record', () => {
     renderEntry(makeEntry('今天保存了一段录音。'));
 
     expect(screen.queryByRole('button', { name: '查看记录' })).toBeNull();
-    expect(screen.getAllByRole('button')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: '展开记录内容' }).textContent).toBe('');
+    expect(screen.queryByRole('button', { name: '展开记录内容' })).toBeNull();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

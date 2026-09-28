@@ -8,6 +8,23 @@ const tabs: MobileMainTab[] = ['past', 'now', 'future', 'avatar'];
 describe('MobileShell', () => {
   afterEach(cleanup);
 
+  it('marks the document as an active mobile product while mounted', () => {
+    const { unmount } = render(
+      <MobileShell activeTab="past" language="zh" onTabChange={vi.fn()}>
+        <main>Past content</main>
+      </MobileShell>,
+    );
+
+    expect(document.documentElement.classList.contains('mobile-product-active')).toBe(true);
+    expect(document.body.classList.contains('mobile-product-active')).toBe(true);
+    expect(document.documentElement.dataset.mobileProductTab).toBe('past');
+
+    unmount();
+
+    expect(document.documentElement.classList.contains('mobile-product-active')).toBe(false);
+    expect(document.body.classList.contains('mobile-product-active')).toBe(false);
+  });
+
   it.each(tabs)('keeps all page-switching entries visible on the %s page', (activeTab) => {
     render(
       <MobileShell activeTab={activeTab} language="en" onTabChange={vi.fn()}>

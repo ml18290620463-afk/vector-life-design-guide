@@ -265,11 +265,12 @@ export const selectAvatarRecallMemories = (
       const eventScore = matchedEventTags.length * 2;
       const score = keywordScore + moodScore + eventScore;
       const matchedTags = [...matchedMoodTags, ...matchedEventTags];
-      const reason = matchedTags.length > 0
-        ? `与你当前表达的「${matchedTags.join('、')}」信号一致`
-        : keywordScore > 0
-          ? `标题或正文包含 ${keywordScore} 个共同关键信号`
-          : '与当前问题有可验证的关联';
+      const reason =
+        matchedTags.length > 0
+          ? `与你当前表达的「${matchedTags.join('、')}」信号一致`
+          : keywordScore > 0
+            ? `标题或正文包含 ${keywordScore} 个共同关键信号`
+            : '与当前问题有可验证的关联';
       return {
         id: entry.id,
         sourceEntryId: entry.id,
@@ -289,8 +290,8 @@ export const selectAvatarRecallMemories = (
 export const buildAvatarRecallHint = (memories: AvatarRecallMemory[]): string | null => {
   const top = memories[0];
   if (!top) return null;
-  const tagText = top.tags.length ? `，标签「${top.tags.join('、')}」` : '';
-  return `我联想到一条过去记录：${top.excerpt}${tagText}。这次我会把它当作背景，不会替你下结论。`;
+  const tagText = top.tags.length ? ` · ${top.tags.join('、')}` : '';
+  return `找到过去：${top.excerpt}${tagText}`;
 };
 
 export const wantsDirectRecord = (content: string): boolean =>
@@ -403,7 +404,9 @@ export const buildAvatarStructuredInsight = (
     eventTags,
     completeness,
     nextQuestion: buildAdaptiveFollowup(messages, 0),
-    evidenceEntryIds: [...new Set(recallMemories.map((memory) => memory.sourceEntryId).filter(Boolean))],
+    evidenceEntryIds: [
+      ...new Set(recallMemories.map((memory) => memory.sourceEntryId).filter(Boolean)),
+    ],
   };
 
   return insight;
@@ -418,45 +421,40 @@ export const buildCompanionAcknowledgement = (
   const latest = messages[messages.length - 1]?.content.trim() ?? '';
   const recallHint = assistantTurns === 0 ? buildAvatarRecallHint(recallMemories) : null;
   if (wantsDirectRecord(latest)) {
-    return '好，我不追问了。就按你已经说的内容整理成一条记录，你可以直接点「记录完毕」确认。';
+    return '已收到。可以生成记录。';
   }
   const extracted: string[] = [];
-  if (insight.fact) extracted.push(`事情是「${compactRecordLine(insight.fact)}」`);
+  if (insight.fact) extracted.push(`事实：${compactRecordLine(insight.fact)}`);
   if (insight.feeling)
     extracted.push(
-      `你的感受偏向「${insight.moodTags.join('、') || compactRecordLine(insight.feeling, 24)}」`,
+      `感受：${insight.moodTags.join('、') || compactRecordLine(insight.feeling, 24)}`,
     );
   if (insight.thought && insight.thought !== insight.fact) {
-    extracted.push(`里面有一个判断/想法：「${compactRecordLine(insight.thought, 42)}」`);
+    extracted.push(`想法：${compactRecordLine(insight.thought, 42)}`);
   }
   if (insight.result && insight.result !== insight.fact) {
-    extracted.push(`结果线索是「${compactRecordLine(insight.result, 42)}」`);
+    extracted.push(`结果：${compactRecordLine(insight.result, 42)}`);
   }
-  const prefix =
-    extracted.length > 0
-      ? `我先提炼到：${extracted.join('；')}。`
-      : '我先接住这段记录了，但还需要一个具体事件来落点。';
+  const prefix = extracted.length > 0 ? `已识别：${extracted.join('；')}` : '补充一件具体发生的事';
   const memoryPrefix = recallHint ? `${recallHint}\n` : '';
 
   if (isCorrection(latest)) {
-    return `${memoryPrefix}${prefix}收到，我会按你刚纠正的版本来，不再重复追这个点。`;
+    return `${memoryPrefix}${prefix}\n已更新。`;
   }
 
   if (insight.completeness >= 80) {
-    return `${memoryPrefix}${prefix}这已经可以整理成一条过去记录了；如果你愿意，再补一句“这件事给你的经验/原则是什么”，会更有价值。`;
+    return `${memoryPrefix}${prefix}\n可以生成记录。`;
   }
-  if (!insight.fact)
-    return `${memoryPrefix}${prefix}刚才具体发生了什么？可以只说时间、人物、事件。`;
-  if (!insight.feeling) return `${memoryPrefix}${prefix}这件事里，你当时最明显的情绪是什么？`;
+  if (!insight.fact) return `${memoryPrefix}${prefix}\n补充事实。`;
+  if (!insight.feeling) return `${memoryPrefix}${prefix}\n补充感受。`;
   if (!insight.thought && assistantTurns < CONFIG.MAX_FOLLOWUP_ROUNDS) {
-    return `${memoryPrefix}${prefix}你现在怎么理解这件事？有没有一个判断或意识到的点？`;
+    return `${memoryPrefix}${prefix}\n补充想法。`;
   }
   if (!insight.result && assistantTurns < CONFIG.MAX_FOLLOWUP_ROUNDS) {
-    return `${memoryPrefix}${prefix}后来结果怎样？它带来了什么影响？`;
+    return `${memoryPrefix}${prefix}\n补充结果。`;
   }
-  if (insight.eventTags.length === 0)
-    return `${memoryPrefix}${prefix}它更像工作、关系、健康、家庭，还是个人成长？`;
-  return `${memoryPrefix}${prefix}你可以继续补一点背景，或直接点「记录完毕」让我整理。`;
+  if (insight.eventTags.length === 0) return `${memoryPrefix}${prefix}\n选择标签。`;
+  return `${memoryPrefix}${prefix}\n可以生成记录。`;
 };
 
 export const buildAdaptiveFollowup = (
@@ -468,18 +466,14 @@ export const buildAdaptiveFollowup = (
   const hasAnyRecordable = messages.some((message) => hasRecordableInformation(message.content));
 
   if (!hasAnyRecordable && slots.hasFeeling) {
-    return `我听到你现在${latest.includes('不开心') ? '不开心' : '有情绪'}。为了把它记清楚，刚才具体发生了什么？涉及谁，在哪里？`;
+    return latest.includes('不开心') ? '已识别：难过。补充事实。' : '已识别：情绪。补充事实。';
   }
   if (!hasAnyRecordable) {
-    return followupCount === 0
-      ? '我还没抓到可记录的事实。你可以只补一句：什么时候、发生了什么、涉及谁？'
-      : '这还不足以成为一条记录。请说一件具体发生的事，或者回到手动记录。';
+    return followupCount === 0 ? '补充时间、人物、事件。' : '补充一件具体发生的事。';
   }
-  if (!slots.hasFact) return '你刚才说的是感受或想法。它是由哪件具体事情引起的？';
-  if (!slots.hasFeeling) return '这件事我大概知道了。你当时或现在最明显的感受是什么？';
-  if (!slots.hasThought && followupCount < 2)
-    return '你当时心里怎么理解这件事？有没有一个比较明确的判断？';
-  if (!slots.hasResult && followupCount < 2)
-    return '这件事最后变成了什么结果？和你原本期待的一样吗？';
+  if (!slots.hasFact) return '补充事实。';
+  if (!slots.hasFeeling) return '补充感受。';
+  if (!slots.hasThought && followupCount < 2) return '补充想法。';
+  if (!slots.hasResult && followupCount < 2) return '补充结果。';
   return null;
 };

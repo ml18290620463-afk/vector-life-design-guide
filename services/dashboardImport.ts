@@ -1,5 +1,6 @@
 import { DiaryEntry } from '../types';
 import { BACKUP_TYPE, BACKUP_SCHEMA_VERSION } from './dashboardExport';
+import { validateVaultBackup, type VaultBackup } from './vaultBackup';
 
 export type BackupParseFailure =
   | 'invalid-json'
@@ -11,6 +12,7 @@ export type BackupParseFailure =
 export interface BackupParseSuccess {
   ok: true;
   entries: DiaryEntry[];
+  vaultBackup?: VaultBackup;
   /** When the file is from a known schema, expose meta so callers can show it. */
   meta: {
     version?: string;
@@ -80,11 +82,38 @@ export const parseBackupImport = (raw: string): BackupParseResult => {
   const hasType = typeof value.type === 'string';
 
   if (hasType) {
+    if (value.type === BACKUP_TYPE && (value.schemaVersion === 2 || value.schemaVersion === 3)) {
+      try {
+        validateVaultBackup(value);
+        return {
+          ok: true,
+          entries: value.entries,
+          vaultBackup: value,
+          meta: {
+            version: value.version,
+            exportedAt: value.exportedAt,
+            schemaVersion: value.schemaVersion,
+            legacy: false,
+          },
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          reason: 'wrong-shape',
+          detail: error instanceof Error ? error.message : undefined,
+        };
+      }
+    }
     if (value.type !== BACKUP_TYPE) {
       return { ok: false, reason: 'wrong-type', detail: String(value.type) };
     }
     const schemaVersion = value.schemaVersion;
-    if (typeof schemaVersion !== 'number' || schemaVersion > BACKUP_SCHEMA_VERSION) {
+    if (
+      typeof schemaVersion !== 'number' ||
+      !Number.isInteger(schemaVersion) ||
+      schemaVersion < 1 ||
+      schemaVersion > BACKUP_SCHEMA_VERSION
+    ) {
       return {
         ok: false,
         reason: 'unsupported-version',

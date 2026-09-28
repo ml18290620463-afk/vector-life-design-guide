@@ -3,11 +3,8 @@ import { APP_VERSION } from '../constants';
 import type { DiaryEntry } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { downloadTextFile } from '../services/fileDownload';
-import {
-  buildBackupExport,
-  buildNotesExport,
-  type NotesExportMode,
-} from '../services/dashboardExport';
+import { buildNotesExport, type NotesExportMode } from '../services/dashboardExport';
+import { exportVaultBackup } from '../services/vaultBackup';
 
 export interface UseDashboardExportArgs {
   entries: DiaryEntry[];
@@ -20,7 +17,7 @@ export interface UseDashboardExportArgs {
 
 export interface DashboardExport {
   /** Trigger the JSON Star Map download. */
-  handleExport: () => void;
+  handleExport: () => Promise<void>;
   /** Trigger the Markdown notes download for the chosen mode. */
   handleDownloadNotes: (mode?: NotesExportMode) => void;
   /** UI state for the export-target dropdown. */
@@ -47,15 +44,18 @@ export const useDashboardExport = ({
   t,
   recordBackup,
 }: UseDashboardExportArgs): DashboardExport => {
-  const handleExport = useCallback(() => {
-    const backup = buildBackupExport({
-      version: APP_VERSION,
-      entries,
-      currentUser,
-    });
-    downloadTextFile(backup.content, backup.filename);
-    recordBackup();
-  }, [currentUser, entries, recordBackup]);
+  const handleExport = useCallback(async () => {
+    try {
+      const backup = await exportVaultBackup(APP_VERSION, currentUser ?? undefined);
+      await downloadTextFile(
+        JSON.stringify(backup, null, 2),
+        `VECTOR-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      );
+      recordBackup();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '备份失败，请重试');
+    }
+  }, [currentUser, recordBackup]);
 
   const handleDownloadNotes = useCallback(
     (mode: NotesExportMode = 'all') => {

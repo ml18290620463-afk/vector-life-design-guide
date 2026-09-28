@@ -145,7 +145,7 @@ describe('useBackupImport', () => {
     await act(async () => {
       await result.current.handleChange(buildEvent(payload));
     });
-    expect(result.current.status).toEqual({ kind: 'error', message: 'unknown' });
+    expect(result.current.status).toEqual({ kind: 'error', message: 'upstream merge failed' });
     expect(reportError).toHaveBeenCalledOnce();
   });
 

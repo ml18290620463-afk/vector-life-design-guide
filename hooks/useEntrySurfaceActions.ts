@@ -4,7 +4,7 @@ import type { MobileMainTab } from '../features/mobile/types';
 import { isMobileExperience } from '../lib/previewMode';
 import { generateSecureId } from '../services/idGenerator';
 
-type EntryPayload = Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>;
+type EntryPayload = Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'> & { id?: string };
 
 type UseEntrySurfaceActionsOptions = {
   addEntry: (data: EntryPayload & { id?: string }) => Promise<DiaryEntry>;
@@ -21,7 +21,7 @@ export const useEntrySurfaceActions = ({
 }: UseEntrySurfaceActionsOptions) => {
   const persistNowRecord = useCallback(
     async (payload: EntryPayload) => {
-      const id = generateSecureId();
+      const id = payload.id ?? generateSecureId();
       return addEntry({ ...payload, id });
     },
     [addEntry],

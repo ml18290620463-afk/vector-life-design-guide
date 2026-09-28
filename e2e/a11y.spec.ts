@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { seedOnboardedApp } from './seedHelpers';
 
 /**
  * Accessibility regression gate for the entry-point shells (cover screen +
@@ -39,11 +40,43 @@ test.describe('axe accessibility', () => {
 
   test('onboarding intro has no serious or critical violations', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.getByTestId('cover-initialize').dispatchEvent('click');
+    // Use a real user interaction: the cover transition is deliberately
+    // guarded by the component's pointer/click flow rather than a raw event.
+    await page.getByTestId('cover-initialize').click();
     await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
 
     const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
     const blockers = summarise(result.violations);
     expect(blockers, JSON.stringify(blockers, null, 2)).toEqual([]);
+  });
+
+  test('the unlocked core pages and full-screen editor have no serious or critical violations', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    // Scan real, unlocked screens rather than only the entry flow. This keeps
+    // the audit tied to the controls people use to record, review and plan.
+    await seedOnboardedApp(page);
+
+    const navigation = page.getByRole('navigation', { name: '主页面导航' });
+    for (const [moduleName, landmark] of [
+      ['现在', '[data-testid="now-page"]'],
+      ['过去', '[data-testid="past-page"]'],
+      ['未来', '.future-page'],
+      ['分身', '[data-testid="avatar-assist-page"]'],
+    ] as const) {
+      await navigation.getByRole('button', { name: new RegExp(`^${moduleName}`) }).click();
+      await page.locator(landmark).waitFor({ state: 'visible' });
+      const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
+      const blockers = summarise(result.violations);
+      expect(blockers, `${moduleName}: ${JSON.stringify(blockers, null, 2)}`).toEqual([]);
+    }
+
+    await navigation.getByRole('button', { name: /^未来/ }).click();
+    await page.getByRole('button', { name: /^(从愿景开始|编辑未来规划)$/ }).click();
+    await page.getByRole('dialog', { name: '愿景' }).waitFor({ state: 'visible' });
+    const editor = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
+    const editorBlockers = summarise(editor.violations);
+    expect(editorBlockers, JSON.stringify(editorBlockers, null, 2)).toEqual([]);
   });
 });

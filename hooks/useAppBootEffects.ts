@@ -16,10 +16,18 @@ export const useAppBootEffects = ({ language, setCurrentUser }: UseAppBootEffect
 
   useEffect(() => {
     const mode = getPreviewMode();
-    document.documentElement.classList.toggle('vector-force-mobile', mode === 'mobile');
-    document.documentElement.classList.toggle('vector-force-web', mode === 'web');
+    const mobileViewport = window.matchMedia('(max-width: 767px)');
+    const syncExperienceClass = () => {
+      const useMobileTheme = mode === 'mobile' || (mode !== 'web' && mobileViewport.matches);
+      document.documentElement.classList.toggle('vector-force-mobile', useMobileTheme);
+      document.documentElement.classList.toggle('vector-force-web', !useMobileTheme);
+    };
+
+    syncExperienceClass();
+    mobileViewport.addEventListener('change', syncExperienceClass);
 
     return () => {
+      mobileViewport.removeEventListener('change', syncExperienceClass);
       document.documentElement.classList.remove('vector-force-mobile', 'vector-force-web');
     };
   }, []);

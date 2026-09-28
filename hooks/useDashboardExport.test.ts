@@ -3,9 +3,13 @@ import { act, renderHook } from '@testing-library/react';
 import { useDashboardExport } from './useDashboardExport';
 import type { DiaryEntry } from '../types';
 import * as fileDownload from '../services/fileDownload';
+import { exportVaultBackup } from '../services/vaultBackup';
+
+vi.mock('../services/vaultBackup', () => ({ exportVaultBackup: vi.fn() }));
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 const t = {
@@ -25,7 +29,11 @@ const baseEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 });
 
 describe('useDashboardExport', () => {
-  it('handleExport triggers downloadTextFile + recordBackup', () => {
+  it('handleExport downloads the complete v2 backup before recording success', async () => {
+    vi.mocked(exportVaultBackup).mockResolvedValue({
+      schemaVersion: 2,
+      version: '1.1.0',
+    } as Awaited<ReturnType<typeof exportVaultBackup>>);
     const recordBackup = vi.fn();
     const downloadSpy = vi
       .spyOn(fileDownload, 'downloadTextFile')
@@ -39,11 +47,32 @@ describe('useDashboardExport', () => {
         recordBackup,
       }),
     );
-    act(() => result.current.handleExport());
+    await act(async () => {
+      await result.current.handleExport();
+    });
     expect(downloadSpy).toHaveBeenCalled();
     const [content] = downloadSpy.mock.calls[0];
     expect(JSON.parse(content).version).toBe('1.1.0');
+    expect(JSON.parse(content).schemaVersion).toBe(2);
     expect(recordBackup).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not record success when the download fails', async () => {
+    vi.mocked(exportVaultBackup).mockResolvedValue({ schemaVersion: 2 } as Awaited<
+      ReturnType<typeof exportVaultBackup>
+    >);
+    vi.spyOn(fileDownload, 'downloadTextFile').mockRejectedValue(new Error('下载失败'));
+    const alert = vi.fn();
+    vi.stubGlobal('alert', alert);
+    const recordBackup = vi.fn();
+    const { result } = renderHook(() =>
+      useDashboardExport({ entries: [], filteredEntries: [], currentUser: null, t, recordBackup }),
+    );
+    await act(async () => {
+      await result.current.handleExport();
+    });
+    expect(recordBackup).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('下载失败');
   });
 
   it('handleDownloadNotes triggers downloadTextFile for the active subset', () => {

@@ -1,15 +1,17 @@
+import { resolveAvatarKnowledge } from '../../../services/avatarKnowledgeProjection';
+import { modelError } from '../api/avatarModel';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, MessageCircleMore, Palette, X } from 'lucide-react';
-import type { DiaryEntry } from '../../../types';
+import type { ActionItem, DiaryEntry, Principle } from '../../../types';
+import type { FutureState } from '../../../types/future';
+import {
+  buildGuidanceSources,
+  buildGroundedGuidance,
+  extractAvatarName,
+} from '../../../services/avatarGuidance';
+import './avatarGuidance.css';
 import { generateSecureId } from '../../../services/idGenerator';
 import { CONFIG } from '../constants/config';
-import { summarizeAvatarMessages } from '../api/avatar';
-import {
-  AvatarInsightPanel,
-  AvatarRecallPanel,
-  AvatarUnderstandingCard,
-  RecordPreviewCard,
-} from './AvatarRecordPanels';
+import { chatWithAvatar, summarizeAvatarMessages } from '../api/avatar';
 import {
   buildAdaptiveFollowup,
   buildAvatarStructuredInsight,
@@ -34,64 +36,20 @@ import type {
   AvatarUnderstandingStatus,
 } from '../../avatar/types';
 import {
-  readAvatarSession,
+  atomicMemoryFromUnderstanding,
+  isPatternMemoryReadyForConfirmation,
+  readAvatarAtomicMemories,
+  readAvatarConversation,
+  readAvatarMemoryRelations,
+  readAvatarUnderstandings,
   writeAvatarSession,
   writeAvatarUnderstanding,
 } from '../../../services/avatarMemory';
-import { buildAvatarProactiveInvitation } from '../../avatar/proactiveInvitation';
-import { AvatarAppearanceStudio, AvatarGlyph } from '../../avatar/AvatarAppearanceStudio';
-import type { AvatarAppearance } from '../../avatar/appearance';
-import { readAvatarAppearance, writeAvatarAppearance } from '../../../services/avatarAppearance';
+import { subscribeVault } from '../../../services/vaultTransaction';
 
-const MODE_COPY = {
-  capture: {
-    title: '帮我记录',
-    description: '把当下表达整理成一条可确认的记录。',
-    placeholder: '输入想记录的内容',
-    action: '记录完毕',
-  },
-  distill: {
-    title: '帮我整理',
-    description: '从这条经历中分清事实、感受与可复用经验。',
-    placeholder: '你想重点整理什么？',
-    action: '形成候选理解',
-  },
-  recall: {
-    title: '问问过去',
-    description: '用可追溯的记录回答，不替你下结论。',
-    placeholder: '想从过去查找什么？',
-    action: '继续检索',
-  },
-  decide: {
-    title: '帮我分析',
-    description: '结合过去经历，提供第二视角与可验证的下一步。',
-    placeholder: '补充你的限制或犹豫',
-    action: '形成候选理解',
-  },
-  review: {
-    title: '回顾结果',
-    description: '对照原行动与真实结果，更新你的经验。',
-    placeholder: '实际发生了什么？',
-    action: '形成候选理解',
-  },
-  general: {
-    title: '问 VECTOR',
-    description: '你的跨模块助手与第二视角，长期理解只在你确认后更新。',
-    placeholder: '你想讨论什么？',
-    action: '形成候选理解',
-  },
-} as const;
-
-const referenceToRecallMemory = (reference: AvatarSourceReference): AvatarRecallMemory => ({
-  id: `avatar-reference-${reference.entryId}`,
-  sourceEntryId: reference.entryId,
-  title: reference.title,
-  excerpt: reference.excerpt,
-  tags: [],
-  score: 1,
-  createdAt: reference.date,
-  reason: reference.reason,
-});
+import { AvatarChatSurface } from './AvatarChatSurface';
+import { useAvatarMemoryCapture } from '../hooks/useAvatarMemoryCapture';
+import { useAvatarChatViewport } from '../hooks/useAvatarChatViewport';
 
 const entryToRecallMemory = (entry: DiaryEntry): AvatarRecallMemory => ({
   id: `avatar-entry-${entry.id}`,
@@ -108,6 +66,10 @@ interface AvatarChatPageProps {
   draft: NowDraft;
   setDraft: (updater: NowDraft | ((draft: NowDraft) => NowDraft)) => void;
   pastEntries: DiaryEntry[];
+  principles?: Principle[];
+  actions?: ActionItem[];
+  future?: FutureState;
+  onNavigateModule?: (module: 'past' | 'now' | 'future') => void;
   sending: boolean;
   mobileShell?: boolean;
   onBack: () => void;
@@ -122,6 +84,9 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   draft,
   setDraft,
   pastEntries,
+  principles = [],
+  actions = [],
+  future,
   sending,
   mobileShell = false,
   onBack,
@@ -131,21 +96,59 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   launchContext = { mode: 'capture', source: 'now' },
   onSelectEntry,
 }) => {
-  const restoredSession = useMemo(() => readAvatarSession(launchContext), [launchContext]);
-  const sessionId = useMemo(
-    () => restoredSession?.id ?? generateSecureId('avatar-session'),
-    [restoredSession],
-  );
-  const modeCopy = MODE_COPY[launchContext.mode];
+  const [restoredSession] = useState(() => readAvatarConversation(launchContext));
+  const [sessionId] = useState(() => restoredSession?.id ?? generateSecureId('avatar-session'));
+  const [sessionCreatedAt] = useState(() => restoredSession?.createdAt ?? Date.now());
   const [input, setInput] = useState('');
+  const [chatPending, setChatPending] = useState(false);
+  const [modelSettingsOpen, setModelSettingsOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [chatError, setChatError] = useState('');
+  const chatController = useRef<AbortController | null>(null);
+  const failedChat = useRef<ChatMessage[] | null>(null);
+  useEffect(() => () => chatController.current?.abort(), []);
+
+  const general = launchContext.mode === 'general';
+  const [patterns, setPatterns] = useState(readAvatarUnderstandings);
+  const [storedAvatarMemories, setAvatarMemories] = useState(readAvatarAtomicMemories);
+  const refreshAvatarKnowledge = () => {
+    setPatterns(readAvatarUnderstandings());
+    setAvatarMemories(readAvatarAtomicMemories());
+  };
+  useEffect(() => {
+    const unsubscribe = subscribeVault(refreshAvatarKnowledge);
+    window.addEventListener('focus', refreshAvatarKnowledge);
+    window.addEventListener('storage', refreshAvatarKnowledge);
+    refreshAvatarKnowledge();
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', refreshAvatarKnowledge);
+      window.removeEventListener('storage', refreshAvatarKnowledge);
+    };
+  }, [pastEntries]);
+  const { memories: avatarMemories } = resolveAvatarKnowledge({
+    memories: storedAvatarMemories,
+    principles,
+    actions,
+    future,
+    patterns,
+    entries: pastEntries,
+    relations: readAvatarMemoryRelations(),
+  });
+  const guidanceSources = buildGuidanceSources({
+    entries: pastEntries,
+    patterns,
+    principles,
+    actions,
+    future,
+    avatarMemories,
+  });
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatListRef = useRef<HTMLElement>(null);
   const [followupRound, setFollowupRound] = useState(0);
   const [assistantTurns, setAssistantTurns] = useState(0);
   const [preview, setPreview] = useState<RecordPreviewPayload | null>(null);
   const [recallMemories, setRecallMemories] = useState<AvatarRecallMemory[]>(() => {
-    if (restoredSession?.references.length) {
-      return restoredSession.references.map(referenceToRecallMemory);
-    }
     const focusedEntry = launchContext.entryId
       ? pastEntries.find((entry) => entry.id === launchContext.entryId)
       : undefined;
@@ -163,20 +166,26 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     status: AvatarUnderstandingStatus;
   } | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [appearance, setAppearance] = useState<AvatarAppearance>(() => readAvatarAppearance());
-  const [appearanceDraft, setAppearanceDraft] = useState<AvatarAppearance>(() =>
-    readAvatarAppearance(),
-  );
-  const [customizingAppearance, setCustomizingAppearance] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (restoredSession) return restoredSession.messages;
+    const seed = launchContext.prompt || launchContext.query;
+    if (launchContext.mode === 'general') {
+      const history = restoredSession?.messages ?? [];
+      return seed
+        ? [
+            ...history,
+            buildUserTextMessage(seed, {
+              id: generateSecureId('msg'),
+              createdAt: new Date().toISOString(),
+            }),
+          ]
+        : history;
+    }
     const intro = getAvatarIntroMessages({
       isFirstVisit: readAndMarkAvatarIntroFirstVisit(),
       createdAt: new Date().toISOString(),
       createId: () => generateSecureId('msg'),
       mode: launchContext.mode,
     });
-    const seed = launchContext.prompt || launchContext.query;
     if (!seed) return intro;
     const options = {
       id: generateSecureId('msg'),
@@ -187,7 +196,11 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       : [...intro, buildUserTextMessage(seed, options)];
   });
 
-  const userMessages = messages.filter((message) => message.role === 'user');
+  const userMessages = useMemo(
+    () => messages.filter((message) => message.role === 'user'),
+    [messages],
+  );
+  const chatViewport = useAvatarChatViewport(messages, chatListRef);
   const validRecallMemories = useMemo(() => {
     const existingIds = new Set(pastEntries.map((entry) => entry.id));
     return recallMemories.filter((memory) => existingIds.has(memory.sourceEntryId));
@@ -198,58 +211,29 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   );
   const references = useMemo<AvatarSourceReference[]>(
     () =>
-      recallMemories.map((memory) => ({
+      validRecallMemories.map((memory) => ({
         entryId: memory.sourceEntryId,
         title: memory.title,
         date: memory.createdAt,
         excerpt: memory.excerpt,
         reason: memory.reason,
       })),
-    [recallMemories],
+    [validRecallMemories],
   );
-  const proactiveInvitation = useMemo(
-    () => buildAvatarProactiveInvitation(pastEntries),
-    [pastEntries],
-  );
-
-  const chooseConversationStarter = (prompt: string) => {
-    setInput(prompt);
-    inputRef.current?.focus();
-  };
-
-  const openAppearanceStudio = () => {
-    setAppearanceDraft(appearance);
-    setCustomizingAppearance(true);
-  };
-
-  const cancelAppearanceStudio = () => {
-    setAppearanceDraft(appearance);
-    setCustomizingAppearance(false);
-  };
-
-  const saveAppearance = () => {
-    const next = { ...appearanceDraft, name: appearanceDraft.name.trim() };
-    if (!writeAvatarAppearance(next)) {
-      showToast('保存失败，请重试');
-      return;
-    }
-    setAppearance(next);
-    setAppearanceDraft(next);
-    setCustomizingAppearance(false);
-    showToast('专属分身形象已保存到本机');
-  };
 
   useEffect(() => {
-    writeAvatarSession({
+    if (!messages.some((message) => message.role === 'user')) return;
+    const saved = writeAvatarSession({
       id: sessionId,
       mode: launchContext.mode,
       context: launchContext,
       messages,
       references,
-      createdAt: restoredSession?.createdAt ?? Date.now(),
+      createdAt: sessionCreatedAt,
       updatedAt: Date.now(),
     });
-  }, [launchContext, messages, references, restoredSession?.createdAt, sessionId]);
+    if (!saved) setChatError('聊天记录未能保存，请检查浏览器存储空间后重试。');
+  }, [launchContext, messages, references, sessionCreatedAt, sessionId]);
 
   const formUnderstanding = () => {
     const statement =
@@ -289,7 +273,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    showToast(status === 'confirmed' ? '已经你确认，写入长期理解' : '已标记为不准确');
+    showToast(status === 'confirmed' ? '已归纳' : '已忽略');
   };
 
   const finish = async (
@@ -303,8 +287,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     const recordableMessages = getRecordableInformation(conversationUserMessages);
     if (recordableMessages.length === 0) {
       const question =
-        buildAdaptiveFollowup(conversationUserMessages, followupRound) ??
-        '这些内容还不足以整理成记录。请至少说清一件具体事实，或先返回手动记录。';
+        buildAdaptiveFollowup(conversationUserMessages, followupRound) ?? '补充一件具体事实。';
       if (followupRound < CONFIG.MAX_FOLLOWUP_ROUNDS) setFollowupRound((value) => value + 1);
       setMessages((current) => [
         ...current,
@@ -324,9 +307,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     ) {
       const question =
         buildAdaptiveFollowup(conversationUserMessages, followupRound) ??
-        (followupRound === 0
-          ? '能具体说说是哪件事吗？当时你怎么想的？'
-          : '这件事你现在的感受是什么？');
+        (followupRound === 0 ? '补充事实和想法。' : '补充感受。');
       setFollowupRound((value) => value + 1);
       setMessages((current) => [
         ...current,
@@ -353,9 +334,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         setMessages((current) => [
           ...current,
           buildAssistantTextMessage(
-            result.followup_question ||
-              result.reason ||
-              '信息还不够具体，我不能替你随意生成记录或标签。请补充一件具体事实。',
+            result.followup_question || result.reason || '补充一件具体事实。',
             { id: generateSecureId('msg'), createdAt: new Date().toISOString() },
           ),
         ]);
@@ -399,9 +378,45 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     }
   };
 
+  const requestReply = async (conversation: ChatMessage[]) => {
+    if (chatController.current) return;
+    const controller = new AbortController();
+    chatController.current = controller;
+    setChatPending(true);
+    setChatError('');
+    failedChat.current = conversation;
+    try {
+      const question = conversation.at(-1)?.content ?? '';
+      const sources = buildGroundedGuidance(question, guidanceSources).sources;
+      const identity = guidanceSources.filter((source) => source.avatarName);
+      const reply = await chatWithAvatar(
+        conversation,
+        [...identity, ...sources],
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      const assistantMessage = buildAssistantTextMessage(reply, {
+        id: generateSecureId('msg'),
+        createdAt: new Date().toISOString(),
+      });
+      setMessages((current) => [...current, assistantMessage]);
+      setAssistantTurns((value) => value + 1);
+      failedChat.current = null;
+      if (!memoryCapture.companionSummary && !extractAvatarName(question)) {
+        void memoryCapture.generateCompanionSummary([...conversation, assistantMessage], true);
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setChatError(modelError(error instanceof Error ? error.message : ''));
+    } finally {
+      if (!controller.signal.aborted) setChatPending(false);
+      chatController.current = null;
+    }
+  };
+
   const sendMessage = () => {
     const content = input.trim();
-    if (!content) return;
+    if (!content || chatController.current) return;
     const userMessage = buildUserTextMessage(content, {
       id: generateSecureId('msg'),
       createdAt: new Date().toISOString(),
@@ -409,11 +424,13 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     const nextRecallMemories = selectAvatarRecallMemories(pastEntries, content);
     const nextUserMessages = [...userMessages, userMessage];
     const nextMessages = [...messages, userMessage];
-    const acknowledgement = buildCompanionAcknowledgement(
-      nextUserMessages,
-      assistantTurns,
-      nextRecallMemories,
-    );
+    const avatarName = general ? extractAvatarName(content) : null;
+    const acknowledgement = general
+      ? null
+      : buildCompanionAcknowledgement(nextUserMessages, assistantTurns, nextRecallMemories);
+    if (avatarName) {
+      memoryCapture.considerAvatarName(avatarName, userMessage);
+    }
     setRecallMemories(nextRecallMemories);
     setMessages((current) => {
       const next = [...current, userMessage];
@@ -428,161 +445,128 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     });
     if (acknowledgement) setAssistantTurns((value) => value + 1);
     setInput('');
-    if (wantsDirectRecord(content)) void finish(nextUserMessages, nextMessages);
+    if (general) void requestReply(nextMessages);
+    if (!general && wantsDirectRecord(content)) void finish(nextUserMessages, nextMessages);
   };
 
+  const memoryCapture = useAvatarMemoryCapture({
+    draft,
+    sessionId,
+    avatarMemoryReferences: avatarMemories.flatMap((memory) => {
+      if (
+        memory.status !== 'candidate' &&
+        memory.status !== 'confirmed' &&
+        memory.status !== 'retained'
+      )
+        return [];
+      return [
+        {
+          id: memory.id,
+          text: memory.statement,
+          status: memory.status,
+          ...(memory.patternKey ? { patternKey: memory.patternKey } : {}),
+          ...(memory.category ? { category: memory.category } : {}),
+        },
+      ];
+    }),
+    onSend,
+    showToast,
+    refreshAvatarMemories: () => setAvatarMemories(readAvatarAtomicMemories()),
+  });
+
   return (
-    <main className="now-page now-chat-page" data-testid="avatar-assist-page">
-      <header className="now-header">
-        <button type="button" className="now-icon-button" onClick={onBack} aria-label="返回">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="now-time">
-          {mobileShell && launchContext.mode === 'capture' ? '记录协助' : modeCopy.title}
-        </div>
-        {launchContext.mode === 'general' ? (
-          <button
-            type="button"
-            className="now-avatar-customize"
-            onClick={openAppearanceStudio}
-            aria-label="定制分身形象"
-          >
-            <Palette size={17} aria-hidden="true" />
-            <span>定制形象</span>
-          </button>
-        ) : !mobileShell ? (
-          <button type="button" className="now-icon-button" onClick={onBack} aria-label="关闭">
-            <X size={20} />
-          </button>
-        ) : (
-          <span className="now-header__badge">协助</span>
-        )}
-      </header>
-      <section className="now-avatar-mode-intro">
-        {launchContext.mode === 'general' && <AvatarGlyph appearance={appearance} />}
-        <div>
-          <span>
-            {launchContext.mode === 'general' ? appearance.name : 'VECTOR'} ·{' '}
-            {launchContext.mode.toUpperCase()}
-          </span>
-          <p>{modeCopy.description}</p>
-        </div>
-      </section>
-      {launchContext.mode === 'general' && customizingAppearance ? (
-        <AvatarAppearanceStudio
-          value={appearanceDraft}
-          onChange={setAppearanceDraft}
-          onSave={saveAppearance}
-          onCancel={cancelAppearanceStudio}
-        />
-      ) : (
-        launchContext.mode === 'general' &&
-        userMessages.length === 0 && (
-          <section className="now-avatar-invitation" aria-labelledby="avatar-invitation-title">
-            <AvatarGlyph appearance={appearance} />
-            <div className="now-avatar-invitation__copy">
-              <span>{proactiveInvitation.eyebrow}</span>
-              <h2 id="avatar-invitation-title">{proactiveInvitation.title}</h2>
-              <p>{proactiveInvitation.context}</p>
-            </div>
-            <div className="now-avatar-invitation__starters" aria-label="选择一个开聊方向">
-              {proactiveInvitation.prompts.map((prompt) => (
-                <button
-                  type="button"
-                  key={prompt}
-                  onClick={() => chooseConversationStarter(prompt)}
-                >
-                  <MessageCircleMore size={16} aria-hidden="true" />
-                  <span>{prompt}</span>
-                </button>
-              ))}
-            </div>
-            <div className="now-avatar-invitation__foot">
-              <span>点击只会放入输入框，不会自动发送</span>
-              {proactiveInvitation.sourceEntryId && onSelectEntry && (
-                <button
-                  type="button"
-                  onClick={() => onSelectEntry(proactiveInvitation.sourceEntryId!)}
-                >
-                  查看来源记录
-                </button>
-              )}
-            </div>
-          </section>
+    <AvatarChatSurface
+      avatarMemories={avatarMemories}
+      candidateSummary={memoryCapture.companionSummary}
+      chatError={chatError}
+      chatListRef={chatListRef}
+      hiddenMessageCount={chatViewport.hiddenMessageCount}
+      chatPending={chatPending}
+      companionSaving={memoryCapture.memorySaving}
+      general={general}
+      generating={generating || memoryCapture.generatingMemory}
+      input={input}
+      inputRef={inputRef}
+      launchContext={launchContext}
+      libraryOpen={libraryOpen}
+      memoryFacets={
+        memoryCapture.extractedFacets ??
+        memoryCapture.inferMemoryFacets(
+          memoryCapture.companionSummary ?? {
+            text: '',
+            mood_tags: [],
+            event_tags: [],
+            record_time: '',
+            display_time: '',
+            is_sparse: false,
+          },
         )
-      )}
-      <section className="now-chat-list">
-        {userMessages.length > 0 && (
-          <AvatarInsightPanel
-            insight={liveInsight}
-            evidence={validRecallMemories}
-            onSelectEntry={onSelectEntry}
-          />
-        )}
-        {recallMemories.length > 0 && (
-          <AvatarRecallPanel memories={recallMemories} onSelectEntry={onSelectEntry} />
-        )}
-        {understanding && (
-          <AvatarUnderstandingCard
-            statement={understanding.statement}
-            status={understanding.status}
-            onResolve={resolveUnderstanding}
-          />
-        )}
-        {messages.map((message) =>
-          message.type === 'record_preview' && message.payload ? (
-            <RecordPreviewCard
-              key={message.id}
-              payload={preview ?? message.payload}
-              sending={sending}
-              onChange={setPreview}
-              showPrincipleOutcome={launchContext.mode === 'review'}
-              onEditTags={() => {
-                if (preview) {
-                  setDraft((current) => ({
-                    ...current,
-                    mood_tags: preview.mood_tags,
-                    event_tags: preview.event_tags,
-                  }));
-                }
-                onRouteChange('tags');
-              }}
-              onSend={() => void onSend(preview ?? message.payload!, sessionId)}
-            />
-          ) : (
-            <div
-              key={message.id}
-              className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}
-            >
-              {message.content}
-            </div>
-          ),
-        )}
-        {generating && <div className="now-chat-bubble">正在整理…</div>}
-      </section>
-      <footer className="now-chat-input">
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => event.key === 'Enter' && sendMessage()}
-          placeholder={modeCopy.placeholder}
-        />
-        <button type="button" onClick={sendMessage}>
-          发送
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (launchContext.mode === 'capture') void finish();
-            else if (launchContext.mode === 'recall') continueRecall();
-            else formUnderstanding();
-          }}
-          disabled={generating}
-        >
-          {modeCopy.action}
-        </button>
-      </footer>
-    </main>
+      }
+      memoryNature={memoryCapture.memoryNature}
+      candidateKind={memoryCapture.candidateKind}
+      candidateCategory={memoryCapture.candidateCategory}
+      candidateSourceCount={memoryCapture.candidateSources.length}
+      candidatePosition={memoryCapture.candidatePosition}
+      candidateTotal={memoryCapture.candidateTotal}
+      replacementStatement={memoryCapture.replacementStatement}
+      visibleMessages={chatViewport.visibleMessages}
+      mobileShell={mobileShell}
+      modelSettingsOpen={modelSettingsOpen}
+      onAddMemory={memoryCapture.addMemory}
+      onBack={onBack}
+      onChangeInput={setInput}
+      onCloseModelSettings={() => setModelSettingsOpen(false)}
+      onConfirmMemory={memoryCapture.confirmMemory}
+      onDismissMemory={memoryCapture.dismissMemory}
+      onEditTags={() => {
+        if (preview)
+          setDraft((current) => ({
+            ...current,
+            mood_tags: preview.mood_tags,
+            event_tags: preview.event_tags,
+          }));
+        onRouteChange('tags');
+      }}
+      onGenerateMemory={() => void memoryCapture.generateCompanionSummary(messages)}
+      onMemoryTextChange={(text) =>
+        memoryCapture.companionSummary &&
+        memoryCapture.setCompanionSummary({ ...memoryCapture.companionSummary, text })
+      }
+      onOpenLibrary={setLibraryOpen}
+      onOpenModelSettings={() => setModelSettingsOpen(true)}
+      onShowEarlierMessages={chatViewport.showEarlier}
+      onJumpToLatest={chatViewport.jumpToLatest}
+      onRefreshKnowledge={refreshAvatarKnowledge}
+      onResolveUnderstanding={resolveUnderstanding}
+      onRetry={() => {
+        if (failedChat.current) void requestReply(failedChat.current);
+      }}
+      onSelectEntry={onSelectEntry}
+      onSend={sendMessage}
+      onSendPreview={(payload) => void onSend(payload, sessionId)}
+      onSetPreview={setPreview}
+      onSubmitModeAction={() => {
+        if (launchContext.mode === 'capture') void finish();
+        else if (launchContext.mode === 'recall') continueRecall();
+        else formUnderstanding();
+      }}
+      patterns={patterns}
+      pendingMemories={[
+        ...patterns
+          .filter((pattern) => pattern.status === 'pending')
+          .map(atomicMemoryFromUnderstanding),
+        ...storedAvatarMemories.filter(isPatternMemoryReadyForConfirmation),
+      ]}
+      preview={preview}
+      sending={sending}
+      setChatError={setChatError}
+      showToast={showToast}
+      showJumpToLatest={chatViewport.showJumpToLatest}
+      storedAvatarMemories={storedAvatarMemories}
+      understanding={understanding}
+      userMessageCount={userMessages.length}
+      validRecallMemories={validRecallMemories}
+      liveInsight={liveInsight}
+    />
   );
 };

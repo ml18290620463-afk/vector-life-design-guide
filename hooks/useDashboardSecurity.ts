@@ -198,11 +198,11 @@ export const useDashboardSecurity = ({
             return false;
           }
         }
-        if (updatedEntries.length > 0) onBulkUpdateEntries(updatedEntries);
+        if (updatedEntries.length > 0) await onBulkUpdateEntries(updatedEntries);
       }
 
       // 4. Promote upward + reset local state.
-      onSetPassword(newPassword);
+      await onSetPassword(newPassword);
       setSecurityMode('idle');
       resetPasswordInputs();
       setSecurityError(null);

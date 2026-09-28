@@ -44,35 +44,29 @@ export const getAvatarIntroMessages = (args: {
 }) => {
   if (args.mode === 'review') {
     return [
-      buildAssistantTextMessage(
-        '请只记录真实发生的结果：做了什么、发生了什么、原原则哪里有效或需要调整。完成后再保存到「过去」。',
-        { id: args.createId(), createdAt: args.createdAt },
-      ),
+      buildAssistantTextMessage('记录真实结果。完成后保存到「过去」。', {
+        id: args.createId(),
+        createdAt: args.createdAt,
+      }),
     ];
   }
   if (args.mode === 'general') {
     return [
       buildAssistantTextMessage(
-        args.isFirstVisit
-          ? '你好，我是 VECTOR。我会结合你的真实记录，陪你看见当下不易察觉的另一个角度。'
-          : '我在。你不用先得出结论，我们可以从一句还没整理好的话开始。',
+        args.isFirstVisit ? '我是 VECTOR。说一件事就好。' : '我在。继续说。',
         { id: args.createId(), createdAt: args.createdAt },
       ),
     ];
   }
   return args.isFirstVisit
     ? [
-        buildAssistantTextMessage(
-          '你好，我是你的分身。我可以帮你记录此刻：把今天发生的事、你的感受、想法，整理成一条完整记录，存进「过去」。',
-          { id: args.createId(), createdAt: args.createdAt },
-        ),
-        buildAssistantTextMessage(
-          '你不用整理，像平时聊天一样说就好。我会边听边提炼事实、感受、想法和结果；说到差不多时点「记录完毕」，我再给你一版可确认的记录。',
-          { id: args.createId(), createdAt: args.createdAt },
-        ),
+        buildAssistantTextMessage('说一件事。完成后生成记录。', {
+          id: args.createId(),
+          createdAt: args.createdAt,
+        }),
       ]
     : [
-        buildAssistantTextMessage('你自然说，我会边听边提炼。说到差不多时点「记录完毕」。', {
+        buildAssistantTextMessage('继续说。完成后生成记录。', {
           id: args.createId(),
           createdAt: args.createdAt,
         }),

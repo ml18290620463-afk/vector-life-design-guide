@@ -867,10 +867,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({
             data-release-phase={releasePhase}
           >
             <div
-              className={`absolute inset-0 ${isLight ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(241,250,253,0.78)_46%,rgba(245,242,255,0.86))]' : 'bg-[#061a34]'}`}
+              className={`onboarding-step__base absolute inset-0 ${isLight ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(241,250,253,0.78)_46%,rgba(245,242,255,0.86))]' : 'bg-[#061a34]'}`}
             />
             <div
-              className={`absolute inset-0 ${isLight ? 'bg-[radial-gradient(circle_at_48%_8%,rgba(34,211,238,0.16),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(124,110,246,0.10),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(0,175,200,0.10),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(124,110,246,0.08),transparent_32%)]' : 'bg-[radial-gradient(circle_at_46%_8%,rgba(169,212,255,0.16),transparent_20%),radial-gradient(circle_at_22%_30%,rgba(234,210,164,0.08),transparent_26%),radial-gradient(circle_at_76%_48%,rgba(111,174,232,0.12),transparent_32%),radial-gradient(circle_at_62%_86%,rgba(138,168,149,0.07),transparent_34%),linear-gradient(180deg,rgba(8,32,61,0.22)_0%,rgba(7,31,64,0.58)_48%,rgba(6,23,46,0.94)_100%)]'}`}
+              className={`onboarding-step__atmosphere absolute inset-0 ${isLight ? 'bg-[radial-gradient(circle_at_48%_8%,rgba(34,211,238,0.16),transparent_18%),radial-gradient(circle_at_24%_28%,rgba(124,110,246,0.10),transparent_25%),radial-gradient(circle_at_76%_46%,rgba(0,175,200,0.10),transparent_30%),radial-gradient(circle_at_62%_86%,rgba(124,110,246,0.08),transparent_32%)]' : 'bg-[radial-gradient(circle_at_46%_8%,rgba(169,212,255,0.16),transparent_20%),radial-gradient(circle_at_22%_30%,rgba(234,210,164,0.08),transparent_26%),radial-gradient(circle_at_76%_48%,rgba(111,174,232,0.12),transparent_32%),radial-gradient(circle_at_62%_86%,rgba(138,168,149,0.07),transparent_34%),linear-gradient(180deg,rgba(8,32,61,0.22)_0%,rgba(7,31,64,0.58)_48%,rgba(6,23,46,0.94)_100%)]'}`}
             />
             <div className="absolute inset-0 opacity-[0.52]">
               <svg
@@ -1075,7 +1075,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
               className={`absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b ${isLight ? 'from-white/42 via-transparent to-transparent' : 'from-black/10 via-transparent to-transparent'}`}
             />
             <div
-              className={`absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t ${isLight ? 'from-cyan-50/62 via-white/18 to-transparent' : 'from-[#01030a]/62 via-[#06091a]/18 to-transparent'}`}
+              className={`onboarding-step__footer absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t ${isLight ? 'from-cyan-50/62 via-white/18 to-transparent' : 'from-[#01030a]/62 via-[#06091a]/18 to-transparent'}`}
             />
             {onCancel && (
               <motion.button

@@ -56,7 +56,7 @@ export const AvatarAppearanceStudio: React.FC<AvatarAppearanceStudioProps> = ({
       <div>
         <span>你的专属分身</span>
         <h2 id="avatar-studio-title">{value.name || 'VECTOR'}</h2>
-        <p>形象只表达你喜欢的陪伴方式，不会用来推断你的人格。</p>
+        <p>选择外观。</p>
       </div>
     </div>
 
@@ -70,11 +70,14 @@ export const AvatarAppearanceStudio: React.FC<AvatarAppearanceStudioProps> = ({
         placeholder="VECTOR"
         aria-describedby="avatar-name-help"
       />
-      <small id="avatar-name-help">最多 12 个字符，仅保存在本机</small>
+      <small id="avatar-name-help">最多 12 个字符</small>
     </div>
 
     <fieldset className="avatar-studio__choices">
-      <legend><Shapes size={16} aria-hidden="true" />核心形态</legend>
+      <legend>
+        <Shapes size={16} aria-hidden="true" />
+        核心形态
+      </legend>
       <div className="avatar-studio__shape-grid">
         {SHAPES.map((option) => (
           <label key={option.value} data-selected={value.shape === option.value}>
@@ -112,25 +115,43 @@ export const AvatarAppearanceStudio: React.FC<AvatarAppearanceStudioProps> = ({
       </div>
     </fieldset>
 
-    <label className="avatar-studio__motion">
+    <div className="avatar-studio__motion">
       <input
         type="checkbox"
+        id="avatar-motion"
         checked={value.motion === 'alive'}
-        onChange={(event) => onChange({ ...value, motion: event.target.checked ? 'alive' : 'still' })}
+        aria-label="使用轻微生命感"
+        aria-describedby="avatar-motion-help"
+        onChange={(event) =>
+          onChange({ ...value, motion: event.target.checked ? 'alive' : 'still' })
+        }
       />
       <span>
         <strong>使用轻微生命感</strong>
-        <small>启用光场呼吸和轨迹移动；系统减少动画时会自动停止</small>
+        <small id="avatar-motion-help">轻微呼吸动画</small>
       </span>
-    </label>
+    </div>
 
     <div className="avatar-studio__actions">
-      <button type="button" className="avatar-studio__secondary" onClick={() => onChange(DEFAULT_AVATAR_APPEARANCE)}>
-        <RotateCcw size={16} aria-hidden="true" />恢复默认
+      <button
+        type="button"
+        className="avatar-studio__secondary"
+        onClick={() => onChange(DEFAULT_AVATAR_APPEARANCE)}
+      >
+        <RotateCcw size={16} aria-hidden="true" />
+        恢复默认
       </button>
-      <button type="button" className="avatar-studio__secondary" onClick={onCancel}>取消</button>
-      <button type="button" className="avatar-studio__primary" onClick={onSave} disabled={!value.name.trim()}>
-        <Save size={16} aria-hidden="true" />保存为我的分身
+      <button type="button" className="avatar-studio__secondary" onClick={onCancel}>
+        取消
+      </button>
+      <button
+        type="button"
+        className="avatar-studio__primary"
+        onClick={onSave}
+        disabled={!value.name.trim()}
+      >
+        <Save size={16} aria-hidden="true" />
+        保存为我的分身
       </button>
     </div>
   </section>

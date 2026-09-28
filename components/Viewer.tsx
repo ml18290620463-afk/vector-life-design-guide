@@ -21,7 +21,7 @@ interface ViewerProps {
   masterPassword: string | null;
   onBack: () => void;
   onGoHome?: () => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
   onOpenAvatar?: () => void;
 }
 
@@ -111,7 +111,7 @@ export const Viewer: React.FC<ViewerProps> = ({
 
   return (
     <div
-      className={`relative min-h-screen overflow-hidden flex flex-col items-center transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-vector-onyx'}`}
+      className={`vector-viewer relative min-h-screen overflow-hidden flex flex-col items-center transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-vector-onyx'}`}
     >
       <ViewerStarfield theme={theme} fixedStars={fixedStars} twinklingStars={twinklingStars} />
 
@@ -122,6 +122,18 @@ export const Viewer: React.FC<ViewerProps> = ({
          这从根本上杜绝了通过 CSS (如 display: block) 绕过验证的可能性。
       */}
       <AnimatePresence>
+        {viewState !== 'reading' && (
+          <div role="status" className="relative z-10 p-6">
+            <p>
+              {isTimeLocked
+                ? t.notReady || '尚未到开启时间'
+                : access.decryptionError || '正在读取…'}
+            </p>
+            <button type="button" onClick={onBack}>
+              返回
+            </button>
+          </div>
+        )}
         {viewState === 'reading' && (
           <ViewerReadingPanel
             theme={theme}

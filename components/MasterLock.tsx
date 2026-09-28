@@ -288,11 +288,11 @@ export const MasterLock: React.FC<MasterLockProps> = ({
           {!recovery.isRecoveryMode && (
             <div className="master-lock-security pointer-events-none absolute bottom-6 left-8 right-8 flex items-center justify-center gap-2 text-center font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(160,200,240,0.65)] md:text-[10px]">
               <span className="text-[#1D9E75]">●</span>
-              <span>端到端加密</span>
+              <span>本地加密存储</span>
               <span className="text-[#1D9E75]">●</span>
-              <span>数据仅存于本地</span>
+              <span>使用 AI 时发送相关内容</span>
               <span className="text-[#1D9E75]">●</span>
-              <span>服务器零知识</span>
+              <span>由所选模型处理</span>
             </div>
           )}
         </motion.div>

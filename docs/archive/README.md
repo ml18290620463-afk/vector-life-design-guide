@@ -1,6 +1,6 @@
 # Historical archive / 历史文档归档说明
 
-Last updated: 2026-07-13.
+Last updated: 2026-09-22.
 
 This folder is an index for historical planning and evaluation documents that may still live at their original paths for link stability.
 
@@ -18,6 +18,7 @@ Current product truth is maintained in:
 
 - [README.md](../../README.md)
 - [PROJECT_OVERVIEW.md](../../PROJECT_OVERVIEW.md)
+- [模块数据归属与联动](../data-linkage.md)
 - [PRIVACY.md](../../PRIVACY.md)
 - [SECURITY.md](../../SECURITY.md)
 
@@ -25,7 +26,7 @@ Current product truth is maintained in:
 
 Root-level history:
 
-- [ROADMAP.md](../../ROADMAP.md)
+- [历史 ROADMAP](roadmap-historical.md)（当前范围见[新路线图](../../ROADMAP.md)）
 - [CHANGELOG.md](../../CHANGELOG.md)
 - [EVALUATION.md](../../EVALUATION.md)
 - [INVESTOR_EVALUATION.md](../../INVESTOR_EVALUATION.md)
@@ -40,6 +41,9 @@ Docs history:
 - [docs/phase-4-postmortem.md](../phase-4-postmortem.md)
 - [docs/phase-5-architecture.md](../phase-5-architecture.md)
 - [docs/T0_VECTOR_CONTEXT.md](../T0_VECTOR_CONTEXT.md)
+
+- [分身早期设计快照](../avatar-design-2026-09-16.md)
+- [未来早期实施计划](../future-module-implementation-plan-2026-09-12.md)
 
 ## Rule for future readers
 

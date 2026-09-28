@@ -1,20 +1,20 @@
 # PROJECT_OVERVIEW — VECTOR 矢量人生经验进化系统
 
-Snapshot: 2026-07-13.
+Snapshot: 2026-09-22.
 
 This document describes the current project shape after the product cleanup pass. Older roadmap, changelog, and postmortem files may still mention retired experiments; treat those as historical records.
 
 ## 1 · Current pitch
 
-VECTOR is a local-first, zero-knowledge personal experience system.
+VECTOR is a local-first personal experience and growth system.
 
 The current product spine is:
 
 ```text
 Now capture
-  → Past review and management
-  → Future action transformation
-  → Avatar record assistance and summary support
+  → Past review and principle distillation
+  → Future design and practice
+  → Avatar self-understanding: about me, patterns, changes
   → Dashboard system governance / ordinary backup
 ```
 
@@ -26,8 +26,8 @@ The project no longer presents Morning Star, Memoir, Echo Chamber, delayed lette
 | --- | --- |
 | Now | Primary creation path for new text, image, video, link, tag, and avatar-assisted records |
 | Past | Responsive record repository for timeline review, search, archive access, principle work, and record management |
-| Future | Lightweight transformation surface that turns records and principles into trends and next-action prompts |
-| Avatar | Conversational record-assistance and summary surface built around the user's existing Past context |
+| Future | Design visions, goals and action plans; record action outcomes in practice |
+| Avatar | Conversation and self-understanding through About me / My patterns / My changes; references canonical records rather than duplicating their lists |
 | Dashboard | System hub for global status, quick capture, backup/import/export, settings, security, recovery, and license controls |
 | Viewer | Reading, sharing, archiving, deleting, container movement, and locked-entry access |
 | Pricing | Subscription/license surface with current product capabilities only |
@@ -62,6 +62,8 @@ Core active entities:
 - `Container`
 - `Attachment`
 - `EntryMaterial`
+- future visions, goals and action plans
+- understandings, confirmed memory and source relationships
 - license / install metadata
 
 Retired entities were removed from the runtime model:
@@ -77,20 +79,9 @@ Retired entities were removed from the runtime model:
 
 ## 5 · Backup posture
 
-The ordinary backup schema is intentionally light:
+Full vault backups use schema v3, preserving records, principles, actions, future plans, understandings, memory and their relationships. Readers retain v2 and legacy record-backup compatibility. See [data ownership and linkage](docs/data-linkage.md) for current rules.
 
-```json
-{
-  "type": "vector-vault-backup",
-  "schemaVersion": 1,
-  "version": "...",
-  "exportedAt": "...",
-  "entryCount": 0,
-  "entries": []
-}
-```
-
-It is meant for casual users who need a simple export/import path. It does not carry retired AI-persona or migration payloads.
+AI requests may send the selected context to the configured model provider; local storage does not mean external AI processing stays on device.
 
 ## 6 · Server posture
 

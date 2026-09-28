@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import './styles/experiences.css';
 import * as Sentry from '@sentry/react';
 import { initWebVitalsReporter } from './lib/vitals';
 import { registerVectorServiceWorker } from './lib/pwaRegister';

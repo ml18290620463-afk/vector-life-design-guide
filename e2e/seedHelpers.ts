@@ -36,7 +36,10 @@ export const seedOnboardedApp = async (
   // copy changes on the homepage do not break all onboarding specs.
   const coverEntry = page.getByTestId('cover-initialize');
   await coverEntry.waitFor({ state: 'visible' });
-  await coverEntry.click();
+  // The cover entry starts a decorative launch animation. Dispatch the
+  // activation directly so E2E setup exercises the same handler without
+  // intermittently waiting for a moving visual layer to become actionable.
+  await coverEntry.dispatchEvent('click');
   await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
 
   // Calibration: master password (twice) then issue recovery key.
@@ -46,7 +49,15 @@ export const seedOnboardedApp = async (
   await page.getByTestId('onboarding-backup-phase').waitFor({ state: 'visible' });
 
   // Backup: save offline PNG, then enter the app directly.
-  await page.getByTestId('onboarding-save-png').click();
+  // PNG rendering can synchronously disable this control while the browser
+  // serializes the credential card. Dispatch the same activation directly so
+  // setup does not race Playwright's actionability retry with that transient
+  // disabled state.
+  await page.getByTestId('onboarding-save-png').dispatchEvent('click');
   await page.getByTestId('onboarding-recovery-saved').waitFor({ state: 'visible' });
   await page.getByTestId('onboarding-recovery-saved').click();
+  // Completing onboarding persists an encrypted vault asynchronously.  Do not
+  // navigate away before the main shell is visible, otherwise the route change
+  // can interrupt the persistence and leave the test on the setup screen.
+  await page.getByRole('navigation', { name: '主页面导航' }).waitFor({ state: 'visible' });
 };

@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
-import { Anchor, ArrowLeft, ArrowUp, Bot, Check, Image, Link as LinkIcon, Plus, Video } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Anchor,
+  ArrowLeft,
+  Check,
+  Image,
+  Link as LinkIcon,
+  Plus,
+  Video,
+} from 'lucide-react';
 import { CONFIG } from '../constants/config';
 import { useMaterialPicker } from '../hooks/useMaterialPicker';
 import { getCanSend, getDisabledSendReason, isDraftEmpty } from '../state/nowRules';
@@ -32,6 +40,20 @@ export const NowPage: React.FC<NowPageProps> = ({
   mobileShell = false,
 }) => {
   const [materialMenuOpen, setMaterialMenuOpen] = useState(false);
+  const [exitOpen, setExitOpen] = useState(false);
+  const exitDialog = useRef<HTMLDialogElement>(null);
+  const continueEditingButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!exitOpen) return;
+    const node = exitDialog.current;
+    const opener = document.activeElement as HTMLElement | null;
+    node?.showModal();
+    continueEditingButton.current?.focus();
+    return () => {
+      node?.close();
+      if (opener?.isConnected) opener.focus();
+    };
+  }, [exitOpen]);
   const picker = useMaterialPicker({
     materials: draft.materials,
     onAdd: (materials) => {
@@ -40,10 +62,7 @@ export const NowPage: React.FC<NowPageProps> = ({
     onError: showToast,
   });
   const canSend = getCanSend(draft);
-  const hasMood = draft.mood_tags.length > 0;
-  const hasEvent = draft.event_tags.length > 0;
-  const tagProgress = Number(hasMood) + Number(hasEvent);
-  const tagSummary = [...draft.mood_tags, ...draft.event_tags].slice(0, 2).join(' · ');
+  const tagSummary = [...draft.event_tags, ...draft.mood_tags].join(' · ');
 
   const handleImageImport = () => {
     setMaterialMenuOpen(false);
@@ -65,15 +84,7 @@ export const NowPage: React.FC<NowPageProps> = ({
       onExit();
       return;
     }
-    const choice = window.prompt('输入 1 保存草稿，输入 2 放弃，留空取消');
-    if (choice === '1') {
-      onSaveDraft();
-      onExit();
-    }
-    if (choice === '2') {
-      onDiscardDraft();
-      onExit();
-    }
+    setExitOpen(true);
   };
 
   const removeMaterial = (id: string) => {
@@ -97,17 +108,10 @@ export const NowPage: React.FC<NowPageProps> = ({
         <time className="now-time" dateTime={draft.record_time}>
           {draft.display_time}
         </time>
-        <button
-          type="button"
-          className="now-assist-button now-assist-button--perched"
-          onClick={() => onRouteChange('avatar-chat')}
-          aria-label="分身记录"
-        >
-          <Bot size={25} />
-        </button>
+        <span className="now-header__spacer" aria-hidden="true" />
       </header>
 
-      <div className="now-card">
+      <div className={`now-card${isDraftEmpty(draft) ? ' now-card--empty' : ''}`}>
         <section className="now-editor">
           <div className="now-editor__surface">
             <label htmlFor="now-record-text" className="sr-only">
@@ -117,7 +121,9 @@ export const NowPage: React.FC<NowPageProps> = ({
               id="now-record-text"
               value={draft.text}
               maxLength={CONFIG.MAX_TEXT_LENGTH}
-              onChange={(event) => setDraft((current) => ({ ...current, text: event.target.value }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, text: event.target.value }))
+              }
               placeholder="写下此刻"
               aria-describedby="now-record-count"
             />
@@ -127,8 +133,11 @@ export const NowPage: React.FC<NowPageProps> = ({
               </span>
             </div>
           </div>
-          <MaterialPreview materials={draft.materials} onRemove={removeMaterial} />
         </section>
+
+        <div className="now-materials-row">
+          <MaterialPreview materials={draft.materials} onRemove={removeMaterial} />
+        </div>
 
         <div className="now-actions">
           <div className="now-tool-row">
@@ -138,12 +147,16 @@ export const NowPage: React.FC<NowPageProps> = ({
               onClick={() => onRouteChange('tags')}
               aria-label="心情与事件"
             >
-              <span className={`now-anchor-point__icon ${canSend ? 'is-complete' : ''}`} aria-hidden="true">
+              <span
+                className={`now-anchor-point__icon ${canSend ? 'is-complete' : ''}`}
+                aria-hidden="true"
+              >
                 {canSend ? <Check size={16} /> : <Anchor size={20} />}
               </span>
               <span className="now-anchor-point__meta">
-                <span className="now-anchor-point__count">{tagProgress}/2</span>
-                {tagSummary ? <span className="now-anchor-point__summary">{tagSummary}</span> : null}
+                <span className="now-anchor-point__summary" title={tagSummary || undefined}>
+                  {tagSummary || '标签（选填）'}
+                </span>
               </span>
             </button>
             <button
@@ -158,13 +171,28 @@ export const NowPage: React.FC<NowPageProps> = ({
           </div>
           {materialMenuOpen ? (
             <div className="now-material-popover" aria-label="素材类型">
-              <button type="button" className="now-tool-button" aria-label="图片" onClick={handleImageImport}>
+              <button
+                type="button"
+                className="now-tool-button"
+                aria-label="图片"
+                onClick={handleImageImport}
+              >
                 <Image size={19} />
               </button>
-              <button type="button" className="now-tool-button" aria-label="视频" onClick={handleVideoImport}>
+              <button
+                type="button"
+                className="now-tool-button"
+                aria-label="视频"
+                onClick={handleVideoImport}
+              >
                 <Video size={19} />
               </button>
-              <button type="button" className="now-tool-button" aria-label="链接" onClick={handleLinkImport}>
+              <button
+                type="button"
+                className="now-tool-button"
+                aria-label="链接"
+                onClick={handleLinkImport}
+              >
                 <LinkIcon size={19} />
               </button>
             </div>
@@ -184,13 +212,52 @@ export const NowPage: React.FC<NowPageProps> = ({
               }
               onSend();
             }}
-            aria-label="发送过去"
+            aria-label="保存到过去"
             disabled={sending}
           >
-            <ArrowUp size={18} aria-hidden="true" />
+            <span>保存</span>
           </button>
         </footer>
       </div>
+      {exitOpen && (
+        <dialog
+          ref={exitDialog}
+          className="now-exit-dialog"
+          aria-labelledby="now-exit-title"
+          onCancel={(event) => {
+            event.preventDefault();
+            setExitOpen(false);
+          }}
+        >
+          <h2 id="now-exit-title">保留这次草稿？</h2>
+          <div className="now-exit-dialog__actions">
+            <button
+              type="button"
+              className="now-exit-dialog__save"
+              onClick={() => {
+                onSaveDraft();
+                setExitOpen(false);
+                onExit();
+              }}
+            >
+              保存草稿
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onDiscardDraft();
+                setExitOpen(false);
+                onExit();
+              }}
+            >
+              放弃
+            </button>
+            <button ref={continueEditingButton} type="button" onClick={() => setExitOpen(false)}>
+              继续编辑
+            </button>
+          </div>
+        </dialog>
+      )}
       <input
         ref={picker.imageInputRef}
         hidden

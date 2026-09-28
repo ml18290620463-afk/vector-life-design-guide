@@ -1,36 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { set } from 'idb-keyval';
 import type { ActionItem } from '../types';
 import { sanitizeActionItem, readStoredArray } from '../services/diaryDataRead';
 import { generateSecureId } from '../services/idGenerator';
-import { getDiaryStorageKeys, mirrorDiaryValue } from '../services/diaryStorage';
+import { getDiaryStorageKeys } from '../services/diaryStorage';
+import { commitArrayDelta, subscribeVault, VaultLockedError } from '../services/vaultTransaction';
 
 export const useActionItems = (userId: string | undefined) => {
   const [actions, setActions] = useState<ActionItem[]>([]);
   const actionsRef = useRef<ActionItem[]>([]);
+  const [actionsLoadError, setActionsLoadError] = useState<string | null>(null);
+  const readFailure = useRef<string | null>('行动尚未读取，请稍后重试');
 
   useEffect(() => {
+    readFailure.current = '行动尚未读取，请稍后重试';
+    actionsRef.current = [];
+    setActions([]);
     let cancelled = false;
-    void readStoredArray<ActionItem>(getDiaryStorageKeys(userId).actions).then((storedActions) => {
-      if (cancelled) return;
+    let generation = 0;
+    const refresh = () => { const id = ++generation; void readStoredArray<ActionItem>(getDiaryStorageKeys(userId).actions).then((storedActions) => {
+      if (cancelled || id !== generation) return;
       const sanitized = storedActions.flatMap((action) => sanitizeActionItem(action) ?? []);
       actionsRef.current = sanitized;
       setActions(sanitized);
-    });
+      readFailure.current = null;
+      setActionsLoadError(null);
+    }).catch((error: unknown) => {
+      if (cancelled || id !== generation) return;
+      const message = error instanceof Error ? error.message : '行动读取失败，请重新加载';
+      actionsRef.current = [];
+      setActions([]);
+      readFailure.current = message;
+      // Locked data is expected before the unified login. Keep writes blocked,
+      // but do not let this state replace the login screen with a fatal error.
+      // The vault session subscription reloads actions after authentication.
+      setActionsLoadError(error instanceof VaultLockedError ? null : message);
+    }); };
+    refresh();
+    const unsubscribe = subscribeVault(refresh);
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [userId]);
 
   const persistActions = useCallback(
     async (nextActions: ActionItem[]) => {
+      if (readFailure.current) throw new Error(readFailure.current);
       const key = getDiaryStorageKeys(userId).actions;
-      actionsRef.current = nextActions;
-      setActions(nextActions);
-      await set(key, nextActions).catch((error) => {
-        console.warn('IndexedDB set failed for actions, falling back to localStorage', error);
-        mirrorDiaryValue(key, JSON.stringify(nextActions));
-      });
+      const committed = await commitArrayDelta<ActionItem>(key, actionsRef.current, nextActions, undefined, sanitizeActionItem);
+      actionsRef.current = committed;
+      setActions(committed);
     },
     [userId],
   );
@@ -43,6 +62,7 @@ export const useActionItems = (userId: string | undefined) => {
         id: generateSecureId('action'),
         createdAt: now,
         updatedAt: now,
+        revision: 1,
       };
       await persistActions([action, ...actionsRef.current]);
       return action;
@@ -54,7 +74,7 @@ export const useActionItems = (userId: string | undefined) => {
     async (updatedAction: ActionItem) => {
       await persistActions(
         actionsRef.current.map((action) =>
-          action.id === updatedAction.id ? { ...updatedAction, updatedAt: Date.now() } : action,
+          action.id === updatedAction.id ? { ...updatedAction, revision: (action.revision ?? 0) + 1, updatedAt: Date.now() } : action,
         ),
       );
     },
@@ -74,6 +94,7 @@ export const useActionItems = (userId: string | undefined) => {
                 completedAt: now,
                 reviewedAt: now,
                 updatedAt: now,
+                revision: (action.revision ?? 0) + 1,
               }
             : action,
         ),
@@ -87,5 +108,5 @@ export const useActionItems = (userId: string | undefined) => {
     setActions([]);
   }, []);
 
-  return { actions, addAction, updateAction, recordActionResult, resetActions };
+  return { actions, actionsLoadError, addAction, updateAction, recordActionResult, resetActions };
 };

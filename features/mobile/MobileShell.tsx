@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { getMainModules } from './mainModules';
 import { MobileMainNav } from './MobileMainNav';
 import type { Language } from '../../types';
 import type { MobileMainTab } from './types';
@@ -28,18 +28,28 @@ export const MobileShell: React.FC<MobileShellProps> = ({
     previousTabRef.current = activeTab;
   }, [activeTab]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+
+    root.classList.add('mobile-product-active');
+    body.classList.add('mobile-product-active');
+    root.dataset.mobileProductTab = activeTab;
+    body.dataset.mobileProductTab = activeTab;
+
+    return () => {
+      root.classList.remove('mobile-product-active');
+      body.classList.remove('mobile-product-active');
+      delete root.dataset.mobileProductTab;
+      delete body.dataset.mobileProductTab;
+    };
+  }, [activeTab]);
+
   return (
     <div className="mobile-shell" data-mobile-tab={activeTab}>
-      {activeTab === 'future' && (
-        <button
-          type="button"
-          className="mobile-shell__back"
-          aria-label={language === 'zh' ? '返回过去' : 'Back to Past'}
-          onClick={() => onTabChange('past')}
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-        </button>
-      )}
+      <h1 className="mobile-shell__accessible-title">
+        {getMainModules(language).find((item) => item.id === activeTab)?.title}
+      </h1>
       <div
         key={activeTab}
         className={`mobile-shell__content mobile-shell__content--${transitionDirection}`}

@@ -1,11 +1,14 @@
-import { get, set } from 'idb-keyval';
+import { get } from 'idb-keyval';
 import { Container, DiaryEntry, Principle } from '../types';
 import { getStoredString } from './browserStorage';
 import { DIARY_LEGACY_KEYS, getDiaryStorageKeys, mirrorDiaryValue } from './diaryStorage';
 import { asLegacyEntry, getEntryTimestamp } from './entryCompat';
-import { generateSecureId } from './idGenerator';
+import { vaultTransaction } from './vaultTransaction';
+import { storedArray } from './vaultLegacyRead';
 
 export interface DiaryMigrationResult {
+  /** Captured before scanning; a subsequent wipe invalidates the entire result. */
+  scanEpoch?: number;
   entries: DiaryEntry[];
   principles: Principle[];
   containers: Container[];
@@ -19,6 +22,9 @@ interface ScanOptions {
 }
 
 export const delayMigrationStep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const migrationEpochKey = (userId?: string) =>
+  `${getDiaryStorageKeys(userId).entries}:migration-epoch`;
 
 export const getLegacyStorageKeys = (userId: string | undefined) => {
   const keys: string[] = [...DIARY_LEGACY_KEYS];
@@ -41,15 +47,18 @@ const parseLocalValue = (raw: string | null) => {
   try {
     return JSON.parse(raw);
   } catch {
-    return null;
+    throw new Error('旧版数据格式无效，迁移未完成，请检查备份');
   }
 };
 
-const normalizeLegacyEntry = (item: unknown): DiaryEntry => {
+const normalizeLegacyEntry = (item: unknown, sourceId: string): DiaryEntry => {
+  if (!item || typeof item !== 'object' || Array.isArray(item))
+    throw new Error('旧版记录格式无效，迁移未完成');
   const entry = asLegacyEntry(item);
-  const timestamp = getEntryTimestamp(entry) || Date.now();
+  // A missing legacy ID/date must not produce a new record on every scan.
+  const timestamp = getEntryTimestamp(entry) || 0;
   return {
-    id: entry.id || generateSecureId('v1'),
+    id: entry.id || sourceId,
     title: entry.title || entry.name || entry.subject || 'Legacy Record',
     content: entry.content || entry.text || entry.body || entry.details || '',
     createdAt: timestamp,
@@ -77,7 +86,11 @@ const collectLegacyValue = (key: string, value: unknown, result: DiaryMigrationR
       lowerKey.includes('vault') ||
       lowerKey.includes('diary')
     ) {
-      result.entries.push(...value.map(normalizeLegacyEntry));
+      result.entries.push(
+        ...value.map((item, index) =>
+          normalizeLegacyEntry(item, `legacy:${encodeURIComponent(key)}:${index}`),
+        ),
+      );
     } else if (lowerKey.includes('principles')) {
       result.principles.push(...value);
     } else if (lowerKey.includes('containers')) {
@@ -98,7 +111,7 @@ const collectLegacyValue = (key: string, value: unknown, result: DiaryMigrationR
   if (typeof value === 'object') {
     const entry = asLegacyEntry(value);
     if (entry.id || entry.title || entry.content || entry.text) {
-      result.entries.push(normalizeLegacyEntry(entry));
+      result.entries.push(normalizeLegacyEntry(entry, `legacy:${encodeURIComponent(key)}:0`));
     }
   }
 };
@@ -109,14 +122,8 @@ export const dedupeMigrationResult = (result: DiaryMigrationResult): DiaryMigrat
     if (item && item.id && !uniqueEntriesMap.has(item.id)) uniqueEntriesMap.set(item.id, item);
   });
 
-  const contentSet = new Set<string>();
-  const entries = Array.from(uniqueEntriesMap.values()).filter((item) => {
-    if (!item.content) return true;
-    const hash = item.content.trim().substring(0, 100);
-    if (contentSet.has(hash)) return false;
-    contentSet.add(hash);
-    return true;
-  });
+  // Identical text on different dates can describe distinct experiences.
+  const entries = Array.from(uniqueEntriesMap.values());
 
   const principles = Array.from(
     new Map(
@@ -130,6 +137,7 @@ export const dedupeMigrationResult = (result: DiaryMigrationResult): DiaryMigrat
   );
 
   return {
+    ...(result.scanEpoch === undefined ? {} : { scanEpoch: result.scanEpoch }),
     entries,
     principles,
     containers,
@@ -143,6 +151,7 @@ export const scanLegacyDiaryData = async (
   options: ScanOptions = {},
 ): Promise<DiaryMigrationResult> => {
   const result: DiaryMigrationResult = {
+    scanEpoch: (await get<number>(migrationEpochKey(userId))) ?? 0,
     entries: [],
     principles: [],
     containers: [],
@@ -153,14 +162,9 @@ export const scanLegacyDiaryData = async (
 
   for (let index = 0; index < legacyKeys.length; index += 1) {
     const key = legacyKeys[index];
-    try {
-      const localValue = getStoredString(key);
-      const idbValue = await get(key).catch(() => undefined);
-      const value = idbValue ?? parseLocalValue(localValue);
-      collectLegacyValue(key, value, result);
-    } catch (error) {
-      console.warn(`Scan error for ${key}:`, error);
-    }
+    const idbValue = await get(key);
+    const value = idbValue === undefined ? parseLocalValue(localStorage.getItem(key)) : idbValue;
+    collectLegacyValue(key, value, result);
 
     options.onProgress?.(Math.floor(5 + (index / legacyKeys.length) * 10));
     if (options.delayMs) await delayMigrationStep(options.delayMs);
@@ -172,32 +176,71 @@ export const scanLegacyDiaryData = async (
 export const persistMigrationResult = async (
   userId: string | undefined,
   result: DiaryMigrationResult,
+  samples: DiaryEntry[] = [],
 ) => {
   const keys = getDiaryStorageKeys(userId);
-
-  if (result.entries.length > 0) {
-    await set(keys.entries, result.entries).catch(() => {});
-    mirrorDiaryValue(keys.entries, JSON.stringify(result.entries));
-  }
-
-  if (result.principles.length > 0) {
-    await set(keys.principles, result.principles).catch(() => {});
-    mirrorDiaryValue(keys.principles, JSON.stringify(result.principles));
-  }
-
-  if (result.containers.length > 0) {
-    await set(keys.containers, result.containers).catch(() => {});
-    mirrorDiaryValue(keys.containers, JSON.stringify(result.containers));
-  }
-
-  if (result.passwordHash) {
-    // Sensitive: never mirror password hash to localStorage.
-    await set(keys.passwordHash, result.passwordHash).catch(() => {});
-  }
-
-  if (result.passwordSalt) {
-    await set(keys.passwordSalt, result.passwordSalt).catch(() => {});
-  }
+  const epochKey = migrationEpochKey(userId);
+  const committed = await vaultTransaction(
+    [
+      epochKey,
+      keys.entries,
+      keys.backup,
+      keys.principles,
+      keys.containers,
+      keys.passwordHash,
+      keys.passwordSalt,
+      keys.initializedFlag,
+    ],
+    (values) => {
+      if (result.scanEpoch !== undefined && result.scanEpoch !== (values[epochKey] ?? 0))
+        throw new Error('扫描期间资料库已清空，已取消旧数据迁移。请重新扫描。');
+      const existingEntries =
+        storedArray<DiaryEntry>(values[keys.entries], keys.entries) ??
+        storedArray<DiaryEntry>(values[keys.backup], keys.backup);
+      const existingPrinciples =
+        storedArray<Principle>(values[keys.principles], keys.principles) ?? [];
+      const existingContainers =
+        storedArray<Container>(values[keys.containers], keys.containers) ?? [];
+      let entries = mergeMigrationEntries(result.entries, existingEntries ?? []);
+      const principles = mergeMigrationPrinciples(result.principles, existingPrinciples);
+      const containers = mergeMigrationContainers(result.containers, existingContainers);
+      const initialized = values[keys.initializedFlag] ?? getStoredString(keys.initializedFlag);
+      // Explicitly empty vaults (including wiped vaults) must not be re-seeded.
+      if (!initialized && existingEntries === undefined && !entries.length) entries = samples;
+      const existingHash = values[keys.passwordHash] ?? getStoredString(keys.passwordHash);
+      const existingSalt = values[keys.passwordSalt] ?? getStoredString(keys.passwordSalt);
+      // A legacy hash without a salt is valid; never pair it with another vault's salt.
+      const hasCredentials = existingHash != null || existingSalt != null;
+      const passwordHash = hasCredentials ? existingHash : result.passwordHash;
+      const passwordSalt = hasCredentials ? existingSalt : result.passwordSalt;
+      values[keys.entries] = entries;
+      values[keys.backup] = entries;
+      values[keys.principles] = principles;
+      values[keys.containers] = containers;
+      if (passwordHash) values[keys.passwordHash] = passwordHash;
+      if (passwordSalt) values[keys.passwordSalt] = passwordSalt;
+      values[keys.initializedFlag] = true;
+      return {
+        entries,
+        principles,
+        containers,
+        passwordHash,
+        passwordSalt,
+        mergedEntries: entries.filter(
+          (e) => !e.isSample && !existingEntries?.some((old) => old.id === e.id),
+        ).length,
+        mergedPrinciples: principles.length - existingPrinciples.length,
+        mergedContainers: containers.length - existingContainers.length,
+      };
+    },
+  );
+  // Mirrors are optional caches; only mirror a fully committed transaction.
+  mirrorDiaryValue(keys.entries, JSON.stringify(committed.entries));
+  mirrorDiaryValue(keys.backup, JSON.stringify(committed.entries));
+  mirrorDiaryValue(keys.principles, JSON.stringify(committed.principles));
+  mirrorDiaryValue(keys.containers, JSON.stringify(committed.containers));
+  mirrorDiaryValue(keys.initializedFlag, 'true');
+  return committed;
 };
 
 export const mergeMigrationEntries = (

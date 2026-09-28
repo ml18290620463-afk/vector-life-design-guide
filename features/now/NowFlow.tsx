@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { useFuture } from '../../hooks/useFuture';
+import { generateSecureId } from '../../services/idGenerator';
 import type {
   ActionItem,
   DiaryEntry,
@@ -14,6 +16,8 @@ import {
   searchLocalSemanticIndex,
 } from '../../services/localSemanticIndex';
 import { findNeuralRelatedEntryIds } from '../../services/neuralSemanticRecall';
+import { buildAvatarGrowthPreview } from '../../services/avatarIntelligence';
+import { readAvatarUnderstandings, upsertAvatarAtomicMemories } from '../../services/avatarMemory';
 import { postRecord } from './api/records';
 import { useNowDraft } from './hooks/useNowDraft';
 import { useToast } from './hooks/useToast';
@@ -40,7 +44,7 @@ interface NowFlowProps {
   onRouteChange: (route: NowRoute) => void;
   onExit: () => void;
   onPersistRecord: (
-    payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
+    payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'> & { id?: string },
   ) => Promise<DiaryEntry>;
   onRelatedEntriesResolved?: (entryId: string, relatedEntryIds: string[]) => void;
   onRecordComplete?: () => void;
@@ -51,6 +55,7 @@ interface NowFlowProps {
   onUpdatePrinciple?: (principle: Principle) => Promise<void> | void;
   avatarLaunchContext?: AvatarLaunchContext;
   onSelectEntry?: (entryId: string) => void;
+  onNavigateModule?: (module: 'past' | 'now' | 'future') => void;
 }
 
 export const NowFlow: React.FC<NowFlowProps> = ({
@@ -70,10 +75,18 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   onUpdatePrinciple,
   avatarLaunchContext = DEFAULT_AVATAR_CONTEXT,
   onSelectEntry,
+  onNavigateModule,
 }) => {
   const { draft, setDraft, saveDraft, discardDraft, resetAfterSend } = useNowDraft();
   const { toastMessage, showToast } = useToast();
   const [sending, setSending] = useState(false);
+  const inFlight = useRef(false);
+  const retry = useRef<{
+    key: string;
+    id: string;
+    updatedAt: number;
+  } | null>(null);
+  const { state: future } = useFuture();
   const semanticIndex = useMemo(() => buildLocalSemanticIndex(pastEntries), [pastEntries]);
   const isLight = theme === 'light';
 
@@ -83,6 +96,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     avatarSessionId: string | null = null,
     principleOutcome?: ExperienceFeedbackOutcome,
   ) => {
+    if (inFlight.current) return false;
     const tagValidation = validateTags(
       overrideDraft.mood_tags,
       overrideDraft.event_tags,
@@ -103,9 +117,15 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       return false;
     }
     setSending(true);
+    inFlight.current = true;
     const record = buildRecordFromDraft(overrideDraft, source, avatarSessionId);
+    const key = JSON.stringify({ record, principleOutcome });
+    if (retry.current?.key !== key)
+      retry.current = { key, id: generateSecureId('now'), updatedAt: Date.now() };
+    const attempt = retry.current;
     try {
       const entryPayload = recordToDiaryEntry(record);
+      entryPayload.updatedAt = attempt.updatedAt;
       const reviewAction =
         avatarLaunchContext.mode === 'review' && avatarLaunchContext.actionId
           ? actions.find((action) => action.id === avatarLaunchContext.actionId)
@@ -125,7 +145,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       const reviewPrinciple = reviewAction?.principleId
         ? principles.find((principle) => principle.id === reviewAction.principleId)
         : undefined;
-      const feedbackCreatedAt = Date.now();
+      const feedbackCreatedAt = attempt.updatedAt;
       const principleFeedback =
         reviewPrinciple && principleOutcome
           ? [
@@ -136,8 +156,9 @@ export const NowFlow: React.FC<NowFlowProps> = ({
               },
             ]
           : undefined;
-      const persistedEntry = await onPersistRecord({
+      const payload = {
         ...entryPayload,
+        id: attempt.id,
         relatedActionIds: reviewAction ? [reviewAction.id] : undefined,
         relatedEntryIds: relatedEntryIds.length > 0 ? relatedEntryIds : undefined,
         experienceEdges:
@@ -146,14 +167,40 @@ export const NowFlow: React.FC<NowFlowProps> = ({
             : undefined,
         relatedPrincipleIds: relatedPrincipleIds.length > 0 ? relatedPrincipleIds : undefined,
         principleFeedback,
-      });
-      if (reviewPrinciple && principleOutcome && onUpdatePrinciple) {
-        await onUpdatePrinciple(
-          applyPrincipleFeedback(reviewPrinciple, principleOutcome, feedbackCreatedAt),
+      };
+      const persistedEntry = await onPersistRecord(payload);
+      // Auxiliary projections must not turn an already committed diary into a failed save.
+      try {
+        const growthPreview = await buildAvatarGrowthPreview(
+          {
+            messages: [
+              {
+                role: 'user',
+                content: persistedEntry.content,
+                createdAt: persistedEntry.createdAt,
+              },
+            ],
+            source: 'now',
+            sourceEntryId: persistedEntry.id,
+            occurredAt: persistedEntry.createdAt,
+          },
+          {
+            entries: pastEntries,
+            understandings: readAvatarUnderstandings(),
+            now: persistedEntry.createdAt,
+          },
         );
-      }
-      if (reviewAction && onActionResultRecorded) {
-        await onActionResultRecorded(reviewAction.id, persistedEntry.id);
+        upsertAvatarAtomicMemories(growthPreview.atomicMemoryCandidates);
+        if (reviewPrinciple && principleOutcome && onUpdatePrinciple) {
+          await onUpdatePrinciple(
+            applyPrincipleFeedback(reviewPrinciple, principleOutcome, feedbackCreatedAt),
+          );
+        }
+        if (reviewAction && onActionResultRecorded) {
+          await onActionResultRecorded(reviewAction.id, persistedEntry.id);
+        }
+      } catch (error) {
+        console.warn('记录已保存，辅助反馈待同步', error);
       }
       if (onRelatedEntriesResolved) {
         void findNeuralRelatedEntryIds(persistedEntry.id, entryPayload, pastEntries)
@@ -174,6 +221,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       });
       showToast(reviewAction ? '行动结果已回写' : '已存入过去');
       resetAfterSend();
+      retry.current = null;
       if (onRecordComplete) {
         onRecordComplete();
       } else {
@@ -182,10 +230,11 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       return true;
     } catch (error) {
       console.error('NowFlow: failed to persist local record', error);
-      showToast('发送失败，请重试');
+      showToast(error instanceof Error ? error.message : '发送失败，请重试');
       return false;
     } finally {
       setSending(false);
+      inFlight.current = false;
     }
   };
 
@@ -219,6 +268,10 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       )}
       {route === 'avatar-chat' && (
         <AvatarChatPage
+          principles={principles}
+          actions={actions}
+          future={future}
+          onNavigateModule={onNavigateModule}
           draft={draft}
           setDraft={setDraft}
           pastEntries={pastEntries}

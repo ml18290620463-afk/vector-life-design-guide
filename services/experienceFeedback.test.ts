@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiaryEntry, Principle } from '../types';
 import {
   applyPrincipleFeedback,
+  applyPrincipleFeedbackToLinks,
   findRelatedPrinciples,
   getPrincipleConfidence,
 } from './experienceFeedback';
@@ -55,6 +56,40 @@ describe('experienceFeedback', () => {
   it('does not mutate a principle when the association is unrelated', () => {
     const principle = buildPrinciple();
     expect(applyPrincipleFeedback(principle, 'unrelated')).toBe(principle);
+  });
+
+  it('validates the relationship after a helpful real-world result', () => {
+    const link = {
+      id: 'link-1',
+      patternId: 'pattern-1',
+      principleId: 'principle-1',
+      relation: 'adjust' as const,
+      status: 'confirmed' as const,
+      createdBy: 'user' as const,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+
+    expect(applyPrincipleFeedbackToLinks([link], 'principle-1', 'helpful', 10)[0]).toMatchObject({
+      status: 'validated',
+      updatedAt: 10,
+    });
+  });
+
+  it('keeps the relationship unchanged after an unhelpful result', () => {
+    const link = {
+      id: 'link-1',
+      patternId: 'pattern-1',
+      principleId: 'principle-1',
+      relation: 'adjust' as const,
+      status: 'confirmed' as const,
+      createdBy: 'user' as const,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const links = [link];
+
+    expect(applyPrincipleFeedbackToLinks(links, 'principle-1', 'unhelpful', 10)).toBe(links);
   });
 
   it('prioritizes principles supported by evidence with matching tags', () => {

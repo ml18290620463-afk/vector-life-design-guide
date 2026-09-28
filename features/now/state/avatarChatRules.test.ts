@@ -13,7 +13,7 @@ describe('avatarChatRules', () => {
     localStorage.clear();
   });
 
-  it('builds richer intro messages for first avatar visit', () => {
+  it('builds compact intro messages for first avatar visit', () => {
     let index = 0;
     const messages = getAvatarIntroMessages({
       isFirstVisit: true,
@@ -21,12 +21,11 @@ describe('avatarChatRules', () => {
       createId: () => `msg-${(index += 1)}`,
     });
 
-    expect(messages).toHaveLength(2);
+    expect(messages).toHaveLength(1);
     expect(messages[0]).toEqual(
       expect.objectContaining({ id: 'msg-1', role: 'assistant', type: 'text' }),
     );
-    expect(messages[0].content).toContain('我是你的分身');
-    expect(messages[1].content).toContain('边听边提炼');
+    expect(messages[0].content).toContain('说一件事');
   });
 
   it('builds compact intro after the first avatar visit', () => {
@@ -37,7 +36,7 @@ describe('avatarChatRules', () => {
     });
 
     expect(messages).toHaveLength(1);
-    expect(messages[0].content).toContain('你自然说');
+    expect(messages[0].content).toContain('继续说');
   });
 
   it('introduces the standalone avatar as a second perspective instead of a recorder', () => {
@@ -49,7 +48,7 @@ describe('avatarChatRules', () => {
     });
 
     expect(messages).toHaveLength(1);
-    expect(messages[0].content).toContain('另一个角度');
+    expect(messages[0].content).toContain('我是 VECTOR');
     expect(messages[0].content).not.toContain('帮你记录');
   });
 
@@ -62,8 +61,8 @@ describe('avatarChatRules', () => {
     });
 
     expect(messages).toHaveLength(1);
-    expect(messages[0].content).toContain('真实发生的结果');
-    expect(messages[0].content).toContain('需要调整');
+    expect(messages[0].content).toContain('记录真实结果');
+    expect(messages[0].content).toContain('保存到「过去」');
   });
 
   it('reads and marks avatar intro state in storage', () => {

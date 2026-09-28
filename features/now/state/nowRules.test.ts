@@ -38,14 +38,15 @@ const entry = (overrides: Partial<DiaryEntry>): DiaryEntry => ({
 });
 
 describe('nowRules', () => {
-  it('requires content and an event tag while keeping mood optional', () => {
+  it('requires content while keeping all tags optional', () => {
     const draft = createEmptyDraft(new Date('2026-06-15T10:37:00+08:00'));
 
     expect(getCanSend(draft)).toBe(false);
     expect(getDisabledSendReason(draft)).toBe('请先输入内容或添加素材');
 
     const withText = { ...draft, text: '今天完成一次重要记录' };
-    expect(getDisabledSendReason(withText)).toBe('请选择事件标签');
+    expect(getDisabledSendReason(withText)).toBeNull();
+    expect(getCanSend(withText)).toBe(true);
 
     expect(getCanSend({ ...withText, event_tags: ['个人成长'] })).toBe(true);
   });
@@ -95,7 +96,7 @@ describe('nowRules', () => {
   it('validates tag ranges and allows confirmed custom anchors', () => {
     expect(validateTags(['焦虑'], ['职业发展'])).toEqual({ ok: true });
     expect(validateTags([], ['职业发展'])).toEqual({ ok: true });
-    expect(validateTags([], [])).toEqual({ ok: false, message: '请选择事件标签' });
+    expect(validateTags([], [])).toEqual({ ok: true });
     expect(validateTags(['我的锚点'], ['职业发展'], ['我的锚点'])).toEqual({ ok: true });
     expect(validateTags(['焦虑'], ['我的锚点'], ['我的锚点'])).toEqual({ ok: true });
     expect(validateTags(['焦虑'], ['未知事件'])).toEqual({
@@ -133,15 +134,15 @@ describe('nowRules', () => {
   });
 
   it('builds adaptive followups from the user answer', () => {
-    expect(buildAdaptiveFollowup([{ content: '我很不开心' }], 0)).toContain('具体发生了什么');
+    expect(buildAdaptiveFollowup([{ content: '我很不开心' }], 0)).toContain('补充事实');
     expect(buildAdaptiveFollowup([{ content: '今天工作项目推进完了' }], 0)).toContain('感受');
-    expect(buildAdaptiveFollowup([{ content: 'h l v y z y' }], 0)).toContain('什么时候');
+    expect(buildAdaptiveFollowup([{ content: 'h l v y z y' }], 0)).toContain('时间');
   });
 
   it('treats negated happy as sadness instead of happiness', () => {
     expect(inferAvatarMoodTags('我今天不开心')).toEqual(['难过']);
     expect(buildCompanionAcknowledgement([{ content: '我今天不开心' }], 0)).toContain(
-      '感受偏向「难过」',
+      '感受：难过',
     );
   });
 
@@ -151,10 +152,10 @@ describe('nowRules', () => {
       0,
     );
 
-    expect(reply).toContain('我先提炼到');
+    expect(reply).toContain('已识别');
     expect(reply).toContain('项目汇报');
     expect(reply).toContain('感动');
-    expect(reply).toMatch(/结果|影响|记录/);
+    expect(reply).toMatch(/结果|补充结果|记录/);
   });
 
   it('stops follow-up when the user asks to record directly', () => {
@@ -164,8 +165,8 @@ describe('nowRules', () => {
       1,
     );
 
-    expect(reply).toContain('不追问');
-    expect(reply).toContain('记录完毕');
+    expect(reply).toContain('已收到');
+    expect(reply).toContain('生成记录');
   });
 
   it('absorbs user corrections instead of repeating the same prompt', () => {
@@ -175,7 +176,7 @@ describe('nowRules', () => {
     );
 
     expect(reply).toContain('开心');
-    expect(reply).toContain('不再重复追这个点');
+    expect(reply).toContain('已更新');
   });
 
   it('recalls related past records from tags and keywords', () => {
@@ -204,9 +205,8 @@ describe('nowRules', () => {
       memories,
     );
 
-    expect(reply).toContain('我联想到一条过去记录');
-    expect(reply).toContain('不会替你下结论');
-    expect(reply).toContain('感受偏向「难过」');
+    expect(reply).toContain('找到过去');
+    expect(reply).toContain('感受：难过');
   });
 
   it('anchors structured insight only to unique recalled entry ids', () => {

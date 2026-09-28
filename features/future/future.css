@@ -1,0 +1,1334 @@
+.future-page,
+.future-dialog {
+  /* Use the same semantic palette as Past; never override the shell's tokens. */
+  --color-archive-text-main: var(--mobile-ink, #edfafd);
+  --color-archive-text-muted: var(--mobile-ink-soft, #c8e0e6);
+  --color-archive-bg: var(--mobile-paper, #071824);
+  --color-archive-surface: var(--mobile-surface, #0f2b39);
+  --color-archive-border: var(--mobile-line, rgba(151, 216, 227, 0.2));
+  --color-archive-border-strong: var(--mobile-line-strong, rgba(151, 216, 227, 0.36));
+  --color-archive-accent: var(--mobile-accent, #91dce8);
+  color: var(--color-archive-text-main, #0f172a);
+  background: var(--color-archive-bg, #f4f7f9);
+  font-size: 1rem;
+  font-family: var(--font-sans, sans-serif);
+  line-height: 1.7;
+}
+.future-page {
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 0.75rem var(--mobile-page-gutter, 1rem) calc(7rem + env(safe-area-inset-bottom));
+  background: transparent;
+  min-width: 0;
+}
+.future-page *,
+.future-dialog * {
+  box-sizing: border-box;
+}
+.future-page button,
+.future-dialog button,
+.future-page summary,
+.future-dialog summary {
+  min-height: 2.875rem;
+  padding: 0.625rem 0.875rem;
+  cursor: pointer;
+  border-radius: 0.875rem;
+  touch-action: manipulation;
+}
+.future-page button:focus-visible,
+.future-dialog :focus-visible,
+.future-page summary:focus-visible {
+  outline: 2px solid var(--color-archive-accent, #0891b2);
+  outline-offset: 3px;
+}
+.future-page button:disabled,
+.future-dialog button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.future-page h2,
+.future-dialog h2 {
+  font-size: 1.25rem;
+  font-weight: 650;
+  margin: 0.5rem 0;
+}
+.future-page h3 {
+  margin-top: 1.5rem;
+  font-weight: 600;
+}
+.future-card h3,
+.future-card p {
+  margin: 0;
+}
+.future-card h3 {
+  font-size: 1.0625rem;
+}
+.future-toolbar,
+.future-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.future-toolbar {
+  justify-content: flex-start;
+  margin-block: 0.75rem;
+}
+.future-tabs {
+  margin-inline: calc(-1 * var(--mobile-page-gutter, 1rem));
+  margin-bottom: 1.25rem;
+  padding-inline: var(--mobile-page-gutter, 1rem);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.future-tabs::-webkit-scrollbar {
+  display: none;
+}
+.future-action-tabs {
+  margin-bottom: 0.75rem;
+}
+.future-page button[aria-pressed='true'],
+.future-primary {
+  background: var(--color-archive-border, rgb(15 23 42 / 0.08));
+  color: var(--color-archive-text-main, #0f172a);
+  font-weight: 600;
+}
+.future-section-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  margin-block: 1.25rem 0.75rem;
+}
+.future-section-header h2 {
+  margin: 0;
+  font-size: 1.1875rem;
+  line-height: 1.35;
+}
+.future-page .future-date {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-block: 0.75rem 0.5rem;
+  color: var(--color-archive-text-muted, #334155);
+  font-size: 0.875rem;
+}
+.future-date input {
+  width: min(12rem, 68%);
+  max-width: 100%;
+}
+.future-filters {
+  gap: 0.375rem;
+  flex-wrap: nowrap;
+  margin-inline: calc(-1 * var(--mobile-page-gutter, 1rem));
+  padding-inline: var(--mobile-page-gutter, 1rem);
+  padding-bottom: 0.75rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-bottom: 1px solid var(--color-archive-border, rgb(15 23 42 / 0.08));
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.future-filters::-webkit-scrollbar {
+  display: none;
+}
+.future-filters button {
+  flex: 0 0 auto;
+  padding-inline: 0.625rem;
+  font-size: 0.875rem;
+}
+.future-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+  min-width: 0;
+  margin-block: 0.875rem;
+  padding: 1rem !important;
+  border: 1px solid var(--color-archive-border, rgb(15 23 42 / 0.08));
+  background: linear-gradient(145deg, rgba(17, 48, 64, 0.88), rgba(7, 25, 39, 0.8));
+  box-shadow: var(--mobile-shadow);
+  backdrop-filter: blur(18px) saturate(1.04);
+  border-radius: 1.125rem;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.future-card strong {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+.future-card .future-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0.625rem 0 0;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-archive-border, rgb(15 23 42 / 0.08));
+}
+.future-card .future-toolbar button {
+  width: 100%;
+  font-size: 0.875rem;
+}
+.future-goal > span:last-child {
+  font-size: 0.875rem;
+  color: var(--color-archive-text-muted, #334155);
+  margin-top: 0.25rem;
+}
+.future-goal-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: auto !important;
+  padding: 0 !important;
+  color: inherit;
+  background: transparent !important;
+  border: 0;
+  text-align: left;
+}
+.future-long-action {
+  gap: 0.875rem;
+}
+.future-long-action-controls {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+.future-long-action-controls button {
+  min-width: 0;
+}
+.future-long-action-option {
+  padding: 0.75rem;
+  border: 1px solid var(--color-archive-border, rgb(15 23 42 / 0.08));
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 0.04);
+}
+.future-card small {
+  color: var(--color-archive-text-muted, #334155);
+  font-size: 0.875rem;
+}
+.future-text {
+  text-align: left;
+  font-weight: 600;
+  padding-inline: 0 !important;
+}
+.future-add {
+  margin-left: auto;
+}
+.future-page label,
+.future-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.future-dialog {
+  width: min(calc(100% - 1rem), var(--future-editor-width, 34rem));
+  max-width: 34rem;
+  max-height: calc(100dvh - 1rem - env(safe-area-inset-bottom));
+  margin: auto auto calc(0.5rem + env(safe-area-inset-bottom));
+  padding: 1.25rem;
+  border: 1px solid var(--color-archive-border-strong, #cbd5e1);
+  border-radius: 1.5rem 1.5rem 1.125rem 1.125rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.future-dialog::backdrop {
+  background: rgb(15 23 42 / 0.5);
+}
+.future-dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.future-editor-screen > header {
+  justify-content: flex-start;
+}
+.future-editor-screen > header button {
+  display: inline-grid;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-archive-border-strong) 72%, transparent);
+  background: color-mix(in srgb, var(--color-archive-surface) 68%, transparent);
+  color: var(--color-archive-text-main);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+}
+.future-dialog fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.future-dialog input,
+.future-dialog select,
+.future-dialog textarea,
+.future-page input,
+.future-page select,
+.future-page textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.625rem;
+  border: 1px solid var(--color-archive-border-strong, #cbd5e1);
+  border-radius: 0.625rem;
+  color: inherit;
+  background: var(--color-archive-surface, #fff);
+  font: inherit;
+}
+.future-dialog textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+.future-page textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+/* Keep native controls consistent with the shared dark mobile palette. */
+html .mobile-shell .future-page input,
+html .mobile-shell .future-page select,
+html .mobile-shell .future-page textarea,
+html .mobile-shell .future-dialog input,
+html .mobile-shell .future-dialog select,
+html .mobile-shell .future-dialog textarea,
+html .future-dialog input,
+html .future-dialog select,
+html .future-dialog textarea {
+  color-scheme: dark;
+  background: var(--color-archive-surface, #fff) !important;
+  color: var(--color-archive-text-main, #0f172a) !important;
+  -webkit-text-fill-color: var(--color-archive-text-main, #0f172a) !important;
+  border-color: var(--color-archive-border-strong, #cbd5e1) !important;
+  caret-color: var(--color-archive-accent, #0891b2) !important;
+}
+.future-form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+.future-dialog .future-check {
+  flex-direction: row;
+  align-items: center;
+}
+.future-check input {
+  width: 1.25rem;
+  min-height: 1.25rem;
+}
+.future-additional-target {
+  display: grid;
+  gap: 0.75rem;
+  padding-block: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.future-page [role='alert'],
+.future-dialog [role='alert'] {
+  color: var(--color-archive-text-main, #0f172a);
+  border-left: 3px solid var(--color-archive-danger, #f43f5e);
+  padding: 0.75rem;
+}
+@media (max-width: 359px) {
+  .future-form-row {
+    grid-template-columns: 1fr;
+  }
+  .future-card .future-toolbar,
+  .future-long-action-controls,
+  .future-section-header {
+    grid-template-columns: 1fr;
+  }
+  .future-date input {
+    width: 100%;
+  }
+}
+
+@media (min-width: 720px) {
+  .future-page {
+    max-width: 42rem;
+    padding-top: 1rem;
+  }
+  .future-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .future-card {
+    padding: 1.25rem !important;
+  }
+  .future-dialog {
+    margin: auto;
+    border-radius: 1.25rem;
+  }
+}
+
+/* Result-first lists keep editing and secondary actions out of the reading path. */
+.future-result-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  border-bottom: 1px solid var(--color-archive-border);
+  background: transparent;
+}
+.future-result-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 4.75rem !important;
+  padding: 0.875rem 0 !important;
+  border: 0;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit;
+  text-align: left;
+}
+.future-result-copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.future-result-copy strong,
+.future-result-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.future-result-copy strong {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.future-result-copy small {
+  color: var(--color-archive-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.future-result-entry,
+.future-result-chevron {
+  color: var(--color-archive-accent);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.future-result-chevron {
+  font-size: 1.5rem;
+  font-weight: 300;
+}
+.future-action-card .future-result-main,
+.future-goal .future-result-main {
+  padding-right: 0.5rem !important;
+}
+.future-goal-main {
+  flex-direction: unset;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 4.75rem !important;
+}
+.future-row-more {
+  position: relative;
+  align-self: center;
+}
+.future-row-more > summary {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--color-archive-text-muted);
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  list-style: none;
+}
+.future-row-more > summary::-webkit-details-marker {
+  display: none;
+}
+.future-row-more[open] > summary {
+  background: var(--color-archive-border);
+  color: var(--color-archive-text-main);
+}
+.future-row-more-menu {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  display: grid;
+  width: max-content;
+  min-width: 8.5rem;
+  padding: 0.375rem;
+  border: 1px solid var(--color-archive-border-strong);
+  border-radius: 0.875rem;
+  background: var(--color-archive-surface);
+  box-shadow: var(--mobile-shadow);
+}
+.future-row-more-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+.future-ended-results {
+  margin-top: 0.75rem;
+  border-bottom: 1px solid var(--color-archive-border);
+}
+.future-ended-results > summary {
+  padding: 0.625rem 0;
+  border-radius: 0;
+  color: var(--color-archive-text-muted);
+  font-size: 0.875rem;
+  list-style-position: inside;
+}
+.future-ended-results .future-result-row:last-child,
+.future-ended-results .future-feedback-row:last-child {
+  border-bottom: 0;
+}
+
+/* Two clear workspaces; planning types stay subordinate to the workspace switch. */
+.future-primary-tabs {
+  display: flex;
+  gap: 1.6rem;
+  margin-inline: calc(-1 * var(--mobile-page-gutter, 1rem));
+  margin-bottom: 0.875rem;
+  padding: 0.5rem var(--mobile-page-gutter, 1rem) 0.875rem;
+  border-bottom: 1px solid var(--color-archive-border);
+}
+.future-primary-tabs button {
+  position: relative;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-archive-text-muted);
+  font-size: 0.9rem;
+}
+.future-primary-tabs button[aria-selected='true'] {
+  color: var(--color-archive-accent);
+  font-weight: 650;
+}
+.future-primary-tabs button[aria-selected='true']::after {
+  position: absolute;
+  right: 0;
+  bottom: -0.9rem;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  content: '';
+}
+.future-design-content {
+  display: grid;
+  gap: 0.875rem;
+}
+.future-design-empty-intro {
+  display: grid;
+  gap: 0.625rem;
+  padding: 0.25rem 0 0.375rem;
+}
+.future-design-empty-intro p {
+  margin: 0;
+  color: var(--color-archive-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.future-design-entry {
+  width: 100%;
+  min-height: 2.875rem;
+  border: 1px solid var(--color-archive-border-strong);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--color-archive-accent) 14%, var(--color-archive-surface));
+  color: var(--color-archive-text-main);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.future-design-empty-intro .future-design-entry {
+  width: fit-content;
+  min-width: 8.75rem;
+  padding-inline: 1rem;
+}
+.future-design-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem;
+  margin-block: 1rem 1.25rem;
+}
+.future-create {
+  min-height: 2.75rem;
+  padding-inline: 1rem !important;
+  border: 1px solid var(--color-archive-border-strong);
+  white-space: nowrap;
+}
+.future-design-summary-card {
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid var(--color-archive-border);
+  border-radius: 1rem;
+  background: var(--color-archive-surface);
+  box-shadow: 0 0.375rem 1.25rem color-mix(in srgb, var(--color-archive-text-main) 5%, transparent);
+}
+.future-design-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem !important;
+  border: 0;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-archive-text-main);
+  text-align: left;
+}
+.future-design-summary-header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.future-design-summary-header h2,
+.future-design-summary-header [role='heading'] {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.future-design-summary-header small {
+  color: var(--color-archive-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.future-design-summary-header > span:last-child {
+  color: var(--color-archive-text-muted);
+  font-size: 1.4rem;
+  font-weight: 300;
+  line-height: 1;
+}
+.future-design-summary-body,
+.future-design-summary-empty {
+  margin: 0 1rem;
+  padding: 0.875rem 0 1rem;
+  border-top: 1px solid var(--color-archive-border);
+}
+.future-design-summary-body p,
+.future-design-summary-empty {
+  margin-block: 0;
+  color: var(--color-archive-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.future-design-summary-body p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.future-summary-result {
+  display: block;
+  width: calc(100% - 2rem);
+  margin: 0 1rem;
+  padding: 0.875rem 0 1rem;
+  border-top: 1px solid var(--color-archive-border);
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+.future-summary-result:hover {
+  color: var(--color-archive-text-main);
+}
+.future-summary-result:focus-visible {
+  outline: 2px solid var(--color-archive-accent);
+  outline-offset: 0.25rem;
+}
+.future-summary-result__primary {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-archive-text-main);
+  font-size: 0.875rem;
+  font-weight: 580;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.future-summary-result__context {
+  display: -webkit-box;
+  margin: 0.375rem 0 0;
+  overflow: hidden;
+  color: var(--color-archive-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.future-kind-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+/* The planning-type switch belongs to the field that follows it.  The shared
+   editor rhythm is intentionally generous for writing, so tighten only this
+   transition instead of making every form field feel crowded. */
+.future-editor-screen .future-kind-picker {
+  margin-bottom: -0.5rem;
+}
+.future-design-more-results {
+  margin: 0 1rem 0.5rem;
+  border-top: 1px solid var(--color-archive-border);
+}
+.future-design-more-results > summary {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0;
+  color: var(--color-archive-text-muted);
+  font-size: 0.75rem;
+  list-style-position: inside;
+}
+.future-design-more-results > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.625rem 0 !important;
+  border: 0;
+  border-top: 1px solid var(--color-archive-border);
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-archive-text-main);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  text-align: left;
+}
+.future-design-more-results > button span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.future-design-more-results > button span:last-child {
+  color: var(--color-archive-text-muted);
+  font-size: 1.25rem;
+}
+.future-page .future-section-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-block: 1rem 0.75rem;
+}
+.future-back {
+  color: var(--color-archive-accent);
+  padding-inline: 0 !important;
+}
+.future-form-options > label {
+  margin-top: 1rem;
+}
+.future-form-options > summary {
+  color: var(--color-archive-text-muted);
+  padding-inline: 0;
+}
+.future-form-submit {
+  position: sticky;
+  bottom: -1.25rem;
+  padding-block: 0.75rem;
+  margin-bottom: 0;
+  background: var(--color-archive-bg);
+}
+.future-form-submit > button {
+  flex: 1;
+}
+.future-editor-screen .future-editor-form {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+}
+.future-editor-screen .future-editor-form > fieldset {
+  flex: 0 0 auto;
+}
+.future-editor-screen .future-form-submit {
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0;
+  padding: 1rem 0 0;
+  background: transparent;
+}
+.future-editor-screen .future-form-submit > button {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+}
+/* A fresh vision has one purpose: writing.  It uses the remaining canvas so
+   the confirmation action reaches the safe lower edge, rather than leaving a
+   detached empty lower half.  Goal and action forms retain their natural
+   height because their additional choices need to stay together. */
+.future-editor-screen .future-editor-form--single-writing {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.future-editor-screen .future-editor-form--single-writing > fieldset {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.future-editor-screen .future-editor-form--single-writing label {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.future-editor-screen .future-editor-form--single-writing textarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  resize: vertical;
+}
+.future-editor-screen .future-editor-form--single-writing .future-form-submit {
+  flex: 0 0 auto;
+  padding-top: 1rem;
+  padding-bottom: 0;
+}
+.future-duplicate-vision {
+  display: grid;
+  gap: 0.625rem;
+  margin-top: 0.5rem;
+  padding: 0.875rem;
+  color: var(--color-archive-text-main);
+  background: color-mix(in srgb, var(--color-archive-accent) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-archive-accent) 36%, transparent);
+  border-radius: 0.875rem;
+}
+.future-dialog .future-duplicate-vision[role='alert'] {
+  border-left-width: 1px;
+}
+.future-duplicate-vision p {
+  margin: 0;
+  color: var(--color-archive-text-muted);
+  line-height: 1.55;
+}
+.future-duplicate-vision .future-toolbar {
+  margin-top: 0.125rem;
+}
+.future-duplicate-vision button {
+  min-height: 44px;
+}
+.future-feedback {
+  display: grid;
+  gap: 1.75rem;
+}
+.future-feedback-workspace {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--color-archive-border);
+  border-radius: 1rem;
+  background: var(--color-archive-surface);
+  box-shadow: 0 0.375rem 1.25rem color-mix(in srgb, var(--color-archive-text-main) 5%, transparent);
+}
+.future-feedback-selector,
+.future-feedback-editor,
+.future-feedback-history {
+  min-width: 0;
+  padding: 0.875rem 1rem;
+}
+.future-feedback-editor,
+.future-feedback-history {
+  border-top: 1px solid var(--color-archive-border);
+}
+.future-feedback-selector .future-section-header,
+.future-feedback-editor .future-section-header,
+.future-feedback-history .future-section-header {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.625rem;
+}
+.future-feedback-editor fieldset {
+  display: grid;
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.future-feedback-editor label {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.future-feedback-editor .future-feedback-context {
+  margin: 0;
+}
+.future-feedback-submit {
+  display: flex;
+  padding-top: 0.125rem;
+}
+.future-feedback-submit > button {
+  flex: 1;
+}
+.future-feedback-group {
+  min-width: 0;
+}
+.future-feedback-group + .future-feedback-group {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--color-archive-border);
+}
+.future-feedback-group .future-section-header {
+  display: flex;
+  justify-content: space-between;
+  margin-block: 0.5rem 0.625rem;
+}
+.future-feedback-group .future-section-header small,
+.future-empty {
+  color: var(--color-archive-text-muted);
+}
+.future-empty {
+  margin-block: 0.5rem;
+  line-height: 1.6;
+}
+.future-feedback-list {
+  display: grid;
+}
+.future-feedback-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--color-archive-border);
+  border-radius: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.future-feedback-row[aria-pressed='true'] {
+  border-left-color: var(--color-archive-accent);
+  padding-left: 0.625rem;
+  background: color-mix(in srgb, var(--color-archive-accent) 8%, transparent);
+}
+.future-feedback-row > span {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.future-feedback-row strong,
+.future-feedback-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.future-feedback-row small,
+.future-feedback-row time {
+  color: var(--color-archive-text-muted);
+  font-size: 0.8125rem;
+}
+.future-feedback-row time {
+  padding-top: 0.125rem;
+  white-space: nowrap;
+}
+.future-feedback-row-end {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem !important;
+  color: var(--color-archive-text-muted);
+}
+.future-feedback-result {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--color-archive-border);
+  overflow-wrap: anywhere;
+}
+.future-feedback-result strong {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.future-feedback-result p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-archive-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.future-goal-detail,
+.future-detail-section {
+  min-width: 0;
+}
+.future-detail-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+}
+.future-detail-heading h2,
+.future-detail-heading small,
+.future-detail-summary,
+.future-detail-meta,
+.future-feedback-progress {
+  margin: 0;
+}
+.future-detail-heading small,
+.future-detail-meta {
+  color: var(--color-archive-text-muted);
+}
+.future-detail-heading h2 {
+  margin-top: 0.25rem;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+.future-detail-summary,
+.future-feedback-progress {
+  margin-top: 1rem;
+  line-height: 1.65;
+}
+.future-detail-meta {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+}
+.future-detail-section {
+  margin-top: 1rem;
+}
+.future-status-control {
+  margin-top: 0.75rem;
+}
+.future-status-control > summary {
+  min-height: 44px;
+  color: var(--color-archive-text-muted);
+}
+.future-feedback-entry {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--color-archive-border);
+}
+.future-feedback-entry > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+.future-feedback-entry small {
+  color: var(--color-archive-text-muted);
+}
+.future-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.future-entry-actions button {
+  min-height: 44px;
+}
+.future-feedback-context {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding: 0.875rem;
+  border: 1px solid var(--color-archive-border);
+  border-radius: 0.875rem;
+}
+.future-feedback-context span,
+.future-feedback-context small {
+  color: var(--color-archive-text-muted);
+  font-size: 0.8125rem;
+}
+@media (max-width: 719px) {
+  .future-page .future-card {
+    padding: 1rem 0 !important;
+    border: 0;
+    border-bottom: 1px solid var(--color-archive-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .future-card .future-long-action-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .future-long-action-controls button {
+    padding-inline: 0.25rem;
+  }
+  .future-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 0.5rem);
+    margin: auto 0 0;
+    padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-bottom: 0;
+    border-radius: 1.25rem 1.25rem 0 0;
+  }
+  .future-dialog > header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    min-height: 4rem;
+    margin-bottom: 0.5rem;
+    background: var(--color-archive-bg);
+  }
+  .future-editor-screen > header {
+    min-height: 3.25rem;
+    margin-bottom: 0.75rem;
+    background: transparent;
+  }
+  .future-dialog:not(.future-editor-screen) .future-form-submit {
+    bottom: calc(-1rem - env(safe-area-inset-bottom));
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+  .future-detail-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .future-detail-heading > button {
+    justify-self: start;
+  }
+}
+
+.future-search {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-archive-border);
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--color-archive-text-main);
+  font: inherit;
+  font-size: 16px;
+}
+.future-search:focus-visible {
+  outline: 2px solid var(--color-archive-accent);
+  outline-offset: 2px;
+}
+
+/* Practice keeps the reading surface quiet; review and writing are revealed only on demand. */
+.future-practice-workspace {
+  min-width: 0;
+  border: 1px solid var(--color-archive-border);
+  border-radius: 1rem;
+  background: var(--color-archive-surface);
+  box-shadow: 0 0.375rem 1.25rem color-mix(in srgb, var(--color-archive-text-main) 5%, transparent);
+}
+.future-practice-records {
+  min-width: 0;
+  padding: 0.875rem 1rem;
+}
+.future-practice-header {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.625rem !important;
+}
+.future-practice-header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.future-practice-header small {
+  color: var(--color-archive-text-muted);
+  font-size: 0.75rem;
+}
+.future-pending-entry {
+  flex: 0 0 auto;
+  min-height: 2.75rem !important;
+  padding: 0.5rem 0 !important;
+  border: 0;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-archive-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.future-pending-entry span {
+  margin-left: 0.125rem;
+  font-size: 1.25rem;
+  font-weight: 400;
+  vertical-align: -0.08em;
+}
+.future-practice-panel {
+  /* This is a native dialog, styled as a complete working page by the shared
+     editor rules.  Keep only the practice-specific inner layout here. */
+  padding: 1rem var(--mobile-page-gutter, 1rem) calc(1rem + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.future-practice-panel > .future-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.75rem;
+}
+.future-practice-panel > .future-section-header > button {
+  min-height: 2.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-archive-text-muted);
+}
+.future-practice-panel .future-feedback-editor {
+  padding: 0;
+  border: 0;
+}
+.future-practice-panel .future-feedback-row:last-child,
+.future-practice-records .future-feedback-result:last-child {
+  border-bottom: 0;
+}
+.growth-loop-completion__content {
+  display: grid;
+  gap: 0.875rem;
+  padding-bottom: 1rem;
+}
+.growth-loop-completion__summary {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.875rem;
+  border: 1px solid var(--color-archive-border);
+  border-radius: 0.875rem;
+  background: var(--color-archive-surface);
+}
+.growth-loop-completion__summary small,
+.growth-loop-completion__summary span,
+.growth-loop-completion__hint {
+  color: var(--color-archive-text-muted);
+  font-size: 0.8125rem;
+}
+.growth-loop-completion__summary strong,
+.growth-loop-completion__summary p,
+.growth-loop-completion__hint {
+  margin: 0;
+}
+.growth-loop-completion__summary p {
+  line-height: 1.65;
+}
+.growth-loop-completion__hint {
+  line-height: 1.6;
+}
+.growth-loop-completion__actions {
+  display: grid;
+  gap: 0.625rem;
+}
+.growth-loop-completion__actions button {
+  width: 100%;
+}
+.future-continue-practice {
+  margin-top: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--ink, #252525) 24%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.future-continue-practice:hover,
+.future-continue-practice:focus-visible {
+  border-color: var(--ink, #252525);
+  background: color-mix(in srgb, var(--ink, #252525) 7%, transparent);
+}
+
+.future-delete-control {
+  display: grid;
+  justify-items: start;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+}
+.future-delete-button,
+.future-danger {
+  min-height: 2.75rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid color-mix(in srgb, #b42318 42%, transparent);
+  border-radius: 0.75rem;
+  background: transparent;
+  color: #b42318;
+  font: inherit;
+  cursor: pointer;
+}
+.future-delete-confirmation {
+  display: grid;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid color-mix(in srgb, #b42318 30%, var(--color-archive-border));
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, #b42318 6%, var(--color-archive-surface));
+}
+.future-delete-confirmation p {
+  margin: 0;
+}
+.future-danger {
+  background: #b42318;
+  color: #fff;
+}
+
+/* Editing is a destination, not a layer over the reading surface.  The
+   dialog owns the viewport on every breakpoint; only its inner form is
+   constrained for comfortable desktop reading. */
+.future-editor-screen,
+.future-practice-panel {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-archive-bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.future-editor-screen {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+.future-editor-screen > header,
+.future-editor-screen .future-editor-form,
+.future-practice-panel > * {
+  width: min(100%, 52rem);
+  margin-inline: auto;
+}
+.future-editor-screen .future-editor-form {
+  flex: 1 0 auto;
+}
+.future-practice-panel {
+  padding: clamp(1rem, 3vw, 2.5rem);
+  color: var(--color-archive-text-main);
+}
+.future-practice-panel::backdrop,
+.future-editor-screen::backdrop {
+  background: var(--color-archive-bg);
+}
+@media (max-width: 719px) {
+  .future-editor-screen,
+  .future-practice-panel {
+    padding: max(1rem, env(safe-area-inset-top)) var(--mobile-page-gutter, 1rem)
+      max(1.25rem, env(safe-area-inset-bottom));
+  }
+  .future-editor-screen > header {
+    position: static;
+    width: 100%;
+    min-height: 2.75rem;
+    margin-bottom: 0.75rem;
+  }
+}

@@ -54,11 +54,13 @@ export const entriesPayloadExceedsMirror = (serializedLength: number): boolean =
 export const DiaryStorageKeys = {
   entries: 'vector_master_vault_entries',
   principles: 'vector_master_vault_principles',
+  patternPrincipleLinks: 'vector_pattern_principle_links_v1',
   passwordHash: 'vector_master_vault_pwd_hash',
   passwordSalt: 'vector_master_vault_pwd_salt',
   guidingStars: 'vector_master_vault_stars',
   containers: 'vector_master_vault_containers',
   actions: 'vector_master_vault_actions',
+  future: 'vector_future_state_v1',
   /** Derived local vectors only. Never mirrored or included in backups. */
   semanticEmbeddings: 'vector_semantic_embeddings_v1',
   /**
@@ -109,6 +111,7 @@ export const getMaterialsStorageKey = (uid: string | undefined) =>
 export const getDiaryStorageKeys = (uid: string | undefined) => ({
   entries: DiaryStorageKeys.entries,
   principles: DiaryStorageKeys.principles,
+  patternPrincipleLinks: DiaryStorageKeys.patternPrincipleLinks,
   passwordHash: DiaryStorageKeys.passwordHash,
   passwordSalt: DiaryStorageKeys.passwordSalt,
   guidingStars: DiaryStorageKeys.guidingStars,
@@ -116,6 +119,7 @@ export const getDiaryStorageKeys = (uid: string | undefined) => ({
   materials: getMaterialsStorageKey(uid),
   containers: DiaryStorageKeys.containers,
   actions: DiaryStorageKeys.actions,
+  future: DiaryStorageKeys.future,
   semanticEmbeddings: DiaryStorageKeys.semanticEmbeddings,
   deviceKeypair: DiaryStorageKeys.deviceKeypair,
   license: DiaryStorageKeys.license,

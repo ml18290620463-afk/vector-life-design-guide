@@ -445,10 +445,10 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           className={`cover-nebula-c absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-screen motion-safe:animate-pulse ${theme === 'light' ? 'bg-white/12' : 'bg-[#082a38]/05'}`}
         ></div>
         <div
-          className={`pointer-events-none absolute inset-0 ${theme === 'light' ? '' : 'bg-[radial-gradient(ellipse_95%_60%_at_50%_108%,color-mix(in_srgb,var(--color-space-deep)_14%,transparent),transparent_55%)]'}`}
+          className={`cover-nebula-floor pointer-events-none absolute inset-0 ${theme === 'light' ? '' : 'bg-[radial-gradient(ellipse_95%_60%_at_50%_108%,color-mix(in_srgb,var(--color-space-deep)_14%,transparent),transparent_55%)]'}`}
         ></div>
         <div
-          className={`pointer-events-none absolute inset-0 ${theme === 'light' ? '' : 'bg-[radial-gradient(ellipse_70%_55%_at_50%_50%,transparent_20%,color-mix(in_srgb,var(--color-space-bg)_55%,transparent)_100%)]'}`}
+          className={`cover-nebula-vignette pointer-events-none absolute inset-0 ${theme === 'light' ? '' : 'bg-[radial-gradient(ellipse_70%_55%_at_50%_50%,transparent_20%,color-mix(in_srgb,var(--color-space-bg)_55%,transparent)_100%)]'}`}
         ></div>
         {/* Phase 4.5 §D — replaced the 3rd-party
                   `grainy-gradients.vercel.app/noise.svg` reference

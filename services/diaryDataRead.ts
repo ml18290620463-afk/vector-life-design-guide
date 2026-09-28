@@ -6,12 +6,18 @@ import type {
   ExperienceFeedback,
   ExperienceFeedbackOutcome,
   ExperienceEdge,
+  PatternPrincipleLink,
+  PatternPrincipleLinkCreator,
+  PatternPrincipleLinkStatus,
+  PatternPrincipleRelation,
   Principle,
 } from '../types';
 import { generateSecureId } from './idGenerator';
 import { asLegacyEntry } from './entryCompat';
-import { readDiaryJson, readDiaryString } from './diaryStorage';
+import { readDiaryString } from './diaryStorage';
+import { storedArray } from './vaultLegacyRead';
 import { DEFAULT_PRINCIPLE_CONFIDENCE } from './experienceFeedback';
+import { vaultTransaction } from './vaultTransaction';
 
 const FEEDBACK_OUTCOMES = new Set<ExperienceFeedbackOutcome>([
   'helpful',
@@ -22,6 +28,22 @@ const FEEDBACK_OUTCOMES = new Set<ExperienceFeedbackOutcome>([
 const ACTION_STATUSES = new Set<ActionItemStatus>(['pending', 'active', 'completed', 'abandoned']);
 const EDGE_KINDS = new Set<ExperienceEdge['kind']>(['supports', 'contradicts', 'sameTheme']);
 const EDGE_SOURCES = new Set<ExperienceEdge['source']>(['local-semantic', 'user-confirmed']);
+const PATTERN_PRINCIPLE_RELATIONS = new Set<PatternPrincipleRelation>([
+  'continue',
+  'adjust',
+  'replace',
+  'balance',
+]);
+const PATTERN_PRINCIPLE_LINK_STATUSES = new Set<PatternPrincipleLinkStatus>([
+  'suggested',
+  'confirmed',
+  'validated',
+  'inactive',
+]);
+const PATTERN_PRINCIPLE_LINK_CREATORS = new Set<PatternPrincipleLinkCreator>([
+  'user',
+  'ai-suggested',
+]);
 
 const sanitizeStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -104,7 +126,7 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
     updatedAt:
       typeof safeEntry.updatedAt === 'number' && !Number.isNaN(safeEntry.updatedAt)
         ? safeEntry.updatedAt
-        : now,
+        : typeof safeEntry.createdAt === 'number' ? safeEntry.createdAt : 0,
     tags: Array.isArray(safeEntry.tags) ? safeEntry.tags : [],
     isLocked: Boolean(safeEntry.isLocked),
     isEncrypted: Boolean(safeEntry.isEncrypted),
@@ -129,6 +151,7 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
 
 export const sanitizePrinciple = (principle: Principle): Principle => ({
   ...principle,
+  tags: sanitizeStringArray(principle.tags),
   application:
     principle.application &&
     typeof principle.application.trigger === 'string' &&
@@ -141,6 +164,7 @@ export const sanitizePrinciple = (principle: Principle): Principle => ({
         }
       : undefined,
   derivedFromEntryIds: sanitizeStringArray(principle.derivedFromEntryIds),
+  sourcePatternIds: sanitizeStringArray(principle.sourcePatternIds),
   confidence:
     typeof principle.confidence === 'number' && Number.isFinite(principle.confidence)
       ? Math.min(1, Math.max(0, principle.confidence))
@@ -163,6 +187,54 @@ export const sanitizePrinciple = (principle: Principle): Principle => ({
       : 0,
 });
 
+export const sanitizePatternPrincipleLink = (value: unknown): PatternPrincipleLink | null => {
+  if (!value || typeof value !== 'object') return null;
+  const link = value as Partial<PatternPrincipleLink>;
+  if (
+    typeof link.patternId !== 'string' ||
+    !link.patternId.trim() ||
+    typeof link.principleId !== 'string' ||
+    !link.principleId.trim()
+  ) {
+    return null;
+  }
+  const now = Date.now();
+  const reason =
+    typeof link.reason === 'string' && link.reason.trim().length > 0
+      ? link.reason.trim().slice(0, 240)
+      : undefined;
+
+  return {
+    id:
+      typeof link.id === 'string' && link.id.trim()
+        ? link.id
+        : generateSecureId('pattern-principle-link'),
+    patternId: link.patternId.trim(),
+    principleId: link.principleId.trim(),
+    relation:
+      link.relation && PATTERN_PRINCIPLE_RELATIONS.has(link.relation) ? link.relation : 'adjust',
+    status:
+      link.status && PATTERN_PRINCIPLE_LINK_STATUSES.has(link.status)
+        ? link.status
+        : 'confirmed',
+    contexts: sanitizeStringArray(link.contexts),
+    triggerIds: sanitizeStringArray(link.triggerIds),
+    reason,
+    createdBy:
+      link.createdBy && PATTERN_PRINCIPLE_LINK_CREATORS.has(link.createdBy)
+        ? link.createdBy
+        : 'user',
+    createdAt:
+      typeof link.createdAt === 'number' && Number.isFinite(link.createdAt)
+        ? link.createdAt
+        : now,
+    updatedAt:
+      typeof link.updatedAt === 'number' && Number.isFinite(link.updatedAt)
+        ? link.updatedAt
+        : now,
+  };
+};
+
 export const sanitizeActionItem = (value: unknown): ActionItem | null => {
   if (!value || typeof value !== 'object') return null;
   const action = value as Partial<ActionItem>;
@@ -182,6 +254,12 @@ export const sanitizeActionItem = (value: unknown): ActionItem | null => {
   return {
     id: action.id,
     title: action.title.trim(),
+    goalId: typeof action.goalId === 'string' ? action.goalId : undefined,
+    scheduledOn: typeof action.scheduledOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(action.scheduledOn)
+      ? action.scheduledOn : typeof action.dueAt === 'number' && Number.isFinite(action.dueAt)
+        ? `${new Date(action.dueAt).getFullYear()}-${String(new Date(action.dueAt).getMonth() + 1).padStart(2, '0')}-${String(new Date(action.dueAt).getDate()).padStart(2, '0')}` : undefined,
+    resultIntent: action.resultIntent === 'outcome' ? 'outcome' : 'preparation',
+    revision: Number.isInteger(action.revision) ? action.revision : 0,
     status: action.status,
     createdAt: action.createdAt,
     question: typeof action.question === 'string' ? action.question.trim() || undefined : undefined,
@@ -209,21 +287,16 @@ export const sanitizeActionItem = (value: unknown): ActionItem | null => {
 };
 
 export const readStoredArray = async <T>(key: string): Promise<T[]> => {
-  const idbValue = await get(key).catch(() => undefined);
-  if (Array.isArray(idbValue)) return idbValue as T[];
-  const localValue = readDiaryJson<T[]>(key);
-  return Array.isArray(localValue) ? localValue : [];
+  return vaultTransaction([key], (v) => storedArray<T>(v[key], key) ?? [], true);
 };
 
 export const readStoredOptionalArray = async <T>(key: string): Promise<T[] | undefined> => {
-  const idbValue = await get(key).catch(() => undefined);
-  if (Array.isArray(idbValue)) return idbValue as T[];
-  const localValue = readDiaryJson<T[]>(key);
-  return Array.isArray(localValue) ? localValue : undefined;
+  return vaultTransaction([key], (v) => storedArray<T>(v[key], key), true);
 };
 
 export const readStoredScalar = async (key: string): Promise<string | null> => {
-  const idbValue = await get(key).catch(() => undefined);
+  const idbValue = await get(key);
   if (typeof idbValue === 'string') return idbValue;
+  if (idbValue !== undefined && idbValue !== null) throw new Error('资料库保护信息无效');
   return readDiaryString(key) || null;
 };

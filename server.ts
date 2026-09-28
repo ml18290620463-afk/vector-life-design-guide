@@ -12,6 +12,8 @@ import { registerStripeRoutes } from './server/stripeRoutes';
 import { createMinter } from './server/licenseMinter';
 import { formatLogError } from './server/scrubLog';
 import { initServerObservability } from './server/observability';
+import { registerAvatarChatRoutes } from './server/avatarChatRoutes';
+import { registerAvatarGrowthRoutes } from './server/avatarGrowthRoutes';
 import {
   chooseProvider,
   fetchOpenRouterFreeModels,
@@ -409,7 +411,9 @@ async function startServer() {
   // `express.raw()` inside the handler chain.
   app.use((req, res, next) => {
     if (req.path === '/api/stripe/webhook') return next();
-    return express.json({ limit: '128kb' })(req, res, next);
+    // Chat can contain 120 saved turns plus reference memories.
+    const limit = req.path === '/api/v1/avatar/chat' ? '4mb' : '128kb';
+    return express.json({ limit })(req, res, next);
   });
 
   app.get('/api/health', (_req, res) => {
@@ -489,6 +493,9 @@ async function startServer() {
       followup_question: null,
     });
   });
+
+  registerAvatarGrowthRoutes(app);
+  registerAvatarChatRoutes(app, providerConfig, [requireAiProxyAuth, aiRequestLimiter]);
 
   app.get('/api/models', modelsListLimiter, requireAiProxyAuth, async (_req, res) => {
     const requestId = randomUUID();

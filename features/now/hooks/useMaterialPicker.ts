@@ -26,8 +26,21 @@ export const useMaterialPicker = (args: {
       args.onError(check.message);
       return;
     }
-    const url = window.prompt('输入 URL');
-    if (!url) return;
+    const input = window.prompt('粘贴网页链接');
+    if (input === null) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    let url: string;
+    try {
+      const parsed = new URL(/^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`);
+      if (!['https:', 'http:'].includes(parsed.protocol) || !parsed.hostname.includes('.')) {
+        throw new Error('invalid link');
+      }
+      url = parsed.href;
+    } catch {
+      args.onError('请输入有效的网页链接，例如 example.com');
+      return;
+    }
     args.onAdd([
       {
         id: generateSecureId('material'),
@@ -53,14 +66,22 @@ export const useMaterialPicker = (args: {
           : 1;
       const maxBytes = type === 'image' ? 10 * 1024 * 1024 : 100 * 1024 * 1024;
       const picked = Array.from(files).slice(0, maxCount);
-      const oversized = picked.find((file) => file.size > maxBytes);
-      if (oversized) {
-        args.onError(
-          type === 'image' ? '单图不能超过 10MB' : '视频不能超过 100MB',
-        );
+      if (picked.some((file) => !file.type.startsWith(`${type}/`))) {
+        args.onError(type === 'image' ? '请选择图片文件' : '请选择视频文件');
         return;
       }
-      const urls = await Promise.all(picked.map((file) => readFileAsDataUrl(file)));
+      const oversized = picked.find((file) => file.size > maxBytes);
+      if (oversized) {
+        args.onError(type === 'image' ? '单图不能超过 10MB' : '视频不能超过 100MB');
+        return;
+      }
+      let urls: string[];
+      try {
+        urls = await Promise.all(picked.map((file) => readFileAsDataUrl(file)));
+      } catch {
+        args.onError('素材读取失败，请重新选择');
+        return;
+      }
       args.onAdd(
         picked.map((file, index) => ({
           id: generateSecureId('material'),

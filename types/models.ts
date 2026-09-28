@@ -33,6 +33,8 @@ export interface PrincipleApplication {
 export interface Principle {
   id: string;
   text: string;
+  /** User-authored labels used to organise principles without changing their meaning. */
+  tags?: string[];
   year: number;
   date?: string; // New: Optional full date for entry-derived principles
   createdAt: number;
@@ -40,6 +42,8 @@ export interface Principle {
   containerId?: string; // New: Link to a storage container
   /** Entry evidence explicitly confirmed when this principle was distilled. */
   derivedFromEntryIds?: string[];
+  /** Confirmed patterns this user-authored principle responds to. */
+  sourcePatternIds?: string[];
   /** Optional P4 trigger-to-action structure, confirmed with the principle. */
   application?: PrincipleApplication;
   /** 0–1 reliability estimate. Missing legacy values are interpreted as 0.5. */
@@ -51,6 +55,24 @@ export interface Principle {
   lastFeedbackAt?: number;
 }
 
+export type PatternPrincipleRelation = 'continue' | 'adjust' | 'replace' | 'balance';
+export type PatternPrincipleLinkStatus = 'suggested' | 'confirmed' | 'validated' | 'inactive';
+export type PatternPrincipleLinkCreator = 'user' | 'ai-suggested';
+
+export interface PatternPrincipleLink {
+  id: string;
+  patternId: string;
+  principleId: string;
+  relation: PatternPrincipleRelation;
+  status: PatternPrincipleLinkStatus;
+  contexts?: string[];
+  triggerIds?: string[];
+  reason?: string;
+  createdBy: PatternPrincipleLinkCreator;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type ActionItemStatus = 'pending' | 'active' | 'completed' | 'abandoned';
 
 /**
@@ -58,6 +80,10 @@ export type ActionItemStatus = 'pending' | 'active' | 'completed' | 'abandoned';
  * intentionally deferred until the principle feedback loop has been validated.
  */
 export interface ActionItem {
+  goalId?: string;
+  scheduledOn?: string;
+  resultIntent?: 'preparation' | 'outcome';
+  revision?: number;
   id: string;
   title: string;
   status: ActionItemStatus;

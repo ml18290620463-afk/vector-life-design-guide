@@ -17,6 +17,7 @@ interface PastEntryTitleProps {
   language?: Language;
   theme?: Theme;
   archiveId?: string;
+  showTimestamp?: boolean;
 }
 
 interface PastEntryBodyProps {
@@ -81,6 +82,7 @@ export const PastEntryTitle: React.FC<PastEntryTitleProps> = ({
   language = 'zh',
   theme = 'dark',
   archiveId,
+  showTimestamp = true,
 }) => {
   const title = getDisplayTitle(entry, language);
   const showTitle = title && !isGeneratedTimeTitle(title);
@@ -88,7 +90,7 @@ export const PastEntryTitle: React.FC<PastEntryTitleProps> = ({
   if (variant === 'mobile') {
     return (
       <>
-        <span className="mobile-past-timeline__time">{formatEntryTime(entry, language)}</span>
+        {showTimestamp && <span className="mobile-past-timeline__time">{formatEntryTime(entry, language)}</span>}
         {showTitle && <strong>{title}</strong>}
       </>
     );

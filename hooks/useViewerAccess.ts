@@ -133,6 +133,39 @@ export const useViewerAccess = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.isEncrypted, entry.content, entry.unlockAt, masterPassword]);
 
+  // The app login supplies the key; individual records never need a second login.
+  useEffect(() => {
+    if (isTimeLocked || !masterPassword) return;
+    let cancelled = false;
+    setViewState('opening');
+    const read = async () => {
+      try {
+        const content = entry.isEncrypted
+          ? await SecurityService.decrypt(entry.content, masterPassword)
+          : entry.content;
+        if (cancelled) return;
+        setDecryptedContent(content);
+        setDecrypted(true);
+        setViewState('reading');
+      } catch {
+        if (cancelled) return;
+        setDecryptionError(t.decryptionFailed);
+        setViewState('sealed');
+      }
+    };
+    void read();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    entry.id,
+    entry.content,
+    entry.isEncrypted,
+    isTimeLocked,
+    masterPassword,
+    t.decryptionFailed,
+  ]);
+
   // Clear the decryption error only when the user actually *changes* the
   // password (typing into the field after a failure). We track the
   // previous value via a ref so the effect doesn't fire when our own
@@ -187,13 +220,13 @@ export const useViewerAccess = ({
 
     setViewState('opening');
     setDecryptionError(null);
-    resetAttempts();
 
     try {
       let content = entry.content;
       if (entry.isEncrypted) {
         content = await SecurityService.decrypt(entry.content, decryptionPassword);
       }
+      resetAttempts();
       // Ceremony delay so the unlock animation reads as intentional.
       scheduleTimeout(() => {
         setDecryptedContent(content);

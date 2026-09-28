@@ -56,7 +56,7 @@ describe('useViewerAccess', () => {
     expect(result.current.decryptedContent).toBe('plain body');
   });
 
-  it('starts sealed when a master password exists, even on plain text entries', () => {
+  it('reads plain text using the existing login without another password', () => {
     const { result } = renderHook(() =>
       useViewerAccess({
         entry: baseEntry(),
@@ -65,17 +65,17 @@ describe('useViewerAccess', () => {
         t,
       }),
     );
-    expect(result.current.viewState).toBe('sealed');
-    expect(result.current.decrypted).toBe(false);
-    expect(result.current.decryptedContent).toBe('');
+    expect(result.current.viewState).toBe('reading');
+    expect(result.current.decrypted).toBe(true);
+    expect(result.current.decryptedContent).toBe('plain body');
   });
 
   it('handleOpenLetter rejects empty input with privateKeyRequired and shakes', async () => {
     const onShake = vi.fn();
     const { result } = renderHook(() =>
       useViewerAccess({
-        entry: baseEntry(),
-        masterPassword: 'master',
+        entry: baseEntry({ isEncrypted: true }),
+        masterPassword: null,
         isTimeLocked: false,
         t,
         onShake,
@@ -94,11 +94,12 @@ describe('useViewerAccess', () => {
   });
 
   it('handleOpenLetter on a wrong password registers a failure and surfaces the failure copy', async () => {
+    vi.spyOn(SecurityService, 'decrypt').mockRejectedValue(new Error('invalid key'));
     const onShake = vi.fn();
     const { result } = renderHook(() =>
       useViewerAccess({
-        entry: baseEntry(),
-        masterPassword: 'master',
+        entry: baseEntry({ isEncrypted: true }),
+        masterPassword: null,
         isTimeLocked: false,
         t,
         onShake,
@@ -145,7 +146,7 @@ describe('useViewerAccess', () => {
     expect(result.current.lockout.failedAttempts).toBe(0);
   });
 
-  it('handleOpenLetter unseals the entry on the correct password', async () => {
+  it('automatically decrypts with the login key without typing a record password', async () => {
     const decryptSpy = vi.spyOn(SecurityService, 'decrypt').mockResolvedValueOnce('decrypted body');
     const { result } = renderHook(() =>
       useViewerAccess({
@@ -156,15 +157,8 @@ describe('useViewerAccess', () => {
       }),
     );
 
-    act(() => result.current.setDecryptionPassword('master'));
     await act(async () => {
-      await result.current.handleOpenLetter();
-    });
-
-    // The hook is now in the 1.2s ceremony delay; advance timers to land
-    // on the reading state.
-    await act(async () => {
-      vi.advanceTimersByTime(1_300);
+      await Promise.resolve();
     });
 
     expect(decryptSpy).toHaveBeenCalledWith('cipher', 'master');

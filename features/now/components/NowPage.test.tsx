@@ -1,7 +1,16 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { NowPage } from './NowPage';
 import type { NowDraft, NowRoute } from '../types/now';
+// jsdom does not implement the native dialog lifecycle.
+beforeEach(() => {
+  vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function () {
+    this.setAttribute('open', '');
+  });
+  vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function () {
+    this.removeAttribute('open');
+  });
+});
 
 const makeDraft = (overrides: Partial<NowDraft> = {}): NowDraft => ({
   text: '',
@@ -20,7 +29,7 @@ describe('NowPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('routes to avatar chat from the top-right entry', () => {
+  it('keeps recording in Now without a duplicate avatar entry', () => {
     const onRouteChange = vi.fn();
 
     render(
@@ -37,20 +46,22 @@ describe('NowPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText('分身记录'));
+    expect(screen.queryByLabelText('分身记录')).toBeNull();
+    fireEvent.click(screen.getByLabelText('心情与事件'));
 
-    expect(onRouteChange).toHaveBeenCalledWith('avatar-chat');
+    expect(onRouteChange).toHaveBeenCalledWith('tags');
   });
 
-  it('shows disabled send reason before the draft is complete', () => {
+  it('saves content without requiring optional tags', () => {
     const showToast = vi.fn();
+    const onSend = vi.fn();
 
     render(
       <NowPage
         draft={makeDraft({ text: '今天完成一次复盘' })}
         setDraft={vi.fn()}
         sending={false}
-        onSend={vi.fn()}
+        onSend={onSend}
         onSaveDraft={vi.fn()}
         onDiscardDraft={vi.fn()}
         onExit={vi.fn()}
@@ -59,11 +70,12 @@ describe('NowPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText('发送过去'));
+    fireEvent.click(screen.getByLabelText('保存到过去'));
 
-    expect(showToast).toHaveBeenCalledWith('请选择心情标签');
+    expect(showToast).not.toHaveBeenCalled();
+    expect(onSend).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('心情与事件')).toBeDefined();
-    expect(screen.getByText('0/2')).toBeDefined();
+    expect(screen.getByText('标签（选填）')).toBeDefined();
   });
 
   it('sends when content and tags are complete', () => {
@@ -87,11 +99,11 @@ describe('NowPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText('发送过去'));
+    fireEvent.click(screen.getByLabelText('保存到过去'));
 
     expect(onSend).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('2/2')).toBeDefined();
-    expect(screen.getByText('平静 · 个人成长')).toBeDefined();
+    expect(screen.queryByText('2/2')).toBeNull();
+    expect(screen.getByText('个人成长 · 平静')).toBeDefined();
   });
 
   it('routes to tags from the anchor point', () => {
@@ -164,10 +176,6 @@ describe('NowPage', () => {
   });
 
   it('prompts to save or discard when leaving a non-empty draft', () => {
-    vi.stubGlobal(
-      'prompt',
-      vi.fn(() => '1'),
-    );
     const onSaveDraft = vi.fn();
     const onExit = vi.fn();
 
@@ -187,6 +195,8 @@ describe('NowPage', () => {
     );
 
     fireEvent.click(screen.getByLabelText('返回过去'));
+    expect(onExit).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '保存草稿' }));
 
     expect(onSaveDraft).toHaveBeenCalledTimes(1);
     expect(onExit).toHaveBeenCalledTimes(1);

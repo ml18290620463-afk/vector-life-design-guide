@@ -1,13 +1,9 @@
 import { lazy } from 'react';
 
+export const FuturePage = lazy(() => import('../future/FuturePage').then((module) => ({ default: module.FuturePage })));
+
 export const PastRepository = lazy(() =>
   import('./PastRepository').then((module) => ({ default: module.PastRepository })),
-);
-
-export const FuturePlaceholder = lazy(() =>
-  import('./FuturePlaceholder').then((module) => ({
-    default: module.FuturePlaceholder,
-  })),
 );
 
 export const MobileShell = lazy(() =>

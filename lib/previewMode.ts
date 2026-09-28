@@ -8,8 +8,9 @@ export const getPreviewMode = (): PreviewMode | null => {
 
 export const isMobileExperience = (): boolean => {
   if (typeof window === 'undefined') return false;
+  const mode = getPreviewMode();
+  if (mode) return mode === 'mobile';
   return (
-    getPreviewMode() === 'mobile' ||
     document.documentElement.classList.contains('vector-force-mobile') ||
     window.matchMedia('(max-width: 767px)').matches
   );
