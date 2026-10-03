@@ -299,10 +299,10 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           !inTitleField &&
           edgeField &&
           (emphasis === 'hero'
-            ? random() < 0.2
+            ? random() < 0.08
             : emphasis === 'mid'
-              ? random() < 0.026
-              : random() < 0.002);
+              ? random() < 0.012
+              : random() < 0.001);
         const depth =
           emphasis === 'hero'
             ? 'near'
@@ -331,6 +331,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             : emphasis === 'mid'
               ? (random() - 0.5) * 4
               : (random() - 0.5) * 5.4;
+        const driftX = (random() - 0.5) * (emphasis === 'hero' ? 11 : emphasis === 'mid' ? 8 : 5);
+        const driftY = (random() - 0.5) * (emphasis === 'hero' ? 13 : emphasis === 'mid' ? 9 : 6);
+        const driftRotate = (random() - 0.5) * (emphasis === 'hero' ? 0.7 : emphasis === 'mid' ? 0.5 : 0.35);
         const baseAlpha =
           emphasis === 'hero'
             ? 0.62 + random() * 0.08
@@ -373,6 +376,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           blurPx,
           depthScale,
           itemRotate,
+          driftX,
+          driftY,
+          driftRotate,
           baseAlpha,
           peakAlpha,
         };
@@ -622,6 +628,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               blurPx,
               depthScale,
               itemRotate,
+              driftX,
+              driftY,
+              driftRotate,
               baseAlpha,
               peakAlpha,
             }) => {
@@ -647,7 +656,6 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     {
                       gridColumn: `span ${columnSpan}`,
                       justifySelf,
-                      transform: `translate(${offsetX}px, ${offsetY}px) rotate(${itemRotate}deg) scale(${depthScale})`,
                       opacity: theme === 'dark' ? 1 : opacity,
                       fontSize,
                       fontWeight: emphasis === 'hero' ? 700 : emphasis === 'mid' ? 600 : 500,
@@ -655,14 +663,14 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                       color:
                         theme === 'dark'
                           ? wallViolet
-                            ? 'rgba(138, 124, 255, 0.68)'
+                            ? 'rgba(112, 122, 148, 0.38)'
                             : `rgba(${coverDarkRgb}, ${coverDarkAlpha})`
                           : wallColor,
                       filter: `blur(${blurPx}px)`,
                       textShadow:
                         theme === 'dark'
                           ? emphasis === 'hero'
-                            ? '0 0 14px rgba(0, 200, 232, 0.14), 0 0 28px rgba(123, 109, 255, 0.08)'
+                            ? '0 0 14px rgba(0, 200, 232, 0.14), 0 0 28px rgba(111, 122, 144, 0.05)'
                             : emphasis === 'mid'
                               ? '0 0 10px rgba(0, 200, 232, 0.08)'
                               : 'none'
@@ -677,6 +685,16 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                       '--signal-delay': `${signalDelay}s`,
                       '--drift-duration': `${driftDuration}s`,
                       '--drift-delay': `${driftDelay}s`,
+                      '--drift-x': `${offsetX}px`,
+                      '--drift-y': `${offsetY}px`,
+                      '--drift-rotate': `${itemRotate}deg`,
+                      '--drift-scale': depthScale,
+                      '--drift-sway-x': `${driftX}px`,
+                      '--drift-sway-y': `${driftY}px`,
+                      '--drift-sway-rotate': `${driftRotate}deg`,
+                      '--drift-return-x': `${driftX * 0.36}px`,
+                      '--drift-return-y': `${driftY * 0.18}px`,
+                      '--drift-return-rotate': `${driftRotate * 0.25}deg`,
                       '--signal-blur': `${blurPx}px`,
                     } as React.CSSProperties
                   }
@@ -1502,9 +1520,11 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 text-shadow: none !important;
               }
               .cover-signal-fragment {
-                animation: signal-breathe var(--signal-duration) ease-in-out var(--signal-delay) infinite;
+                animation:
+                  signal-breathe var(--signal-duration) ease-in-out var(--signal-delay) infinite,
+                  signal-drift var(--drift-duration) cubic-bezier(0.45, 0.05, 0.55, 0.95) var(--drift-delay) infinite;
                 opacity: var(--signal-base);
-                will-change: opacity, filter;
+                will-change: opacity, filter, transform;
               }
 	              .cover-fate-signal {
 	                animation: fate-signal-resonance var(--fate-duration) ease-in-out var(--fate-delay) infinite;
@@ -1794,7 +1814,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 0% { transform: translate3d(0.6vw, -0.12vh, 0) rotate(6deg) scale(1.16); }
                 100% { transform: translate3d(-0.8vw, 0.22vh, 0) rotate(5.2deg) scale(1.14); }
               }
-	              @keyframes signal-breathe {
+              @keyframes signal-breathe {
                 0% { opacity: 0.01; filter: blur(calc(var(--signal-blur) + 1.15px)) brightness(0.56); }
                 9% { opacity: 0.014; filter: blur(calc(var(--signal-blur) + 1.02px)) brightness(0.6); }
                 22% { opacity: calc(var(--signal-base) * 0.58); filter: blur(calc(var(--signal-blur) + 0.32px)) brightness(0.86); }
@@ -1805,6 +1825,32 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 90% { opacity: calc(var(--signal-base) * 0.34); filter: blur(calc(var(--signal-blur) + 0.52px)) brightness(0.76); }
                 95% { opacity: 0.018; filter: blur(calc(var(--signal-blur) + 1px)) brightness(0.62); }
                 100% { opacity: 0.01; filter: blur(calc(var(--signal-blur) + 1.15px)) brightness(0.56); }
+              }
+              @keyframes signal-drift {
+                0%, 100% {
+                  transform: translate3d(var(--drift-x), var(--drift-y), 0) rotate(var(--drift-rotate)) scale(var(--drift-scale));
+                }
+                29% {
+                  transform: translate3d(
+                    calc(var(--drift-x) + var(--drift-sway-x)),
+                    calc(var(--drift-y) - var(--drift-sway-y)),
+                    0
+                  ) rotate(calc(var(--drift-rotate) + var(--drift-sway-rotate))) scale(var(--drift-scale));
+                }
+                63% {
+                  transform: translate3d(
+                    calc(var(--drift-x) - var(--drift-sway-x)),
+                    calc(var(--drift-y) + var(--drift-sway-y)),
+                    0
+                  ) rotate(calc(var(--drift-rotate) - var(--drift-sway-rotate))) scale(var(--drift-scale));
+                }
+                82% {
+                  transform: translate3d(
+                    calc(var(--drift-x) + var(--drift-return-x)),
+                    calc(var(--drift-y) + var(--drift-return-y)),
+                    0
+                  ) rotate(calc(var(--drift-rotate) + var(--drift-return-rotate))) scale(var(--drift-scale));
+                }
               }
               @keyframes core-breath {
                 0%, 100% { opacity: 0.46; filter: blur(0.5px) brightness(0.92); transform: scale(0.985); }
