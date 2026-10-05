@@ -4222,9 +4222,11 @@ html.vector-force-mobile .master-lock-security {
 
 html.vector-force-web,
 html.vector-force-web body {
-  min-width: 1180px;
+  width: 100%;
+  min-width: 0;
   min-height: 100vh;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 html.vector-force-web body {
@@ -4255,6 +4257,12 @@ html.vector-force-web .vector-dashboard-shell {
 }
 
 @media (max-width: 767px) {
+  html.vector-force-web,
+  html.vector-force-web body {
+    width: 100%;
+    min-width: 0;
+  }
+
   html,
   body {
     min-width: 390px;

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { VectorDetector } from './VectorDetector';
 import { Cpu, Scan } from 'lucide-react';
 import { PRESET_PRINCIPLES, TRANSLATIONS } from '../constants';
 import { NOISE_BG_STYLE } from '../lib/noiseTexture';
@@ -42,32 +43,69 @@ type FateSignal = {
   duration: string;
   scale: number;
   rotate: string;
-  tone: 'cyan' | 'violet';
 };
 
 const VectorEntryHudMark: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
     <defs>
-      <linearGradient id="entryHudStroke" x1="10" y1="20" x2="54" y2="44">
-        <stop stopColor="#d9e7f2" stopOpacity="0.94" />
-        <stop offset="0.5" stopColor="#a9d4ff" stopOpacity="0.88" />
-        <stop offset="1" stopColor="#6faee8" stopOpacity="0.70" />
+      <linearGradient
+        id="entryVectorStroke"
+        x1="16"
+        y1="48"
+        x2="50"
+        y2="14"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stopColor="#5baed6" stopOpacity="0.46" />
+        <stop offset="0.56" stopColor="#d7f6ff" stopOpacity="0.94" />
+        <stop offset="1" stopColor="#89d9f6" stopOpacity="0.86" />
       </linearGradient>
+      <radialGradient
+        id="entryVectorCore"
+        cx="0"
+        cy="0"
+        r="1"
+        gradientTransform="translate(30 34) rotate(45) scale(8.5)"
+      >
+        <stop stopColor="#f2fdff" />
+        <stop offset="0.42" stopColor="#8fdcf7" />
+        <stop offset="1" stopColor="#3e92bd" stopOpacity="0.36" />
+      </radialGradient>
     </defs>
     <path
-      d="M8.8 31.9C15 16.8 25.6 20.2 32.5 32C39.4 43.8 50.1 47.1 55.2 32"
-      stroke="url(#entryHudStroke)"
-      strokeWidth="3.4"
+      className="cover-entry-reticle"
+      d="M18.2 17.3A22.8 22.8 0 1 0 46.8 48.7"
+      stroke="url(#entryVectorStroke)"
+      strokeWidth="1.35"
       strokeLinecap="round"
     />
     <path
-      d="M8.8 32.1C14 47.1 25 43.8 32.5 32C40 20.2 50.4 16.8 55.2 32.1"
-      stroke="url(#entryHudStroke)"
-      strokeWidth="2.4"
+      className="cover-entry-vector"
+      d="M30 34 47 17M39.7 17H47v7.3"
+      stroke="url(#entryVectorStroke)"
+      strokeWidth="1.45"
       strokeLinecap="round"
-      opacity="0.76"
+      strokeLinejoin="round"
     />
-    <circle cx="32" cy="32" r="2.1" fill="#d8e6f1" opacity="0.72" />
+    <circle
+      className="cover-entry-core"
+      cx="30"
+      cy="34"
+      r="5.7"
+      fill="url(#entryVectorCore)"
+      stroke="#dbf8ff"
+      strokeOpacity="0.88"
+      strokeWidth="1.05"
+    />
+    <circle className="cover-entry-signal" cx="30" cy="34" r="1.55" fill="#f8feff" />
+    <path
+      className="cover-entry-guide"
+      d="M13.1 34H20.2M30 49.2v-4.6"
+      stroke="#b8ecfb"
+      strokeOpacity="0.58"
+      strokeWidth="1"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
@@ -79,6 +117,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
   onMigrate,
 }) => {
   const [isWarping, setIsWarping] = useState(false);
+  const [isLaunchPrimed, setIsLaunchPrimed] = useState(false);
   const [isLaunchSliding, setIsLaunchSliding] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showCustomPrinciples, setShowCustomPrinciples] = useState(false);
@@ -101,24 +140,30 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
   }, []);
 
   const handleInitialize = () => {
-    if (isLaunchSliding || isWarping) return;
+    if (isLaunchPrimed || isLaunchSliding || isWarping) return;
     const fastMobileEntry =
       typeof window !== 'undefined' &&
       (window.matchMedia('(max-width: 767px)').matches ||
         document.documentElement.classList.contains('vector-force-mobile'));
-    if (fastMobileEntry) {
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    setIsLaunchPrimed(true);
+    if (fastMobileEntry || reduceMotion) {
       setIsLaunchSliding(true);
       setIsWarping(true);
-      scheduleTimeout(onStart, 80);
+      scheduleTimeout(onStart, reduceMotion ? 120 : 80);
       return;
     }
-    setIsLaunchSliding(true);
+
     scheduleTimeout(() => {
-      setIsWarping(true);
+      setIsLaunchSliding(true);
       scheduleTimeout(() => {
-        onStart();
-      }, 820);
-    }, 620);
+        setIsWarping(true);
+        scheduleTimeout(onStart, 320);
+      }, 520);
+    }, 100);
   };
 
   const defaultSourcePrinciples = useMemo<PrincipleSource[]>(
@@ -269,40 +314,32 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
         const centerDistance = Math.hypot((xNorm - 0.5) / 0.5, (yNorm - 0.5) / 0.5);
         const inCoreField = centerDistance < 0.28;
         const inTitleField = Math.abs(xNorm - 0.5) < 0.34 && yNorm > 0.38 && yNorm < 0.68;
+        const inHeroSafeField = Math.abs(xNorm - 0.5) < 0.4 && yNorm > 0.18 && yNorm < 0.84;
         const edgeField = centerDistance > 0.58;
         const emphasisSeed = random();
         const emphasis: 'hero' | 'mid' | 'base' =
-          edgeField && emphasisSeed > 0.982
+          edgeField && !inHeroSafeField && emphasisSeed > 0.982
             ? 'hero'
-            : !inCoreField && !inTitleField && emphasisSeed > (edgeField ? 0.76 : 0.86)
+            : !inHeroSafeField && emphasisSeed > (edgeField ? 0.76 : 0.86)
               ? 'mid'
               : 'base';
         const offsetX = (random() - 0.5) * (emphasis === 'hero' ? 24 : emphasis === 'mid' ? 15 : 8);
         const offsetY =
           (random() - 0.5) * (emphasis === 'hero' ? 28 : emphasis === 'mid' ? 18 : 10);
         const justifySelf = random() > 0.68 ? 'center' : random() > 0.34 ? 'start' : 'end';
+        const heroFieldAttenuation = inHeroSafeField ? 0.78 : 1;
         const coverDarkAlpha =
           emphasis === 'hero'
-            ? 0.56 + random() * 0.08
+            ? (0.47 + random() * 0.06) * heroFieldAttenuation
             : emphasis === 'mid'
-              ? 0.34 + random() * 0.1
-              : 0.14 + random() * 0.08;
+              ? (0.26 + random() * 0.08) * heroFieldAttenuation
+              : (0.1 + random() * 0.06) * heroFieldAttenuation;
         const coverDarkRgb =
           emphasis === 'hero'
-            ? '143, 162, 184'
+            ? '145, 177, 200'
             : emphasis === 'mid'
-              ? '115, 133, 154'
-              : '83, 104, 127';
-        const wallViolet =
-          theme === 'dark' &&
-          !inCoreField &&
-          !inTitleField &&
-          edgeField &&
-          (emphasis === 'hero'
-            ? random() < 0.08
-            : emphasis === 'mid'
-              ? random() < 0.012
-              : random() < 0.001);
+              ? '101, 139, 166'
+              : '65, 97, 124';
         const depth =
           emphasis === 'hero'
             ? 'near'
@@ -310,7 +347,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               ? random() > 0.28
                 ? 'mid'
                 : 'far'
-              : random() > 0.68 || inCoreField || inTitleField
+              : random() > 0.68 || inHeroSafeField
                 ? 'far'
                 : 'mid';
         const driftDuration = 28 + random() * 30;
@@ -331,24 +368,27 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             : emphasis === 'mid'
               ? (random() - 0.5) * 4
               : (random() - 0.5) * 5.4;
-        const driftX = (random() - 0.5) * (emphasis === 'hero' ? 11 : emphasis === 'mid' ? 8 : 5);
-        const driftY = (random() - 0.5) * (emphasis === 'hero' ? 13 : emphasis === 'mid' ? 9 : 6);
-        const driftRotate = (random() - 0.5) * (emphasis === 'hero' ? 0.7 : emphasis === 'mid' ? 0.5 : 0.35);
+        const driftX =
+          (random() - 0.5) * (emphasis === 'hero' ? 5.5 : emphasis === 'mid' ? 4 : 2.5);
+        const driftY =
+          (random() - 0.5) * (emphasis === 'hero' ? 6.5 : emphasis === 'mid' ? 4.5 : 3);
+        const driftRotate =
+          (random() - 0.5) * (emphasis === 'hero' ? 0.28 : emphasis === 'mid' ? 0.22 : 0.16);
         const baseAlpha =
           emphasis === 'hero'
-            ? 0.62 + random() * 0.08
+            ? (0.56 + random() * 0.07) * heroFieldAttenuation
             : emphasis === 'mid'
-              ? 0.32 + random() * 0.09
-              : inCoreField || inTitleField
-                ? 0.08 + random() * 0.05
+              ? (0.29 + random() * 0.08) * heroFieldAttenuation
+              : inHeroSafeField
+                ? 0.065 + random() * 0.04
                 : 0.16 + random() * 0.08;
         const peakAlpha =
           emphasis === 'hero'
-            ? 0.78 + random() * 0.06
+            ? (0.7 + random() * 0.06) * heroFieldAttenuation
             : emphasis === 'mid'
-              ? 0.46 + random() * 0.1
-              : inCoreField || inTitleField
-                ? 0.15 + random() * 0.06
+              ? (0.42 + random() * 0.08) * heroFieldAttenuation
+              : inHeroSafeField
+                ? 0.12 + random() * 0.05
                 : 0.26 + random() * 0.1;
         return {
           principle,
@@ -356,7 +396,6 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           accentIndex: Math.floor(random() * wallPalette.bright.length),
           coverDarkRgb,
           coverDarkAlpha,
-          wallViolet,
           opacity:
             emphasis === 'hero'
               ? random() * 0.08 + 0.66
@@ -383,7 +422,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           peakAlpha,
         };
       }),
-    [signalColumnCount, wallData, wallPalette.bright.length, theme],
+    [signalColumnCount, wallData, wallPalette.bright.length],
   );
 
   const fateSignals = useMemo<FateSignal[]>(() => {
@@ -392,14 +431,12 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
       `fate-signal-${language}-${fateSeed}-${sourcePrinciples.length}`,
     );
     const templates = [
-      { left: '23%', top: '36%', maxWidth: 'min(33vw, 520px)' },
-      { left: '53%', top: '36%', maxWidth: 'min(33vw, 520px)' },
-      { left: '22%', top: '52%', maxWidth: 'min(31vw, 500px)' },
-      { left: '55%', top: '52%', maxWidth: 'min(31vw, 500px)' },
-      { left: '25%', top: '63%', maxWidth: 'min(34vw, 540px)' },
-      { left: '51%', top: '63%', maxWidth: 'min(34vw, 540px)' },
+      { left: '7%', top: '22%', maxWidth: 'min(27vw, 430px)' },
+      { left: '69%', top: '24%', maxWidth: 'min(25vw, 410px)' },
+      { left: '6%', top: '70%', maxWidth: 'min(26vw, 420px)' },
+      { left: '70%', top: '69%', maxWidth: 'min(25vw, 410px)' },
     ];
-    const count = random() > 0.62 ? 2 : 1;
+    const count = 1;
     const used = new Set<number>();
 
     return Array.from({ length: count }, (_, signalIndex) => {
@@ -424,7 +461,6 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
         duration: `${duration.toFixed(2)}s`,
         scale: 0.98 + random() * 0.05,
         rotate: `${((random() - 0.5) * 2).toFixed(2)}deg`,
-        tone: random() > 0.88 ? 'violet' : 'cyan',
       };
     });
   }, [fateSeed, isEmptyCustomPrinciplesMode, language, sourcePrinciples]);
@@ -434,7 +470,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
       className={`cover-screen relative min-h-screen overflow-hidden flex flex-col items-center justify-center perspective-[1000px] transition-colors duration-1000 ${theme === 'light' ? 'cover-light-shell' : ''} ${
         theme === 'light'
           ? 'bg-[radial-gradient(ellipse_120%_86%_at_50%_8%,#fcfefd_0%,#f3fbfa_38%,#e8f4f3_72%,#fbfdfb_100%)]'
-          : 'bg-[radial-gradient(ellipse_125%_100%_at_50%_8%,var(--color-space-layer)_0%,var(--color-space-deep)_44%,var(--color-space-bg)_100%)]'
+          : 'bg-[radial-gradient(ellipse_125%_100%_at_50%_8%,#0d2d43_0%,#0b263a_44%,#061827_100%)]'
       }`}
     >
       {/* Nebula Atmosphere Layers */}
@@ -449,6 +485,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
         ></div>
         <div
           className={`cover-nebula-c absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-screen motion-safe:animate-pulse ${theme === 'light' ? 'bg-white/12' : 'bg-[#082a38]/05'}`}
+        ></div>
+        <div
+          className={`cover-sky-bloom pointer-events-none absolute left-1/2 top-[5%] h-[62vh] w-[min(92vw,1120px)] -translate-x-1/2 rounded-full blur-[72px] ${theme === 'light' ? 'opacity-0' : 'bg-[radial-gradient(ellipse_at_center,rgba(79,151,197,0.13)_0%,rgba(42,105,151,0.075)_42%,transparent_74%)]'}`}
         ></div>
         <div
           className={`cover-nebula-floor pointer-events-none absolute inset-0 ${theme === 'light' ? '' : 'bg-[radial-gradient(ellipse_95%_60%_at_50%_108%,color-mix(in_srgb,var(--color-space-deep)_14%,transparent),transparent_55%)]'}`}
@@ -578,9 +617,10 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
       {/* The Data Wall */}
       <div
-        className={`cover-data-wall ${theme === 'light' ? 'cover-light-wall' : ''} absolute inset-[-30%] w-[170%] h-[170%] grid content-center justify-items-start auto-rows-min gap-x-8 gap-y-4 px-10 py-10
+        aria-hidden="true"
+        className={`cover-data-wall ${theme === 'light' ? 'cover-light-wall' : ''} ${isLaunchPrimed ? 'cover-data-wall--primed' : ''} ${isLaunchSliding ? 'cover-data-wall--launching' : ''} absolute inset-[-30%] w-[170%] h-[170%] grid content-center justify-items-start auto-rows-min gap-x-8 gap-y-4 px-10 py-10
               select-none pointer-events-none z-[2]
-              ${theme === 'dark' ? 'opacity-[0.84] brightness-[1.03] contrast-[1.08]' : ''}
+              ${theme === 'dark' ? 'opacity-[0.79] brightness-[1.02] contrast-[1.06]' : ''}
               ${theme === 'light' ? 'opacity-[0.10] saturate-[0.32] blur-[0.95px]' : ''}
               ${isWarping ? 'animate-[warp-speed_1s_ease-in_forwards]' : ''}
             `}
@@ -620,7 +660,6 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               key,
               coverDarkRgb,
               coverDarkAlpha,
-              wallViolet,
               driftDuration,
               driftDelay,
               signalDuration,
@@ -661,11 +700,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                       fontWeight: emphasis === 'hero' ? 700 : emphasis === 'mid' ? 600 : 500,
                       letterSpacing: emphasis === 'hero' ? '0.008em' : '0.012em',
                       color:
-                        theme === 'dark'
-                          ? wallViolet
-                            ? 'rgba(112, 122, 148, 0.38)'
-                            : `rgba(${coverDarkRgb}, ${coverDarkAlpha})`
-                          : wallColor,
+                        theme === 'dark' ? `rgba(${coverDarkRgb}, ${coverDarkAlpha})` : wallColor,
                       filter: `blur(${blurPx}px)`,
                       textShadow:
                         theme === 'dark'
@@ -718,7 +753,6 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           fateSignals.map((signal, signalIndex) => {
             const source =
               signal.principle.source || signal.principle.date || signal.principle.year;
-            const isViolet = signal.tone === 'violet';
             return (
               <div
                 key={signal.key}
@@ -732,21 +766,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     '--fate-delay': signal.delay,
                     '--fate-duration': signal.duration,
                     '--fate-color':
-                      theme === 'dark'
-                        ? isViolet
-                          ? 'rgba(198, 190, 254, 0.48)'
-                          : 'rgba(205, 250, 252, 0.46)'
-                        : isViolet
-                          ? 'rgba(79, 70, 229, 0.5)'
-                          : 'rgba(0, 122, 140, 0.52)',
+                      theme === 'dark' ? 'rgba(205, 250, 252, 0.46)' : 'rgba(0, 122, 140, 0.52)',
                     '--fate-glow':
-                      theme === 'dark'
-                        ? isViolet
-                          ? 'rgba(123, 109, 255, 0.13)'
-                          : 'rgba(0, 200, 232, 0.12)'
-                        : isViolet
-                          ? 'rgba(123, 109, 255, 0.12)'
-                          : 'rgba(0, 200, 232, 0.1)',
+                      theme === 'dark' ? 'rgba(0, 200, 232, 0.12)' : 'rgba(0, 200, 232, 0.1)',
                   } as React.CSSProperties
                 }
               >
@@ -779,186 +801,16 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
       {/* Main UI Content */}
       <div
-        className={`cover-hero-stack relative z-20 flex flex-col items-center text-center transition-all duration-700 ${mounted && !isWarping ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-sm'}`}
+        className={`cover-hero-stack relative z-20 flex flex-col items-center text-center transition-all duration-700 ${isLaunchPrimed ? 'cover-hero-stack--primed' : ''} ${isLaunchSliding ? 'cover-hero-stack--launching' : ''} ${mounted && !isWarping ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-sm'}`}
       >
-        <div className="cover-core-stage mb-8 relative w-56 h-56 md:w-[19.5rem] md:h-[19.5rem] flex items-center justify-center [perspective:1000px] cover-enter cover-enter--3">
-          <div
-            className={`cover-core-breath ${isLaunchSliding ? 'cover-core-breath--launching' : ''} absolute inset-0 border rounded-full blur-[0.5px] ${theme === 'light' ? 'border-[#86b4bb]/22 shadow-[0_0_26px_rgba(134,180,187,0.16),0_0_82px_rgba(255,255,255,0.72)]' : 'border-[color:var(--color-cover-status-rule)]/25 shadow-[0_0_20px_rgba(0,200,232,0.08)]'}`}
-          ></div>
-          <div
-            className={`cover-core-breath ${isLaunchSliding ? 'cover-core-breath--launching' : ''} absolute inset-[28px] rounded-full pointer-events-none ${theme === 'light' ? 'bg-[radial-gradient(circle,rgba(255,255,255,0.46)_0%,rgba(134,180,187,0.10)_42%,transparent_68%)]' : 'bg-[radial-gradient(circle,rgba(0,200,232,0.14)_0%,rgba(123,109,255,0.08)_42%,transparent_68%)]'}`}
-          ></div>
-          <div
-            className={`cover-purple-aura absolute inset-[30px] rounded-full pointer-events-none mix-blend-screen ${theme === 'light' ? 'bg-[radial-gradient(circle,rgba(134,180,187,0.14)_0%,rgba(214,232,231,0.14)_42%,transparent_72%)]' : 'bg-[radial-gradient(circle,rgba(123,109,255,0.16)_0%,rgba(123,109,255,0.08)_40%,rgba(0,200,232,0.025)_58%,transparent_74%)]'}`}
-          ></div>
-          {/* Layer 1 — outer grain track */}
-          <div className="cover-orbit-grain absolute inset-[-14px] animate-[spin-z_200s_linear_infinite] max-md:[&>span:nth-child(odd)]:hidden pointer-events-none blur-[0.5px]">
-            {Array.from({ length: 64 }).map((_, i) => {
-              const angle = (i / 64) * Math.PI * 2 - Math.PI / 2;
-              const x = 50 + Math.cos(angle) * 50.8;
-              const y = 50 + Math.sin(angle) * 50.8;
-              const size = i % 10 === 0 ? 1.05 : i % 4 === 0 ? 0.8 : 0.55;
-              return (
-                <span
-                  key={`orbit-particle-${i}`}
-                  className={`absolute rounded-full animate-[orbit-grain-twinkle_5.8s_ease-in-out_infinite] ${theme === 'light' ? 'bg-white shadow-[0_0_4px_rgba(134,180,187,0.20)]' : 'bg-cyan-100 shadow-[0_0_3px_rgba(103,232,249,0.08)]'}`}
-                  style={{
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    left: `calc(${x}% - ${size / 2}px)`,
-                    top: `calc(${y}% - ${size / 2}px)`,
-                    opacity: i % 7 === 0 ? 0.2 : i % 2 === 0 ? 0.11 : 0.05,
-                    animationDelay: `${(i % 10) * 0.28}s`,
-                    animationDuration: `${5.2 + (i % 6) * 0.42}s`,
-                  }}
-                ></span>
-              );
-            })}
-          </div>
-          {/* Layer 2 — rare violet grain（#7B6DFF · 35% 体系，中央神秘感） */}
-          <div className="cover-orbit-violet absolute inset-[10px] z-[1] max-md:opacity-[0.72] max-md:[&>span:nth-child(3n)]:hidden pointer-events-none mix-blend-screen">
-            {Array.from({ length: 128 }).map((_, i) => {
-              const angle = (i / 128) * Math.PI * 2 - Math.PI / 2;
-              const x = 50 + Math.cos(angle) * 46.2;
-              const y = 50 + Math.sin(angle) * 46.2;
-              const size = i % 12 === 0 ? 1.35 : i % 4 === 0 ? 1.05 : 0.82;
-              const isDark = theme === 'dark';
-              return (
-                <span
-                  key={`static-violet-grain-${i}`}
-                  className={`absolute rounded-full animate-[static-grain-twinkle_7.2s_ease-in-out_infinite] ${theme === 'light' ? 'bg-[#dbe9e6] shadow-[0_0_5px_rgba(134,180,187,0.18)]' : 'bg-[var(--color-cover-orbit-violet)] shadow-[0_0_5px_rgba(123,109,255,0.22)]'}`}
-                  style={{
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    left: `calc(${x}% - ${size / 2}px)`,
-                    top: `calc(${y}% - ${size / 2}px)`,
-                    opacity: isDark
-                      ? i % 11 === 0
-                        ? 0.35
-                        : i % 3 === 0
-                          ? 0.2
-                          : 0
-                      : i % 6 === 0
-                        ? 0.58
-                        : i % 2 === 0
-                          ? 0.38
-                          : 0.24,
-                    animationDelay: `${(i % 16) * 0.22}s`,
-                    animationDuration: `${6.4 + (i % 5) * 0.34}s`,
-                  }}
-                ></span>
-              );
-            })}
-          </div>
-          {/* Layer 3 — calibration tick orbit */}
-          <div className="cover-orbit-ticks absolute inset-[8px] animate-[spin-z_112s_linear_infinite] blur-[0.25px] pointer-events-none">
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div
-                key={i}
-                className={`absolute top-0 left-1/2 w-[1px] h-2.5 origin-bottom transform -translate-x-1/2 ${theme === 'light' ? 'bg-[#6f9da4]/38 shadow-[0_0_4px_rgba(134,180,187,0.18)]' : 'bg-cyan-300/12'}`}
-                style={{ transform: `rotate(${i * 22.5}deg) translateY(0)` }}
-              ></div>
-            ))}
-          </div>
-          {/* Layer 4 — sweep orbit */}
-          <div className="cover-orbit-sweep absolute inset-[18px] rounded-full overflow-hidden opacity-22 pointer-events-none">
-            <div
-              className={`absolute top-1/2 left-1/2 w-1/2 h-[1.25px] origin-left animate-[radar-spin_9s_linear_infinite] ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#86b4bb]/42 to-white shadow-[0_0_10px_rgba(134,180,187,0.26)]' : 'bg-gradient-to-r from-transparent via-cyan-300/16 to-cyan-200'}`}
-            ></div>
-          </div>
-          <div
-            className={`cover-orbit-tail absolute inset-[34px] rounded-full pointer-events-none ${theme === 'light' ? 'bg-[conic-gradient(from_18deg,transparent_0deg,transparent_250deg,rgba(134,180,187,0.11)_286deg,rgba(255,255,255,0.34)_318deg,transparent_352deg)]' : 'bg-[conic-gradient(from_18deg,transparent_0deg,transparent_250deg,rgba(0,200,232,0.11)_286deg,rgba(123,109,255,0.20)_318deg,transparent_352deg)]'}`}
-          ></div>
-          {/* Layer 4.5 — industrial hairline calibration */}
-          <div className="absolute inset-[24px] rounded-full pointer-events-none opacity-70">
-            {Array.from({ length: 48 }).map((_, i) => (
-              <span
-                key={`hairline-${i}`}
-                className={`absolute left-1/2 top-0 w-px origin-[50%_136px] md:origin-[50%_160px] ${i % 6 === 0 ? 'h-3' : i % 3 === 0 ? 'h-2' : 'h-1'} ${theme === 'light' ? 'bg-[#6f9da4]/26 shadow-[0_0_3px_rgba(134,180,187,0.14)]' : 'bg-cyan-100/14'}`}
-                style={{
-                  transform: `rotate(${i * 7.5}deg) translateX(-50%)`,
-                }}
-              />
-            ))}
-          </div>
-          <div className="absolute inset-[34px] rounded-full pointer-events-none opacity-60">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <span
-                key={`micro-code-${i}`}
-                className={`absolute font-mono text-[7px] tracking-[0.24em] ${theme === 'light' ? 'text-[#6f9da4]/22' : 'text-cyan-100/22'}`}
-                style={{
-                  left: `${50 + Math.cos((i / 8) * Math.PI * 2) * 48}%`,
-                  top: `${50 + Math.sin((i / 8) * Math.PI * 2) * 48}%`,
-                  transform: `translate(-50%, -50%) rotate(${i * 45}deg)`,
-                }}
-              >
-                {`0x${(i * 17 + 42).toString(16).toUpperCase()}`}
-              </span>
-            ))}
-          </div>
-          {/* Layer 5 — primary orbit */}
-          <div
-            className={`cover-orbit-primary absolute z-20 inset-[40px] border-[2.5px] rounded-full animate-[spin-z_18s_linear_infinite] transition-all duration-500 pointer-events-none ${theme === 'light' ? (showCustomPrinciples ? 'border-t-white border-l-[#86b4bb]/72 border-r-[#86b4bb]/72 border-b-white shadow-[0_0_32px_rgba(134,180,187,0.28),0_0_17px_rgba(255,255,255,0.84),0_96px_48px_-44px_rgba(134,180,187,0.11)]' : 'border-t-white border-l-[#86b4bb]/56 border-r-[#86b4bb]/56 border-b-white shadow-[0_0_28px_rgba(134,180,187,0.22),0_0_15px_rgba(255,255,255,0.76),0_86px_42px_-42px_rgba(134,180,187,0.09)]') : showCustomPrinciples ? 'border-t-cyan-100 border-l-cyan-100/72 border-r-cyan-100/72 border-b-cyan-100 shadow-[0_0_40px_rgba(0,200,232,0.42),0_0_24px_rgba(0,200,232,0.22)]' : 'border-t-cyan-100 border-l-cyan-100/55 border-r-cyan-100/55 border-b-cyan-100 shadow-[0_0_32px_rgba(0,200,232,0.34),0_0_18px_rgba(0,200,232,0.16)]'}`}
-          >
-            <div
-              className={`absolute top-0 left-1/2 w-2.5 h-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ${theme === 'light' ? 'bg-white shadow-[0_0_16px_rgba(134,180,187,0.34),0_0_6px_rgba(255,255,255,0.95)]' : 'bg-cyan-50 shadow-[0_0_26px_rgba(0,200,232,0.55)]'}`}
-            ></div>
-            <div
-              className={`absolute inset-0 rounded-full border-[3px] border-transparent ${theme === 'light' ? 'border-t-[#6f9da4]/24 border-r-[#6f9da4]/17' : 'border-t-black/42 border-r-black/32'} opacity-80`}
-            ></div>
-            <div
-              className={`absolute inset-[-1px] rounded-full border-[3px] border-transparent ${theme === 'light' ? 'border-b-white/88 border-l-[#dbe9e6]/72 shadow-[0_0_12px_rgba(134,180,187,0.16)]' : 'border-b-cyan-50/92 border-l-cyan-50/82 shadow-[0_0_16px_rgba(34,211,238,0.30)]'}`}
-            ></div>
-          </div>
-          <div
-            className={`cover-orbit-secondary cover-orbit-spin-x absolute z-30 inset-[60px] border-[3px] rounded-full animate-[spin-x_16s_linear_infinite] [transform-style:preserve-3d] transition-all duration-500 pointer-events-none ${theme === 'light' ? (showCustomPrinciples ? 'border-[#dbe9e6]/58 shadow-[0_0_16px_rgba(134,180,187,0.14)]' : 'border-[#dbe9e6]/42 shadow-[0_0_12px_rgba(134,180,187,0.10)]') : showCustomPrinciples ? 'border-cyan-400/28 shadow-[0_0_14px_rgba(0,200,232,0.14)]' : 'border-cyan-400/18 shadow-[0_0_10px_rgba(0,200,232,0.08)]'}`}
-          >
-            <div
-              className={`absolute inset-0 border-t-[2px] rounded-full blur-0 transition-all duration-500 ${theme === 'light' ? (showCustomPrinciples ? 'border-t-white/70 shadow-[0_0_8px_rgba(134,180,187,0.12)]' : 'border-t-white/56 shadow-[0_0_6px_rgba(134,180,187,0.10)]') : showCustomPrinciples ? 'border-t-cyan-300/55 shadow-[0_0_8px_rgba(0,200,232,0.12)]' : 'border-t-cyan-300/38 shadow-[0_0_5px_rgba(0,200,232,0.07)]'}`}
-            ></div>
-            <div
-              className={`absolute inset-0 rounded-full border-[4px] border-transparent ${theme === 'light' ? 'border-l-[#6f9da4]/16 border-b-[#6f9da4]/10' : 'border-l-black/36 border-b-black/24'} opacity-75`}
-            ></div>
-            <div
-              className={`absolute inset-[-0.5px] rounded-full border-[2px] border-transparent ${theme === 'light' ? 'border-t-white/56 border-r-[#dbe9e6]/50 shadow-[0_0_7px_rgba(134,180,187,0.10)]' : 'border-t-cyan-200/42 border-r-cyan-200/32 shadow-[0_0_6px_rgba(0,200,232,0.08)]'}`}
-            ></div>
-          </div>
-          {/* spin-y 内环：色系对齐「观测系统连接」标签（浅 blue-600 / 深 cyan-300） */}
-          <div
-            className={`cover-orbit-secondary cover-orbit-spin-y absolute z-10 inset-[80px] border-[1.5px] rounded-full animate-[spin-y_24s_linear_infinite] [transform-style:preserve-3d] transition-all duration-500 pointer-events-none ${theme === 'light' ? (showCustomPrinciples ? 'border-[#86b4bb]/38 shadow-[0_0_15px_rgba(134,180,187,0.15)]' : 'border-[#86b4bb]/30 shadow-[0_0_11px_rgba(134,180,187,0.11)]') : showCustomPrinciples ? 'border-cyan-300/28 shadow-[0_0_14px_rgba(103,232,249,0.10)]' : 'border-cyan-300/18 shadow-[0_0_10px_rgba(103,232,249,0.07)]'}`}
-          >
-            <div
-              className={`absolute inset-0 border-l-[3px] rounded-full transition-all duration-500 ${theme === 'light' ? (showCustomPrinciples ? 'border-l-white/70 shadow-[0_0_9px_rgba(134,180,187,0.16)]' : 'border-l-white/54 shadow-[0_0_7px_rgba(134,180,187,0.12)]') : showCustomPrinciples ? 'border-l-cyan-300/50 shadow-[0_0_14px_rgba(103,232,249,0.14)]' : 'border-l-cyan-300/36 shadow-[0_0_10px_rgba(103,232,249,0.10)]'}`}
-            ></div>
-            <div
-              className={`absolute inset-0 rounded-full border-[3px] border-transparent ${theme === 'light' ? 'border-t-[#6f9da4]/18 border-l-[#6f9da4]/14' : 'border-t-black/40 border-l-black/30'} opacity-78`}
-            ></div>
-            <div
-              className={`absolute inset-[-1px] rounded-full border-[3px] border-transparent ${theme === 'light' ? 'border-b-[#dbe9e6]/60 border-r-white/56 shadow-[0_0_9px_rgba(134,180,187,0.11)]' : 'border-b-cyan-200/64 border-r-cyan-200/50 shadow-[0_0_12px_rgba(165,243,252,0.16)]'}`}
-            ></div>
-          </div>
-          {/* Layer 7 — inner temporal orbit（深色仅用 #7B6DFF 轨迹，不用玫红） */}
-          <div
-            className={`cover-orbit-inner absolute inset-[100px] md:inset-[126px] rounded-full animate-[spin-diagonal_28s_linear_infinite] [transform-style:preserve-3d] transition-all duration-500 pointer-events-none ${theme === 'light' ? (showCustomPrinciples ? 'shadow-[0_0_14px_rgba(134,180,187,0.16)]' : 'shadow-[0_0_10px_rgba(134,180,187,0.11)]') : showCustomPrinciples ? 'shadow-[0_0_16px_rgba(123,109,255,0.2)]' : 'shadow-[0_0_12px_rgba(123,109,255,0.12)]'}`}
-            style={{
-              background:
-                theme === 'light'
-                  ? showCustomPrinciples
-                    ? 'conic-gradient(from 150deg, rgba(134, 180, 187, 0.22), rgba(255, 255, 255, 0.68), rgba(214, 232, 231, 0.24), rgba(134, 180, 187, 0.20), rgba(134, 180, 187, 0.22))'
-                    : 'conic-gradient(from 150deg, rgba(134, 180, 187, 0.12), rgba(255, 255, 255, 0.52), rgba(214, 232, 231, 0.18), rgba(134, 180, 187, 0.13), rgba(134, 180, 187, 0.12))'
-                  : showCustomPrinciples
-                    ? 'conic-gradient(from 150deg, rgba(123, 109, 255, 0.2), rgba(123, 109, 255, 0.52), rgba(123, 109, 255, 0.26), rgba(123, 109, 255, 0.44), rgba(123, 109, 255, 0.2))'
-                    : 'conic-gradient(from 150deg, rgba(123, 109, 255, 0.1), rgba(123, 109, 255, 0.28), rgba(123, 109, 255, 0.14), rgba(123, 109, 255, 0.22), rgba(123, 109, 255, 0.1))',
-              padding: '1.5px',
-            }}
-          >
-            <div
-              className={`absolute inset-[1.5px] rounded-full ${theme === 'light' ? 'bg-white/10' : 'bg-black/35'}`}
-            ></div>
-            <div
-              className={`absolute inset-0 rounded-full border-r-[2px] border-transparent transition-all duration-500 ${theme === 'light' ? (showCustomPrinciples ? 'border-r-white/72' : 'border-r-white/54') : showCustomPrinciples ? 'border-r-[rgba(123,109,255,0.72)]' : 'border-r-[rgba(123,109,255,0.48)]'}`}
-            ></div>
-          </div>
+        <div
+          className={`cover-core-stage mb-8 relative w-56 h-56 md:w-[19.5rem] md:h-[19.5rem] flex items-center justify-center [perspective:1000px] cover-enter cover-enter--3 ${isLaunchPrimed ? 'cover-core-stage--primed' : ''}`}
+        >
+          <span
+            className={`cover-detector-aura pointer-events-none absolute inset-[-18%] rounded-full ${theme === 'light' ? 'opacity-0' : 'bg-[radial-gradient(circle_at_50%_48%,rgba(139,207,239,0.11)_0%,rgba(69,143,187,0.075)_31%,rgba(29,83,123,0.035)_55%,transparent_74%)] blur-[24px]'}`}
+            aria-hidden="true"
+          />
+          <VectorDetector />
           <button
             type="button"
             onClick={() => {
@@ -984,26 +836,8 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   ? 'Click to switch to your principles view'
                   : 'Click to enter the reflection prompt view'
             }
-            className={`relative z-40 w-16 h-16 flex items-center justify-center transition-transform duration-300 ${hasCustomPrinciples ? 'cursor-pointer hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-300/60 focus:ring-offset-2 focus:ring-offset-[var(--color-space-bg)]' : 'cursor-pointer'} ${showCustomPrinciples ? 'scale-105' : ''}`}
-          >
-            <div
-              className={`absolute inset-[-12px] rounded-full border transition-all duration-500 ${showCustomPrinciples ? (theme === 'light' ? 'border-[#86b4bb]/32 animate-[mode-pulse_3.1s_ease-in-out_infinite]' : 'border-cyan-300/22 animate-[mode-pulse_3.1s_ease-in-out_infinite]') : 'border-transparent'}`}
-            ></div>
-            <div
-              className={`absolute inset-0 rounded-full blur-md motion-reduce:animate-none ${theme === 'light' ? 'animate-[cover-outer-glow_5s_ease-in-out_infinite] bg-white' : 'animate-[cover-outer-glow_5s_ease-in-out_infinite] bg-[#5eeaf2]/08'}`}
-            ></div>
-            <div
-              className={`absolute inset-[-4px] rounded-full blur-lg motion-reduce:animate-none ${theme === 'light' ? 'animate-[cover-outer-glow_4.2s_ease-in-out_infinite] bg-[#86b4bb]/16' : 'animate-[cover-outer-glow_4.2s_ease-in-out_infinite] bg-[#00c8e8]/14'}`}
-            ></div>
-            <div
-              className={`absolute inset-0 border-2 rounded-full flex items-center justify-center transition-all duration-300 ${theme === 'light' ? (showCustomPrinciples ? 'border-[#86b4bb] bg-white/92 shadow-[0_0_24px_rgba(134,180,187,0.24),inset_0_0_18px_rgba(219,233,230,0.70)]' : 'border-[#86b4bb]/92 bg-white/90 shadow-[0_0_18px_rgba(134,180,187,0.18),inset_0_0_16px_rgba(219,233,230,0.60)]') : showCustomPrinciples ? 'border-cyan-300 bg-cyan-950/90 shadow-[0_0_24px_rgba(34,211,238,0.35)]' : 'border-white bg-black/50'}`}
-            >
-              <span
-                className={`cover-core-scan pointer-events-none absolute inset-[7px] rounded-full ${theme === 'light' ? 'bg-[linear-gradient(180deg,transparent_0%,rgba(134,180,187,0.16)_48%,rgba(255,255,255,0.32)_51%,transparent_56%)]' : 'bg-[linear-gradient(180deg,transparent_0%,rgba(123,109,255,0.16)_47%,rgba(94,234,242,0.12)_50%,transparent_55%)]'}`}
-              ></span>
-              <Cpu className="cover-core-hud-mark pointer-events-none relative z-[1] h-8 w-8 opacity-95 motion-reduce:animate-none md:h-9 md:w-9" />
-            </div>
-          </button>
+            className="detector-core-control"
+          ></button>
           <div className="cover-core-status cover-core-status--identity absolute left-[calc(100%+2.75rem)] top-2 flex flex-col items-start gap-2 min-w-[180px]">
             <div
               className={`flex items-center gap-2 text-xs font-mono pl-3 ${theme === 'light' ? 'text-[#547f89]/72 drop-shadow-[0_0_8px_rgba(134,180,187,0.08)]' : 'text-[color:var(--color-cover-status-title)]'}`}
@@ -1058,36 +892,6 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               {language === 'zh' ? '观测系统连接' : 'Observation Active'}
             </div>
           </div>
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.32]"
-            viewBox="0 0 320 320"
-          >
-            <line
-              x1="160"
-              y1="160"
-              x2="280"
-              y2="80"
-              stroke={theme === 'light' ? '#86b4bb' : 'var(--color-vector-cyan-pure)'}
-              strokeWidth="1"
-              strokeDasharray="4 2"
-            />
-            <line
-              x1="160"
-              y1="160"
-              x2="40"
-              y2="240"
-              stroke={theme === 'light' ? '#dbe9e6' : '#7b6dff'}
-              strokeWidth="1"
-              strokeDasharray="4 2"
-            />
-            <circle
-              cx="280"
-              cy="80"
-              r="2"
-              fill={theme === 'light' ? '#86b4bb' : 'var(--color-vector-cyan-pure)'}
-            />
-            <circle cx="40" cy="240" r="2" fill={theme === 'light' ? '#dbe9e6' : '#7b6dff'} />
-          </svg>
         </div>
 
         {/* Phase 4.5 §D — `font-black` (900) was being
@@ -1099,7 +903,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   uses the real TTF — same heroic visual weight,
                   no paint delay. */}
         <h1
-          className={`cover-title cover-enter cover-enter--1 relative z-10 text-5xl sm:text-7xl md:text-9xl font-bold tracking-[0.08em] md:tracking-[0.12em] mb-2 max-md:mix-blend-normal md:mix-blend-plus-lighter [transform:scaleX(1.045)] ${theme === 'light' ? 'text-[#303846] md:[text-shadow:0_1px_0_rgba(255,255,255,0.76),0_10px_34px_rgba(84,127,137,0.07)]' : 'text-[color:var(--color-cover-hero-title)] md:drop-shadow-[0_2px_0_rgba(123,109,255,0.22)] md:[text-shadow:0_0_20px_rgba(0,200,232,0.10),0_0_34px_rgba(123,109,255,0.12),0_8px_26px_rgba(0,0,0,0.34)]'}`}
+          className={`cover-title cover-enter cover-enter--1 relative z-10 text-5xl sm:text-7xl md:text-9xl font-bold tracking-[0.08em] md:tracking-[0.12em] mb-2 max-md:mix-blend-normal md:mix-blend-plus-lighter [transform:scaleX(1.045)] ${theme === 'light' ? 'text-[#303846] md:[text-shadow:0_1px_0_rgba(255,255,255,0.76),0_10px_34px_rgba(84,127,137,0.07)]' : 'text-[#f5ffff] md:drop-shadow-[0_2px_0_rgba(148,224,236,0.14)] md:[text-shadow:0_0_20px_rgba(111,216,232,0.10),0_0_32px_rgba(137,210,224,0.08),0_7px_22px_rgba(1,15,24,0.20)]'}`}
           data-text="VECTOR"
         >
           VECTOR
@@ -1108,7 +912,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           className={`cover-subtitle cover-enter cover-enter--2 relative z-10 flex items-center gap-4 font-bold text-xl md:text-3xl tracking-[0.5em] md:tracking-[0.54em] uppercase mb-4 ${theme === 'light' ? 'text-[#3f4b62]' : ''}`}
         >
           <span
-            className={`h-[1px] w-24 md:w-36 ${theme === 'light' ? 'bg-gradient-to-l from-[#3f4b62]/28 via-[#86b4bb]/12 to-transparent' : 'bg-gradient-to-l from-[color:var(--color-cover-hero-rule)] via-[#7b6dff]/55 to-transparent shadow-[0_0_12px_rgba(0,200,232,0.26),0_0_18px_rgba(123,109,255,0.20)]'}`}
+            className={`h-[1px] w-24 md:w-36 ${theme === 'light' ? 'bg-gradient-to-l from-[#3f4b62]/28 via-[#86b4bb]/12 to-transparent' : 'bg-gradient-to-l from-[#b9edf2]/70 via-[#75bfd0]/38 to-transparent shadow-[0_0_12px_rgba(111,216,232,0.18)]'}`}
           ></span>
           <span
             className={`${theme === 'light' ? 'text-[#3f4b62]' : 'text-[color:var(--color-cover-hero-subtitle)]'}`}
@@ -1116,7 +920,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             {language === 'zh' ? '矢量空间' : 'Vector Space'}
           </span>
           <span
-            className={`h-[1px] w-24 md:w-36 ${theme === 'light' ? 'bg-gradient-to-r from-[#3f4b62]/28 via-[#86b4bb]/12 to-transparent' : 'bg-gradient-to-r from-[color:var(--color-cover-hero-rule)] via-[#7b6dff]/55 to-transparent shadow-[0_0_12px_rgba(0,200,232,0.26),0_0_18px_rgba(123,109,255,0.20)]'}`}
+            className={`h-[1px] w-24 md:w-36 ${theme === 'light' ? 'bg-gradient-to-r from-[#3f4b62]/28 via-[#86b4bb]/12 to-transparent' : 'bg-gradient-to-r from-[#b9edf2]/70 via-[#75bfd0]/38 to-transparent shadow-[0_0_12px_rgba(111,216,232,0.18)]'}`}
           ></span>
         </div>
         <p
@@ -1129,45 +933,41 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             {language === 'zh' ? '记录 || 过去·此刻 ⇌ 未来' : 'Record || Past · Now ⇌ Future'}
           </span>
         </p>
-        <div
-          className={`pointer-events-none absolute left-1/2 top-[56%] h-[44%] w-[82vw] max-w-[1080px] -translate-x-1/2 -translate-y-1/2 rounded-full ${theme === 'light' ? 'bg-white/26 blur-3xl' : 'bg-[radial-gradient(ellipse_at_42%_48%,rgba(5,11,20,0.82)_0%,rgba(8,12,32,0.54)_44%,rgba(123,109,255,0.10)_66%,transparent_78%)] blur-2xl'}`}
-        ></div>
-
         <button
           type="button"
           data-testid="cover-initialize"
           onClick={handleInitialize}
           aria-label={language === 'zh' ? '点击进入下一个界面' : 'Click to enter the next screen'}
-          className={`cover-launch-tunnel cover-enter cover-enter--4 group relative z-10 mt-8 flex w-[min(82vw,480px)] items-center justify-between gap-5 px-8 py-4 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${isLaunchSliding ? 'cover-launch-tunnel--active pointer-events-none' : ''} ${
+          className={`cover-launch-tunnel cover-enter cover-enter--4 group relative z-10 mt-6 flex min-h-[76px] w-[min(88vw,540px)] items-center justify-between gap-5 px-5 py-3.5 md:h-[88px] md:min-h-[88px] md:px-8 md:py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${isLaunchPrimed ? 'cover-launch-tunnel--primed' : ''} ${isLaunchSliding ? 'cover-launch-tunnel--active pointer-events-none' : ''} ${
             theme === 'light'
               ? 'rounded-full border border-[#c9dfdc]/95 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(242,249,247,0.82)_48%,rgba(255,255,255,0.90))] backdrop-blur-xl text-[#334154] shadow-[inset_0_1px_0_rgba(255,255,255,0.98),inset_0_-16px_30px_rgba(134,180,187,0.040),0_18px_54px_rgba(134,180,187,0.12),0_0_0_1px_rgba(134,180,187,0.16)] hover:-translate-y-1 hover:scale-[1.01] hover:border-[#b8d3cf]/95 hover:shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-16px_30px_rgba(134,180,187,0.055),0_22px_58px_rgba(134,180,187,0.15),0_0_0_1px_rgba(134,180,187,0.18)] focus:ring-[#86b4bb]/35 focus:ring-offset-[#fbfdfb]'
-              : 'rounded-full border border-[color:var(--color-cover-cta-border)]/46 bg-[rgba(5,13,24,0.46)] backdrop-blur-xl hover:-translate-y-0.5 shadow-[inset_0_1px_0_0_rgba(157,246,250,0.08),inset_0_-12px_28px_rgba(123,109,255,0.055),0_12px_32px_rgba(0,0,0,0.34),0_0_14px_rgba(0,200,232,0.10),0_0_18px_rgba(123,109,255,0.08)] hover:shadow-[inset_0_1px_0_0_rgba(157,246,250,0.12),inset_0_-12px_28px_rgba(123,109,255,0.075),0_0_20px_rgba(0,200,232,0.24),0_0_16px_rgba(123,109,255,0.22)] focus:ring-[color:var(--color-cover-cta-hover-glow)]/45 focus:ring-offset-[var(--color-space-bg)]'
+              : 'rounded-full border border-[rgba(169,222,244,0.32)] bg-[rgba(10,35,53,0.42)] backdrop-blur-xl hover:-translate-y-0.5 shadow-[inset_0_1px_0_0_rgba(223,250,255,0.16),inset_0_-10px_24px_rgba(94,169,200,0.025),0_10px_25px_rgba(0,12,22,0.20),0_0_0_1px_rgba(107,178,211,0.035),0_0_14px_rgba(83,175,211,0.07)] hover:border-[rgba(190,234,250,0.42)] hover:shadow-[inset_0_1px_0_0_rgba(232,252,255,0.20),inset_0_-10px_24px_rgba(94,169,200,0.04),0_12px_28px_rgba(0,12,22,0.18),0_0_18px_rgba(92,190,220,0.13)] focus:ring-[color:var(--color-cover-cta-hover-glow)]/45 focus:ring-offset-[#081e30]'
           }`}
         >
           <span
-            className={`pointer-events-none absolute inset-0 rounded-full ${theme === 'light' ? 'opacity-90 bg-[linear-gradient(90deg,rgba(255,255,255,0.28),rgba(235,246,244,0.22),rgba(255,255,255,0.34))]' : 'opacity-80 bg-[radial-gradient(ellipse_at_center,rgba(123,109,255,0.10)_0%,rgba(0,200,232,0.055)_38%,transparent_72%)]'}`}
+            className={`pointer-events-none absolute inset-0 rounded-full ${theme === 'light' ? 'opacity-90 bg-[linear-gradient(90deg,rgba(255,255,255,0.28),rgba(235,246,244,0.22),rgba(255,255,255,0.34))]' : 'opacity-80 bg-[linear-gradient(180deg,rgba(215,244,255,0.045)_0%,transparent_42%),radial-gradient(ellipse_at_center,rgba(112,189,218,0.065)_0%,rgba(71,151,187,0.035)_40%,transparent_74%)]'}`}
           ></span>
           <span
-            className={`cover-tunnel-lines pointer-events-none absolute inset-x-7 inset-y-2 rounded-full border-y ${theme === 'light' ? 'border-[#86b4bb]/20' : 'border-cyan-200/14'}`}
+            className={`cover-tunnel-lines pointer-events-none absolute inset-x-3 inset-y-2 rounded-full border-y ${theme === 'light' ? 'border-[#86b4bb]/20' : 'border-cyan-200/14'}`}
           ></span>
           <span
-            className={`cover-tunnel-depth cover-tunnel-depth--upper pointer-events-none absolute left-[24%] right-[13%] top-[38%] h-px ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#86b4bb]/20 to-transparent' : 'bg-gradient-to-r from-transparent via-cyan-100/16 to-[#7b6dff]/14'}`}
+            className={`cover-tunnel-depth cover-tunnel-depth--upper pointer-events-none absolute left-[25%] right-[9%] top-[34%] h-px ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#86b4bb]/20 to-transparent' : 'bg-gradient-to-r from-transparent via-cyan-100/16 to-[#62d5df]/14'}`}
           ></span>
           <span
-            className={`cover-tunnel-depth cover-tunnel-depth--lower pointer-events-none absolute left-[26%] right-[17%] top-[63%] h-px ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#dbe9e6]/16 to-transparent' : 'bg-gradient-to-r from-transparent via-[#7b6dff]/16 to-cyan-100/10'}`}
+            className={`cover-tunnel-depth cover-tunnel-depth--lower pointer-events-none absolute left-[27%] right-[11%] top-[67%] h-px ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#dbe9e6]/16 to-transparent' : 'bg-gradient-to-r from-transparent via-[#46bfd0]/16 to-cyan-100/10'}`}
           ></span>
           <span
-            className={`cover-tunnel-vanish pointer-events-none absolute left-[23%] right-[8%] top-1/2 h-px -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-r from-[#86b4bb]/10 via-[#86b4bb]/22 to-transparent' : 'bg-gradient-to-r from-cyan-200/10 via-[#7b6dff]/42 to-transparent'}`}
+            className={`cover-tunnel-vanish pointer-events-none absolute left-[25%] right-[8%] top-1/2 h-px -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-r from-[#86b4bb]/10 via-[#86b4bb]/22 to-transparent' : 'bg-gradient-to-r from-cyan-200/10 via-[#58d4df]/42 to-transparent'}`}
           ></span>
           <span
-            className={`cover-tunnel-ticks pointer-events-none absolute left-[34%] right-[16%] top-1/2 h-5 -translate-y-1/2 opacity-70 ${theme === 'light' ? 'text-[#86b4bb]/22' : 'text-cyan-100/20'}`}
+            className={`cover-tunnel-ticks pointer-events-none absolute left-[69%] right-[9%] top-1/2 h-7 -translate-y-1/2 opacity-70 ${theme === 'light' ? 'text-[#86b4bb]/22' : 'text-cyan-100/20'}`}
             aria-hidden
           >
-            {Array.from({ length: 9 }).map((_, tickIndex) => (
+            {Array.from({ length: 17 }).map((_, tickIndex) => (
               <span
                 key={`launch-tick-${tickIndex}`}
-                className={`absolute top-1/2 w-px -translate-y-1/2 ${tickIndex % 3 === 0 ? 'h-3' : 'h-2'} ${theme === 'light' ? 'bg-[#86b4bb]/22' : 'bg-cyan-100/18'}`}
-                style={{ left: `${tickIndex * 12.5}%` }}
+                className={`absolute top-1/2 w-px -translate-y-1/2 ${tickIndex % 5 === 0 ? 'h-5' : tickIndex % 2 === 0 ? 'h-3' : 'h-2'} ${theme === 'light' ? 'bg-[#86b4bb]/22' : 'bg-cyan-100/18'}`}
+                style={{ left: `${tickIndex * 6.25}%` }}
               />
             ))}
           </span>
@@ -1175,29 +975,29 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             className={`cover-tunnel-gate cover-tunnel-gate--left pointer-events-none absolute left-4 top-1/2 h-10 w-px -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-[#86b4bb]/22 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-200/42 to-transparent'}`}
           ></span>
           <span
-            className={`cover-tunnel-gate cover-tunnel-gate--right pointer-events-none absolute right-4 top-1/2 h-10 w-px -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-[#dbe9e6]/28 to-transparent' : 'bg-gradient-to-b from-transparent via-[#7b6dff]/44 to-transparent'}`}
+            className={`cover-tunnel-gate cover-tunnel-gate--right pointer-events-none absolute right-4 top-1/2 h-10 w-px -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-[#dbe9e6]/28 to-transparent' : 'bg-gradient-to-b from-transparent via-[#64dce4]/44 to-transparent'}`}
           ></span>
           <span
-            className={`cover-launch-stream pointer-events-none absolute left-14 right-12 top-1/2 h-px -translate-y-1/2 scale-x-0 ${theme === 'light' ? 'bg-gradient-to-r from-[#86b4bb]/08 via-[#86b4bb]/30 to-transparent' : 'bg-gradient-to-r from-cyan-200/12 via-[#7b6dff]/72 to-transparent'}`}
+            className={`cover-launch-stream pointer-events-none absolute left-14 right-12 top-1/2 h-px -translate-y-1/2 scale-x-0 ${theme === 'light' ? 'bg-gradient-to-r from-[#86b4bb]/08 via-[#86b4bb]/30 to-transparent' : 'bg-gradient-to-r from-cyan-200/12 via-[#6ee6ed]/72 to-transparent'}`}
           ></span>
           <span
-            className={`cover-tunnel-aperture pointer-events-none absolute left-1/2 top-1/2 h-[2px] w-10 -translate-x-1/2 -translate-y-1/2 scale-x-0 rounded-full ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#86b4bb]/42 to-transparent' : 'bg-gradient-to-r from-transparent via-cyan-100/80 to-[#7b6dff]/38'}`}
+            className={`cover-tunnel-aperture pointer-events-none absolute left-1/2 top-1/2 h-[2px] w-10 -translate-x-1/2 -translate-y-1/2 scale-x-0 rounded-full ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#86b4bb]/42 to-transparent' : 'bg-gradient-to-r from-transparent via-cyan-100/80 to-[#59d8e2]/38'}`}
           ></span>
           <span
-            className={`cover-tunnel-wake pointer-events-none absolute left-10 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full opacity-0 blur-md ${theme === 'light' ? 'bg-[#86b4bb]/12' : 'bg-[#7b6dff]/16'}`}
+            className={`cover-tunnel-wake pointer-events-none absolute left-10 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full opacity-0 blur-md ${theme === 'light' ? 'bg-[#86b4bb]/12' : 'bg-[#52d2dd]/16'}`}
           ></span>
           <span
-            className={`pointer-events-none absolute -inset-px rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${theme === 'light' ? 'blur-md bg-[#86b4bb]/12' : 'shadow-[0_0_18px_rgba(0,200,232,0.24),0_0_10px_rgba(123,109,255,0.18)]'}`}
+            className={`pointer-events-none absolute -inset-px rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${theme === 'light' ? 'blur-md bg-[#86b4bb]/12' : 'shadow-[0_0_18px_rgba(0,208,226,0.24),0_0_10px_rgba(89,216,226,0.16)]'}`}
           ></span>
           <span
             className={`pointer-events-none absolute left-5 top-1/2 h-px w-16 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-r from-[#86b4bb]/44 to-transparent' : 'bg-gradient-to-r from-[color:var(--color-cover-status-rule)] to-transparent'}`}
           ></span>
           <span
-            className={`pointer-events-none absolute right-5 top-1/2 h-px w-16 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-l from-[#dbe9e6]/38 to-transparent' : 'bg-gradient-to-l from-[#7b6dff]/70 to-transparent'}`}
+            className={`pointer-events-none absolute right-5 top-1/2 h-px w-16 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-l from-[#dbe9e6]/38 to-transparent' : 'bg-gradient-to-l from-[#62dce5]/70 to-transparent'}`}
           ></span>
-          <span className="relative flex items-center gap-4">
+          <span className="relative flex w-full items-center gap-4">
             <span
-              className={`cover-launch-thumb relative flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full ${theme === 'light' ? 'shadow-[inset_0_0_0_1px_rgba(134,180,187,0.28),0_0_0_1px_rgba(255,255,255,0.82),0_8px_28px_rgba(134,180,187,0.11)]' : 'shadow-[inset_0_0_0_1px_rgba(44,203,218,0.35),0_0_16px_rgba(0,200,232,0.15),0_4px_16px_rgba(0,0,0,0.35)]'}`}
+              className={`cover-launch-thumb relative flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full ${theme === 'light' ? 'shadow-[inset_0_0_0_1px_rgba(134,180,187,0.28),0_0_0_1px_rgba(255,255,255,0.82),0_8px_28px_rgba(134,180,187,0.11)]' : 'shadow-[inset_0_0_0_1px_rgba(44,203,218,0.35),0_0_16px_rgba(0,200,232,0.15),0_4px_16px_rgba(0,0,0,0.35)]'}`}
               aria-hidden
             >
               <span
@@ -1209,13 +1009,13 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               <span
                 className={`pointer-events-none absolute inset-[6px] md:inset-[7px] rounded-full border ${theme === 'light' ? 'border-[#86b4bb]/26' : 'border-[color:var(--color-cover-cta-border)]/35'}`}
               />
-              <VectorEntryHudMark className="cover-entry-hud-mark relative z-[1] h-6 w-6 animate-[cover-boat-float_2.8s_ease-in-out_infinite] opacity-95 motion-reduce:animate-none" />
+              <VectorEntryHudMark className="cover-entry-hud-mark relative z-[1] h-8 w-8 opacity-95 md:h-10 md:w-10" />
             </span>
             <span
-              className={`cover-launch-label relative flex min-w-[156px] items-center justify-center text-[12px] md:text-sm font-mono uppercase tracking-[0.28em] md:tracking-[0.34em] ${theme === 'light' ? 'text-[#334154]/95' : 'text-[color:var(--color-cover-cta-label)]'}`}
+              className={`cover-launch-label absolute left-1/2 flex min-w-[156px] -translate-x-1/2 items-center justify-center whitespace-nowrap text-[13px] font-medium tracking-[0.18em] md:min-w-[250px] md:text-xl md:tracking-[0.22em] ${theme === 'light' ? 'text-[#334154]/95' : 'text-[color:var(--color-cover-cta-label)]'}`}
             >
               <span
-                className={`cover-label-pulse pointer-events-none absolute left-1/2 top-1/2 h-px w-20 -translate-x-1/2 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#86b4bb]/18 to-transparent' : 'bg-gradient-to-r from-transparent via-[#7b6dff]/28 to-transparent'}`}
+                className={`cover-label-pulse pointer-events-none absolute left-1/2 top-1/2 h-px w-20 -translate-x-1/2 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-[#86b4bb]/18 to-transparent' : 'bg-gradient-to-r from-transparent via-[#63dce5]/28 to-transparent'}`}
               ></span>
               {language === 'zh' ? '接入矢量空间' : 'Enter Vector Space'}
             </span>
@@ -1553,14 +1353,41 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 animation: core-scan 3.7s ease-in-out infinite;
                 opacity: 0.34;
               }
+              .cover-core-stage,
+              .cover-entry-hud-mark,
+              .cover-launch-label,
+              .cover-label-pulse,
+              .cover-launch-stream,
+              .cover-tunnel-depth,
+              .cover-tunnel-ticks {
+                transition:
+                  opacity 240ms ease,
+                  transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+                  filter 320ms ease;
+              }
+              .cover-title,
+              .cover-subtitle,
+              .cover-narrative {
+                transition:
+                  opacity 320ms ease,
+                  filter 320ms ease,
+                  transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+              }
               .cover-launch-tunnel {
                 isolation: isolate;
-                --launch-travel: min(calc(78vw - 112px), 328px);
-                animation: launch-system-breath 5.4s ease-in-out infinite;
+                --launch-travel: min(calc(100% - 136px), 366px);
+                animation: none;
               }
-              .cover-launch-tunnel:hover,
-              .cover-launch-tunnel--active {
-                animation-play-state: paused;
+              .cover-launch-tunnel:hover .cover-entry-hud-mark,
+              .cover-launch-tunnel:focus-visible .cover-entry-hud-mark {
+                animation: none;
+                transform: translateX(2px) scale(1.035);
+                filter: brightness(1.08) drop-shadow(0 0 7px rgba(115, 211, 241, 0.16));
+              }
+              .cover-launch-tunnel:hover .cover-label-pulse,
+              .cover-launch-tunnel:focus-visible .cover-label-pulse {
+                opacity: 0.72;
+                transform: translate(-50%, -50%) scaleX(1);
               }
               .cover-launch-tunnel::before {
                 content: "";
@@ -1568,17 +1395,29 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 inset: -18px;
                 z-index: -1;
                 border-radius: 999px;
-                background: radial-gradient(ellipse at center, rgba(94, 234, 242, 0.16), transparent 68%);
-                opacity: 0.12;
-                filter: blur(18px);
-                transform: scaleX(0.72);
+                background: radial-gradient(ellipse at center, rgba(97, 210, 255, 0.18), transparent 68%);
+                opacity: 0.10;
+                filter: blur(20px);
+                transform: scaleX(0.82);
                 transition: opacity 0.38s ease, transform 0.48s ease, filter 0.48s ease;
               }
               .cover-launch-tunnel:hover::before,
+              .cover-launch-tunnel:focus-visible::before,
+              .cover-launch-tunnel--primed::before,
               .cover-launch-tunnel--active::before {
                 opacity: 0.46;
                 filter: blur(20px);
                 transform: scaleX(1.02) scaleY(1.16);
+              }
+              .cover-launch-tunnel::after {
+                content: "";
+                position: absolute;
+                inset: 5px;
+                z-index: -1;
+                border: 1px solid rgba(184, 230, 248, 0.18);
+                border-radius: 999px;
+                box-shadow: inset 0 7px 11px rgba(205, 239, 255, 0.045);
+                pointer-events: none;
               }
               .cover-narrative-arrow {
                 position: relative;
@@ -1607,38 +1446,75 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 will-change: transform, opacity, filter;
               }
               .cover-label-pulse {
-                animation: launch-label-pulse 4.8s ease-in-out infinite;
+                animation: none;
+                opacity: 0.38;
+                transform: translate(-50%, -50%) scaleX(0.72);
               }
               .cover-tunnel-depth {
-                animation: launch-depth-breathe 5.8s ease-in-out infinite;
-              }
-              .cover-tunnel-depth--lower {
-                animation-delay: -2.2s;
+                animation: none;
               }
               .cover-tunnel-ticks {
-                animation: launch-ticks-breathe 6.5s ease-in-out infinite;
+                animation: none;
+                border-top: 1px solid rgba(146, 215, 242, 0.15);
+                border-bottom: 1px solid rgba(77, 139, 180, 0.10);
+              }
+              .cover-tunnel-ticks::after {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 0;
+                width: 38%;
+                height: 1px;
+                transform: translateY(-50%);
+                background: linear-gradient(90deg, transparent, rgba(144, 228, 255, 0.68), transparent);
+                animation: none;
+                opacity: 0.28;
+                filter: blur(0.15px);
+              }
+              .cover-launch-thumb::after {
+                content: "";
+                position: absolute;
+                inset: 4px;
+                border: 1px solid rgba(151, 225, 250, 0.18);
+                border-radius: 50%;
+              }
+              .cover-launch-label {
+                text-shadow: 0 1px 0 rgba(218, 247, 255, 0.18), 0 0 18px rgba(102, 203, 242, 0.10);
+              }
+              .cover-core-stage--primed {
+                filter: brightness(1.08);
+                transform: scale(1.012);
+              }
+              .cover-launch-tunnel--primed .cover-launch-stream {
+                opacity: 0.5;
+                transform: translateY(-50%) scaleX(0.18);
+                transform-origin: left center;
+              }
+              .cover-launch-tunnel--primed .cover-entry-hud-mark {
+                filter: brightness(1.12) drop-shadow(0 0 8px rgba(115, 211, 241, 0.22));
+                transform: scale(1.035);
               }
               .cover-launch-tunnel--active .cover-launch-thumb {
-                animation: launch-thumb-slide 0.72s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
+                animation: launch-thumb-slide 0.52s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
               }
               .cover-launch-tunnel--active .cover-launch-label {
-                animation: launch-label-release 0.52s ease forwards;
+                animation: launch-label-release 0.42s ease forwards;
               }
               .cover-launch-tunnel--active .cover-launch-stream {
-                animation: launch-stream-open 0.72s cubic-bezier(0.18, 0.78, 0.2, 1) forwards;
+                animation: launch-stream-open 0.52s cubic-bezier(0.18, 0.78, 0.2, 1) forwards;
                 transform-origin: left center;
               }
               .cover-launch-tunnel--active .cover-tunnel-aperture {
-                animation: launch-aperture-open 0.82s cubic-bezier(0.16, 0.82, 0.2, 1) forwards;
+                animation: launch-aperture-open 0.6s cubic-bezier(0.16, 0.82, 0.2, 1) forwards;
               }
               .cover-launch-tunnel--active .cover-tunnel-wake {
-                animation: launch-wake-travel 0.72s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
+                animation: launch-wake-travel 0.52s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
               }
               .cover-launch-tunnel--active .cover-tunnel-gate--left {
-                animation: launch-gate-left 0.72s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
+                animation: launch-gate-left 0.52s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
               }
               .cover-launch-tunnel--active .cover-tunnel-gate--right {
-                animation: launch-gate-right 0.72s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
+                animation: launch-gate-right 0.52s cubic-bezier(0.2, 0.82, 0.18, 1) forwards;
               }
               .cover-launch-tunnel--active {
                 transform: translateY(-1px);
@@ -1650,7 +1526,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 z-index: -1;
                 border-radius: 999px;
                 border: 1px solid rgba(126, 239, 255, 0.34);
-                animation: launch-system-pulse 0.82s cubic-bezier(0.16, 0.82, 0.2, 1) forwards;
+                animation: launch-system-pulse 0.6s cubic-bezier(0.16, 0.82, 0.2, 1) forwards;
               }
               .cover-tunnel-lines::before,
               .cover-tunnel-lines::after {
@@ -1669,6 +1545,93 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               }
               .cover-tunnel-ticks span {
                 transform-origin: center;
+              }
+              @media (min-width: 768px) {
+                .cover-hero-stack {
+                  --cover-stage-gap: clamp(48px, 5.5vh, 58px);
+                  width: min(100vw, 1180px);
+                }
+                html:not(.vector-force-mobile) .cover-hero-stack {
+                  translate: 0 8px;
+                }
+                html:not(.vector-force-mobile) .cover-core-stage {
+                  margin-bottom: var(--cover-stage-gap);
+                  translate: 0 -4px;
+                }
+                html:not(.vector-force-mobile)
+                  .cover-launch-tunnel:not(.cover-launch-tunnel--primed):not(
+                    .cover-launch-tunnel--active
+                  )
+                  .cover-entry-hud-mark {
+                  animation: cover-entry-vector-idle 5.4s ease-in-out infinite;
+                }
+                .cover-core-status {
+                  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                  opacity: 0.88;
+                }
+                .cover-core-status--identity > div:first-child,
+                .cover-core-status--observation > div:first-child {
+                  font-size: 10px;
+                  font-weight: 500;
+                  letter-spacing: 0.14em;
+                  line-height: 1.45;
+                }
+                .cover-core-status--identity > div:first-child {
+                  border-left: 1px solid color-mix(in srgb, var(--color-cover-status-rule) 62%, transparent);
+                  padding: 3px 0 3px 9px;
+                }
+                .cover-core-status--identity > div:not(:first-child) {
+                  margin-left: 10px;
+                  font-size: 9px;
+                  font-weight: 500;
+                  letter-spacing: 0.16em;
+                  line-height: 1.6;
+                  opacity: 0.52;
+                }
+                .cover-core-status--observation > div:first-child {
+                  padding: 3px 9px 3px 0;
+                  opacity: 0.62;
+                }
+                .cover-title {
+                  margin-bottom: 10px;
+                  font-size: clamp(68px, 7.1vw, 104px);
+                  line-height: 0.88;
+                  letter-spacing: 0.1em;
+                }
+                .cover-subtitle {
+                  margin-bottom: 16px;
+                  font-size: clamp(19px, 1.8vw, 28px);
+                  font-weight: 500;
+                  letter-spacing: 0.42em;
+                }
+                .cover-narrative {
+                  margin-bottom: 0;
+                  font-size: clamp(13px, 1vw, 16px);
+                  font-weight: 400;
+                  letter-spacing: 0.14em;
+                  opacity: 0.62;
+                }
+                .cover-launch-tunnel {
+                  margin-top: clamp(36px, 4.6vh, 44px);
+                }
+                .cover-hero-stack--launching .cover-title,
+                .cover-hero-stack--launching .cover-subtitle,
+                .cover-hero-stack--launching .cover-narrative {
+                  opacity: 0.48;
+                  filter: blur(0.2px);
+                  transform: translateY(-2px);
+                }
+                .cover-hero-stack--launching .cover-title {
+                  transform: scaleX(1.045) translateY(-2px);
+                }
+              }
+              @media (min-width: 1024px) {
+                .cover-core-status--identity {
+                  left: calc(100% + 4rem);
+                }
+                .cover-core-status--observation {
+                  right: calc(100% + 3.75rem);
+                }
               }
               @media (prefers-reduced-motion: reduce) {
                 .cover-enter {
@@ -1701,8 +1664,25 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 .cover-purple-aura,
                 .cover-orbit-tail,
                 .cover-core-scan,
-                .cover-tunnel-lines {
+                .cover-tunnel-lines,
+                .cover-tunnel-ticks,
+                .cover-tunnel-ticks::after,
+                .cover-label-pulse,
+                .cover-tunnel-depth,
+                .cover-launch-tunnel {
                   animation: none !important;
+                }
+                .cover-entry-hud-mark,
+                .cover-core-stage,
+                .cover-title,
+                .cover-subtitle,
+                .cover-narrative {
+                  animation: none !important;
+                  transition-duration: 0.01ms !important;
+                }
+                .cover-launch-tunnel--active .cover-launch-thumb {
+                  animation: none !important;
+                  transform: translateX(var(--launch-travel));
                 }
                 .cover-core-breath {
                   animation: none !important;
@@ -1732,14 +1712,19 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 	                  line-height: 1.95;
 	                }
 	              }
-	              @keyframes fate-signal-resonance {
-	                0% { opacity: 0.28; filter: blur(0.62px) brightness(0.82); }
-	                18% { opacity: 0.36; filter: blur(0.42px) brightness(0.9); }
-	                42% { opacity: 0.56; filter: blur(0.12px) brightness(1.03); }
-	                58% { opacity: 0.64; filter: blur(0px) brightness(1.08); }
-	                78% { opacity: 0.5; filter: blur(0.16px) brightness(0.98); }
-	                100% { opacity: 0.28; filter: blur(0.62px) brightness(0.82); }
-	              }
+              @keyframes fate-signal-resonance {
+                0% { opacity: 0.2; filter: blur(0.72px) brightness(0.78); }
+                18% { opacity: 0.27; filter: blur(0.5px) brightness(0.86); }
+                42% { opacity: 0.4; filter: blur(0.18px) brightness(0.96); }
+                58% { opacity: 0.46; filter: blur(0.08px) brightness(1); }
+                78% { opacity: 0.36; filter: blur(0.22px) brightness(0.92); }
+                100% { opacity: 0.2; filter: blur(0.72px) brightness(0.78); }
+              }
+              @keyframes cover-entry-vector-idle {
+                0%, 72%, 100% { transform: translateX(0) scale(1); filter: brightness(1); }
+                84% { transform: translateX(1.8px) scale(1.015); filter: brightness(1.055) drop-shadow(0 0 5px rgba(115, 211, 241, 0.11)); }
+                92% { transform: translateX(0.5px) scale(1.006); filter: brightness(1.02); }
+              }
               @keyframes silk-sheen-drift {
                 0% { transform: translate3d(-3%, -1%, 0) scale(1.02); opacity: 0.62; }
                 48% { transform: translate3d(2%, 1%, 0) scale(1.05); opacity: 0.9; }
@@ -1983,8 +1968,8 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 }
               }
               @keyframes launch-label-release {
-                0% { opacity: 1; transform: translateX(0); letter-spacing: 0.44em; }
-                100% { opacity: 0.46; transform: translateX(14px); letter-spacing: 0.56em; }
+                0% { opacity: 1; transform: translateX(-50%); letter-spacing: 0.22em; }
+                100% { opacity: 0.46; transform: translateX(calc(-50% + 14px)); letter-spacing: 0.34em; }
               }
               @keyframes launch-label-pulse {
                 0%, 100% { opacity: 0.22; transform: translate(-50%, -50%) scaleX(0.56); filter: blur(0.2px); }
@@ -2006,6 +1991,11 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               @keyframes launch-ticks-breathe {
                 0%, 100% { opacity: 0.38; filter: blur(0.1px); }
                 46% { opacity: 0.74; filter: blur(0); }
+              }
+              @keyframes launch-signal-drift {
+                0%, 20% { opacity: 0; transform: translate(-18%, -50%); }
+                48% { opacity: 0.85; }
+                78%, 100% { opacity: 0; transform: translate(165%, -50%); }
               }
               @keyframes launch-stream-open {
                 0% { opacity: 0; transform: translateY(-50%) scaleX(0); filter: blur(0); }
@@ -2228,6 +2218,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               }
               html.vector-force-mobile .cover-launch-tunnel {
                 width: 266px !important;
+                height: 56px !important;
                 min-height: 56px !important;
                 margin-top: 78px !important;
                 padding: 9px 18px 9px 17px !important;
@@ -2346,6 +2337,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 }
                 .cover-launch-tunnel {
                   width: 266px !important;
+                  height: 56px !important;
                   min-height: 56px !important;
                   margin-top: 78px !important;
                   padding: 9px 18px 9px 17px !important;
