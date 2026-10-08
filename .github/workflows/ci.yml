@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        env:
+          # Bake the commit SHA into the bundle so the runtime
+          # Sentry SDK tags every event with the same release id
+          # the sourcemap upload step uses below.
+          SENTRY_RELEASE: ${{ github.sha }}
+        run: npm run build
+
+      # Phase 4 §W1.5 — Sentry release + sourcemap upload.
+      #
+      # Only runs on push to main (PR builds skip — they don't
+      # produce a deployable artefact). Gated on the SENTRY_AUTH_TOKEN
+      # secret being set so contributors who fork the repo without
+      # adding the secret still see the rest of the pipeline pass.
+      #
+      # `sourcemap: 'hidden'` in vite.config.ts emits .map files
+      # without referencing them from the bundles. The cleanup step
+      # below deletes them after upload so production users never
+      # download the sourcemaps.
+      - name: Sentry release + sourcemap upload
+        if: github.event_name == 'push' && env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          sourcemaps: ./dist/assets
+          url_prefix: '~/assets'
+
+      # `if: always()` so the cleanup runs even when the upload step
+      # itself failed — defensive: we do NOT want to ship .map files
+      # publicly. Wrapped in an existence check so the step is a
+      # no-op when an earlier failure (lint / typecheck / test /
+      # audit) skipped the build and dist/ doesn't exist.
+      - name: Strip sourcemaps from deployable artefact
+        if: always()
+        run: |
+          if [ -d dist ]; then
+            find dist -name '*.map' -delete
+          else
+            echo "dist/ not present; nothing to strip"
+          fi
+
+      # Phase 4 §W4.4 — production-deps audit is now a HARD gate.
+      # Was advisory (`continue-on-error: true`) until release;
+      # now a high/critical CVE in any production dep fails the
+      # build so we can never silently ship a known-vulnerable
+      # bundle to users. Dev-only deps are still allowed to carry
+      # advisories — they don't end up in the user-facing surface.
+      #
+      # If a legitimate false positive blocks a release, override
+      # locally with `npm audit --omit=dev --audit-level=critical`
+      # to confirm what's reported, then either:
+      #   - upgrade the affected dep,
+      #   - add an `overrides` entry in package.json with a fixed
+      #     transitive version, or
+      #   - if neither is possible AND the advisory doesn't apply
+      #     to our usage, document the rationale in a hot-fix
+      #     commit before reverting the gate change.
+      - name: Audit (production deps, hard gate)
+        run: npm audit --omit=dev --audit-level=high

@@ -1,0 +1,181 @@
+.vector-detector {
+  position: absolute;
+  inset: -15%;
+  width: 130%;
+  height: 130%;
+  overflow: visible;
+  pointer-events: none;
+}
+.detector-outer-turn,
+.detector-metal-turn,
+.detector-middle-turn,
+.detector-inner-turn,
+.detector-orbit,
+.detector-star-orbit {
+  transform-box: view-box;
+  transform-origin: 300px 300px;
+}
+.detector-star-orbit {
+  animation: detector-turn 72s linear infinite;
+}
+.detector-metal-turn {
+  animation: detector-flip-y 90s linear -6s infinite;
+}
+.detector-middle-turn {
+  animation: detector-flip-diagonal 78s linear -16s infinite;
+}
+.detector-outer-turn {
+  animation: detector-turn 96s linear infinite;
+}
+.detector-inner-turn {
+  animation: detector-flip-x 66s linear -4s infinite;
+}
+.detector-orbit {
+  animation: detector-turn 48s linear infinite;
+}
+.detector-chip-light {
+  animation: detector-breathe 8s ease-in-out infinite;
+}
+.detector-beacon {
+  animation: detector-breathe 12s ease-in-out infinite;
+}
+/* Fine current leaves the chip in short, quiet pulses and fades before the outer rings. */
+.detector-neural-signal {
+  stroke-dasharray: 9 121;
+  opacity: 0.52;
+  animation: detector-outward-flow 24s linear infinite;
+}
+.detector-neural-ring {
+  stroke-dasharray: 7 43;
+  opacity: 0.72;
+  animation: detector-neural-flow 20s linear infinite;
+}
+.detector-neural-branch {
+  opacity: 0.36;
+  animation-duration: 28s;
+}
+.detector-outer-signal {
+  stroke-dasharray: 10 110;
+  animation: detector-outer-receive 12s linear infinite;
+}
+@keyframes detector-outward-flow {
+  0%,
+  8% {
+    stroke-dashoffset: 9;
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.38;
+  }
+  42% {
+    stroke-dashoffset: -112;
+    opacity: 0.24;
+  }
+  48%,
+  100% {
+    stroke-dashoffset: -121;
+    opacity: 0;
+  }
+}
+@keyframes detector-outer-receive {
+  0%,
+  50% {
+    stroke-dashoffset: 10;
+    opacity: 0;
+  }
+  55% {
+    stroke-dashoffset: 0;
+    opacity: 0.65;
+  }
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    stroke-dashoffset: -30;
+    opacity: 0;
+  }
+}
+@keyframes detector-neural-flow {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes detector-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes detector-flip-y {
+  0% {
+    transform: perspective(1400px) rotateZ(-18deg) rotateY(0deg) scale(0.97);
+    opacity: 0.78;
+  }
+  50% {
+    transform: perspective(1400px) rotateZ(-18deg) rotateY(180deg) scale(1);
+    opacity: 0.94;
+  }
+  100% {
+    transform: perspective(1400px) rotateZ(-18deg) rotateY(360deg) scale(0.97);
+    opacity: 0.78;
+  }
+}
+@keyframes detector-flip-diagonal {
+  0% {
+    transform: perspective(1400px) rotateZ(42deg) rotateY(0deg) scale(1);
+    opacity: 0.84;
+  }
+  50% {
+    transform: perspective(1400px) rotateZ(42deg) rotateY(-180deg) scale(0.97);
+    opacity: 0.66;
+  }
+  100% {
+    transform: perspective(1400px) rotateZ(42deg) rotateY(-360deg) scale(1);
+    opacity: 0.84;
+  }
+}
+@keyframes detector-flip-x {
+  0% {
+    transform: perspective(1400px) rotateZ(24deg) rotateX(0deg) scale(0.96);
+    opacity: 0.72;
+  }
+  50% {
+    transform: perspective(1400px) rotateZ(24deg) rotateX(180deg) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: perspective(1400px) rotateZ(24deg) rotateX(360deg) scale(0.96);
+    opacity: 0.72;
+  }
+}
+@keyframes detector-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+html:root .cover-core-stage .detector-core-control {
+  position: absolute;
+  inset: 35%;
+  width: 30% !important;
+  height: 30% !important;
+  background: transparent;
+  border: 0;
+  border-radius: 16px;
+  cursor: pointer;
+  z-index: 40;
+}
+.detector-core-control:focus-visible {
+  outline: 2px solid #c6f4ff;
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vector-detector * {
+    animation: none !important;
+  }
+}

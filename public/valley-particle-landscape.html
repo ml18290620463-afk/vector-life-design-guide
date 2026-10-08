@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Valley Particle Landscape — p5.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #cfd4d6;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const GREEN_PALETTE = [
+        [120, 158, 72],
+        [86, 128, 54],
+        [58, 96, 42],
+        [148, 176, 78],
+        [72, 112, 48],
+        [102, 142, 62],
+        [44, 78, 36],
+        [168, 186, 96],
+        [92, 118, 52],
+        [130, 148, 64],
+        [110, 96, 48],
+        [176, 168, 98],
+      ];
+
+      const SKY_TOP = [186, 196, 204];
+      const SKY_MID = [208, 212, 214];
+      const SKY_HORIZON = [220, 222, 222];
+      const HILL_FAR = [158, 172, 158];
+      const HILL_MID = [132, 154, 118];
+      const RIVER_DEEP = [108, 136, 152];
+      const RIVER_MID = [148, 172, 184];
+      const RIVER_LIGHT = [204, 218, 224];
+
+      const PARTICLE_BUDGET = 2800;
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      let particles = [];
+      let buffer;
+      let spawnCursor = 0;
+
+      function riverCenterNorm(yNorm) {
+        const t = Math.max(0, Math.min(1, yNorm));
+        const sway =
+          Math.sin(t * Math.PI * 2.35) * 0.155 +
+          Math.sin(t * Math.PI * 1.15 + 0.4) * 0.07 -
+          Math.sin(t * Math.PI * 3.1) * 0.025;
+        return 0.5 + sway * (0.35 + t * 0.85);
+      }
+
+      function riverHalfWidthNorm(yNorm) {
+        const t = Math.max(0, Math.min(1, yNorm));
+        const horizon = 0.028;
+        const fore = 0.14;
+        return horizon + (fore - horizon) * Math.pow(t, 1.55);
+      }
+
+      function isInsideRiver(x, y, w, h) {
+        const yNorm = y / h;
+        if (yNorm < 0.34) return false;
+        const cx = riverCenterNorm(yNorm) * w;
+        const half = riverHalfWidthNorm(yNorm) * w;
+        return Math.abs(x - cx) < half;
+      }
+
+      function vegetationDepth(x, y, w, h) {
+        const yNorm = y / h;
+        if (yNorm < 0.32) return 0;
+        const cx = riverCenterNorm(yNorm) * w;
+        const half = riverHalfWidthNorm(yNorm) * w;
+        const dist = Math.abs(x - cx) - half;
+        if (dist < 0) return 0;
+        const bank = Math.min(1, dist / (w * 0.08));
+        const edge = Math.min(x, w - x) / (w * 0.5);
+        const fore = Math.pow(yNorm, 1.35);
+        return Math.min(1, bank * 0.55 + (1 - edge) * 0.35 + fore * 0.45);
+      }
+
+      function budget() {
+        const mobile = width < 720;
+        const base = mobile ? Math.floor(PARTICLE_BUDGET * 0.55) : PARTICLE_BUDGET;
+        return reduceMotion ? Math.floor(base * 0.45) : base;
+      }
+
+      function pickColor() {
+        const c = GREEN_PALETTE[Math.floor(random(GREEN_PALETTE.length))];
+        return [c[0] + random(-10, 10), c[1] + random(-10, 10), c[2] + random(-8, 8)];
+      }
+
+      function makeParticle(side, instant) {
+        const y = random(height * 0.34, height * 1.02);
+        const yNorm = y / height;
+        const cx = riverCenterNorm(yNorm) * width;
+        const half = riverHalfWidthNorm(yNorm) * width;
+        const bankGap = random(4, width * (0.04 + yNorm * 0.1));
+        const leftBank = Math.max(8, cx - half - bankGap);
+        const rightBank = Math.min(width - 8, cx + half + bankGap);
+        const edgeX = side === 'left' ? random(-18, 6) : random(width - 6, width + 18);
+        const homeX =
+          side === 'left'
+            ? lerp(random(0, leftBank * 0.45), leftBank, random(0.35, 1))
+            : lerp(
+                rightBank,
+                random(rightBank + (width - rightBank) * 0.55, width),
+                random(0.35, 1),
+              );
+        const clampedHome = constrain(
+          homeX,
+          side === 'left' ? 0 : cx + half + 2,
+          side === 'left' ? cx - half - 2 : width,
+        );
+        const kindRoll = random();
+        const kind =
+          yNorm > 0.78 && kindRoll > 0.55 ? 'blade' : kindRoll > 0.4 ? 'hatch' : 'stipple';
+
+        return {
+          side,
+          homeX: clampedHome,
+          homeY: y + random(-6, 6),
+          x: edgeX,
+          y: y + random(-4, 4),
+          vx: side === 'left' ? random(0.22, 0.55) : -random(0.22, 0.55),
+          birth: instant ? 0 : random(0, 6.5),
+          life: instant ? 1 : 0,
+          size:
+            kind === 'blade'
+              ? random(5, 14) * (0.75 + yNorm)
+              : random(1.4, 4.2) * (0.7 + yNorm * 0.75),
+          alpha: random(0.55, 0.98),
+          color: pickColor(),
+          kind,
+          angle: random(-PI, PI),
+          jitter: random(0.15, 0.85),
+        };
+      }
+
+      function seedParticles(instant) {
+        const n = budget();
+        particles = [];
+        for (let i = 0; i < n; i++) {
+          const side = i % 2 === 0 ? 'left' : 'right';
+          const particle = makeParticle(side, instant);
+          const depth = vegetationDepth(particle.homeX, particle.homeY, width, height);
+          if (depth < 0.18 && random() > 0.35) continue;
+          if (depth < 0.4 && random() > 0.55) continue;
+          particles.push(particle);
+        }
+        spawnCursor = 0;
+      }
+
+      function paintStaticScene() {
+        const g = buffer;
+        const w = g.width;
+        const h = g.height;
+
+        for (let y = 0; y < h; y++) {
+          const t = y / h;
+          let r, green, b;
+          if (t < 0.42) {
+            const u = t / 0.42;
+            r = lerp(SKY_TOP[0], SKY_MID[0], u);
+            green = lerp(SKY_TOP[1], SKY_MID[1], u);
+            b = lerp(SKY_TOP[2], SKY_MID[2], u);
+          } else {
+            const u = (t - 0.42) / 0.58;
+            r = lerp(SKY_MID[0], SKY_HORIZON[0], u);
+            green = lerp(SKY_MID[1], SKY_HORIZON[1], u);
+            b = lerp(SKY_MID[2], SKY_HORIZON[2], u);
+          }
+          g.stroke(r, green, b);
+          g.line(0, y, w, y);
+        }
+
+        g.noStroke();
+        for (let i = 0; i < 26; i++) {
+          g.fill(230, 232, 234, random(18, 46));
+          g.ellipse(
+            random(w),
+            random(h * 0.05, h * 0.38),
+            random(w * 0.12, w * 0.34),
+            random(h * 0.02, h * 0.06),
+          );
+        }
+
+        g.fill(HILL_FAR[0], HILL_FAR[1], HILL_FAR[2], 210);
+        g.beginShape();
+        g.vertex(0, h * 0.46);
+        for (let x = 0; x <= w; x += 12) g.vertex(x, h * (0.4 + noise(x * 0.004, 1.2) * 0.08));
+        g.vertex(w, h);
+        g.vertex(0, h);
+        g.endShape(CLOSE);
+
+        g.fill(HILL_MID[0], HILL_MID[1], HILL_MID[2], 175);
+        g.beginShape();
+        g.vertex(0, h * 0.56);
+        for (let x = 0; x <= w; x += 10) g.vertex(x, h * (0.48 + noise(x * 0.0055, 3.7) * 0.1));
+        g.vertex(w, h);
+        g.vertex(0, h);
+        g.endShape(CLOSE);
+
+        for (let y = h * 0.38; y < h; y += 2) {
+          const yNorm = y / h;
+          const cx = riverCenterNorm(yNorm) * w;
+          const half = riverHalfWidthNorm(yNorm) * w;
+          const band = 18 + yNorm * 70;
+          g.noStroke();
+          g.fill(118, 148, 78, 16 + yNorm * 28);
+          g.rect(0, y, Math.max(0, cx - half - 2), 2);
+          g.rect(cx + half + 2, y, Math.max(0, w - (cx + half + 2)), 2);
+          g.fill(96, 128, 62, 10 + yNorm * 18);
+          g.rect(Math.max(0, cx - half - band), y, band * 0.55, 2);
+          g.rect(cx + half + 2, y, band * 0.55, 2);
+        }
+
+        g.noStroke();
+        const riverSteps = Math.ceil(h * 0.7);
+        for (let i = 0; i < riverSteps; i++) {
+          const y = h * 0.34 + (i / riverSteps) * h * 0.72;
+          const yNorm = y / h;
+          const cx = riverCenterNorm(yNorm) * w;
+          const half = riverHalfWidthNorm(yNorm) * w;
+          const shade = yNorm;
+          g.fill(
+            lerp(RIVER_LIGHT[0], RIVER_DEEP[0], shade),
+            lerp(RIVER_LIGHT[1], RIVER_DEEP[1], shade),
+            lerp(RIVER_LIGHT[2], RIVER_DEEP[2], shade),
+            230,
+          );
+          g.ellipse(cx, y, half * 2.15, Math.max(3, h * 0.012));
+          g.fill(RIVER_LIGHT[0], RIVER_LIGHT[1], RIVER_LIGHT[2], 40 + (1 - shade) * 50);
+          g.ellipse(cx - half * 0.15, y, half * 0.9, Math.max(2, h * 0.006));
+        }
+
+        for (let y = h * 0.36; y < h; y += 3) {
+          const yNorm = y / h;
+          const cx = riverCenterNorm(yNorm) * w;
+          const half = riverHalfWidthNorm(yNorm) * w;
+          g.stroke(RIVER_MID[0], RIVER_MID[1], RIVER_MID[2], 28);
+          g.strokeWeight(2);
+          g.point(cx - half, y);
+          g.point(cx + half, y);
+        }
+
+        g.noStroke();
+        for (let i = 0; i < Math.floor(w * h * 0.008); i++) {
+          g.fill(255, 255, 255, random(4, 14));
+          g.circle(random(w), random(h), random(0.6, 1.6));
+        }
+      }
+
+      function drawParticle(particle) {
+        const appear = reduceMotion ? 1 : constrain((particle.life - 0.05) / 0.85, 0, 1);
+        if (appear <= 0.01) return;
+        const [r, g, b] = particle.color;
+        const a = particle.alpha * appear * 255;
+        const breathe = reduceMotion
+          ? 0
+          : Math.sin(frameCount * 0.012 + particle.angle) * particle.jitter * 0.35;
+
+        push();
+        translate(particle.x + breathe, particle.y);
+        rotate(
+          particle.kind === 'blade' ? -HALF_PI + particle.angle * 0.08 : particle.angle * 0.15,
+        );
+
+        if (particle.kind === 'blade') {
+          stroke(r, g, b, a);
+          strokeWeight(Math.max(0.7, particle.size * 0.18));
+          line(0, 0, sin(particle.angle) * 1.2, -particle.size);
+          if (particle.size > 7) {
+            stroke(r + 20, g + 24, b + 8, a * 0.55);
+            line(0.6, -particle.size * 0.2, 1.2, -particle.size * 0.75);
+          }
+        } else if (particle.kind === 'hatch') {
+          stroke(r, g, b, a);
+          strokeWeight(Math.max(0.6, particle.size * 0.35));
+          const len = particle.size * 1.6;
+          line(-len * 0.5, 0, len * 0.5, len * 0.15);
+          if (particle.jitter > 0.45) {
+            stroke(r - 12, g - 8, b - 6, a * 0.55);
+            line(-len * 0.2, 1.2, len * 0.35, 1.8);
+          }
+        } else {
+          noStroke();
+          fill(r, g, b, a);
+          circle(0, 0, particle.size);
+          fill(r + 18, g + 22, b + 10, a * 0.45);
+          circle(particle.size * 0.15, -particle.size * 0.12, particle.size * 0.55);
+        }
+        pop();
+      }
+
+      function rebuild() {
+        if (buffer) buffer.remove();
+        buffer = createGraphics(width, height);
+        buffer.pixelDensity(1);
+        paintStaticScene();
+        seedParticles(reduceMotion);
+      }
+
+      function setup() {
+        createCanvas(windowWidth, windowHeight);
+        pixelDensity(Math.min(2, window.devicePixelRatio || 1));
+        frameRate(reduceMotion ? 20 : 30);
+        rebuild();
+      }
+
+      function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+        rebuild();
+      }
+
+      function draw() {
+        if (buffer) image(buffer, 0, 0, width, height);
+        else background(SKY_MID[0], SKY_MID[1], SKY_MID[2]);
+
+        const t = millis() / 1000;
+
+        for (let i = 0; i < particles.length; i++) {
+          const particle = particles[i];
+          if (!reduceMotion && t < particle.birth) continue;
+
+          if (reduceMotion) {
+            particle.x = particle.homeX;
+            particle.y = particle.homeY;
+            particle.life = 1;
+          } else {
+            particle.x += (particle.homeX - particle.x) * 0.028 + particle.vx * 0.12;
+            particle.y += (particle.homeY - particle.y) * 0.02;
+            if (isInsideRiver(particle.x, particle.y, width, height)) {
+              particle.x = particle.homeX;
+              particle.y = particle.homeY;
+            }
+            particle.life = Math.min(1, particle.life + 0.01);
+            if (particle.life > 0.85) {
+              particle.x += Math.sin(t * 0.35 + particle.angle) * 0.04 * particle.jitter;
+              particle.y += Math.cos(t * 0.28 + particle.angle * 1.3) * 0.025 * particle.jitter;
+            }
+          }
+
+          drawParticle(particle);
+        }
+
+        if (!reduceMotion && particles.length > 0) {
+          spawnCursor += 0.35;
+          while (spawnCursor >= 1) {
+            spawnCursor -= 1;
+            const side = random() > 0.5 ? 'left' : 'right';
+            const next = makeParticle(side, false);
+            next.birth = t;
+            next.life = 0;
+            const idx = Math.floor(random(particles.length));
+            if (particles[idx].life > 0.9) particles[idx] = next;
+          }
+        }
+
+        noFill();
+        for (let i = 0; i < 6; i++) {
+          stroke(28, 36, 40, 3 + i * 2);
+          strokeWeight(14);
+          rect(6 + i * 5, 6 + i * 5, width - 12 - i * 10, height - 12 - i * 10, 2);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,3452 @@
+/* Layout is selected by experience, not viewport alone. */
+:root {
+  --experience-bg: #071824;
+  --experience-surface: #0d2330;
+  --experience-line: #233d49;
+  --experience-ink: #e4eef1;
+  --experience-muted: #a3b6be;
+  --experience-accent: #a9dacb;
+}
+:is(.desktop-main-module-frame, .mobile-shell)
+  :is(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--experience-accent);
+  outline-offset: 3px;
+}
+:is(.desktop-main-module-frame, .mobile-shell) :is(button, input, select) {
+  min-height: 44px;
+}
+.desktop-main-module-frame.desktop-main-module-frame {
+  display: block;
+  min-height: 100dvh;
+  padding: 0 0 0 216px;
+  background: var(--experience-bg);
+  color: var(--experience-ink);
+}
+.desktop-main-module-frame .desktop-main-nav {
+  inset: 0 auto 0 0;
+  width: 216px;
+  height: 100dvh;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 40px;
+  padding: 36px 16px;
+  border: 0;
+  border-right: 1px solid var(--experience-line);
+  border-radius: 0;
+  background: #091d28;
+  box-shadow: none;
+}
+.desktop-main-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  color: var(--experience-accent);
+  font-size: 28px;
+  font-weight: 300;
+}
+.desktop-main-nav__brand span {
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: var(--experience-ink);
+}
+.desktop-main-nav__links {
+  display: grid;
+  gap: 12px;
+}
+.desktop-main-module-frame .desktop-main-nav__item {
+  justify-content: flex-start;
+  gap: 14px;
+  text-align: left;
+  min-height: 72px;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+.desktop-main-nav__item span {
+  display: grid;
+  gap: 5px;
+  font-size: 15px;
+}
+.desktop-main-nav__item small {
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--experience-muted);
+  letter-spacing: 0;
+}
+.desktop-main-module-frame .desktop-main-nav__item--active {
+  background: #173731;
+  color: #c4f0df;
+  border-color: #395e53;
+}
+.desktop-workspace {
+  max-width: 1480px;
+  margin: auto;
+  padding: 32px 40px;
+}
+.desktop-workspace__body {
+  min-width: 0;
+}
+.desktop-main-module-frame .desktop-workspace .now-shell {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  min-height: calc(100dvh - 154px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.desktop-workspace .future-page {
+  max-width: none;
+  padding: 0;
+}
+.desktop-workspace :is(.future-primary-tabs, .mobile-past-page__segments) {
+  width: fit-content;
+  min-width: 260px;
+  margin: 0 0 28px;
+}
+.desktop-workspace .future-design-content {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 20px;
+}
+.desktop-workspace .future-design-entry {
+  grid-column: 1 / -1;
+  justify-self: end;
+  width: auto;
+  margin: 0;
+}
+.desktop-workspace .future-design-summary-card {
+  min-height: 220px;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--experience-line);
+  border-radius: 16px;
+  background: var(--experience-surface);
+}
+.desktop-workspace .future-design-summary-header h2 {
+  font-size: 15px;
+}
+.desktop-workspace .future-practice-workspace {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.desktop-workspace .mobile-past-page {
+  padding: 0;
+  max-width: none;
+  height: auto;
+  min-height: 70vh;
+  overflow: visible;
+  background: transparent;
+}
+.desktop-workspace .mobile-past-page__body {
+  padding: 0;
+  overflow: visible;
+}
+.desktop-workspace .mobile-past-timeline {
+  display: block;
+  max-width: 880px;
+  margin-inline: auto;
+  padding: 0;
+}
+.desktop-workspace .mobile-past-search-row {
+  position: static;
+  flex-wrap: nowrap;
+}
+.desktop-workspace .mobile-past-timeline__list {
+  margin: 0;
+}
+.desktop-workspace .mobile-principles-view--result-first {
+  max-width: 880px;
+  margin: auto;
+}
+.desktop-workspace .now-page:not(.avatar-guide-page) {
+  width: 100%;
+  max-width: 980px;
+  margin: auto;
+  padding: 20px 28px;
+  height: auto;
+  min-height: 72vh;
+}
+.desktop-workspace .now-page:not(.avatar-guide-page) .now-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 24px;
+  padding: 28px;
+}
+.desktop-workspace .now-page:not(.avatar-guide-page) .now-actions {
+  border-left: 1px solid var(--experience-line);
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.desktop-workspace .now-page:not(.avatar-guide-page) .now-editor textarea {
+  min-height: 340px;
+}
+.desktop-workspace .now-page.avatar-guide-page {
+  display: grid;
+  grid-template-columns: 156px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 24px;
+  padding: 0;
+  height: calc(100dvh - 156px);
+  min-height: 520px;
+  max-width: none;
+}
+.desktop-workspace .avatar-page-controls {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 16px 0 0;
+  margin: 0;
+  border: 0;
+  border-right: 1px solid var(--experience-line);
+  border-radius: 0;
+  background: transparent;
+}
+.desktop-workspace .avatar-page-controls__left {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24px;
+}
+.desktop-workspace .avatar-section-tabs {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+}
+.desktop-workspace .avatar-settings-entry {
+  margin-top: auto;
+  align-self: flex-start;
+}
+.desktop-workspace .avatar-guide-page > :is(.avatar-chat-content, .avatar-library) {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  overflow: auto;
+}
+.desktop-workspace .avatar-guide-page .avatar-chat-content:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+.desktop-workspace .avatar-guide-page .now-chat-input {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
+}
+.desktop-workspace .avatar-library__dimension-grid {
+  grid-template-columns: 1fr;
+}
+/* Bound the entire chat height, including the real avatar frame variant.
+   Only the message list scrolls; flex/grid ancestors must be allowed to shrink. */
+html.vector-force-web:has(.desktop-main-module-frame--avatar),
+html.vector-force-web body:has(.desktop-main-module-frame--avatar) {
+  min-width: 0;
+}
+.desktop-main-module-frame--avatar .desktop-workspace {
+  box-sizing: border-box;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.desktop-main-module-frame--avatar .desktop-workspace__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.desktop-main-module-frame--avatar .desktop-workspace .now-shell {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.desktop-main-module-frame--avatar .desktop-workspace .now-shell .now-page.avatar-guide-page {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
+}
+.desktop-main-module-frame--avatar .avatar-guide-page > .avatar-chat-content {
+  min-height: 0;
+  overflow: hidden;
+}
+.desktop-main-module-frame--avatar .avatar-guide-page > .avatar-library {
+  min-height: 0;
+  align-self: stretch;
+}
+.avatar-guide-page .now-chat-list {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.avatar-guide-page .now-chat-list > * {
+  flex-shrink: 0;
+}
+/* Mobile is a separate, narrow app surface even when opened on a large monitor. */
+html.vector-force-mobile .mobile-shell.mobile-shell {
+  --mobile-device-max-width: 440px;
+  width: min(100%, 440px);
+  max-width: 440px;
+  height: 100dvh;
+  margin-inline: auto;
+  background: var(--experience-bg);
+  display: flex;
+  flex-direction: column;
+}
+html.vector-force-mobile .mobile-shell__heading {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: max(14px, env(safe-area-inset-top)) 20px 12px;
+  border-bottom: 1px solid var(--experience-line);
+}
+.mobile-shell__heading h1 {
+  font-size: 19px;
+  font-weight: 500;
+  margin: 0;
+  letter-spacing: 2px;
+}
+.mobile-shell__wordmark {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--experience-muted);
+}
+html.vector-force-mobile .mobile-shell .mobile-shell__content {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+html.vector-force-mobile .mobile-main-nav.mobile-main-nav {
+  width: min(100%, 440px);
+  max-width: 440px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  border-radius: 0;
+  border-top: 1px solid var(--experience-line);
+  background: #0b202c;
+}
+html.vector-force-mobile .mobile-shell .future-page {
+  padding: 16px 16px 28px;
+}
+html.vector-force-mobile .future-design-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+html.vector-force-mobile .future-design-entry {
+  align-self: flex-end;
+  min-height: 44px;
+}
+html.vector-force-mobile .future-design-summary-card {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 18px;
+  border-radius: 16px;
+}
+html.vector-force-mobile .future-design-summary-header h2 {
+  font-size: 14px;
+}
+html.vector-force-mobile .mobile-past-page {
+  padding: 16px 16px 24px;
+}
+html.vector-force-mobile .mobile-past-timeline {
+  display: block;
+  padding: 12px 0 0;
+}
+html.vector-force-mobile :is(.future-primary-tabs, .mobile-past-page__segments) {
+  width: 100%;
+  margin: 0 0 18px;
+}
+html.vector-force-mobile .mobile-shell .now-page.avatar-guide-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 0;
+  height: 100%;
+  min-height: 0;
+  max-width: 100%;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-page-controls {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-areas: 'back tabs status';
+  gap: 8px;
+  margin: 0 12px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 1px solid var(--experience-line);
+  background: transparent;
+  border-radius: 0;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-page-controls__left {
+  display: contents;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-section-tabs {
+  display: flex;
+  width: 100%;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-section-tabs button {
+  flex: 1;
+  padding-inline: 4px;
+  text-align: center;
+  font-size: 14px;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-settings-entry {
+  margin: 0;
+  padding: 0;
+  width: 44px;
+  justify-content: center;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-settings-entry > span {
+  display: none;
+}
+html.vector-force-mobile .avatar-guide-page > :is(.avatar-chat-content, .avatar-library) {
+  width: auto;
+  min-width: 0;
+  margin: 0 12px;
+  padding: 0;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-chat-content:not([hidden]) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+html.vector-force-mobile .avatar-guide-page .now-chat-list {
+  padding: 12px 0;
+}
+html.vector-force-mobile .avatar-guide-page .now-chat-input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 16px;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-library__dimension-card {
+  min-height: 80px;
+  padding: 16px;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-library__scopes {
+  margin: 8px 0 16px;
+  gap: 4px;
+}
+html.vector-force-mobile .avatar-guide-page .avatar-library__scopes button {
+  font-size: 13px;
+  padding-inline: 4px;
+}
+html.vector-force-mobile :is(input, textarea, select) {
+  font-size: 16px;
+}
+/* Editing takes the full mobile width; desktop uses a bounded dialog. */
+html.vector-force-mobile :is(.future-dialog, .future-practice-panel, .avatar-model-dialog) {
+  width: min(100%, 440px);
+  max-width: 440px;
+  max-height: 90dvh;
+  margin: auto auto 0;
+  border-radius: 24px 24px 0 0;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+html.vector-force-web :is(.future-dialog, .future-practice-panel) {
+  width: min(640px, 90vw);
+  max-height: 84dvh;
+  border-radius: 20px;
+}
+/* Entry, security and reading surfaces follow the selected edition as well. */
+html.vector-force-web .cover-screen .cover-hero-stack {
+  width: min(1100px, 90vw);
+  align-items: center;
+  text-align: center;
+  padding-inline: 32px;
+}
+html.vector-force-mobile .cover-screen .cover-hero-stack {
+  width: 100%;
+  max-width: 440px;
+  padding-inline: 24px;
+}
+html.vector-force-mobile :is(.onboarding-screen, .master-lock-screen) {
+  padding: 0;
+  align-items: flex-start;
+}
+html.vector-force-mobile :is(.onboarding-frame, .master-lock-frame) {
+  max-width: 440px;
+  margin-inline: auto;
+  border-radius: 0;
+}
+html.vector-force-mobile .onboarding-frame .onboarding-step {
+  height: auto;
+  min-height: 100dvh;
+  max-height: none;
+  padding: 24px 18px;
+  overflow: visible;
+}
+html.vector-force-mobile .onboarding-screen {
+  overflow-y: auto;
+}
+html.vector-force-mobile .master-lock-card {
+  min-height: 100dvh;
+  padding: 64px 24px 24px;
+  border-radius: 0;
+  border: 0;
+}
+html.vector-force-mobile .master-lock-silhouette {
+  display: none;
+}
+html.vector-force-web .master-lock-frame {
+  max-width: 680px;
+}
+html.vector-force-web .master-lock-card {
+  border-radius: 28px;
+  min-height: 600px;
+}
+html.vector-force-web .onboarding-frame {
+  max-width: 1240px;
+  border-radius: 24px;
+}
+html.vector-force-web .vector-viewer {
+  padding-inline: max(32px, calc((100vw - 980px) / 2));
+}
+html.vector-force-mobile .vector-viewer {
+  max-width: 440px;
+  margin: auto;
+  padding: 20px 16px;
+}
+@media (max-width: 1100px) {
+  .desktop-workspace {
+    padding: 24px;
+  }
+  .desktop-main-module-frame.desktop-main-module-frame {
+    padding-left: 180px;
+  }
+  .desktop-main-module-frame .desktop-main-nav {
+    width: 180px;
+    padding-inline: 10px;
+  }
+  .desktop-workspace .future-design-content {
+    gap: 12px;
+  }
+  .desktop-workspace .future-design-summary-card {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.desktop-main-module-frame, .mobile-shell) *,
+  :is(.desktop-main-module-frame, .mobile-shell) *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.desktop-workspace .now-card .now-bottom-bar {
+  grid-column: 2;
+  justify-content: flex-end;
+}
+.desktop-workspace .now-card .now-editor {
+  grid-row: 1 / span 2;
+}
+html.vector-force-mobile .avatar-library__dimension-grid {
+  grid-template-columns: 1fr;
+}
+html.vector-force-mobile .avatar-model-dialog {
+  width: min(440px, 100vw);
+  max-width: 440px;
+  margin: auto auto 0;
+  border-radius: 24px 24px 0 0;
+}
+html.vector-force-mobile .now-page:not(.avatar-guide-page) {
+  max-width: 440px;
+  padding: 12px 16px;
+}
+html.vector-force-mobile .now-page:not(.avatar-guide-page) .now-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+html.vector-force-mobile .now-page:not(.avatar-guide-page) .now-editor {
+  flex: 1;
+}
+html.vector-force-mobile .now-page:not(.avatar-guide-page) .now-editor textarea {
+  min-height: 220px;
+}
+html.vector-force-mobile .now-page:not(.avatar-guide-page) .now-actions {
+  border: 0;
+  padding: 0;
+}
+html.vector-force-mobile .now-page:not(.avatar-guide-page) .now-bottom-bar {
+  position: static;
+}
+/* Keep navigation in the shell flow so editors never sit underneath it. */
+html.vector-force-mobile .mobile-shell .mobile-main-nav.mobile-main-nav {
+  position: relative;
+  inset: auto;
+  left: auto;
+  transform: none;
+  flex-shrink: 0;
+  width: 100%;
+}
+html.vector-force-mobile .mobile-shell .mobile-shell__content {
+  padding-bottom: 0;
+  overflow: auto;
+}
+html.vector-force-mobile .mobile-shell .now-shell {
+  height: 100%;
+  min-height: 0;
+}
+html.vector-force-mobile .mobile-shell .now-page:not(.avatar-guide-page) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 12px 16px;
+}
+html.vector-force-mobile .mobile-shell .now-page:not(.avatar-guide-page) .now-header {
+  min-height: 48px;
+  margin: 0 0 12px;
+  padding: 0;
+}
+html.vector-force-mobile .mobile-shell .now-page:not(.avatar-guide-page) .now-card {
+  flex: 1;
+  width: 100%;
+  min-height: 380px;
+  max-height: none;
+  padding: 16px;
+  gap: 12px;
+}
+html.vector-force-mobile .mobile-shell .now-flow--mobile-shell .now-editor__surface {
+  background: var(--mobile-surface) !important;
+  color: var(--mobile-ink) !important;
+  border-color: var(--mobile-line-strong) !important;
+  box-shadow: var(--mobile-shadow) !important;
+  min-height: 220px;
+  padding: 12px;
+}
+html.vector-force-mobile .mobile-shell .now-editor textarea {
+  background: transparent !important;
+  color: var(--mobile-ink) !important;
+  width: 100%;
+}
+html.vector-force-mobile .mobile-shell .avatar-guide-page .now-chat-input {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+.desktop-workspace .mobile-past-timeline > .mobile-past-empty {
+  grid-column: 2;
+}
+
+/* Avatar owns one viewport: messages and archives scroll, controls stay in flow. */
+html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] {
+  box-sizing: border-box;
+  min-height: 0;
+  max-height: 100dvh;
+  padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+}
+html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] .mobile-shell__content,
+html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] .now-flow--mobile-shell {
+  overflow: hidden;
+}
+html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] .mobile-main-nav {
+  max-width: none;
+  min-height: 64px;
+  padding: 4px 12px max(4px, env(safe-area-inset-bottom, 0px));
+}
+html.vector-force-mobile .avatar-guide-page .now-chat-list {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+html.vector-force-mobile .avatar-guide-page .now-chat-input input {
+  min-width: 0;
+  font-size: 16px;
+}
+html.vector-force-mobile .avatar-guide-page > .avatar-library {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+@media (max-height: 500px) and (min-width: 480px) {
+  html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] {
+    width: 100%;
+    max-width: 900px;
+  }
+  html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] .mobile-shell__heading {
+    display: none;
+  }
+  html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] .mobile-main-nav__item {
+    min-height: 44px;
+    flex-direction: row;
+    gap: 8px;
+  }
+  html.vector-force-mobile .mobile-shell[data-mobile-tab='avatar'] .mobile-main-nav {
+    min-height: 52px;
+  }
+}
+
+/* Past records: one timestamp, a compact preview, and one expansion control. */
+:is(.desktop-workspace, .mobile-shell) .mobile-past-search-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-search {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-selection-toggle {
+  flex: none;
+  white-space: nowrap;
+  min-width: 52px;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-timeline__list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-timeline__list::before {
+  display: none;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record.past-record {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  margin: 0;
+  border: 1px solid var(--experience-line);
+  border-radius: 14px;
+  background: var(--experience-surface) !important;
+  box-shadow: none !important;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record::before {
+  display: none;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__reading-column {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__summary-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding-right: 32px;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__summary-title {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  padding: 0;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .past-record__date {
+  display: block;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  font-weight: 400 !important;
+  color: var(--experience-muted) !important;
+  letter-spacing: 0 !important;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__summary-title strong {
+  margin: 0;
+  font-size: 15px !important;
+  line-height: 1.6;
+  font-weight: 600;
+  color: var(--experience-ink);
+  overflow-wrap: anywhere;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__fold {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  margin: 0;
+  background: transparent !important;
+  border: 0;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__content {
+  margin-top: 8px;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__content p {
+  margin: 0;
+  font-size: 14px !important;
+  line-height: 1.75 !important;
+  font-weight: 400 !important;
+  color: var(--experience-ink) !important;
+  opacity: 1;
+  overflow-wrap: anywhere;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__tags {
+  margin-top: 12px;
+  gap: 6px;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__tags span {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  min-height: 0;
+  padding: 3px 8px !important;
+  font-weight: 400 !important;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record.mobile-past-timeline__item--selected {
+  border-color: var(--experience-accent);
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__checkbox {
+  position: static;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+}
+@media (max-width: 600px) {
+  .mobile-shell .past-record.past-record {
+    padding: 14px;
+  }
+}
+
+/* Desktop is a generous reading canvas rather than an enlarged phone.  It
+   keeps the product's original deep palette and gives wide screens measured
+   line lengths, consistent type, and calm space around each result. */
+html.vector-force-web,
+html.vector-force-web body,
+html.vector-force-web #root,
+html.vector-force-web .vector-app-shell {
+  --desktop-page-max: 1440px;
+  --desktop-gutter: clamp(32px, 5vw, 88px);
+}
+
+html.vector-force-web .desktop-main-module-frame.desktop-main-module-frame {
+  min-width: 0;
+  padding-left: 232px;
+  background: var(--experience-bg);
+}
+
+html.vector-force-web .desktop-main-module-frame .desktop-main-nav {
+  width: 232px;
+  gap: 44px;
+  padding: 42px 18px;
+  border-right-color: var(--experience-line);
+  background: #091d28;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+html.vector-force-web .desktop-main-nav__brand {
+  color: var(--experience-accent);
+}
+html.vector-force-web .desktop-main-nav__brand span,
+html.vector-force-web .desktop-main-nav__item {
+  color: var(--experience-ink);
+}
+html.vector-force-web .desktop-main-nav__item small {
+  color: var(--experience-muted);
+}
+html.vector-force-web .desktop-main-module-frame .desktop-main-nav__item {
+  min-height: 68px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+}
+html.vector-force-web .desktop-main-module-frame .desktop-main-nav__item:hover {
+  background: var(--experience-surface);
+  border-color: var(--experience-line);
+}
+html.vector-force-web .desktop-main-module-frame .desktop-main-nav__item--active {
+  color: #c4f0df;
+  border-color: #395e53;
+  background: #173731;
+  box-shadow: none;
+}
+
+html.vector-force-web .desktop-workspace {
+  box-sizing: border-box;
+  width: min(100%, var(--desktop-page-max));
+  margin-inline: auto;
+  padding: clamp(36px, 4.5vw, 72px) var(--desktop-gutter) clamp(48px, 6vw, 96px);
+  font-size: 15px;
+  line-height: 1.65;
+}
+html.vector-force-web .desktop-workspace__body {
+  width: 100%;
+  min-width: 0;
+}
+html.vector-force-web .desktop-workspace :is(.now-shell, .future-page, .mobile-past-page) {
+  background: transparent;
+}
+html.vector-force-web
+  .desktop-workspace
+  :is(.future-design-summary-card, .now-card, .avatar-library__dimension-card) {
+  border-color: var(--experience-line);
+  background: var(--experience-surface);
+  box-shadow: none;
+}
+html.vector-force-web .desktop-workspace :is(h1, .now-page__title, .future-page__title) {
+  font-size: clamp(28px, 2.3vw, 36px);
+  line-height: 1.18;
+}
+html.vector-force-web
+  .desktop-workspace
+  :is(h2, .mobile-past-page__section-title, .avatar-library__dimension-card-title) {
+  font-size: clamp(18px, 1.5vw, 22px);
+  line-height: 1.35;
+}
+html.vector-force-web .desktop-workspace :is(p, textarea, input, select) {
+  font-size: 15px;
+  line-height: 1.7;
+}
+html.vector-force-web .desktop-workspace small {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* Past: a calm reading column.  It has enough surrounding space without
+   forcing individual entries into needlessly broad text lines. */
+html.vector-force-web .desktop-workspace .mobile-past-timeline,
+html.vector-force-web .desktop-workspace .mobile-principles-view--result-first {
+  max-width: 960px;
+}
+html.vector-force-web .desktop-workspace .mobile-past-search-row {
+  max-width: 960px;
+  margin-inline: auto;
+  gap: 14px;
+}
+/* A completed action can be brought here as context for reflection.  This is
+   intentionally a transient prompt, not another record or a generated rule. */
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context {
+  position: relative;
+  box-sizing: border-box;
+  width: min(100%, 960px);
+  margin: 0 auto 20px;
+  padding: 18px 52px 18px 20px;
+  border: 1px solid var(--experience-line);
+  border-radius: 16px;
+  background: var(--experience-surface);
+  color: var(--experience-ink);
+}
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context small,
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context span {
+  display: block;
+  color: var(--experience-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context p {
+  margin: 8px 0;
+  color: var(--experience-ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context__dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--experience-muted);
+  cursor: pointer;
+}
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context__dismiss:hover {
+  background: color-mix(in srgb, var(--experience-line) 45%, transparent);
+  color: var(--experience-ink);
+}
+:is(.desktop-workspace, .mobile-shell) .practice-reflection-context__dismiss svg {
+  width: 18px;
+  height: 18px;
+}
+html.vector-force-web .desktop-workspace .past-record.past-record {
+  padding: 28px 32px;
+  border-color: var(--experience-line);
+  background: var(--experience-surface);
+  box-shadow: none;
+}
+
+/* Future: retain the three planning results as a single scanning row, while
+   allowing cards to wrap before they become too narrow. */
+html.vector-force-web .desktop-workspace .future-design-content {
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: clamp(20px, 2vw, 32px);
+}
+html.vector-force-web .desktop-workspace .future-design-entry {
+  margin-bottom: 4px;
+}
+html.vector-force-web .desktop-workspace .future-design-summary-card {
+  min-height: 230px;
+  padding: clamp(24px, 2.3vw, 32px);
+  border-radius: 20px;
+}
+html.vector-force-web .desktop-workspace .future-practice-workspace {
+  max-width: 980px;
+}
+
+/* Now: a comfortable writing measure with a clearly separated, quiet action
+   rail.  The form grows vertically, not indefinitely sideways. */
+html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) {
+  max-width: 1060px;
+  padding: 12px 0;
+}
+html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) .now-card {
+  grid-template-columns: minmax(0, 1fr) 208px;
+  gap: 32px;
+  padding: clamp(28px, 3vw, 40px);
+  border-radius: 22px;
+}
+html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) .now-actions {
+  padding-left: 28px;
+  border-left-color: var(--experience-line);
+}
+html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) .now-editor textarea {
+  min-height: 360px;
+  max-width: 760px;
+}
+
+/* Desktop recording is a page, not an enlarged mobile screen.  The workspace
+   provides the outer breathing room; the record card is the only visible
+   surface inside it. */
+html.vector-force-web .desktop-main-module-frame--now {
+  display: block;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-shell {
+  width: 100%;
+  min-height: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-page:not(.avatar-guide-page) {
+  width: min(100%, 1060px);
+  min-height: 0;
+  margin-inline: auto;
+  padding: clamp(20px, 2.5vw, 36px) 0 clamp(32px, 4vw, 56px);
+  overflow: visible;
+  background: transparent;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-card {
+  min-height: 0;
+  max-height: none;
+  grid-template-columns: minmax(0, 1fr) 176px;
+  grid-template-rows: auto auto;
+  gap: clamp(24px, 3vw, 40px);
+  padding: clamp(24px, 3vw, 36px);
+  border-radius: 20px;
+  overflow: visible;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-editor {
+  grid-row: 1 / span 2;
+  overflow: visible;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-editor__surface {
+  min-height: 260px;
+  flex: none;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-editor textarea {
+  min-height: 220px;
+  max-width: none;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-actions {
+  align-self: end;
+  justify-content: flex-end;
+  padding-left: clamp(20px, 2vw, 28px);
+}
+html.vector-force-web .desktop-main-module-frame--now .now-bottom-bar {
+  align-self: end;
+}
+
+/* The avatar keeps its dedicated scrolling regions, but loses the phone-like
+   frame around the desktop workspace. */
+html.vector-force-web .desktop-main-module-frame--avatar .now-shell {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Avatar: a bounded conversation surface with a stable side index. */
+html.vector-force-web .desktop-main-module-frame--avatar .desktop-workspace {
+  width: 100%;
+  max-width: none;
+  padding: clamp(28px, 3.5vw, 56px) var(--desktop-gutter);
+}
+html.vector-force-web .desktop-workspace .now-page.avatar-guide-page {
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: clamp(28px, 3vw, 48px);
+  max-width: 1240px;
+  margin-inline: auto;
+}
+html.vector-force-web .desktop-workspace .avatar-page-controls {
+  padding-right: 24px;
+  border-right-color: var(--experience-line);
+}
+html.vector-force-web
+  .desktop-workspace
+  .avatar-guide-page
+  > :is(.avatar-chat-content, .avatar-library) {
+  max-width: 980px;
+}
+html.vector-force-web .desktop-workspace .avatar-guide-page .now-chat-input {
+  max-width: 880px;
+}
+html.vector-force-web .desktop-workspace .avatar-library__dimension-card {
+  border-radius: 20px;
+}
+
+/* Editors remain true, independent pages with a readable writing measure,
+   not a floating modal. */
+html.vector-force-web
+  :is(
+    .future-editor-screen,
+    .principle-editor-screen,
+    .future-practice-panel,
+    .past-bulk-editor-screen,
+    .past-action-dialog
+  ) {
+  background: var(--experience-bg);
+  color: var(--experience-ink);
+}
+html.vector-force-web :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) {
+  --editor-content-width: 1120px;
+  padding: clamp(40px, 6vh, 72px) max(48px, 8vw) clamp(48px, 8vh, 88px);
+}
+html.vector-force-web
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+  > * {
+  max-width: var(--editor-content-width);
+}
+html.vector-force-web
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+  textarea {
+  border-color: var(--experience-line);
+  background: var(--experience-surface);
+  box-shadow: none;
+}
+
+@media (max-width: 1279px) {
+  html.vector-force-web .desktop-main-module-frame.desktop-main-module-frame {
+    padding-left: 196px;
+  }
+  html.vector-force-web .desktop-main-module-frame .desktop-main-nav {
+    width: 196px;
+    padding-inline: 12px;
+  }
+  html.vector-force-web .desktop-workspace {
+    --desktop-gutter: clamp(28px, 4vw, 52px);
+  }
+  html.vector-force-web .desktop-workspace .future-design-content {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+  html.vector-force-web .desktop-workspace .future-design-summary-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 980px) {
+  html.vector-force-web .desktop-main-module-frame.desktop-main-module-frame {
+    padding-left: 176px;
+  }
+  html.vector-force-web .desktop-main-module-frame .desktop-main-nav {
+    width: 176px;
+    gap: 28px;
+  }
+  html.vector-force-web .desktop-main-module-frame .desktop-main-nav__item {
+    padding-inline: 12px;
+  }
+  html.vector-force-web .desktop-workspace {
+    padding-top: 32px;
+  }
+  html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) .now-card {
+    grid-template-columns: 1fr;
+  }
+  html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) .now-actions {
+    padding-left: 0;
+    border-left: 0;
+  }
+  html.vector-force-web .desktop-workspace .now-page.avatar-guide-page {
+    grid-template-columns: 152px minmax(0, 1fr);
+    gap: 24px;
+  }
+}
+
+:is(.desktop-workspace, .mobile-shell)
+  .past-record[data-expanded='false']
+  .mobile-past-timeline__content
+  p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-search input {
+  background: transparent !important;
+}
+
+/* Selection is shared by desktop and mobile, including the unchecked state. */
+:is(.desktop-workspace, .mobile-shell) .mobile-past-selection-toggle {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--experience-line);
+  border-radius: 10px;
+  background: var(--experience-surface);
+  color: var(--experience-ink);
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  margin: 0 0 12px;
+  color: var(--experience-muted);
+  font-size: 14px;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-selection-bar button {
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--experience-accent);
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__checkbox {
+  position: relative;
+  inset: auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--experience-bg);
+  cursor: pointer;
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__checkbox::before {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border: 2px solid var(--experience-muted);
+  border-radius: 6px;
+  background: var(--experience-surface);
+}
+:is(.desktop-workspace, .mobile-shell)
+  .past-record
+  .mobile-past-timeline__checkbox[aria-checked='true']::before {
+  border-color: var(--experience-accent);
+  background: var(--experience-accent);
+}
+:is(.desktop-workspace, .mobile-shell) .past-record .mobile-past-timeline__checkbox svg {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  stroke-width: 3;
+  color: #071824;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-bulk-action {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--experience-line);
+  border-radius: 12px;
+  background: var(--experience-surface);
+}
+.mobile-shell .mobile-past-bulk-action {
+  position: relative;
+  bottom: auto;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-bulk-action button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #a93243;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-bulk-action button svg {
+  width: 18px;
+  height: 18px;
+}
+:is(.desktop-workspace, .mobile-shell) .mobile-past-bulk-action button:disabled {
+  background: var(--experience-line);
+  color: var(--experience-muted);
+  cursor: not-allowed;
+}
+:is(.desktop-workspace, .mobile-shell)
+  :is(
+    .mobile-past-timeline__checkbox,
+    .mobile-past-selection-toggle,
+    .mobile-past-selection-bar button,
+    .mobile-past-bulk-action button
+  ):focus-visible {
+  outline: 2px solid var(--experience-accent);
+  outline-offset: 3px;
+}
+
+/* Mobile sky / shallow sea trial. Shared tokens also reach portalled editors.
+   Desktop retains its existing palette; geometry and scroll ownership stay intact. */
+html.vector-force-mobile,
+html.vector-force-mobile .mobile-shell,
+html.vector-force-mobile .mobile-shell .now-shell {
+  color-scheme: light;
+  --experience-bg: #e6f1f6;
+  --experience-surface: rgba(247, 252, 255, 0.28);
+  --experience-line: rgba(64, 111, 136, 0.1);
+  --experience-ink: #263f50;
+  --experience-muted: #486373;
+  --experience-accent: #246780;
+  --mobile-paper: #edf5fa;
+  --mobile-paper-warm: #edf5fa;
+  --mobile-paper-cool: #dceef4;
+  --mobile-surface: rgba(247, 252, 255, 0.36);
+  --mobile-surface-muted: rgba(202, 230, 240, 0.2);
+  --mobile-ink: #263f50;
+  --mobile-ink-soft: #425f72;
+  --mobile-muted: #486373;
+  --mobile-faint: #486373;
+  --mobile-line: rgba(64, 111, 136, 0.1);
+  --mobile-line-strong: rgba(64, 111, 136, 0.32);
+  --mobile-accent: #246780;
+  --mobile-accent-strong: #205e76;
+  --mobile-accent-soft: rgba(71, 149, 179, 0.08);
+  --mobile-accent-line: rgba(40, 126, 157, 0.32);
+  --mobile-mint: #28685f;
+  --mobile-mint-soft: rgba(101, 170, 161, 0.12);
+  --mobile-violet: #585d78;
+  --mobile-violet-soft: rgba(115, 135, 174, 0.1);
+  --mobile-on-accent: #f4fbff;
+  --mobile-danger: #a33e49;
+  --mobile-focus: rgba(40, 126, 157, 0.35);
+  --mobile-disabled: rgba(86, 111, 128, 0.1);
+  --mobile-shadow: 0 6px 24px rgba(54, 99, 126, 0.025), inset 0 1px rgba(255, 255, 255, 0.6);
+  --now-page: transparent;
+  --now-surface: var(--mobile-surface);
+  --now-surface-strong: #e7f1f6;
+  --now-border: var(--mobile-line);
+  --now-border-strong: var(--mobile-line-strong);
+  --now-text: var(--mobile-ink);
+  --now-text-muted: var(--mobile-muted);
+  --now-text-dim: var(--mobile-faint);
+  --now-accent: var(--mobile-accent);
+  --now-accent-strong: var(--mobile-accent-strong);
+  --now-success: var(--mobile-mint);
+  --sky-canvas:
+    radial-gradient(ellipse at 8% 8%, rgba(255, 255, 255, 0.72), transparent 48%),
+    radial-gradient(ellipse at 100% 62%, rgba(194, 229, 241, 0.3), transparent 56%),
+    linear-gradient(155deg, #edf5fa 0%, #e6f1f6 56%, #dceef4 100%);
+}
+html.vector-force-mobile,
+html.vector-force-mobile body,
+html.vector-force-mobile #root,
+html.vector-force-mobile .vector-app-shell,
+html.vector-force-mobile .mobile-shell.mobile-shell {
+  background: var(--sky-canvas) !important;
+  color: var(--mobile-ink);
+}
+html.vector-force-mobile .mobile-shell :is(.now-shell, .now-page, .mobile-past-page, .future-page) {
+  background: transparent;
+}
+html.vector-force-mobile .mobile-shell .mobile-main-nav.mobile-main-nav {
+  background: rgba(235, 246, 251, 0.64) !important;
+  border-color: var(--mobile-line);
+  box-shadow: 0 -4px 24px rgba(54, 99, 126, 0.018) !important;
+  backdrop-filter: blur(12px) !important;
+}
+html.vector-force-mobile .mobile-shell .mobile-main-nav__item {
+  color: var(--mobile-muted);
+  font-weight: 500;
+}
+html.vector-force-mobile .mobile-shell .mobile-main-nav__item--active {
+  color: var(--mobile-accent);
+  background: var(--mobile-accent-soft);
+}
+html.vector-force-mobile .mobile-shell__heading {
+  border-bottom-color: transparent;
+}
+html.vector-force-mobile .mobile-shell__heading h1 {
+  color: var(--mobile-ink);
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+html.vector-force-mobile
+  .mobile-shell
+  :is(.future-design-summary-card, .avatar-library__dimension-card, .now-card, .now-chat-input) {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.4), rgba(230, 245, 251, 0.16));
+  border-color: var(--mobile-line);
+  box-shadow: var(--mobile-shadow);
+  border-radius: 20px;
+}
+html.vector-force-mobile .avatar-guide-page .now-chat-list {
+  gap: 16px;
+  padding-block: 16px;
+}
+html.vector-force-mobile .now-chat-bubble {
+  border-radius: 18px;
+  padding: 12px 14px;
+  line-height: 1.7;
+  border-color: transparent;
+}
+html.vector-force-mobile .now-chat-bubble.is-user {
+  background: rgba(167, 209, 227, 0.23);
+  border-color: rgba(64, 111, 136, 0.1);
+}
+html.vector-force-mobile .avatar-section-tabs button {
+  font-weight: 500;
+}
+html.vector-force-mobile
+  :is(.future-dialog, .future-practice-panel, .avatar-model-dialog, .avatar-memory-confirm-dialog) {
+  color: var(--mobile-ink);
+  background: linear-gradient(155deg, rgba(244, 250, 253, 0.97), rgba(229, 242, 248, 0.96));
+  border-color: var(--mobile-line);
+  box-shadow: 0 -12px 48px rgba(38, 63, 80, 0.12);
+}
+html.vector-force-mobile dialog::backdrop {
+  background: rgba(38, 63, 80, 0.28);
+}
+html.vector-force-mobile :is(input, textarea, select)::placeholder {
+  color: var(--mobile-muted);
+  opacity: 1;
+}
+html.vector-force-mobile .mobile-shell .mobile-past-page__segments {
+  background: transparent !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  padding: 0 12px 12px;
+  gap: 24px;
+}
+html.vector-force-mobile .mobile-shell .mobile-past-page__segments button {
+  min-height: 44px;
+  background: transparent !important;
+  color: var(--mobile-muted) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+html.vector-force-mobile .mobile-shell .mobile-past-page__segments button[aria-selected='true'] {
+  color: var(--mobile-accent-strong) !important;
+}
+html.vector-force-mobile .mobile-shell .mobile-past-page__segment--active::after {
+  background: var(--mobile-accent);
+  bottom: -12px;
+}
+html.vector-force-mobile
+  .mobile-shell
+  :is(
+    .mobile-past-timeline__fold,
+    .mobile-avatar-memory-layer__cta,
+    .now-avatar-customize,
+    .now-avatar-invitation__starters button,
+    .now-avatar-invitation__foot button,
+    .now-avatar-understanding__actions button,
+    .now-avatar-insight__evidence button
+  ) {
+  background: var(--mobile-accent-soft) !important;
+}
+html.vector-force-mobile
+  .mobile-shell
+  :is(.mobile-past-timeline__tags, .future-chip-list)
+  span:nth-child(3n + 2) {
+  color: var(--mobile-mint) !important;
+}
+
+/* Shared reading rhythm: one navigation layer, readable copy, quiet metadata. */
+.mobile-shell__accessible-title,
+.desktop-workspace__accessible-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell.mobile-shell) {
+  --reading-body: 1rem;
+  --reading-section: 1.0625rem;
+  --reading-control: 0.9375rem;
+  --reading-meta: 0.8125rem;
+  box-sizing: border-box;
+  font-size: var(--reading-body);
+  line-height: 1.7;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  :is(
+    .future-primary-tabs button,
+    .mobile-past-page__segments button,
+    .avatar-section-tabs button,
+    .avatar-library__scopes button
+  ) {
+  font-size: var(--reading-control) !important;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  :is(.future-design-summary-header h2, .avatar-library__dimension-card-title) {
+  font-size: var(--reading-section);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  :is(
+    .now-chat-bubble,
+    .avatar-library__row,
+    .future-summary-result__primary,
+    .future-design-summary-body p,
+    .future-result-copy strong
+  ) {
+  font-size: var(--reading-body);
+  line-height: 1.75;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  .past-record
+  .mobile-past-timeline__content
+  p {
+  font-size: var(--reading-body) !important;
+  line-height: 1.8 !important;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  .past-record
+  .mobile-past-timeline__summary-title
+  strong {
+  font-size: var(--reading-body) !important;
+  line-height: 1.6;
+  font-weight: 500;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  :is(.avatar-library__dimension-card-description, .future-design-summary-empty) {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  font-weight: 400;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  :is(
+    .avatar-library__dimension-card-title small,
+    .future-result-copy small,
+    .now-time,
+    .future-design-summary-header small
+  ) {
+  font-size: var(--reading-meta);
+  line-height: 1.5;
+  font-weight: 400;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  .past-record
+  .past-record__date {
+  font-size: var(--reading-meta) !important;
+}
+:is(html.vector-force-mobile, html.vector-force-web)
+  :is(
+    .desktop-main-module-frame,
+    .mobile-shell,
+    .future-dialog,
+    .future-practice-panel,
+    .avatar-model-dialog
+  )
+  :is(input, textarea, select) {
+  font-size: 1rem;
+  line-height: 1.65;
+}
+:is(html.vector-force-mobile, html.vector-force-web)
+  :is(.future-dialog, .future-practice-panel, .avatar-model-dialog)
+  h2 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+:is(.desktop-main-module-frame, html.vector-force-mobile .mobile-shell)
+  .avatar-library__dimension-card {
+  row-gap: 8px;
+}
+
+html.vector-force-mobile .mobile-shell.mobile-shell {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.desktop-main-module-frame .desktop-main-nav__item span {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+.desktop-main-module-frame .desktop-main-nav__item small {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.desktop-main-module-frame .now-editor textarea {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+/* Keep reflection guidance outside the writing surface. */
+.mobile-principles-view__reflection-hint {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--experience-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: 0;
+}
+
+/* Editors own the viewport; previous screens stay covered and retain their state. */
+html:is(.vector-force-mobile, .vector-force-web)
+  :is(
+    .future-editor-screen,
+    .principle-editor-screen,
+    .future-practice-panel,
+    .past-bulk-editor-screen,
+    .past-action-dialog
+  ) {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--experience-bg);
+  color: var(--experience-ink);
+  box-shadow: none;
+}
+html.vector-force-mobile
+  :is(
+    .future-editor-screen,
+    .principle-editor-screen,
+    .future-practice-panel,
+    .past-bulk-editor-screen,
+    .past-action-dialog
+  ) {
+  background: linear-gradient(155deg, #f0f8fc, #deedf5);
+  color: var(--mobile-ink);
+}
+html
+  :is(
+    .future-editor-screen,
+    .principle-editor-screen,
+    .future-practice-panel,
+    .past-bulk-editor-screen,
+    .past-action-dialog
+  )::backdrop {
+  background: var(--experience-bg);
+}
+html :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) > * {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+html .principle-editor-screen .mobile-principles-view {
+  animation: none;
+}
+html .principle-editor-screen .mobile-principles-view__composer {
+  margin-top: 20px;
+}
+/* Full-screen writing surfaces have their own spacing, independent of cards. */
+html:is(.vector-force-mobile, .vector-force-web)
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) {
+  --editor-content-width: 960px;
+  padding: max(24px, env(safe-area-inset-top)) max(32px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom)) max(32px, env(safe-area-inset-left));
+  scroll-padding-block: 80px 32px;
+}
+html :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) > * {
+  max-width: var(--editor-content-width);
+}
+html .future-editor-screen fieldset {
+  gap: 24px;
+}
+html .future-editor-screen > header {
+  margin-bottom: 24px;
+}
+html .principle-editor-screen .mobile-principles-view__composer {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+  textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: clamp(200px, 32dvh, 360px);
+  padding: 16px;
+  font-size: 16px;
+  line-height: 1.8;
+  resize: vertical;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+  :is(input, select) {
+  min-height: 48px;
+  font-size: 16px;
+}
+@media (max-width: 600px) {
+  html:is(.vector-force-mobile, .vector-force-web)
+    :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) {
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  html .future-editor-screen fieldset {
+    gap: 20px;
+  }
+  html:is(.vector-force-mobile, .vector-force-web)
+    :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+    textarea {
+    min-height: clamp(180px, 28dvh, 280px);
+    padding: 12px;
+  }
+}
+
+/* The mobile preview is rendered inside a desktop browser as well.  Use the
+   selected edition, rather than only the browser width, to size its writing
+   surface so it remains a phone-sized, full-height screen in either case. */
+html.vector-force-mobile
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) {
+  --editor-content-width: 100%;
+  left: 50%;
+  right: auto;
+  width: min(100vw, 440px);
+  max-width: 440px;
+  transform: translateX(-50%);
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  scroll-padding-block: 64px 24px;
+}
+html.vector-force-mobile
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+  > * {
+  width: 100%;
+  max-width: none;
+}
+html.vector-force-mobile .future-editor-screen fieldset {
+  gap: 18px;
+}
+html.vector-force-mobile .future-editor-screen > header {
+  margin-bottom: 18px;
+}
+html.vector-force-mobile
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+  textarea {
+  min-height: clamp(176px, 30dvh, 280px);
+  padding: 14px;
+  line-height: 1.7;
+}
+
+/* Desktop editors keep a generous writing measure without becoming a
+   stretched mobile sheet on wide screens. */
+html.vector-force-web :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) {
+  --editor-content-width: 960px;
+  padding: max(32px, env(safe-area-inset-top)) max(40px, env(safe-area-inset-right))
+    max(36px, env(safe-area-inset-bottom)) max(40px, env(safe-area-inset-left));
+}
+html.vector-force-web
+  :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel)
+  textarea {
+  min-height: clamp(240px, 34dvh, 400px);
+  padding: 18px;
+}
+
+/* Record management is an independent page.  The background and main
+   navigation remain in the document, but the native dialog owns the top layer
+   and its opaque backdrop so there is no visual or interactive overlap. */
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__header,
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__content,
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__footer {
+  width: min(100%, 800px);
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: max(20px, env(safe-area-inset-top)) 0 16px;
+  border-bottom: 1px solid var(--experience-line);
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .past-bulk-editor-screen__header
+  > button:first-child {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--experience-ink);
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__header svg {
+  width: 20px;
+  height: 20px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__header p {
+  margin: 0 0 2px;
+  color: var(--experience-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__header h2 {
+  margin: 0;
+  color: var(--experience-ink);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__select-all {
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--experience-accent);
+  font-size: 14px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 0 28px;
+  overscroll-behavior: contain;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__count {
+  margin: 14px 2px 12px;
+  color: var(--experience-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__footer {
+  padding: 14px 0 max(20px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--experience-line);
+  background: inherit;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__footer button {
+  display: inline-flex;
+  float: right;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #a93243;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-bulk-editor-screen__footer button:disabled {
+  background: var(--experience-line);
+  color: var(--experience-muted);
+}
+html.vector-force-mobile .past-bulk-editor-screen,
+html.vector-force-mobile .past-action-dialog {
+  left: 50%;
+  right: auto;
+  width: min(100vw, 440px);
+  max-width: 440px;
+  transform: translateX(-50%);
+}
+html.vector-force-mobile .past-bulk-editor-screen__header,
+html.vector-force-mobile .past-bulk-editor-screen__content,
+html.vector-force-mobile .past-bulk-editor-screen__footer {
+  width: 100%;
+  padding-inline: 20px;
+}
+
+/* Confirming a destructive change also stays within the same protected page
+   context instead of becoming a floating card over the navigation. */
+html:is(.vector-force-mobile, .vector-force-web) .past-action-dialog {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-action-dialog > * {
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-action-dialog h2 {
+  margin-block: 0;
+}
+html:is(.vector-force-mobile, .vector-force-web) .past-action-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Memory decisions and connection settings are editing tasks.  They use the
+   same independent-page treatment as the writing editors: the prior view and
+   its main navigation stay behind an opaque top layer, while the form itself
+   keeps a readable measure and generous surrounding space. */
+html:is(.vector-force-mobile, .vector-force-web) :is(.avatar-memory-dialog, .avatar-model-dialog) {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: max(24px, env(safe-area-inset-top)) max(32px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom)) max(32px, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--experience-ink);
+  background: var(--experience-bg);
+  box-shadow: none;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  :is(.avatar-memory-dialog, .avatar-model-dialog)::backdrop {
+  background: var(--experience-bg);
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog > *,
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog > form {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog__header,
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog > form > header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  margin: 0 auto 20px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--experience-line);
+  background: transparent;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog h2,
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog h2 {
+  margin: 0;
+  color: var(--experience-ink);
+  font-size: clamp(19px, 2vw, 22px);
+  font-weight: 600;
+  line-height: 1.35;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  :is(.avatar-memory-dialog__back, .avatar-model-dialog__back) {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--experience-ink);
+  background: transparent;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  :is(.avatar-memory-dialog__back, .avatar-model-dialog__back)
+  svg {
+  width: 20px;
+  height: 20px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog label {
+  margin: 18px auto 8px;
+  color: var(--experience-muted);
+  font-size: 14px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog :is(textarea, select) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  color: var(--experience-ink);
+  background: color-mix(in srgb, var(--experience-bg), var(--experience-line) 20%);
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog textarea {
+  min-height: clamp(180px, 30dvh, 300px);
+  padding: 16px;
+  line-height: 1.75;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog__statement {
+  margin: 4px auto 0;
+  font-size: 16px;
+  line-height: 1.85;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog .avatar-library__source {
+  margin: 16px auto 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--experience-line);
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog__actions {
+  position: sticky;
+  bottom: calc(-1 * max(28px, env(safe-area-inset-bottom)));
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  max-width: 760px;
+  margin: auto auto 0;
+  padding: 18px 0 max(28px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--experience-line);
+  background: var(--experience-bg);
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog__actions button,
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog footer button {
+  min-height: 44px;
+  padding: 10px 16px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog > form {
+  display: grid;
+  gap: 16px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog > form > header {
+  position: static;
+  top: auto;
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog footer {
+  position: sticky;
+  bottom: calc(-1 * max(28px, env(safe-area-inset-bottom)));
+  margin-top: 8px;
+  padding: 18px 0 max(28px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--experience-line);
+  background: var(--experience-bg);
+}
+html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog :is(input, select) {
+  min-height: 48px;
+  color: var(--experience-ink);
+  background: color-mix(in srgb, var(--experience-bg), var(--experience-line) 20%);
+}
+html.vector-force-mobile :is(.avatar-memory-dialog, .avatar-model-dialog) {
+  left: 50%;
+  right: auto;
+  width: min(100vw, 440px);
+  max-width: 440px;
+  transform: translateX(-50%);
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  color: var(--mobile-ink);
+  background: linear-gradient(155deg, #f0f8fc, #deedf5);
+}
+html.vector-force-mobile :is(.avatar-memory-dialog, .avatar-model-dialog)::backdrop {
+  background: var(--experience-bg);
+}
+html.vector-force-mobile .avatar-memory-dialog__header,
+html.vector-force-mobile .avatar-model-dialog > form > header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+}
+html.vector-force-mobile .avatar-memory-dialog__actions,
+html.vector-force-mobile .avatar-model-dialog footer {
+  bottom: calc(-1 * max(24px, env(safe-area-inset-bottom)));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  background: linear-gradient(155deg, #f0f8fc, #deedf5);
+}
+@media (max-width: 600px) {
+  html:is(.vector-force-mobile, .vector-force-web)
+    :is(.avatar-memory-dialog, .avatar-model-dialog) {
+    padding-inline: max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-left));
+  }
+  html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog textarea {
+    min-height: clamp(164px, 28dvh, 250px);
+    padding: 14px;
+  }
+}
+
+/* Future planning has one clear route back.  The editor stays contained on
+   the canvas and its final action remains anchored in the lower-right corner. */
+html:is(.vector-force-mobile, .vector-force-web) .future-editor-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+html:is(.vector-force-mobile, .vector-force-web) .future-editor-screen > header,
+html:is(.vector-force-mobile, .vector-force-web) .future-editor-screen > form {
+  width: min(100%, var(--editor-content-width));
+  margin-inline: auto;
+}
+html.vector-force-mobile .future-editor-screen {
+  padding-inline: max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-left));
+}
+html.vector-force-web .future-editor-screen {
+  --editor-content-width: 760px;
+}
+
+/* A principle is written in the same focused environment as a plan or a
+   practice note.  It is a page, not a compact dialog above a live screen. */
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen {
+  display: block;
+  min-height: 100%;
+}
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen__back {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: var(--experience-ink);
+  background: color-mix(in srgb, var(--experience-surface) 68%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--experience-line) 72%, transparent);
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen__back:hover:not(:disabled) {
+  background: var(--experience-surface);
+  transform: translateX(-2px);
+}
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen__back:focus-visible {
+  outline: 2px solid var(--experience-accent);
+  outline-offset: 3px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen__back svg {
+  width: 20px;
+  height: 20px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen .mobile-principles-view {
+  height: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__composer {
+  display: flex;
+  flex: none;
+  min-height: 0;
+  margin: 20px 0 0;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__composer-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__composer-content
+  > .cyber-button {
+  margin-top: 8px;
+}
+
+/* Keep the short form readable, with confirmation directly after its fields. */
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__composer {
+  margin-top: 28px;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__composer-content {
+  gap: 24px;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__reflection-hint {
+  margin-bottom: 18px;
+  font-size: 15px;
+  line-height: 1.75;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__textarea {
+  min-height: 152px;
+  max-height: 220px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--experience-line) 78%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--experience-surface) 48%, transparent);
+  line-height: 1.7;
+}
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen .principle-meta-row {
+  gap: 16px;
+  padding-top: 4px;
+}
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen .principle-meta-field {
+  gap: 8px;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-meta-field
+  label {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__home-toggle {
+  padding-top: 4px;
+}
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__composer-content
+  > .cyber-button {
+  width: min(100%, 360px);
+  min-height: 52px;
+  align-self: flex-end;
+}
+
+@media (max-width: 600px) {
+  html.vector-force-mobile .principle-editor-screen .mobile-principles-view__composer {
+    margin-top: 24px;
+  }
+  html.vector-force-mobile .principle-editor-screen .mobile-principles-view__composer-content {
+    gap: 22px;
+  }
+  html.vector-force-mobile .principle-editor-screen .mobile-principles-view__textarea {
+    min-height: 144px;
+    max-height: 196px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+  html.vector-force-mobile .principle-editor-screen .principle-meta-row {
+    gap: 12px;
+  }
+  html.vector-force-mobile
+    .principle-editor-screen
+    .mobile-principles-view__composer-content
+    > .cyber-button {
+    width: 100%;
+    align-self: stretch;
+  }
+}
+
+/* Final desktop overrides: shared editor rules appear earlier in the file and
+   should not narrow the independent writing pages or full-page settings. */
+html.vector-force-web :is(.future-editor-screen, .principle-editor-screen, .future-practice-panel) {
+  --editor-content-width: 1120px;
+}
+
+html.vector-force-web
+  :is(
+    .past-bulk-editor-screen__header,
+    .past-bulk-editor-screen__content,
+    .past-bulk-editor-screen__footer
+  ) {
+  width: min(100%, 1200px);
+}
+
+html.vector-force-web :is(.avatar-memory-dialog > *, .avatar-model-dialog > form) {
+  max-width: 1120px;
+}
+
+/* A single writing surface on desktop: the card owns the boundary, while the
+   editor is deliberately frameless.  This removes the nested-panel effect
+   without turning the writing area into an edge-to-edge form. */
+html.vector-force-web .desktop-main-module-frame--now .now-card {
+  grid-template-rows: minmax(300px, auto) auto;
+  padding: clamp(26px, 2.8vw, 36px);
+}
+html.vector-force-web .desktop-main-module-frame--now .now-editor__surface {
+  min-height: 300px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-editor__surface:focus-within {
+  border-color: transparent;
+  box-shadow: none;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-editor textarea {
+  min-height: 252px;
+  padding: 2px 0;
+}
+html.vector-force-web .desktop-main-module-frame--now .now-editor__meta {
+  padding-top: 8px;
+}
+
+/* Desktop pages share the workspace itself as their outer canvas.  The mobile
+   recorder carries a full-bleed atmospheric panel by design; retaining that
+   panel on a wide screen made a second, oversized card around the actual
+   record.  On desktop the record card is the one intentional surface. */
+html.vector-force-web .desktop-main-module-frame--now .now-page:not(.avatar-guide-page) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: start;
+  width: min(100%, 1140px);
+  min-height: 0;
+  margin-inline: auto;
+  padding: clamp(12px, 1.8vw, 24px) 0 clamp(36px, 5vw, 72px);
+  overflow: visible;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none;
+}
+
+html.vector-force-web .desktop-main-module-frame--now .now-header {
+  min-height: 56px;
+  padding: 0 4px 14px;
+}
+
+html.vector-force-web .desktop-main-module-frame--now .now-card {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) 164px;
+  gap: clamp(24px, 2.8vw, 36px);
+  padding: clamp(28px, 3.1vw, 42px);
+  border-radius: 22px;
+}
+
+html.vector-force-web .desktop-main-module-frame--now .now-actions {
+  min-width: 0;
+  padding-left: clamp(18px, 2vw, 24px);
+}
+
+/* Avatar is a desktop workspace with an index and a content column, not a
+   centred device-sized canvas.  Its cards keep their own boundaries. */
+html.vector-force-web .desktop-main-module-frame--avatar .now-page.avatar-guide-page {
+  width: min(100%, 1320px);
+  max-width: 1320px;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none;
+}
+
+html.vector-force-web
+  .desktop-main-module-frame--avatar
+  .avatar-guide-page
+  > :is(.avatar-chat-content, .avatar-library) {
+  max-width: none;
+}
+
+/* The content column may use the available monitor width, while each module
+   still chooses a readable measure.  This prevents all four pages from
+   looking like a small panel dropped into an otherwise unused desktop. */
+@media (min-width: 1280px) {
+  html.vector-force-web .desktop-workspace {
+    --desktop-page-max: 1560px;
+    --desktop-gutter: clamp(24px, 1.7vw, 36px);
+    max-width: var(--desktop-page-max);
+  }
+  html.vector-force-web .desktop-workspace .mobile-past-timeline,
+  html.vector-force-web .desktop-workspace .mobile-principles-view--result-first,
+  html.vector-force-web .desktop-workspace .mobile-past-search-row {
+    max-width: 1240px;
+  }
+  html.vector-force-web .desktop-workspace .future-practice-workspace {
+    max-width: 1240px;
+  }
+}
+
+/* Desktop Now workbench — class based so the frame remains correct during the
+   app's boot and lock transitions, before the experience class is attached to
+   the document. The workspace supplies the margin; this is the only surface. */
+.desktop-main-module-frame--now .desktop-workspace {
+  width: min(100%, 1440px);
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: clamp(36px, 3.2vw, 64px) clamp(32px, 4vw, 64px) clamp(48px, 5vw, 88px);
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-shell {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-page:not(.avatar-guide-page) {
+  display: grid;
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  min-height: calc(100dvh - 172px);
+  margin-inline: auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-header {
+  min-height: 58px;
+  padding: 0 6px 20px;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-card {
+  display: grid;
+  width: 100%;
+  min-height: clamp(520px, calc(100dvh - 220px), 720px);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(300px, 1fr) auto auto;
+  gap: 24px 32px;
+  padding: clamp(34px, 3vw, 48px);
+  border-radius: 24px;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-editor {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-materials-row {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-editor__surface {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-editor textarea {
+  min-height: 0;
+  height: auto;
+  flex: 1 1 auto;
+  padding: 4px 0;
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-actions {
+  grid-column: 1;
+  grid-row: 3;
+  align-self: center;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+}
+
+.desktop-main-module-frame--now .desktop-workspace .now-bottom-bar {
+  grid-column: 2;
+  grid-row: 3;
+  align-self: center;
+  justify-self: end;
+  padding: 0;
+}
+
+@media (max-width: 1100px) {
+  .desktop-main-module-frame--now .desktop-workspace {
+    padding-inline: clamp(28px, 4vw, 48px);
+  }
+
+  .desktop-main-module-frame--now .desktop-workspace .now-page:not(.avatar-guide-page) {
+    width: 100%;
+    min-height: 0;
+  }
+
+  .desktop-main-module-frame--now .desktop-workspace .now-card {
+    min-height: 500px;
+  }
+}
+
+/* Desktop frames share a generous canvas; writing remains an independent
+   full-screen page with a readable content measure. */
+@media (min-width: 1000px) {
+  html.vector-force-web .principle-editor-screen {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    margin: 0;
+    padding: max(32px, env(safe-area-inset-top)) max(40px, env(safe-area-inset-right))
+      max(36px, env(safe-area-inset-bottom)) max(40px, env(safe-area-inset-left));
+  }
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__composer-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 20px 32px;
+    align-items: start;
+  }
+  html.vector-force-web .principle-editor-screen__back {
+    grid-column: 1 / -1;
+  }
+  html.vector-force-web
+    .principle-editor-screen
+    .mobile-principles-view__composer-content
+    > div:first-child {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+  html.vector-force-web
+    .principle-editor-screen
+    .mobile-principles-view__composer-content
+    > :is(.principle-meta-row, .mobile-principles-view__home-toggle, .cyber-button) {
+    grid-column: 2;
+    width: 100%;
+  }
+  html.vector-force-web
+    .principle-editor-screen
+    .mobile-principles-view__composer-content
+    > [role='alert'] {
+    grid-column: 2;
+  }
+  html.vector-force-web .principle-editor-screen .principle-meta-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__textarea {
+    min-height: 240px;
+    max-height: 360px;
+  }
+  html.vector-force-web .future-editor-form > fieldset {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-content: start;
+  }
+  html.vector-force-web .future-editor-form > fieldset > :not(label),
+  html.vector-force-web .future-editor-form > fieldset > label:has(textarea) {
+    grid-column: 1 / -1;
+  }
+  html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) {
+    max-width: 1600px;
+  }
+  html.vector-force-web .desktop-workspace .now-page:not(.avatar-guide-page) .now-editor textarea {
+    max-width: none;
+  }
+  html.vector-force-web .desktop-workspace .now-chat-input {
+    max-width: none;
+  }
+}
+
+/* Final desktop Now canvas. Keep this selector equally specific to the
+   desktop experience rules above so it remains the authoritative size. */
+@media (min-width: 1280px) {
+  html.vector-force-web .desktop-main-module-frame--now .desktop-workspace {
+    width: min(100%, 1440px);
+    max-width: 1440px;
+    margin-inline: auto;
+    padding: clamp(36px, 3.2vw, 64px) clamp(32px, 4vw, 64px) clamp(48px, 5vw, 88px);
+  }
+
+  html.vector-force-web
+    .desktop-main-module-frame--now
+    .desktop-workspace
+    .now-page:not(.avatar-guide-page) {
+    width: min(100%, 1120px);
+    max-width: 1120px;
+    margin-inline: auto;
+    padding: 0;
+  }
+
+  html.vector-force-web .desktop-main-module-frame--now .desktop-workspace .now-card {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Final wide-screen measures: the page canvas can grow with a monitor, but
+   reading, planning and conversation each keep a deliberate line length.
+   These selectors come last because the project contains earlier desktop
+   experiments with broader max-width values. */
+@media (min-width: 1280px) {
+  html.vector-force-web
+    .desktop-main-module-frame:not(.desktop-main-module-frame--now):has(.mobile-past-page)
+    .desktop-workspace {
+    width: min(100%, 1360px);
+    max-width: 1360px;
+  }
+
+  html.vector-force-web
+    .desktop-main-module-frame:has(.mobile-past-page)
+    .desktop-workspace
+    :is(.mobile-past-search-row, .mobile-past-timeline, .mobile-principles-view--result-first) {
+    width: min(100%, 960px);
+    max-width: 960px;
+    margin-inline: auto;
+  }
+
+  html.vector-force-web
+    .desktop-main-module-frame:has(.mobile-past-page)
+    .desktop-workspace
+    .past-record.past-record {
+    padding: 24px 28px;
+  }
+
+  html.vector-force-web .desktop-main-module-frame:has(.future-page) .desktop-workspace {
+    width: min(100%, 1360px);
+    max-width: 1360px;
+  }
+
+  html.vector-force-web
+    .desktop-main-module-frame:has(.future-page)
+    .desktop-workspace
+    .future-page {
+    width: min(100%, 1160px);
+    max-width: 1160px;
+    margin-inline: auto;
+  }
+
+  html.vector-force-web
+    .desktop-main-module-frame:has(.future-page)
+    .desktop-workspace
+    .future-design-summary-card--empty {
+    min-height: 188px;
+  }
+
+  html.vector-force-web
+    .desktop-main-module-frame:has(.future-page)
+    .desktop-workspace
+    .future-practice-workspace {
+    width: min(100%, 960px);
+    max-width: 960px;
+  }
+
+  html.vector-force-web .desktop-main-module-frame--avatar .avatar-guide-page .now-chat-list > * {
+    width: min(100%, 820px);
+    margin-inline: auto;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Desktop layout system — authoritative final geometry
+   This block deliberately comes last. It keeps the deep colour direction and
+   resolves only hierarchy, readable measures and spacing. Earlier rules are
+   retained for gradual cleanup, while desktop geometry has one source of truth.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1000px) {
+  html.vector-force-web {
+    --desktop-nav-width: 224px;
+    --desktop-canvas-max: 1480px;
+    --desktop-gutter: clamp(32px, 4vw, 72px);
+    --desktop-type-meta: 12px;
+    --desktop-type-body: 16px;
+    --desktop-type-section: 21px;
+    --desktop-type-page: 30px;
+  }
+
+  html.vector-force-web .desktop-main-module-frame.desktop-main-module-frame {
+    min-height: 100dvh;
+    padding-left: var(--desktop-nav-width);
+  }
+
+  html.vector-force-web .desktop-main-module-frame .desktop-main-nav {
+    width: var(--desktop-nav-width);
+    gap: 32px;
+    padding: 32px 14px;
+  }
+
+  html.vector-force-web .desktop-main-nav__brand {
+    padding-inline: 14px;
+    font-size: 26px;
+  }
+  html.vector-force-web .desktop-main-module-frame .desktop-main-nav__item {
+    min-height: 64px;
+    padding: 10px 14px;
+  }
+
+  html.vector-force-web .desktop-workspace {
+    box-sizing: border-box;
+    width: min(100%, var(--desktop-canvas-max));
+    max-width: var(--desktop-canvas-max);
+    min-height: 100dvh;
+    margin-inline: auto;
+    padding: clamp(36px, 4vw, 64px) var(--desktop-gutter) clamp(52px, 6vw, 96px);
+  }
+
+  html.vector-force-web .desktop-workspace__body {
+    width: 100%;
+    min-width: 0;
+  }
+  html.vector-force-web .desktop-workspace :is(p, textarea, input, select) {
+    font-size: var(--desktop-type-body);
+    line-height: 1.7;
+  }
+  html.vector-force-web .desktop-workspace small {
+    font-size: var(--desktop-type-meta);
+    line-height: 1.55;
+  }
+  html.vector-force-web .desktop-workspace :is(.now-page__title, .future-page__title) {
+    font-size: var(--desktop-type-page);
+    line-height: 1.22;
+  }
+  html.vector-force-web
+    .desktop-workspace
+    :is(.mobile-past-page__section-title, .avatar-library__dimension-card-title) {
+    font-size: var(--desktop-type-section);
+    line-height: 1.35;
+  }
+
+  /* 现在：一个主编辑面，而不是外层大框中再放一个小框。 */
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .desktop-workspace {
+    width: min(100%, 1440px);
+    max-width: 1440px;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-shell,
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-page:not(.avatar-guide-page) {
+    width: min(100%, 1120px);
+    max-width: 1120px;
+    min-height: calc(100dvh - 180px);
+    margin-inline: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-header {
+    min-height: 0;
+    padding: 0 4px 24px;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-card {
+    width: 100%;
+    min-height: clamp(540px, calc(100dvh - 245px), 720px);
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(320px, 1fr) auto auto;
+    gap: 24px 32px;
+    padding: clamp(32px, 3vw, 48px);
+    border-radius: 24px;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-editor {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-materials-row {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-actions {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-bottom-bar {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  /* 过去保持阅读宽度；未来将规划与践行分别限制到恰当的行宽。 */
+  html.vector-force-web
+    .desktop-main-module-frame:has(.mobile-past-page)
+    .desktop-workspace
+    :is(.mobile-past-search-row, .mobile-past-timeline, .mobile-principles-view--result-first),
+  html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-practice-workspace {
+    width: min(100%, 960px);
+    max-width: 960px;
+    margin-inline: auto;
+  }
+  html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-page {
+    width: min(100%, 1160px);
+    max-width: 1160px;
+    margin-inline: auto;
+  }
+  html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-content {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-content--empty {
+    gap: 20px 24px;
+  }
+  html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-empty-intro {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto;
+    align-items: center;
+    justify-content: start;
+    gap: 24px;
+    padding: 8px 2px 4px;
+  }
+  html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-empty-intro p {
+    font-size: 16px;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame:has(.future-page)
+    .future-design-empty-intro
+    .future-design-entry {
+    grid-column: auto;
+    justify-self: start;
+  }
+  html.vector-force-web
+    .desktop-main-module-frame:has(.future-page)
+    .future-design-content--empty
+    .future-design-summary-card {
+    min-height: 164px;
+  }
+
+  html.vector-force-web .desktop-main-module-frame--avatar .desktop-workspace {
+    width: min(100%, 1440px);
+    max-width: 1440px;
+  }
+  html.vector-force-web .desktop-main-module-frame--avatar .avatar-guide-page .now-chat-list > * {
+    width: min(100%, 820px);
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 1000px) and (max-width: 1279px) {
+  html.vector-force-web .desktop-workspace {
+    padding-inline: clamp(28px, 4vw, 48px);
+  }
+  html.vector-force-web
+    .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+    .now-card {
+    min-height: 520px;
+  }
+}
+
+/* A blank record is an invitation, not a full-height document. Keeping the
+   empty workbench deliberately shorter restores a calm visual centre on
+   desktop while the writing area still has room to begin. Once text or a
+   material is added, the regular, larger composition takes over. */
+html.vector-force-web
+  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+  .now-page:not(.avatar-guide-page)
+  .now-card.now-card--empty {
+  /* An empty note only needs enough room to invite a first sentence.  A
+     document-height canvas made the primary action drift too far away and
+     turned the first-use state into unused decoration. */
+  min-height: clamp(392px, calc(100dvh - 510px), 452px);
+  grid-template-rows: minmax(184px, 1fr) auto auto;
+  gap: 18px 32px;
+}
+
+/* A recovered note already has a thought in progress. Give it a generous
+   writing surface while keeping the closing actions visible as part of the
+   same continuous card. */
+html.vector-force-web
+  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+  .now-page:not(.avatar-guide-page)
+  .now-card:not(.now-card--empty) {
+  min-height: clamp(680px, calc(100dvh - 180px), 820px);
+  grid-template-rows: minmax(480px, 1fr) auto auto;
+  gap: 18px 24px;
+  padding: clamp(28px, 2.8vw, 38px);
+}
+
+html.vector-force-web
+  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+  .now-page:not(.avatar-guide-page)
+  .now-card:not(.now-card--empty)
+  .now-editor__surface {
+  flex: 1 1 auto;
+  min-height: 480px;
+}
+
+html.vector-force-web
+  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+  .now-page:not(.avatar-guide-page)
+  .now-card:not(.now-card--empty)
+  .now-editor
+  textarea {
+  min-height: 440px;
+  flex: 1 1 auto;
+}
+
+html.vector-force-web
+  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+  .now-page:not(.avatar-guide-page)
+  .now-card:not(.now-card--empty)
+  .now-editor__meta {
+  padding-top: 6px;
+}
+
+/* The SVG supplies the instrument itself; remove the legacy opaque housing. */
+html:root:root .cover-screen .cover-core-stage::before {
+  background: radial-gradient(circle, rgba(128, 205, 226, 0.05), transparent 70%) !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+html:root:root .cover-screen .cover-core-stage::after {
+  opacity: 0.16;
+}
+
+/* Past · Distillation / Principles
+   The library is deliberately a desktop reading surface here.  Mobile keeps
+   its compact list rules, while a web viewport gains a clearer hierarchy and
+   enough width for principles to be scanned as conclusions instead of cards
+   stretched from the phone layout. */
+@media (min-width: 1000px) {
+  html.vector-force-web
+    .desktop-main-module-frame:has(.mobile-principles-view--result-first)
+    .desktop-workspace
+    .mobile-principles-view--result-first {
+    width: min(100%, 1120px);
+    max-width: 1120px;
+  }
+
+  html.vector-force-web
+    .mobile-principles-view--result-first
+    .mobile-principles-view__result-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 28px;
+    padding: 4px 0 30px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-vector-cyan-brand) 11%, transparent);
+  }
+
+  html.vector-force-web
+    .mobile-principles-view--result-first
+    .mobile-principles-view__result-header
+    > div {
+    display: grid;
+    gap: 7px;
+  }
+
+  html.vector-force-web
+    .mobile-principles-view--result-first
+    .mobile-principles-view__result-header
+    strong {
+    color: var(--experience-ink);
+    font-size: clamp(28px, 2.35vw, 38px);
+    font-weight: 520;
+    letter-spacing: -0.045em;
+    line-height: 1.08;
+  }
+
+  html.vector-force-web
+    .mobile-principles-view--result-first
+    .mobile-principles-view__result-header
+    small {
+    color: var(--color-vector-slate-soft);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+
+  html.vector-force-web
+    .mobile-principles-view--result-first
+    .mobile-principles-view__manage-button {
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  html.vector-force-web .mobile-principles-view--result-first .principles-library {
+    margin-top: 32px;
+  }
+
+  html.vector-force-web .mobile-principles-view--result-first .principles-library__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  html.vector-force-web .mobile-principles-view--result-first .principle-card {
+    min-height: 156px;
+    padding: 26px 28px;
+    border-radius: 14px;
+  }
+
+  html.vector-force-web .mobile-principles-view--result-first .principle-card__content {
+    min-width: 0;
+    padding-right: 14px;
+  }
+
+  html.vector-force-web .mobile-principles-view--result-first .principle-card p {
+    color: var(--experience-ink);
+    font-family: var(--font-serif, ui-serif, Georgia, serif);
+    font-size: clamp(17px, 1.25vw, 19px);
+    font-weight: 450;
+    letter-spacing: 0.01em;
+    line-height: 1.7;
+  }
+
+  html.vector-force-web .mobile-principles-view--result-first .principle-card__formed-year {
+    display: block;
+    margin-top: 17px;
+    color: var(--color-vector-slate-soft);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+
+  html.vector-force-web .mobile-principles-view--result-first .principle-card__actions {
+    gap: 8px;
+    opacity: 0.7;
+  }
+
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__composer {
+    width: min(100%, 1040px);
+    margin: 0 auto;
+    padding: clamp(38px, 4vw, 60px);
+    border-radius: 20px;
+  }
+
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__composer-content {
+    grid-template-columns: minmax(0, 1fr) 264px;
+    column-gap: clamp(42px, 5vw, 76px);
+    row-gap: 0;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__main {
+    grid-column: 1;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__heading {
+    margin: 0 0 30px;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__eyebrow {
+    margin: 0 0 12px;
+    color: var(--color-vector-cyan-brand);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    letter-spacing: 0.13em;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__heading h2 {
+    margin: 0;
+    color: var(--color-vector-ink-strong);
+    font-family: var(--font-serif, ui-serif, Georgia, serif);
+    font-size: clamp(28px, 2.3vw, 36px);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 1.15;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__heading > p:last-child {
+    max-width: 38em;
+    margin: 13px 0 0;
+    color: var(--color-vector-slate-soft);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__field-label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--color-vector-ink-strong);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__textarea {
+    min-height: 210px;
+    padding: 20px;
+    border-radius: 12px;
+    font-family: var(--font-serif, ui-serif, Georgia, serif);
+    font-size: 18px;
+    line-height: 1.75;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__settings {
+    grid-column: 2;
+    grid-row: 1;
+    display: grid;
+    align-content: start;
+    gap: 20px;
+    padding: 18px 0 0 24px;
+    border-left: 1px solid color-mix(in srgb, var(--color-vector-cyan-brand) 11%, transparent);
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-meta-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__home-toggle {
+    padding: 8px 0;
+  }
+
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__delete-button,
+  html.vector-force-web .principle-editor-screen .principle-editor__save-button,
+  html.vector-force-web
+    .principle-editor-screen
+    .mobile-principles-view__composer-content
+    > button:last-child {
+    grid-column: 2;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__save-button {
+    align-self: end;
+    margin-top: 24px;
+  }
+}
+
+@media (min-width: 1000px) and (max-width: 1160px) {
+  html.vector-force-web .mobile-principles-view--result-first .principles-library__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Principle editor: one writing task first, optional organisation second.
+   These scoped rules replace the older side-panel treatments in the full-page editor. */
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen .principle-editor-layout {
+  display: grid;
+  width: min(100%, 760px);
+  margin: 0 auto;
+  gap: 26px;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* The previous desktop editor used a back button spanning a two-column
+   workbench. The editor is now one writing flow, so let the button occupy
+   its own first column; otherwise the heading is auto-placed into a narrow
+   implicit column and breaks into individual characters. */
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__header
+  .principle-editor-screen__back {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__heading {
+  margin: 2px 0 0;
+  width: auto;
+  min-width: 0;
+  grid-column: auto;
+  grid-row: auto;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__writing {
+  display: grid;
+  gap: 10px;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__counter {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px;
+  color: var(--experience-muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__counter
+  .is-warning,
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__counter
+  [role='alert'] {
+  color: var(--color-vector-magenta, #c02672);
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__footer {
+  display: grid;
+  gap: 14px;
+  padding-top: 20px;
+  border-top: 1px solid color-mix(in srgb, var(--experience-line) 78%, transparent);
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__recorded-at {
+  margin: 0;
+  color: var(--experience-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__advanced-toggle {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 40px;
+  align-items: center;
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  color: var(--experience-ink);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__advanced-toggle
+  span {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--experience-line) 90%, transparent);
+  border-radius: 50%;
+  color: var(--experience-muted);
+  font-size: 16px;
+  font-weight: 400;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__advanced {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--experience-line) 84%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--experience-surface) 72%, transparent);
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__advanced
+  > [role='alert'] {
+  margin: 0;
+  color: var(--color-vector-magenta, #c02672);
+  font-size: 13px;
+}
+
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen .principle-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0;
+}
+
+html:is(.vector-force-mobile, .vector-force-web) .principle-editor-screen .principle-meta-field {
+  display: grid;
+  gap: 8px;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-meta-field
+  label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--experience-muted);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-meta-field
+  label
+  svg {
+  width: 14px;
+  height: 14px;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-meta-field
+  :is(input, select) {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--experience-line) 88%, transparent);
+  border-radius: 9px;
+  padding: 0 12px;
+  color: var(--experience-ink);
+  background: var(--experience-surface);
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__home-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  color: var(--experience-muted);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__home-toggle
+  button {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--experience-line) 92%, transparent);
+  border-radius: 6px;
+  color: white;
+  background: transparent;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__home-toggle
+  button[aria-checked='true'] {
+  border-color: var(--experience-accent);
+  background: var(--experience-accent);
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__home-toggle
+  svg {
+  width: 14px;
+  height: 14px;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .principle-editor__save-button {
+  width: min(100%, 280px);
+  min-height: 50px;
+  margin: 8px 0 0;
+  justify-self: end;
+  grid-column: auto;
+}
+
+html:is(.vector-force-mobile, .vector-force-web)
+  .principle-editor-screen
+  .mobile-principles-view__delete-button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+@media (min-width: 1000px) {
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__composer {
+    box-sizing: border-box;
+    width: min(1040px, calc(100vw - 80px));
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(100%, 860px);
+    min-width: 0;
+    gap: 30px;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__header {
+    grid-template-columns: 44px minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  html.vector-force-web .principle-editor-screen .principle-editor__heading h2,
+  html.vector-force-web .principle-editor-screen .principle-editor__field-label {
+    color: var(--experience-ink);
+  }
+
+  html.vector-force-web .principle-editor-screen .mobile-principles-view__textarea {
+    min-height: 238px;
+    max-height: 380px;
+  }
+}
+
+@media (max-width: 600px) {
+  html.vector-force-mobile .principle-editor-screen .principle-editor-layout {
+    gap: 22px;
+  }
+
+  html.vector-force-mobile .principle-editor-screen .principle-editor__header {
+    gap: 14px;
+  }
+
+  html.vector-force-mobile .principle-editor-screen .principle-meta-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  html.vector-force-mobile .principle-editor-screen .principle-editor__save-button {
+    width: 100%;
+    justify-self: stretch;
+  }
+}

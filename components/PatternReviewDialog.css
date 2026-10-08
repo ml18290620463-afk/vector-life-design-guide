@@ -1,0 +1,93 @@
+/* Contextual decisions remain small reminders, independent of full-page editors. */
+.pattern-review-dialog {
+  box-sizing: border-box;
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--experience-line);
+  border-radius: 20px;
+  color: var(--experience-ink);
+  background: var(--experience-bg);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 30%);
+}
+.pattern-review-dialog::backdrop {
+  background: rgb(0 0 0 / 48%);
+}
+.pattern-review-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.pattern-review-dialog__hint {
+  margin: 8px 0;
+  color: var(--experience-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.pattern-review-dialog label {
+  display: block;
+  margin: 20px 0 8px;
+  font-size: 14px;
+}
+.pattern-review-dialog textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 112px;
+  padding: 12px;
+  border: 1px solid var(--experience-line);
+  border-radius: 12px;
+  color: var(--experience-ink);
+  background: color-mix(in srgb, var(--experience-bg), var(--experience-line) 20%);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.65;
+  resize: vertical;
+}
+.pattern-review-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+.pattern-review-dialog button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--experience-line);
+  border-radius: 12px;
+  color: var(--experience-ink);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pattern-review-dialog button.is-primary {
+  border-color: var(--experience-accent);
+  color: var(--experience-bg);
+  background: var(--experience-accent);
+}
+.pattern-review-dialog button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pattern-review-dialog :focus-visible {
+  outline: 2px solid var(--experience-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 480px) {
+  .pattern-review-dialog {
+    padding: 20px;
+  }
+  .pattern-review-dialog h2 {
+    font-size: 18px;
+  }
+  .pattern-review-dialog__actions button {
+    flex: 1 0 auto;
+    padding-inline: 10px;
+  }
+}

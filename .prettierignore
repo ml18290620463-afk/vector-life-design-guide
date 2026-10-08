@@ -1,0 +1,29 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+storybook-static
+.git
+package-lock.json
+Dockerfile
+.dockerignore
+deploy/nginx.conf
+deploy/nginx.conf.example
+scripts/*.sh
+LICENSE
+EVALUATION.md
+.cursor
+
+# ROADMAP.md and CHANGELOG.md mix mermaid blocks, deeply-nested lists,
+# and inline-code-with-backticks-on-list-items in ways that trip prettier
+# 3.x markdown's auto-format into an oscillation loop. The content is
+# author-curated documentation; trying to enforce prettier shape on it
+# only fights itself. Lint stays useful for the rest of the markdown.
+ROADMAP.md
+CHANGELOG.md
+# docs/billing-smoke-test.md uses indented bash code fences inside
+# checklist list items. prettier 3.x flattens the indent, breaking the
+# list nesting and the rendered code blocks both. Author-curated
+# operations doc; whitespace is meaningful.
+docs/billing-smoke-test.md

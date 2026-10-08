@@ -1,0 +1,166 @@
+import React, { useEffect, useState } from 'react';
+import { useTimeoutManager } from '../hooks/useTimeoutManager';
+import { TRANSLATIONS } from '../constants';
+import { AppStorageKeys } from '../services/appSettings';
+import { getStoredString, setStoredString } from '../services/browserStorage';
+import { useBackupImport } from '../hooks/useBackupImport';
+import { useBackupReminder } from '../hooks/useBackupReminder';
+import { usePwaInstallPrompt } from '../hooks/usePwaInstallPrompt';
+import { DashboardOverlays } from './DashboardOverlays';
+import { DashboardHeader } from './DashboardHeader';
+import { DashboardSettingsModal } from './DashboardSettingsModal';
+import { DashboardFooter } from './DashboardFooter';
+import { useDashboardExport } from '../hooks/useDashboardExport';
+import { useDashboardImportConfirm } from '../hooks/useDashboardImportConfirm';
+import { useDashboardFullscreen } from '../hooks/useDashboardFullscreen';
+import type { DashboardProps } from './dashboardProps';
+
+// prettier-ignore
+export const Dashboard: React.FC<DashboardProps> = ({
+  entries, currentUser, isGuest, language, onSetLanguage, theme, onSetTheme,
+  onSelectEntry, onUpdateEntry, onBulkUpdateEntries,
+  onReplayIntro, onWipeData, onCreateMaterialEntry, isUnlocked, passwordHash,
+  passwordSalt, onSetPassword, onClearPassword, onImportBackup, guidingStars,
+  onSaveGuidingStars, selectedStars, onSaveSelectedStars,
+  licenseInstallId, licenseCurrentTier, licensePayload, licenseFailure,
+  onActivateLicense, onDeactivateLicense, onOpenPricing,
+  containers, onAddContainer, onDeleteContainer, isScanning, scanProgress, onTriggerScan, lastScanSummary,
+  syncStatus, loading, startInSettings = false,
+}) => {
+  const { scheduleTimeout } = useTimeoutManager();
+
+  const t = TRANSLATIONS[language];
+  void isGuest;
+  void onUpdateEntry;
+  void onClearPassword;
+  void onSelectEntry;
+  void containers;
+  void onAddContainer;
+  void onDeleteContainer;
+
+  const [customIdentity, setCustomIdentity] = useState(
+    () => getStoredString(AppStorageKeys.customIdentity) || currentUser || '',
+  );
+
+  useEffect(() => {
+    setStoredString(AppStorageKeys.customIdentity, customIdentity);
+  }, [customIdentity]);
+
+  // Settings Modal State
+  const [showSettings, setShowSettings] = useState(startInSettings);
+
+  // Go Home Animation State
+  const [isSailingHome, setIsSailingHome] = useState(false);
+
+  const { backupReminderActive, daysSinceBackup, recordBackup } = useBackupReminder(entries.length);
+
+  const pwaInstall = usePwaInstallPrompt();
+
+  const handleGoHomeClick = () => {
+    setIsSailingHome(true);
+    scheduleTimeout(() => {
+      onReplayIntro();
+      setIsSailingHome(false);
+    }, 1000);
+  };
+
+  const { isFullscreen, toggleFullScreen, setIsFullscreen } = useDashboardFullscreen();
+
+
+  // Settings-only state (security / stars editor / wipe / attachment +
+  // media transient banners) lives inside DashboardSettingsModal so the
+  // dashboard shell doesn't re-render every time those panels tick.
+  const { handleExport } = useDashboardExport({ currentUser, recordBackup });
+
+  const importConfirm = useDashboardImportConfirm(t);
+
+  const {
+    inputRef: importInputRef,
+    handleChange: handleImportBackup,
+    status: importStatus,
+  } = useBackupImport({
+    onImportBackup,
+    currentUser,
+    t,
+    confirm: importConfirm.confirm,
+    requestPassword: importConfirm.requestPassword,
+    reportError: (error) => {
+      console.error('Backup import failed', error);
+    },
+  });
+
+  // Phase 5 §5.1 + 5.2 — bundle license props once. prettier-ignore
+  // keeps it on one line so the LOC ceiling stays under 600.
+  // prettier-ignore
+  const licenseProps = { licenseInstallId, licenseCurrentTier, licensePayload, licenseFailure, onActivateLicense, onDeactivateLicense, onOpenPricing };
+
+  return (
+    <div className="vector-dashboard-shell mx-auto w-full min-h-screen flex flex-col relative z-10">
+      <DashboardHeader
+        theme={theme}
+        language={language}
+        isFullscreen={isFullscreen}
+        toggleFullScreen={toggleFullScreen}
+        syncStatus={syncStatus}
+      />
+
+      <DashboardOverlays
+        theme={theme}
+        t={t}
+        backupReminderActive={false}
+        daysSinceBackup={daysSinceBackup}
+        onOpenSettings={() => setShowSettings(true)}
+        pwaInstallAvailable={pwaInstall.isAvailable}
+        onPwaInstall={() => {
+          void pwaInstall.promptInstall();
+        }}
+        onPwaInstallDismiss={pwaInstall.dismiss}
+        importPending={importConfirm.pending}
+        onResolveImport={importConfirm.resolveConfirm}
+      />
+
+      <DashboardSettingsModal
+        showSettings={showSettings}
+        setShowSettings={setShowSettings}
+        theme={theme}
+        onSetTheme={onSetTheme}
+        language={language}
+        onSetLanguage={onSetLanguage}
+        t={t}
+        customIdentity={customIdentity}
+        setCustomIdentity={setCustomIdentity}
+        passwordHash={passwordHash}
+        passwordSalt={passwordSalt}
+        isUnlocked={isUnlocked}
+        onSetPassword={onSetPassword}
+        entries={entries}
+        onBulkUpdateEntries={onBulkUpdateEntries}
+        onWipeData={onWipeData}
+        onCreateMaterialEntry={onCreateMaterialEntry}
+        guidingStars={guidingStars}
+        selectedStars={selectedStars}
+        onSaveGuidingStars={onSaveGuidingStars}
+        onSaveSelectedStars={onSaveSelectedStars}
+        isScanning={isScanning}
+        scanProgress={scanProgress}
+        onTriggerScan={onTriggerScan}
+        lastScanSummary={lastScanSummary}
+        handleExport={handleExport}
+        importInputRef={importInputRef}
+        handleImportBackup={onImportBackup ? handleImportBackup : undefined}
+        importStatus={importStatus}
+        handleGoHomeClick={handleGoHomeClick}
+        isSailingHome={isSailingHome}
+        setIsFullscreen={setIsFullscreen}
+        {...licenseProps}
+      />
+
+      <DashboardFooter
+        theme={theme}
+        t={t}
+        onOpenSettings={() => setShowSettings(true)}
+      />
+
+    </div>
+  );
+};

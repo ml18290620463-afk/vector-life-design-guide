@@ -1,0 +1,99 @@
+# Phase 4 §W4.4 — automated dependency surveillance.
+#
+# Dependabot opens a PR whenever a tracked manifest gains an update
+# matching the rules below. Combined with the CI `npm audit` hard
+# gate (W4.4 / .github/workflows/ci.yml), this gives us a tight loop
+# between "vulnerability disclosed" and "fix landed":
+#   1. Sec advisory ships → Dependabot opens a PR.
+#   2. CI runs the full suite + audit gate against the bumped
+#      version.
+#   3. Reviewer merges (or rejects with an override).
+#
+# We deliberately group production deps separately from dev / CI
+# tooling so reviewers can fast-track security PRs without scanning
+# through routine devDep noise.
+
+version: 2
+
+updates:
+  # 1. Application runtime + production deps. Weekly cadence,
+  #    grouped so a single PR contains every patch / minor bump for
+  #    the week instead of 30 individual PRs.
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '04:00'
+      timezone: 'Asia/Shanghai'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'automated'
+    commit-message:
+      prefix: 'chore(deps)'
+      include: 'scope'
+    groups:
+      production-dependencies:
+        patterns:
+          - '@google/genai'
+          - '@sentry/*'
+          - 'cmdk'
+          - 'express'
+          - 'express-rate-limit'
+          - 'helmet'
+          - 'idb-keyval'
+          - 'lucide-react'
+          - 'motion'
+          - 'react'
+          - 'react-*'
+          - 'pdfjs-dist'
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+          - 'zustand'
+          - '@fontsource/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      dev-dependencies:
+        patterns:
+          - '@commitlint/*'
+          - '@playwright/*'
+          - '@testing-library/*'
+          - '@types/*'
+          - '@vitejs/*'
+          - 'eslint*'
+          - 'happy-dom'
+          - 'husky'
+          - 'lint-staged'
+          - 'prettier'
+          - 'storybook'
+          - 'typescript'
+          - 'vite'
+          - 'vite-plugin-pwa'
+          - 'vitest'
+          - 'workbox-*'
+        update-types:
+          - 'minor'
+          - 'patch'
+    # Always open a PR for major bumps separately — they need
+    # human review for breaking changes regardless of group.
+    ignore: []
+
+  # 2. GitHub Actions used in workflows (actions/checkout, etc.).
+  #    Monthly cadence is enough; the action ecosystem is stable.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+      day: 'monday'
+      time: '04:00'
+      timezone: 'Asia/Shanghai'
+    open-pull-requests-limit: 3
+    labels:
+      - 'dependencies'
+      - 'github-actions'
+      - 'automated'
+    commit-message:
+      prefix: 'chore(ci)'
+      include: 'scope'
