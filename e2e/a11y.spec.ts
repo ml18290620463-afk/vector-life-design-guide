@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { seedOnboardedApp } from './seedHelpers';
+import { resetPersistentAppState, seedOnboardedApp } from './seedHelpers';
 
 /**
  * Accessibility regression gate for the entry-point shells (cover screen +
@@ -29,7 +29,7 @@ const summarise = (violations: Awaited<ReturnType<AxeBuilder['analyze']>>['viola
 
 test.describe('axe accessibility', () => {
   test('cover screen has no serious or critical violations', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await resetPersistentAppState(page);
     // Wait for the cover entry button so we know React has hydrated.
     await page.getByTestId('cover-initialize').waitFor({ state: 'visible' });
 
@@ -39,7 +39,7 @@ test.describe('axe accessibility', () => {
   });
 
   test('onboarding intro has no serious or critical violations', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await resetPersistentAppState(page);
     // Use a real user interaction: the cover transition is deliberately
     // guarded by the component's pointer/click flow rather than a raw event.
     await page.getByTestId('cover-initialize').click();

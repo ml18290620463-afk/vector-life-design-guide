@@ -177,9 +177,7 @@ export enum AppState {
   COVER = 'COVER', // New Landing Page (Includes Fragments)
   ONBOARDING = 'ONBOARDING', // Initial Setup
   LOGIN = 'LOGIN', // Returning-user password gate
-  DASHBOARD = 'DASHBOARD',
   VIEWER = 'VIEWER',
-  ARCHIVE = 'ARCHIVE', // Bio-Vault
   PAST = 'PAST', // Mobile repository hub (timeline / principles / archive)
   FUTURE = 'FUTURE', // Mobile future analysis (placeholder)
   NOW = 'NOW',

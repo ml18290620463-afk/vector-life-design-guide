@@ -23,13 +23,39 @@ export interface SeedOnboardedAppOptions {
   password?: string;
 }
 
+/**
+ * Start a flow from the real first-run surface.
+ *
+ * The application deliberately persists vault state in IndexedDB.  Clearing
+ * only cookies or localStorage leaves a previous onboarding session intact,
+ * which makes entry-flow tests depend on execution order. Use Chromium's
+ * storage protocol before opening the app, so React reads a clean state.
+ */
+export const resetPersistentAppState = async (page: Page): Promise<void> => {
+  // Clear storage before the app opens IndexedDB.  Clearing after `goto()`
+  // can be blocked by the vault's already-open database connection, leaving
+  // the test on a later onboarding step.
+  const port = process.env.E2E_PORT ?? '3710';
+  const origin = `http://127.0.0.1:${port}`;
+  const client = await page.context().newCDPSession(page);
+  try {
+    await client.send('Storage.clearDataForOrigin', {
+      origin,
+      storageTypes: 'all',
+    });
+  } finally {
+    await client.detach();
+  }
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+};
+
 export const seedOnboardedApp = async (
   page: Page,
   options: SeedOnboardedAppOptions = {},
 ): Promise<void> => {
   const password = options.password ?? 'VectorVisual123!';
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await resetPersistentAppState(page);
 
   // Cover screen → Onboarding intro.
   // W4.1 — keep the cover entry anchored on the initialize testid so

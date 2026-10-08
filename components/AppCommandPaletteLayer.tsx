@@ -9,7 +9,6 @@ type AppCommandPaletteLayerProps = {
   appState: AppState;
   entries: DiaryEntry[];
   language: Language;
-  onBackToDashboard: () => void;
   onLockVault?: () => void;
   onNavigateMainModule: (tab: MobileMainTab) => void;
   onOpenChange: (open: boolean) => void;
@@ -26,7 +25,6 @@ export const AppCommandPaletteLayer: FC<AppCommandPaletteLayerProps> = ({
   appState,
   entries,
   language,
-  onBackToDashboard,
   onLockVault,
   onNavigateMainModule,
   onOpenChange,
@@ -49,7 +47,6 @@ export const AppCommandPaletteLayer: FC<AppCommandPaletteLayerProps> = ({
         t={TRANSLATIONS[language]}
         entries={entries}
         onNavigateMainModule={onNavigateMainModule}
-        onBackToDashboard={onBackToDashboard}
         onReplayIntro={onReplayIntro}
         onSelectEntry={onSelectEntry}
         onSetTheme={onSetTheme}

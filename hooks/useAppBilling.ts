@@ -28,7 +28,7 @@ import { useCheckoutReturn, type UseCheckoutReturnResult } from './useCheckoutRe
  * single object with discriminated sub-states. Consumers
  * destructure what they need (`billing.license` for paywall
  * checks, `billing.showPricing` for the PricingPage mount,
- * `billing.openPricing()` for Settings → Upgrade clicks).
+ * `billing.openPricing()` when the pricing page should be shown).
  */
 export interface UseAppBillingResult {
   license: UseLicenseResult;
@@ -36,20 +36,6 @@ export interface UseAppBillingResult {
   showPricing: boolean;
   setShowPricing: (next: boolean) => void;
   openPricing: () => void;
-  /**
-   * Bundled props the App passes through Dashboard →
-   * DashboardSettingsModal → SettingsPanel → LicenseSection.
-   * Pre-bundled here so App.tsx stays under the 600-LOC ceiling.
-   */
-  licensePropsForDashboard: {
-    licenseInstallId: string;
-    licenseCurrentTier: UseLicenseResult['currentTier'];
-    licensePayload: UseLicenseResult['payload'];
-    licenseFailure: UseLicenseResult['failure'];
-    onActivateLicense: UseLicenseResult['activate'];
-    onDeactivateLicense: UseLicenseResult['deactivate'];
-    onOpenPricing: () => void;
-  };
 }
 
 const initialPricingFromQuery = (): boolean => {
@@ -69,21 +55,11 @@ export const useAppBilling = (): UseAppBillingResult => {
   const [showPricing, setShowPricing] = useState<boolean>(initialPricingFromQuery);
 
   const openPricing = () => setShowPricing(true);
-  const licensePropsForDashboard = {
-    licenseInstallId: license.installId,
-    licenseCurrentTier: license.currentTier,
-    licensePayload: license.payload,
-    licenseFailure: license.failure,
-    onActivateLicense: license.activate,
-    onDeactivateLicense: license.deactivate,
-    onOpenPricing: openPricing,
-  };
   return {
     license,
     checkoutReturn,
     showPricing,
     setShowPricing,
     openPricing,
-    licensePropsForDashboard,
   };
 };

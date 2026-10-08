@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { AppState, type Attachment, type DiaryEntry } from '../types';
+import { AppState, type DiaryEntry } from '../types';
 import type { MobileMainTab } from '../features/mobile/types';
 import { isMobileExperience } from '../lib/previewMode';
 import { generateSecureId } from '../services/idGenerator';
@@ -27,19 +27,6 @@ export const useEntrySurfaceActions = ({
     [addEntry],
   );
 
-  const createMaterialEntry = useCallback(
-    (material: Attachment) => {
-      void addEntry({
-        title: material.name,
-        content: `[Attachment: ${material.name}]`,
-        tags: ['upload', 'material', material.type],
-        attachment: material,
-        isArchived: false,
-      });
-    },
-    [addEntry],
-  );
-
   const selectEntry = useCallback(
     (entry: DiaryEntry) => {
       if (entry.unlockAt && entry.unlockAt > Date.now()) return;
@@ -49,7 +36,7 @@ export const useEntrySurfaceActions = ({
     [setAppState, setSelectedEntry],
   );
 
-  const backToDashboard = useCallback(() => {
+  const backToPast = useCallback(() => {
     if (isMobileExperience()) {
       handleMobileTabChange('past');
     } else {
@@ -59,8 +46,7 @@ export const useEntrySurfaceActions = ({
   }, [handleMobileTabChange, setAppState, setSelectedEntry]);
 
   return {
-    handleBackToDashboard: backToDashboard,
-    handleCreateMaterialEntry: createMaterialEntry,
+    handleBackToPast: backToPast,
     handleMintEntry: persistNowRecord,
     handlePersistNowRecord: persistNowRecord,
     handleSelectEntry: selectEntry,

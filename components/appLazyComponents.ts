@@ -10,10 +10,6 @@ export const SpaceTimeBackground = lazy(() =>
   })),
 );
 
-export const Dashboard = lazy(() =>
-  import('./Dashboard').then((module) => ({ default: module.Dashboard })),
-);
-
 export const Onboarding = lazy(() =>
   import('./Onboarding').then((module) => ({ default: module.Onboarding })),
 );

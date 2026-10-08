@@ -46,7 +46,6 @@ export interface CommandPaletteProps {
   t: TranslationDictionary;
   entries: DiaryEntry[];
   onNavigateMainModule: (tab: MobileMainTab) => void;
-  onBackToDashboard: () => void;
   onReplayIntro: () => void;
   onSelectEntry: (entry: DiaryEntry) => void;
   onSetTheme: (theme: Theme) => void;
@@ -76,7 +75,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   t,
   entries,
   onNavigateMainModule,
-  onBackToDashboard,
   onReplayIntro,
   onSelectEntry,
   onSetTheme,
@@ -119,7 +117,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     recent: t.commandPaletteRecent || 'Recent entries',
     languagePage: t.commandPaletteLanguage || 'Language',
     back: t.cancel || 'Back',
-    backToDashboard: t.dashboard || 'Back to dashboard',
     replayIntro: t.replayIntro || 'Replay intro',
     toggleTheme:
       t.toggleTheme || (theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'),
@@ -188,8 +185,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Command.Group heading={labels.navigation}>
                 {mainModules.map(({ id, commandLabel, Icon }) => {
                   const isCurrent =
-                    (id === 'past' &&
-                      (appState === AppState.PAST || appState === AppState.ARCHIVE)) ||
+                    (id === 'past' && appState === AppState.PAST) ||
                     (id === 'now' &&
                       (appState === AppState.NOW || appState === AppState.NOW_TAGS)) ||
                     (id === 'future' && appState === AppState.FUTURE) ||
@@ -205,14 +201,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     />
                   );
                 })}
-                {appState !== AppState.DASHBOARD && (
-                  <PaletteItem
-                    theme={theme}
-                    icon={<ArrowLeft className="w-4 h-4" />}
-                    label={labels.backToDashboard}
-                    onSelect={() => run(onBackToDashboard)}
-                  />
-                )}
                 <PaletteItem
                   theme={theme}
                   icon={<PlayCircle className="w-4 h-4" />}

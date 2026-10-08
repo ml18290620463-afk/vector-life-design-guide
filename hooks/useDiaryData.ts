@@ -41,10 +41,7 @@ import { updateRelatedEntryIds } from '../services/entryRelations';
 import {
   pruneAvatarAtomicMemoriesBySourceIds,
   invalidateAvatarEvidence,
-  readAvatarUnderstandings,
-  writeAvatarUnderstanding,
 } from '../services/avatarMemory';
-import { extractPastPatterns } from '../services/pastPatternExtraction';
 import { useActionItems } from './useActionItems';
 import { commitArrayDelta, subscribeVault, vaultTransaction } from '../services/vaultTransaction';
 import { stateFrom } from '../services/futureRepository';
@@ -112,13 +109,6 @@ const mergePatternPrincipleLinks = (
     byPair.set(`${link.patternId}:${link.principleId}`, link);
   });
   return [...byPair.values()].sort((a, b) => b.updatedAt - a.updatedAt);
-};
-
-const updateAvatarPatternCandidates = (nextEntries: DiaryEntry[]) => {
-  const existing = readAvatarUnderstandings();
-  extractPastPatterns(nextEntries, existing).forEach((pattern) => {
-    writeAvatarUnderstanding(pattern);
-  });
 };
 
 export const useDiaryData = (userId: string | undefined, language: Language = 'zh') => {
@@ -455,7 +445,6 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         : entriesRef.current.filter((e) => !e.isSample);
       const nextEntries = [newEntry, ...baseEntries];
       await persistEntries(nextEntries);
-      updateAvatarPatternCandidates(nextEntries);
       return newEntry;
     },
     [persistEntries],
@@ -471,7 +460,6 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       if (previous && previous.content !== updatedEntry.content)
         invalidateAvatarEvidence(updatedEntry.id);
       await persistEntries(nextEntries);
-      updateAvatarPatternCandidates(nextEntries);
     },
     [entries, persistEntries],
   );

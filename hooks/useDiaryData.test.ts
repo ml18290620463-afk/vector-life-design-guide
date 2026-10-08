@@ -71,7 +71,7 @@ describe('useDiaryData', () => {
     expect(await idb.get(getDiaryStorageKeys(userId).entries)).toEqual(result.current.entries);
   });
 
-  it('extracts pending avatar pattern candidates when records are saved', async () => {
+  it('does not create pattern candidates when records are saved', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -82,11 +82,6 @@ describe('useDiaryData', () => {
         content: '我提前整理了材料。',
         tags: ['事件:职业发展'],
       });
-    });
-
-    expect(readAvatarUnderstandings()).toEqual([]);
-
-    await act(async () => {
       await result.current.addEntry({
         title: '出发前确认',
         content: '我提前确认了路线和时间。',
@@ -94,17 +89,7 @@ describe('useDiaryData', () => {
       });
     });
 
-    expect(readAvatarUnderstandings()).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          status: 'pending',
-          sourceEntryIds: expect.arrayContaining([
-            result.current.entries[0].id,
-            result.current.entries[1].id,
-          ]),
-        }),
-      ]),
-    );
+    expect(readAvatarUnderstandings()).toEqual([]);
   });
 
   it('keeps samples when the entry being added is itself a sample', async () => {

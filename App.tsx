@@ -10,13 +10,10 @@ import { ScreenLoader } from './components/ScreenLoader';
 import { AppOverlayLayer } from './components/AppOverlayLayer';
 import { AppCommandPaletteLayer } from './components/AppCommandPaletteLayer';
 import { AppEntryGateScreens } from './components/AppEntryGateScreens';
-import { AppDashboardScreen } from './components/AppDashboardScreen';
 import { AppViewerScreen } from './components/AppViewerScreen';
 import { AppMainModuleScreens } from './components/AppMainModuleScreens';
-import type { DashboardProps } from './components/dashboardProps';
 import { SpaceTimeBackground } from './components/appLazyComponents';
 import { isMobileExperience, removeObsoletePreviewQuery } from './lib/previewMode';
-import { getPreviewScreen } from './lib/appEntryRoutes';
 import { getMobileMainTab } from './features/mobile/mobileRoutes';
 import { useAppEntryRouting } from './hooks/useAppEntryRouting';
 import { useAppMainNavigation } from './hooks/useAppMainNavigation';
@@ -90,9 +87,7 @@ const App: React.FC = () => {
     principles,
     patternPrincipleLinks,
     addEntry,
-    updateEntry,
     updateEntryRelatedIds,
-    bulkUpdateEntries,
     deleteEntry,
     deleteEntries,
     addPrinciple,
@@ -105,7 +100,6 @@ const App: React.FC = () => {
     addAction,
     updateAction,
     recordActionResult,
-    importBackup,
     wipeData,
     passwordHash,
     passwordSalt,
@@ -116,16 +110,8 @@ const App: React.FC = () => {
     saveGuidingStars,
     selectedStars,
     saveSelectedStars,
-    containers,
-    addContainer,
-    deleteContainer,
     loading,
     loadError,
-    isScanning,
-    scanProgress,
-    triggerScan,
-    lastScanSummary,
-    syncStatus,
   } = useDiaryData(userId, language);
 
   const { enterPendingOrPastMain, nowRoute, setNowRoute } = useAppEntryRouting({
@@ -175,12 +161,7 @@ const App: React.FC = () => {
 
   const homePrinciples = getHomePrinciples(principles);
 
-  const {
-    handleBackToDashboard,
-    handleCreateMaterialEntry,
-    handlePersistNowRecord,
-    handleSelectEntry,
-  } = useEntrySurfaceActions({
+  const { handleBackToPast, handlePersistNowRecord, handleSelectEntry } = useEntrySurfaceActions({
     addEntry,
     handleMobileTabChange,
     setAppState,
@@ -203,42 +184,6 @@ const App: React.FC = () => {
   const useMobileShell = shouldUseMobileShell(isMobileExperience(), mobileMainTab);
   const showGlobalBackground = shouldShowGlobalBackground(appState);
   const showLoadingOverlay = shouldShowLoadingOverlay(loading, appState);
-  const dashboardProps = {
-    entries,
-    currentUser,
-    isGuest: userId === 'guest',
-    language,
-    onSetLanguage: setLanguage,
-    theme,
-    onSetTheme: setTheme,
-    onSelectEntry: handleSelectEntry,
-    onUpdateEntry: updateEntry,
-    onBulkUpdateEntries: bulkUpdateEntries,
-    onReplayIntro: () => setAppState(AppState.COVER),
-    onWipeData: handleWipeData,
-    onCreateMaterialEntry: handleCreateMaterialEntry,
-    isUnlocked,
-    passwordHash,
-    passwordSalt,
-    onSetPassword: handleSetPassword,
-    onClearPassword: handleClearPassword,
-    onImportBackup: importBackup,
-    guidingStars,
-    onSaveGuidingStars: saveGuidingStars,
-    selectedStars,
-    onSaveSelectedStars: saveSelectedStars,
-    ...billing.licensePropsForDashboard,
-    containers,
-    onAddContainer: addContainer,
-    onDeleteContainer: deleteContainer,
-    isScanning,
-    scanProgress,
-    onTriggerScan: triggerScan,
-    lastScanSummary,
-    syncStatus,
-    loading,
-    startInSettings: getPreviewScreen() === 'settings',
-  } satisfies DashboardProps;
 
   if (loadError)
     return (
@@ -273,7 +218,6 @@ const App: React.FC = () => {
             appState={appState}
             entries={entries}
             onNavigateMainModule={handleMainModuleNavigate}
-            onBackToDashboard={handleBackToDashboard}
             onReplayIntro={() => setAppState(AppState.COVER)}
             onSelectEntry={handleSelectEntry}
             onSetTheme={setTheme}
@@ -301,18 +245,13 @@ const App: React.FC = () => {
             theme={theme}
           />
 
-          <AppDashboardScreen
-            active={appState === AppState.DASHBOARD}
-            dashboardProps={dashboardProps}
-          />
-
           <AppViewerScreen
             active={appState === AppState.VIEWER}
             currentUser={currentUser}
             entry={selectedEntry}
             language={language}
             masterPassword={masterPassword}
-            onBack={handleBackToDashboard}
+            onBack={handleBackToPast}
             onDeleteEntry={deleteEntry}
             onGoHome={() => setAppState(AppState.COVER)}
             theme={theme}

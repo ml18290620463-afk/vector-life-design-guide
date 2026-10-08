@@ -58,8 +58,7 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
     if (open) reset();
   }, [open, reset]);
 
-  // Close on Escape — keeps keyboard parity with the rest of the
-  // app's modals (`SettingsPanel`, `MasterLock`).
+  // Close on Escape to keep keyboard behavior consistent across dialogs.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {

@@ -11,23 +11,13 @@ import {
 } from './appPathRules';
 import { AppState } from '../types';
 
-export type PreviewScreen =
-  | 'dashboard'
-  | 'future'
-  | 'editor'
-  | 'now'
-  | 'onboarding'
-  | 'settings'
-  | 'archive'
-  | 'past';
+export type PreviewScreen = 'future' | 'editor' | 'now' | 'onboarding' | 'archive' | 'past';
 
 const previewScreens = new Set<PreviewScreen>([
-  'dashboard',
   'future',
   'editor',
   'now',
   'onboarding',
-  'settings',
   'archive',
   'past',
 ]);
@@ -142,12 +132,10 @@ export const getPreviewScreenAction = (
   }
 
   if (screen === 'future') {
-    return options.isMobile
-      ? { kind: 'route', states: [AppState.FUTURE], replacePath: getMainTabPathname('future') }
-      : { kind: 'route', states: [AppState.DASHBOARD] };
+    return { kind: 'route', states: [AppState.FUTURE], replacePath: getMainTabPathname('future') };
   }
 
-  return { kind: 'route', states: [AppState.DASHBOARD] };
+  return { kind: 'route', states: [AppState.PAST], replacePath: getMainTabPathname('past') };
 };
 
 export const getPostUnlockRouteAction = (targetPathname: string | null): AppEntryRouteAction => {

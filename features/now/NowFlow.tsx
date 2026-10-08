@@ -1,6 +1,3 @@
-import { PatternReviewDialog } from '../../components/PatternReviewDialog';
-import { extractPastPatterns } from '../../services/pastPatternExtraction';
-import type { AvatarUnderstandingVersion } from '../avatar/types';
 import React, { useMemo, useRef, useState } from 'react';
 import { useFuture } from '../../hooks/useFuture';
 import { generateSecureId } from '../../services/idGenerator';
@@ -20,11 +17,7 @@ import {
 } from '../../services/localSemanticIndex';
 import { findNeuralRelatedEntryIds } from '../../services/neuralSemanticRecall';
 import { buildAvatarGrowthPreview } from '../../services/avatarIntelligence';
-import {
-  readAvatarUnderstandings,
-  writeAvatarUnderstanding,
-  upsertAvatarAtomicMemories,
-} from '../../services/avatarMemory';
+import { readAvatarUnderstandings, upsertAvatarAtomicMemories } from '../../services/avatarMemory';
 import { useNowDraft } from './hooks/useNowDraft';
 import { useToast } from './hooks/useToast';
 import { TagSelectPage } from './components/TagSelectPage';
@@ -97,16 +90,11 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   const { toastMessage, showToast } = useToast();
   const [sending, setSending] = useState(false);
   const inFlight = useRef(false);
-  const [reviewQueue, setReviewQueue] = useState<AvatarUnderstandingVersion[]>([]);
   const [completionError, setCompletionError] = useState('');
   const pendingCompletion = useRef<(() => Promise<void>) | null>(null);
   const complete = () => {
     if (onRecordComplete) onRecordComplete();
     else onRouteChange('now');
-  };
-  const deferReview = () => {
-    setReviewQueue([]);
-    complete();
   };
   const retryCompletion = async () => {
     if (inFlight.current || !pendingCompletion.current) return;
@@ -134,7 +122,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     avatarSessionId: string | null = null,
     principleOutcome?: ExperienceFeedbackOutcome,
   ) => {
-    if (inFlight.current || pendingCompletion.current || reviewQueue.length) return false;
+    if (inFlight.current || pendingCompletion.current) return false;
     const tagValidation = validateTags(
       overrideDraft.mood_tags,
       overrideDraft.event_tags,
@@ -218,9 +206,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         relatedPrincipleIds: relatedPrincipleIds.length > 0 ? relatedPrincipleIds : undefined,
         principleFeedback,
       };
-      const existingPatternIds = new Set(readAvatarUnderstandings().map((item) => item.id));
       const persistedEntry = resumedEntry ?? (await onPersistRecord(payload));
-      const candidates: AvatarUnderstandingVersion[] = [];
       const steps = [
         async () => {
           const preview = await buildAvatarGrowthPreview(
@@ -260,21 +246,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           if (reviewAction && onActionResultRecorded)
             await onActionResultRecorded(reviewAction.id, persistedEntry.id);
         },
-        async () => {
-          const entries = [
-            persistedEntry,
-            ...pastEntries.filter((entry) => entry.id !== persistedEntry.id),
-          ];
-          for (const pattern of extractPastPatterns(entries, readAvatarUnderstandings())) {
-            if (!writeAvatarUnderstanding(pattern)) throw new Error('模式提炼尚未保存');
-            if (
-              pattern.status === 'pending' &&
-              !existingPatternIds.has(pattern.id) &&
-              !candidates.some((item) => item.id === pattern.id)
-            )
-              candidates.push(pattern);
-          }
-        },
       ];
       const finished = new Set<number>();
       pendingCompletion.current = async () => {
@@ -297,8 +268,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         setCompletionError('');
         retry.current = null;
         showToast('已存入过去');
-        if (candidates.length) setReviewQueue(candidates);
-        else complete();
+        complete();
       };
       if (onRelatedEntriesResolved) {
         void findNeuralRelatedEntryIds(persistedEntry.id, entryPayload, pastEntries)
@@ -338,7 +308,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       </div>
     );
 
-  if (pastEntries.some((entry) => entry.id === draft.submission_id) && !reviewQueue.length)
+  if (pastEntries.some((entry) => entry.id === draft.submission_id))
     return (
       <div className="now-shell">
         <p role={completionError ? 'alert' : 'status'}>
@@ -370,18 +340,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
             重试未完成处理
           </button>
         </div>
-      )}
-      {reviewQueue[0] && (
-        <PatternReviewDialog
-          key={reviewQueue[0].id}
-          pattern={reviewQueue[0]}
-          onDefer={deferReview}
-          onDone={() => {
-            const rest = reviewQueue.slice(1);
-            setReviewQueue(rest);
-            if (!rest.length) complete();
-          }}
-        />
       )}
       {route !== 'avatar-chat' && (
         <div role={draftError ? 'alert' : 'status'} className="now-draft-status">

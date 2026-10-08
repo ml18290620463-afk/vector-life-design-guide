@@ -12,7 +12,6 @@ export const getMobileTabFromPath = (): MobileMainTab | null => {
 export const getMobileMainTab = (appState: AppState): MobileMainTab | null => {
   switch (appState) {
     case AppState.PAST:
-    case AppState.ARCHIVE:
       return 'past';
     case AppState.NOW:
     case AppState.NOW_TAGS:

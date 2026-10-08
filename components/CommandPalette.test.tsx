@@ -17,7 +17,6 @@ const baseT: TranslationDictionary = {
   switchLanguage: 'Switch language',
   lockVault: 'Lock vault',
   replayIntro: 'Replay intro',
-  dashboard: 'Back to dashboard',
   wipeData: 'Wipe data',
   cancel: 'Back',
 };
@@ -27,11 +26,10 @@ const baseProps = {
   onOpenChange: vi.fn(),
   theme: 'dark' as const,
   language: 'en' as const,
-  appState: AppState.DASHBOARD,
+  appState: AppState.PAST,
   t: baseT,
   entries: [],
   onNavigateMainModule: vi.fn(),
-  onBackToDashboard: vi.fn(),
   onReplayIntro: vi.fn(),
   onSelectEntry: vi.fn(),
   onSetTheme: vi.fn(),
@@ -58,9 +56,8 @@ describe('CommandPalette', () => {
     expect(screen.getByPlaceholderText('Search')).not.toBeNull();
   });
 
-  it('hides the "back to dashboard" command when already on dashboard', () => {
-    render(<CommandPalette {...baseProps} appState={AppState.DASHBOARD} />);
-    expect(screen.queryByText('Back to dashboard')).toBeNull();
+  it('shows the main-module commands from Past', () => {
+    render(<CommandPalette {...baseProps} appState={AppState.PAST} />);
     expect(screen.queryByText('Open Now')).not.toBeNull();
   });
 

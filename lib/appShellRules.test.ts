@@ -16,21 +16,20 @@ describe('appShellRules', () => {
   });
 
   it('shows global background only behind main immersive surfaces', () => {
-    expect(shouldShowGlobalBackground(AppState.DASHBOARD)).toBe(true);
+    expect(shouldShowGlobalBackground(AppState.PAST)).toBe(true);
     expect(shouldShowGlobalBackground(AppState.PAST)).toBe(true);
     expect(shouldShowGlobalBackground(AppState.LOGIN)).toBe(false);
     expect(shouldShowGlobalBackground(AppState.ONBOARDING)).toBe(false);
   });
 
   it('hides loading overlay on entry gate surfaces', () => {
-    expect(shouldShowLoadingOverlay(true, AppState.DASHBOARD)).toBe(true);
+    expect(shouldShowLoadingOverlay(true, AppState.PAST)).toBe(true);
     expect(shouldShowLoadingOverlay(true, AppState.COVER)).toBe(false);
-    expect(shouldShowLoadingOverlay(false, AppState.DASHBOARD)).toBe(false);
+    expect(shouldShowLoadingOverlay(false, AppState.PAST)).toBe(false);
   });
 
   it('groups past and now shell states', () => {
     expect(isPastSurfaceState(AppState.PAST)).toBe(true);
-    expect(isPastSurfaceState(AppState.ARCHIVE)).toBe(true);
     expect(isPastSurfaceState(AppState.NOW)).toBe(false);
     expect(isNowSurfaceState(AppState.NOW)).toBe(true);
     expect(isNowSurfaceState(AppState.NOW_TAGS)).toBe(true);

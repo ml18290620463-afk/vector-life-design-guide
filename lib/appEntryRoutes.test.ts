@@ -13,7 +13,6 @@ describe('appEntryRoutes', () => {
   afterEach(() => localStorage.clear());
   it('parses known preview screens from query string', () => {
     expect(getPreviewScreenFromSearch('?preview=web&screen=now')).toBe('now');
-    expect(getPreviewScreenFromSearch('?preview=mobile&screen=settings')).toBe('settings');
     expect(getPreviewScreenFromSearch('?preview=recovered-draft&screen=now')).toBeNull();
     expect(getPreviewScreenFromSearch('?preview=1&screen=now')).toBeNull();
     expect(getPreviewScreenFromSearch('?screen=now')).toBeNull();

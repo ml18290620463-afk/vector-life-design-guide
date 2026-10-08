@@ -1,6 +1,6 @@
 # PROJECT_OVERVIEW — VECTOR 矢量人生经验进化系统
 
-Snapshot: 2026-09-22.
+Snapshot: 2026-10-08.
 
 This document describes the current project shape after the product cleanup pass. Older roadmap, changelog, and postmortem files may still mention retired experiments; treat those as historical records.
 
@@ -22,16 +22,16 @@ The project no longer presents Morning Star, Memoir, Echo Chamber, delayed lette
 
 ## 2 · Main surfaces
 
-| Surface   | Purpose                                                                                                                                           |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Now       | Primary creation path for new text, image, video, link, tag, and avatar-assisted records                                                          |
-| Past      | Responsive record repository for timeline review, search, archive access, principle work, and record management                                   |
-| Future    | Design visions, goals and action plans; record action outcomes in practice                                                                        |
-| Avatar    | Conversation and self-understanding through About me / My patterns / My changes; references canonical records rather than duplicating their lists |
-| Dashboard | A lightweight access point to settings, recovery, security, and license controls; low-frequency data continuity stays out of daily work           |
-| Viewer    | Reading, sharing, archiving, deleting, container movement, and locked-entry access                                                                |
-| Pricing   | Subscription/license surface with current product capabilities only                                                                               |
-| Server    | Express backend for health, records API, avatar summary, model listing, and billing                                                               |
+| Surface          | Purpose                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Now              | Primary creation path for new text, image, video, link, tag, and avatar-assisted records                                                          |
+| Past             | Responsive record repository for timeline review, search, archive access, principle work, and record management                                   |
+| Future           | Design visions, goals and action plans; record action outcomes in practice                                                                        |
+| Avatar           | Conversation and self-understanding through About me / My patterns / My changes; references canonical records rather than duplicating their lists |
+| Continuity layer | Local draft recovery, encryption, backup compatibility, and data transactions operate below the four daily workspaces.                            |
+| Viewer           | Reading, sharing, archiving, deleting, container movement, and locked-entry access                                                                |
+| Pricing          | Subscription/license surface with current product capabilities only                                                                               |
+| Server           | Express backend for health, records API, avatar summary, model listing, and billing                                                               |
 
 ## 3 · Codebase map
 
@@ -39,10 +39,10 @@ The project no longer presents Morning Star, Memoir, Echo Chamber, delayed lette
 .
 ├── App.tsx                         # Top-level app composition and state routing
 ├── server.ts                       # Express server: health, records, avatar, models, billing
-├── components/                     # Desktop UI, viewer, dashboard, settings, pricing
+├── components/                     # Desktop UI, viewer, primary workspace framing
 ├── features/now/                   # Now flow, material capture, avatar chat rules
 ├── features/mobile/                # Mobile shell, Past repository, responsive navigation
-├── hooks/                          # App boot/routing/storage/viewer/dashboard hooks
+├── hooks/                          # App boot, routing, storage and viewer hooks
 ├── services/                       # Storage, backup, import/export, security, license, checkout
 ├── lib/                            # Routing rules, markdown safety, pricing, entry/media helpers
 ├── i18n/locales/                   # Translation maps
@@ -107,7 +107,7 @@ Recommended checks before handoff:
 ```bash
 npm run typecheck
 npx vitest run services/appStateMachine.test.ts lib/appEntryRoutes.test.ts lib/appPathRules.test.ts features/mobile/mobileRoutes.test.ts
-npx vitest run services/dashboardImport.test.ts hooks/useDashboardExport.test.ts hooks/useBackupImport.test.ts
+npx vitest run services/vaultBackupFile.test.ts services/vaultBackup.test.ts
 npx vitest run services/sampleEntries.test.ts components/PastEntryPreview.test.tsx components/PastEntryText.test.tsx components/PastEntryMedia.test.tsx features/mobile/PastRepository.test.tsx components/ViewerReadingPanel.test.tsx components/ShareCard.test.tsx services/quotaService.test.ts
 ```
 

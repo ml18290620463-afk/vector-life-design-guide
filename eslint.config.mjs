@@ -15,6 +15,7 @@ export default [
     ignores: [
       'node_modules/**',
       'dist/**',
+      'output/**',
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
