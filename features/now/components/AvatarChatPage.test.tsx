@@ -647,6 +647,86 @@ describe('AvatarChatPage', () => {
     expect(screen.getByText('我倾向使用简短直接的语句')).toBeTruthy();
   });
 
+  it('lets the avatar resume a saved draft locally without using the model', () => {
+    const onNavigateModule = vi.fn();
+    const savedDraft = { ...draft(), text: '客户反馈还没整理完' };
+    render(
+      <AvatarChatPage
+        draft={savedDraft}
+        setDraft={vi.fn()}
+        pastEntries={[]}
+        sending={false}
+        onBack={vi.fn()}
+        onRouteChange={vi.fn()}
+        onNavigateModule={onNavigateModule}
+        onSend={vi.fn()}
+        showToast={vi.fn()}
+        launchContext={{ mode: 'general', source: 'global' }}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+      target: { value: '恢复我的草稿' },
+    });
+    fireEvent.click(screen.getByText('发送'));
+
+    expect(screen.getByRole('complementary', { name: '草稿协助' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '继续这份草稿' }));
+    expect(onNavigateModule).toHaveBeenCalledWith('now');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('lets the avatar open backup and recovery actions locally', () => {
+    render(
+      <AvatarChatPage
+        draft={draft()}
+        setDraft={vi.fn()}
+        pastEntries={[]}
+        sending={false}
+        onBack={vi.fn()}
+        onRouteChange={vi.fn()}
+        onSend={vi.fn()}
+        showToast={vi.fn()}
+        launchContext={{ mode: 'general', source: 'global' }}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+      target: { value: '帮我备份资料' },
+    });
+    fireEvent.click(screen.getByText('发送'));
+
+    expect(screen.getByRole('complementary', { name: '备份与恢复' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '生成备份' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '选择备份文件' })).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('lets the avatar explain data protection locally without exposing credentials', () => {
+    render(
+      <AvatarChatPage
+        draft={draft()}
+        setDraft={vi.fn()}
+        pastEntries={[]}
+        sending={false}
+        onBack={vi.fn()}
+        onRouteChange={vi.fn()}
+        onSend={vi.fn()}
+        showToast={vi.fn()}
+        launchContext={{ mode: 'general', source: 'global' }}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+      target: { value: '我的数据是否加密？' },
+    });
+    fireEvent.click(screen.getByText('发送'));
+
+    expect(screen.getByRole('complementary', { name: '数据保护状态' })).toBeTruthy();
+    expect(screen.getByText(/密令/)).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('does not auto-record from the general avatar even when the user says record', () => {
     const onSend = vi
       .fn<(preview: RecordPreviewPayload, sessionId: string) => Promise<boolean>>()

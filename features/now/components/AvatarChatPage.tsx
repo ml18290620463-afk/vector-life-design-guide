@@ -51,6 +51,7 @@ import {
 import { subscribeVault } from '../../../services/vaultTransaction';
 
 import { AvatarChatSurface } from './AvatarChatSurface';
+import { detectAvatarReliabilityTask, reliabilityReply } from '../state/avatarReliabilityTasks';
 import { useAvatarMemoryCapture } from '../hooks/useAvatarMemoryCapture';
 import { useAvatarChatViewport } from '../hooks/useAvatarChatViewport';
 
@@ -79,6 +80,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   principles = [],
   actions = [],
   future,
+  onNavigateModule,
   sending,
   mobileShell = false,
   onBack,
@@ -96,6 +98,9 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const [modelSettingsOpen, setModelSettingsOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [chatError, setChatError] = useState('');
+  const [reliabilityTask, setReliabilityTask] = useState<
+    import('../state/avatarReliabilityTasks').AvatarReliabilityTask | null
+  >(null);
   const chatController = useRef<AbortController | null>(null);
   const failedChat = useRef<ChatMessage[] | null>(null);
   useEffect(() => () => chatController.current?.abort(), []);
@@ -393,12 +398,16 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       createdAt: new Date().toISOString(),
     });
     const activePatterns = readAvatarUnderstandings().filter((item) => item.status === 'confirmed');
+    const requestedReliabilityTask = general ? detectAvatarReliabilityTask(content) : null;
     const correcting =
       /(?:修正|修改|不认可|不认同|纠正|不符合).*(?:模式|理解)|(?:模式|理解).*(?:不对|错了|不符合)/.test(
         content,
       );
     let localAnswer: string | null = null;
-    if (correcting || choosingCorrection) {
+    if (requestedReliabilityTask) {
+      setReliabilityTask(requestedReliabilityTask);
+      localAnswer = reliabilityReply(requestedReliabilityTask);
+    } else if (correcting || choosingCorrection) {
       const { target, ordinal } = resolvePatternCorrection(
         content,
         activePatterns,
@@ -538,6 +547,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         candidateSourceCount={memoryCapture.candidateSources.length}
         candidatePosition={memoryCapture.candidatePosition}
         candidateTotal={memoryCapture.candidateTotal}
+        draft={draft}
         replacementStatement={memoryCapture.replacementStatement}
         visibleMessages={chatViewport.visibleMessages}
         mobileShell={mobileShell}
@@ -595,6 +605,8 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         userMessageCount={userMessages.length}
         validRecallMemories={validRecallMemories}
         liveInsight={liveInsight}
+        reliabilityTask={reliabilityTask}
+        onOpenDraft={() => onNavigateModule?.('now')}
       />
     </>
   );

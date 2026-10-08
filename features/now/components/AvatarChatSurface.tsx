@@ -6,12 +6,14 @@ import type {
   AvatarMemoryNature,
 } from '../../avatar/types';
 import type { AvatarRecallMemory, AvatarStructuredInsight } from '../state/nowRules';
-import type { ChatMessage, RecordPreviewPayload } from '../types/now';
+import type { ChatMessage, NowDraft, RecordPreviewPayload } from '../types/now';
 import { AvatarMemoryConfirm } from './AvatarMemoryConfirm';
 import { AvatarMemoryLibrary } from './AvatarMemoryLibrary';
 import { AvatarModelSettings } from './AvatarModelSettings';
 import { RecordPreviewCard } from './AvatarRecordPanels';
 import { MODE_COPY } from './avatarModeCopy';
+import { AvatarReliabilityAssistant } from './AvatarReliabilityAssistant';
+import type { AvatarReliabilityTask } from '../state/avatarReliabilityTasks';
 
 const AvatarChatMessage = React.memo(function AvatarChatMessage({
   message,
@@ -113,6 +115,9 @@ interface AvatarChatSurfaceProps {
   userMessageCount: number;
   validRecallMemories: AvatarRecallMemory[];
   liveInsight: AvatarStructuredInsight;
+  reliabilityTask: AvatarReliabilityTask | null;
+  onOpenDraft: () => void;
+  draft: NowDraft;
 }
 
 export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
@@ -171,6 +176,9 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   userMessageCount,
   validRecallMemories,
   liveInsight,
+  reliabilityTask,
+  onOpenDraft,
+  draft,
 }) => {
   const modeCopy = MODE_COPY[launchContext.mode];
   return (
@@ -287,6 +295,14 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
               onSendPreview={onSendPreview}
             />
           ))}
+          {general && reliabilityTask && (
+            <AvatarReliabilityAssistant
+              task={reliabilityTask}
+              draft={draft}
+              onOpenDraft={onOpenDraft}
+              showToast={showToast}
+            />
+          )}
           {generating && <div className="now-chat-bubble">正在整理…</div>}
         </section>
         {showJumpToLatest && (

@@ -1170,3 +1170,103 @@
     font-size: 14px;
   }
 }
+
+.avatar-reliability-card {
+  width: min(100%, 680px);
+  margin: 8px auto 18px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--mobile-accent), var(--mobile-line) 70%);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--mobile-surface) 90%, transparent);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+.avatar-reliability-card__eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--mobile-accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+.avatar-reliability-card p {
+  margin: 0;
+  color: var(--mobile-ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.avatar-reliability-card button {
+  min-height: 40px;
+  margin-top: 16px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--mobile-accent), transparent 42%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mobile-accent), var(--mobile-surface) 78%);
+  color: var(--mobile-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.avatar-reliability-card button:disabled {
+  opacity: 0.58;
+  cursor: wait;
+}
+.avatar-reliability-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.avatar-reliability-card__actions button + button {
+  margin-left: 0;
+}
+.avatar-reliability-restore {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--mobile-line);
+}
+.avatar-reliability-restore p {
+  color: var(--mobile-muted);
+  font-size: 13px;
+}
+.avatar-reliability-restore label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mobile-ink);
+  font-size: 14px;
+}
+.avatar-reliability-restore input[type='password'] {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid var(--mobile-line);
+  border-radius: 10px;
+  background: var(--mobile-surface-muted);
+  color: var(--mobile-ink);
+  font: inherit;
+}
+.avatar-reliability-restore__confirm {
+  color: var(--mobile-muted) !important;
+  font-size: 13px !important;
+}
+.avatar-reliability-card__error {
+  margin-top: 12px !important;
+  color: #fca5a5 !important;
+}
+@media (max-width: 640px) {
+  .avatar-reliability-card {
+    margin-inline: 0;
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .avatar-reliability-card__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .avatar-reliability-card__actions button {
+    width: 100%;
+    padding-inline: 8px;
+  }
+}
