@@ -9,6 +9,10 @@ import {
 } from '../../../services/vaultBackup';
 import { decryptVaultBackupFile, isEncryptedVaultBackup } from '../../../services/vaultBackupFile';
 import { downloadTextFile } from '../../../services/fileDownload';
+import {
+  inspectVaultBackup,
+  type VaultBackupInspection,
+} from '../../../services/vaultBackupInspection';
 
 interface Props {
   task: AvatarReliabilityTask;
@@ -34,6 +38,7 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
   const [restoreMode, setRestoreMode] = useState<'merge' | 'replace'>('merge');
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
   const [error, setError] = useState('');
+  const [inspection, setInspection] = useState<VaultBackupInspection | null>(null);
 
   const exportBackup = async () => {
     setBusy(true);
@@ -79,6 +84,22 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       showToast(`已${restoreMode === 'merge' ? '合并' : '恢复'} ${summary.importedCount} 条记录`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '恢复失败，请检查备份文件后重试');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const inspectBackup = async () => {
+    if (!restoreFile || busy) return;
+    setBusy(true);
+    setError('');
+    setInspection(null);
+    try {
+      setInspection(
+        await inspectVaultBackup(JSON.parse(await restoreFile.text()), restorePassword),
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '检查失败，请确认备份文件或密令');
     } finally {
       setBusy(false);
     }
@@ -140,6 +161,7 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
         accept="application/json,.json"
         onChange={(event) => {
           setRestoreFile(event.target.files?.[0] ?? null);
+          setInspection(null);
           setError('');
           event.currentTarget.value = '';
         }}
@@ -171,6 +193,46 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
             placeholder="若备份已加密，请输入备份密令"
             aria-label="备份密令"
           />
+          <button type="button" onClick={() => void inspectBackup()} disabled={busy}>
+            {busy ? '检查中…' : '检查备份'}
+          </button>
+          {inspection && (
+            <section className="avatar-reliability-inspection" aria-label="备份检查结果">
+              <p>
+                {inspection.encrypted ? '加密备份' : '明文备份'} · 格式版本{' '}
+                {inspection.schemaVersion}
+              </p>
+              {inspection.encryption && (
+                <p>
+                  加密：{inspection.encryption.cipher}；{inspection.encryption.kdf}；
+                  {inspection.encryption.iterations} 次
+                </p>
+              )}
+              {inspection.needsPassword ? (
+                <p>需要备份密令才能验证内容。</p>
+              ) : (
+                <>
+                  <p>
+                    应用版本：{inspection.version}；导出时间：{inspection.exportedAt}；记录：
+                    {inspection.entryCount}
+                  </p>
+                  <p>
+                    数据域：
+                    {Object.entries(inspection.dataCounts ?? {})
+                      .map(([key, count]) => `${key} ${count}`)
+                      .join('；')}
+                  </p>
+                  <p>
+                    缓存域：
+                    {Object.entries(inspection.cacheCounts ?? {})
+                      .map(([key, count]) => `${key} ${count}`)
+                      .join('；')}
+                  </p>
+                </>
+              )}
+              <p>链接和媒体地址属于外部或本机引用；检查不会验证它们仍可访问。</p>
+            </section>
+          )}
           {restoreMode === 'replace' && (
             <label className="avatar-reliability-restore__confirm">
               <input

@@ -122,9 +122,10 @@ export const buildRecordFromDraft = (
 export const recordToDiaryEntry = (
   record: Omit<NowRecord, 'id' | 'sync_status'>,
 ): Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'> => {
-  const materialLines = record.materials.map(
-    (material) => `- ${material.type}: ${getMaterialTitle(material)}`,
-  );
+  const materialLines = record.materials.map((material) => {
+    const description = material.description?.trim();
+    return `- ${material.type}: ${getMaterialTitle(material)}${description ? `（用户说明：${description}）` : ''}`;
+  });
   const content = [record.text, materialLines.length ? `\n素材:\n${materialLines.join('\n')}` : '']
     .filter(Boolean)
     .join('\n');

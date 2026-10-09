@@ -21,6 +21,12 @@ import { goalProgress } from '../../services/futureRepository';
 import type { ActionDraftContext, PracticeReflectionContext } from '../../types/future';
 import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
+import {
+  availablePastTags,
+  buildDeterministicReview,
+  filterPastEntries,
+  type PastSearchFilters,
+} from './pastSearch';
 
 interface PastRepositoryProps {
   archiveMode?: boolean;
@@ -113,6 +119,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const { state: futureState } = useFuture();
   const [deleting, setDeleting] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState(initialQuery);
+  const [filters, setFilters] = useState<PastSearchFilters>({});
   useEffect(() => {
     onViewChange?.({ section, query: timelineQuery });
   }, [section, timelineQuery, onViewChange]);
@@ -131,6 +138,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const safePrinciples = useMemo(() => (Array.isArray(principles) ? principles : []), [principles]);
   const safeActions = useMemo(() => (Array.isArray(actions) ? actions : []), [actions]);
   const activePrinciples = useMemo(() => currentPrinciples(safePrinciples), [safePrinciples]);
+  const filterTags = useMemo(() => availablePastTags(safeEntries), [safeEntries]);
   const searchMatches = useMemo(() => {
     const query = normalizedTimelineQuery.toLocaleLowerCase();
     if (!query) return { principleIds: new Set<string>(), actionIds: new Set<string>() };
@@ -174,7 +182,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       }));
     return [...principles, ...actions].slice(0, 3);
   }, [activePrinciples, safeActions, searchMatches, hasTimelineQuery, language]);
-  const timelineEntries = useMemo(() => {
+  const textMatchedEntries = useMemo(() => {
     const active = [...safeEntries].sort(
       (a, b) => getSafeTimestamp(b.createdAt) - getSafeTimestamp(a.createdAt),
     );
@@ -183,7 +191,10 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     const isDirectMatch = (entry: DiaryEntry) =>
       getSafeText(entry.title).toLocaleLowerCase().includes(query) ||
       getSafeText(entry.content).toLocaleLowerCase().includes(query) ||
-      getSafeTags(entry.tags).some((tag) => tag.toLocaleLowerCase().includes(query));
+      getSafeTags(entry.tags).some((tag) => tag.toLocaleLowerCase().includes(query)) ||
+      (entry.nowMaterials ?? []).some((material) =>
+        getSafeText(material.description).toLocaleLowerCase().includes(query),
+      );
     const matchedActionEntryIds = new Set(
       safeActions
         .filter((action) => searchMatches.actionIds.has(action.id))
@@ -207,6 +218,14 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
         ),
     );
   }, [safeEntries, safeActions, activePrinciples, searchMatches, normalizedTimelineQuery]);
+  const timelineEntries = useMemo(
+    () => filterPastEntries(textMatchedEntries, filters, safeActions, activePrinciples),
+    [textMatchedEntries, filters, safeActions, activePrinciples],
+  );
+  const deterministicReview = useMemo(
+    () => buildDeterministicReview(timelineEntries, activePrinciples, safeActions),
+    [timelineEntries, activePrinciples, safeActions],
+  );
   const visibleEntryIds = useMemo(
     () => timelineEntries.map((entry) => entry.id),
     [timelineEntries],
@@ -318,6 +337,21 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       detail: activePrinciples.length,
     },
   ];
+  const hasFilters = Boolean(
+    filters.tags?.length ||
+    filters.from !== undefined ||
+    filters.to !== undefined ||
+    filters.linkedTo,
+  );
+  const updateDateFilter = (key: 'from' | 'to', value: string) => {
+    setFilters((current) => ({
+      ...current,
+      [key]: value
+        ? new Date(`${value}T${key === 'to' ? '23:59:59.999' : '00:00:00.000'}`).getTime()
+        : undefined,
+    }));
+    setSelectedEntryIds(new Set());
+  };
 
   const renderTimelineRows = (isManaging = false) => {
     if (timelineRows.length === 0) {
@@ -446,6 +480,72 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 {language === 'zh' ? '选择' : 'Select'}
               </button>
             </div>
+            <div
+              className="mobile-past-filters"
+              aria-label={language === 'zh' ? '筛选记录' : 'Filter records'}
+            >
+              <label>
+                {language === 'zh' ? '从' : 'From'}
+                <input
+                  type="date"
+                  aria-label={language === 'zh' ? '开始日期' : 'Start date'}
+                  value={filters.from ? new Date(filters.from).toISOString().slice(0, 10) : ''}
+                  onChange={(event) => updateDateFilter('from', event.target.value)}
+                />
+              </label>
+              <label>
+                {language === 'zh' ? '到' : 'To'}
+                <input
+                  type="date"
+                  aria-label={language === 'zh' ? '结束日期' : 'End date'}
+                  value={filters.to ? new Date(filters.to).toISOString().slice(0, 10) : ''}
+                  onChange={(event) => updateDateFilter('to', event.target.value)}
+                />
+              </label>
+              <select
+                aria-label={language === 'zh' ? '按标签筛选' : 'Filter by tag'}
+                value={filters.tags?.[0] ?? ''}
+                onChange={(event) => {
+                  setFilters((current) => ({
+                    ...current,
+                    tags: event.target.value ? [event.target.value] : undefined,
+                  }));
+                  setSelectedEntryIds(new Set());
+                }}
+              >
+                <option value="">{language === 'zh' ? '所有标签' : 'All tags'}</option>
+                {filterTags.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label={language === 'zh' ? '按关联筛选' : 'Filter by relation'}
+                value={filters.linkedTo ?? ''}
+                onChange={(event) => {
+                  const linkedTo = event.target.value as PastSearchFilters['linkedTo'] | '';
+                  setFilters((current) => ({ ...current, linkedTo: linkedTo || undefined }));
+                  setSelectedEntryIds(new Set());
+                }}
+              >
+                <option value="">{language === 'zh' ? '所有关联' : 'All relations'}</option>
+                <option value="action">{language === 'zh' ? '关联行动' : 'Linked actions'}</option>
+                <option value="principle">
+                  {language === 'zh' ? '关联原则' : 'Linked principles'}
+                </option>
+              </select>
+              {hasFilters && (
+                <button type="button" onClick={() => setFilters({})}>
+                  {language === 'zh' ? '清除筛选' : 'Clear filters'}
+                </button>
+              )}
+            </div>
+            <p className="mobile-past-filter-result" role="status">
+              {language === 'zh'
+                ? `显示 ${timelineEntries.length} 条记录`
+                : `${timelineEntries.length} records shown`}
+            </p>
             {deleteStatus && (
               <p className="mobile-past-delete-status" role="status">
                 {deleteStatus}
@@ -465,6 +565,45 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     </li>
                   ))}
                 </ul>
+              </aside>
+            )}
+            {deterministicReview.entries.length > 0 && (
+              <aside
+                className="mobile-past-fact-review"
+                aria-label={language === 'zh' ? '事实回顾' : 'Fact review'}
+              >
+                <strong>{language === 'zh' ? '事实回顾' : 'Fact review'}</strong>
+                <p>
+                  {language === 'zh'
+                    ? '以下内容均来自你已保存的资料，不包含模型推断。'
+                    : 'Everything below comes from your saved data; no model inference is included.'}
+                </p>
+                <ul>
+                  <li>
+                    {language === 'zh' ? '最近记录：' : 'Recent records: '}
+                    {deterministicReview.entries.map((entry) => entry.title).join('、')}
+                  </li>
+                  {deterministicReview.principles.length > 0 && (
+                    <li>
+                      {language === 'zh' ? '已有原则：' : 'Existing principles: '}
+                      {deterministicReview.principles.map((principle) => principle.text).join('、')}
+                    </li>
+                  )}
+                  {deterministicReview.actions.length > 0 && (
+                    <li>
+                      {language === 'zh' ? '关联行动：' : 'Related actions: '}
+                      {deterministicReview.actions.map((action) => action.title).join('、')}
+                    </li>
+                  )}
+                </ul>
+                {onOpenFutureAction && deterministicReview.actionContext && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenFutureAction(deterministicReview.actionContext!)}
+                  >
+                    {language === 'zh' ? '以最近记录建立行动' : 'Create action from latest record'}
+                  </button>
+                )}
               </aside>
             )}
             {!entries.some((entry) => !entry.isSample) && onOpenNow && !hasTimelineQuery && (

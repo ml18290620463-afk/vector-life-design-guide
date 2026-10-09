@@ -140,6 +140,8 @@ export interface EntryMaterial {
     title?: string;
   };
   sort_order: number;
+  /** Optional explanation written by the person who added this material. */
+  description?: string;
 }
 
 export interface DiaryEntry {

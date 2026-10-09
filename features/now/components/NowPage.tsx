@@ -107,6 +107,15 @@ export const NowPage: React.FC<NowPageProps> = ({
       materials: current.materials.filter((material) => material.id !== id),
     }));
   };
+  const updateMaterialDescription = (id: string, description: string) => {
+    if (sending || exitInFlight.current) return;
+    setDraft((current) => ({
+      ...current,
+      materials: current.materials.map((material) =>
+        material.id === id ? { ...material, description } : material,
+      ),
+    }));
+  };
 
   return (
     <main className="now-page" data-testid="now-page">
@@ -166,7 +175,11 @@ export const NowPage: React.FC<NowPageProps> = ({
         </section>
 
         <div className="now-materials-row">
-          <MaterialPreview materials={draft.materials} onRemove={removeMaterial} />
+          <MaterialPreview
+            materials={draft.materials}
+            onRemove={removeMaterial}
+            onUpdateDescription={updateMaterialDescription}
+          />
           <p className="now-materials-hint" id="now-materials-hint">
             素材是这次经历的证据；分身会结合这条记录理解，不会自动把素材当成结论。
           </p>

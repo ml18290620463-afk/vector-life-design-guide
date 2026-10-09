@@ -88,6 +88,8 @@ describe('Now simulated input integration', () => {
     const timestamp = document.querySelector('time')!.textContent;
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    await screen.findByRole('heading', { name: '记录已存入过去' });
+    fireEvent.click(screen.getByRole('button', { name: '继续记录' }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist).toHaveBeenCalledTimes(1);
     expect(persist.mock.calls[0][0]).toMatchObject({
@@ -109,6 +111,8 @@ describe('Now simulated input integration', () => {
     await screen.findByText('模拟存储失败');
     expect(input()).toHaveValue('今天主动澄清会议目标，讨论更聚焦。');
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    await screen.findByRole('heading', { name: '记录已存入过去' });
+    fireEvent.click(screen.getByRole('button', { name: '继续记录' }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist.mock.calls[0][0].id).toBe(persist.mock.calls[1][0].id);
   });
@@ -136,6 +140,8 @@ describe('Now simulated input integration', () => {
     await screen.findByLabelText('此刻发生了什么？');
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    await screen.findByRole('heading', { name: '记录已存入过去' });
+    fireEvent.click(screen.getByRole('button', { name: '继续记录' }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist).toHaveBeenCalledOnce();
     expect(postRecord).not.toHaveBeenCalled();

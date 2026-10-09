@@ -62,6 +62,7 @@ describe('nowRules', () => {
           url: 'data:audio/webm;base64,AAAA',
           meta: { title: '录音 5s' },
           sort_order: 0,
+          description: '会议后的语音备注',
         },
       ],
       mood_tags: ['平静'],
@@ -75,6 +76,7 @@ describe('nowRules', () => {
     expect(entry.content).toContain('今天完成一次重要复盘');
     expect(entry.content).toContain('素材:');
     expect(entry.content).toContain('- audio: 录音 5s');
+    expect(entry.content).toContain('用户说明：会议后的语音备注');
     expect(entry.tags).toEqual(['心情:平静', '事件:个人成长']);
     expect(entry.nowMaterials).toEqual(draft.materials);
   });

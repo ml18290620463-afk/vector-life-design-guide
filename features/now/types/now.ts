@@ -13,6 +13,8 @@ export interface Material {
     title?: string;
   };
   sort_order: number;
+  /** Optional user-authored context. It is never inferred from the file itself. */
+  description?: string;
 }
 
 export interface NowDraft {

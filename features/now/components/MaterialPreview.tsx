@@ -6,9 +6,14 @@ import { getAudioPlayLabel, getMaterialAlt, getMaterialTitle } from '../../../li
 interface MaterialPreviewProps {
   materials: Material[];
   onRemove: (id: string) => void;
+  onUpdateDescription: (id: string, description: string) => void;
 }
 
-export const MaterialPreview: React.FC<MaterialPreviewProps> = ({ materials, onRemove }) => {
+export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
+  materials,
+  onRemove,
+  onUpdateDescription,
+}) => {
   if (materials.length === 0) return null;
   return (
     <div className="now-materials">
@@ -25,6 +30,16 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({ materials, onR
             <Paperclip size={18} />
           )}
           <span>{getMaterialTitle(material)}</span>
+          <label className="now-material__description">
+            <span className="sr-only">素材说明（选填）</span>
+            <input
+              aria-label={`素材说明（选填）：${getMaterialTitle(material)}`}
+              value={material.description ?? ''}
+              maxLength={240}
+              placeholder="说明（选填）"
+              onChange={(event) => onUpdateDescription(material.id, event.target.value)}
+            />
+          </label>
           <button type="button" onClick={() => onRemove(material.id)} aria-label="删除素材">
             <Trash2 size={16} />
           </button>
