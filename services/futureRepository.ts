@@ -296,7 +296,7 @@ export async function deleteFutureAction(id: string, expectedRevision: number) {
 export async function recordActionPractice(input: ActionPracticeInput) {
   return command((state, values) => {
     validateDate(input.occurredOn);
-    textRequired(input.note, '实际情况');
+    if (typeof input.note !== 'string') throw new Error('实际情况无效');
     if (!['completed', 'partial', 'not_completed', 'cancelled'].includes(input.status))
       throw new Error('行动状态无效');
     if (!['continue', 'adjust', 'pause', 'end'].includes(input.nextStep))

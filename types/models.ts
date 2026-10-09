@@ -30,6 +30,8 @@ export interface PrincipleApplication {
   action: string;
 }
 
+export type PrincipleRevisionKind = 'correction' | 'evolution';
+
 export interface Principle {
   id: string;
   text: string;
@@ -42,10 +44,18 @@ export interface Principle {
   containerId?: string; // New: Link to a storage container
   /** Entry evidence explicitly confirmed when this principle was distilled. */
   derivedFromEntryIds?: string[];
+  /** Stable practice records explicitly confirmed when this principle was distilled. */
+  derivedFromPracticeIds?: string[];
   /** Confirmed patterns this user-authored principle responds to. */
   sourcePatternIds?: string[];
   /** Optional P4 trigger-to-action structure, confirmed with the principle. */
   application?: PrincipleApplication;
+  /** The prior principle this record replaces. The original record remains immutable. */
+  supersedesPrincipleId?: string;
+  /** Whether this replacement corrects the record or records a later real-world change. */
+  revisionKind?: PrincipleRevisionKind;
+  /** When this correction or change actually became known. */
+  revisedAt?: number;
   /** 0–1 internal ranking heuristic; NOT a calibrated probability. Missing legacy values are interpreted as 0.5. */
   confidence?: number;
   recallCount?: number;

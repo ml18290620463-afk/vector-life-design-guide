@@ -155,6 +155,20 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
 export const sanitizePrinciple = (principle: Principle): Principle => ({
   ...principle,
   tags: sanitizeStringArray(principle.tags),
+  supersedesPrincipleId:
+    typeof principle.supersedesPrincipleId === 'string' && principle.supersedesPrincipleId.trim()
+      ? principle.supersedesPrincipleId.trim()
+      : undefined,
+  revisionKind:
+    principle.revisionKind === 'correction' || principle.revisionKind === 'evolution'
+      ? principle.revisionKind
+      : undefined,
+  revisedAt:
+    typeof principle.revisedAt === 'number' &&
+    Number.isFinite(principle.revisedAt) &&
+    principle.revisedAt >= 0
+      ? principle.revisedAt
+      : undefined,
   application:
     principle.application &&
     typeof principle.application.trigger === 'string' &&
@@ -167,6 +181,7 @@ export const sanitizePrinciple = (principle: Principle): Principle => ({
         }
       : undefined,
   derivedFromEntryIds: sanitizeStringArray(principle.derivedFromEntryIds),
+  derivedFromPracticeIds: sanitizeStringArray(principle.derivedFromPracticeIds),
   sourcePatternIds: sanitizeStringArray(principle.sourcePatternIds),
   appliedFeedbackEntryIds: sanitizeStringArray(principle.appliedFeedbackEntryIds),
   confidence:

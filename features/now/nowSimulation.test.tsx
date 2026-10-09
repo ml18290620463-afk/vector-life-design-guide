@@ -141,26 +141,37 @@ describe('Now simulated input integration', () => {
     expect(postRecord).not.toHaveBeenCalled();
     expect(localStorage.getItem(STORAGE_KEYS.pendingRecords)).toBeNull();
   });
-  it.each(['继续编辑', '放弃', '保存草稿'])(
-    'back choice %s cancels, discards or saves explicitly',
+  it('saves the draft before returning and restores it on re-entry', async () => {
+    const exit = vi.fn();
+    const view = render(<Flow persist={vi.fn(saved)} exit={exit} />);
+    await screen.findByLabelText('此刻发生了什么？');
+    fillRecord();
+    fireEvent.click(screen.getByLabelText('返回'));
+    await waitFor(() => expect(exit).toHaveBeenCalledOnce());
+    expect(screen.queryByRole('dialog')).toBeNull();
+    view.unmount();
+    const hook = renderHook(() => useNowDraft());
+    await waitFor(() => expect(hook.result.current.ready).toBe(true));
+    expect(hook.result.current.draft.text).toBe('今天主动澄清会议目标，讨论更聚焦。');
+  });
+  it.each(['继续编辑', '确认清空'])(
+    'explicit clear choice %s preserves or clears the draft',
     async (choice) => {
       const exit = vi.fn();
       const view = render(<Flow persist={vi.fn(saved)} exit={exit} />);
       await screen.findByLabelText('此刻发生了什么？');
       fillRecord();
-      fireEvent.click(screen.getByLabelText('返回'));
+      fireEvent.click(screen.getByRole('button', { name: '清空草稿' }));
       fireEvent.click(screen.getByRole('button', { name: choice }));
-      await waitFor(() => expect(exit).toHaveBeenCalledTimes(choice === '继续编辑' ? 0 : 1));
-      if (choice === '继续编辑') {
-        expect(input()).toHaveValue('今天主动澄清会议目标，讨论更聚焦。');
-        return;
-      }
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      const expected = choice === '继续编辑' ? '今天主动澄清会议目标，讨论更聚焦。' : '';
+      expect(input()).toHaveValue(expected);
+      expect(exit).not.toHaveBeenCalled();
       view.unmount();
+      await waitFor(async () => expect((await loadNowDraft()).draft?.text ?? '').toBe(expected));
       const hook = renderHook(() => useNowDraft());
       await waitFor(() => expect(hook.result.current.ready).toBe(true));
-      expect(hook.result.current.draft.text).toBe(
-        choice === '保存草稿' ? '今天主动澄清会议目标，讨论更聚焦。' : '',
-      );
+      expect(hook.result.current.draft.text).toBe(expected);
     },
   );
   it('cancels unconfirmed tag changes', async () => {
@@ -247,7 +258,9 @@ describe('Now simulated input integration', () => {
     const dirty = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(dirty);
     expect(dirty.defaultPrevented).toBe(true);
-    await act(async () => { await h.result.current.saveDraft(); });
+    await act(async () => {
+      await h.result.current.saveDraft();
+    });
     const saved = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(saved);
     expect(saved.defaultPrevented).toBe(false);

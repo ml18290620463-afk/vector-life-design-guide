@@ -175,7 +175,28 @@ describe('NowPage', () => {
     expect(screen.queryByLabelText('导入音频文件')).toBeNull();
   });
 
-  it('prompts to save or discard when leaving a non-empty draft', async () => {
+  it('explains that materials are evidence rather than automatic avatar conclusions', () => {
+    render(
+      <NowPage
+        draft={makeDraft()}
+        setDraft={vi.fn()}
+        sending={false}
+        onSend={vi.fn()}
+        onSaveDraft={vi.fn()}
+        onDiscardDraft={vi.fn()}
+        onExit={vi.fn()}
+        onRouteChange={vi.fn()}
+        showToast={vi.fn()}
+      />,
+    );
+
+    const hint = screen.getByText(
+      '素材是这次经历的证据；分身会结合这条记录理解，不会自动把素材当成结论。',
+    );
+    expect(screen.getByLabelText('添加素材').getAttribute('aria-describedby')).toBe(hint.id);
+  });
+
+  it('saves a non-empty draft before leaving without a confirmation', async () => {
     const onSaveDraft = vi.fn().mockResolvedValue(true);
     const onExit = vi.fn();
 
@@ -196,9 +217,55 @@ describe('NowPage', () => {
 
     fireEvent.click(screen.getByLabelText('返回过去'));
     expect(onExit).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: '保存草稿' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
 
     expect(onSaveDraft).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(onExit).toHaveBeenCalledTimes(1));
+  });
+  it('keeps the editor and draft when saving fails', async () => {
+    const onExit = vi.fn();
+    const showToast = vi.fn();
+    render(
+      <NowPage
+        draft={makeDraft({ text: '保留这段内容' })}
+        setDraft={vi.fn()}
+        sending={false}
+        onSend={vi.fn()}
+        onSaveDraft={vi.fn().mockResolvedValue(false)}
+        onDiscardDraft={vi.fn()}
+        onExit={onExit}
+        onRouteChange={vi.fn()}
+        showToast={showToast}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('返回'));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('草稿保存失败，请继续编辑并重试'));
+    expect(onExit).not.toHaveBeenCalled();
+    expect((screen.getByLabelText('此刻发生了什么？') as HTMLTextAreaElement).value).toBe(
+      '保留这段内容',
+    );
+  });
+
+  it('requires explicit confirmation to clear and stays in the editor', async () => {
+    const discard = vi.fn().mockResolvedValue(true);
+    const onExit = vi.fn();
+    render(
+      <NowPage
+        draft={makeDraft({ text: '草稿' })}
+        setDraft={vi.fn()}
+        sending={false}
+        onSend={vi.fn()}
+        onSaveDraft={vi.fn()}
+        onDiscardDraft={discard}
+        onExit={onExit}
+        onRouteChange={vi.fn()}
+        showToast={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByText('清空草稿'));
+    expect(discard).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('确认清空'));
+    await waitFor(() => expect(discard).toHaveBeenCalledTimes(1));
+    expect(onExit).not.toHaveBeenCalled();
   });
 });

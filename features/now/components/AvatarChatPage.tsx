@@ -1,4 +1,5 @@
-import { selectAvatarGuidanceContext } from '../state/avatarGuidanceContext';
+/* eslint-disable max-lines -- This page composes the complete chat flow; focused logic lives in state and hooks. */
+import { selectAvatarGuidanceContext, getFocusText } from '../state/avatarGuidanceContext';
 import { PatternReviewDialog } from '../../../components/PatternReviewDialog';
 import {
   answerAvatarEvidence,
@@ -6,10 +7,20 @@ import {
 } from '../../../services/avatarEvidenceDialogue';
 import { resolveAvatarKnowledge } from '../../../services/avatarKnowledgeProjection';
 import { modelError } from '../api/avatarModel';
+import {
+  buildDeterministicEntryCountReply,
+  isAccessibleDiaryEntry,
+  parseAvatarQueryPlan,
+} from '../../../services/avatarQueryPlan';
+import { searchNeuralRelatedEntryIds } from '../../../services/neuralSemanticRecall';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionItem, DiaryEntry, Principle } from '../../../types';
 import type { FutureState } from '../../../types/future';
-import { buildGuidanceSources, extractAvatarName } from '../../../services/avatarGuidance';
+import {
+  buildGuidanceSources,
+  detectAvatarConversationIntent,
+  extractAvatarName,
+} from '../../../services/avatarGuidance';
 import './avatarGuidance.css';
 import { generateSecureId } from '../../../services/idGenerator';
 import { CONFIG } from '../constants/config';
@@ -49,12 +60,11 @@ import {
   writeAvatarUnderstanding,
 } from '../../../services/avatarMemory';
 import { subscribeVault } from '../../../services/vaultTransaction';
-
 import { AvatarChatSurface } from './AvatarChatSurface';
 import { detectAvatarReliabilityTask, reliabilityReply } from '../state/avatarReliabilityTasks';
 import { useAvatarMemoryCapture } from '../hooks/useAvatarMemoryCapture';
 import { useAvatarChatViewport } from '../hooks/useAvatarChatViewport';
-
+import { buildAvatarMemoryReferences } from '../state/avatarMemoryReferences';
 interface AvatarChatPageProps {
   draft: NowDraft;
   setDraft: (updater: NowDraft | ((draft: NowDraft) => NowDraft)) => void;
@@ -104,7 +114,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const chatController = useRef<AbortController | null>(null);
   const failedChat = useRef<ChatMessage[] | null>(null);
   useEffect(() => () => chatController.current?.abort(), []);
-
   const general = launchContext.mode === 'general';
   const [patterns, setPatterns] = useState(readAvatarUnderstandings);
   const [storedAvatarMemories, setAvatarMemories] = useState(readAvatarAtomicMemories);
@@ -194,11 +203,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       ? [...intro, buildAssistantTextMessage(seed, options)]
       : [...intro, buildUserTextMessage(seed, options)];
   });
-
-  const userMessages = useMemo(
-    () => messages.filter((message) => message.role === 'user'),
-    [messages],
-  );
+  const userMessages = useMemo(() => messages.filter((m) => m.role === 'user'), [messages]);
   const chatViewport = useAvatarChatViewport(messages, chatListRef);
   const validRecallMemories = useMemo(() => {
     const existingIds = new Set(pastEntries.map((entry) => entry.id));
@@ -219,7 +224,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       })),
     [validRecallMemories],
   );
-
   useEffect(() => {
     if (!messages.some((message) => message.role === 'user')) return;
     const saved = writeAvatarSession({
@@ -233,7 +237,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     });
     if (!saved) setChatError('聊天记录未能保存，请检查浏览器存储空间后重试。');
   }, [launchContext, messages, references, sessionCreatedAt, sessionId]);
-
   const formUnderstanding = () => {
     const statement =
       liveInsight.thought || liveInsight.result || liveInsight.action || liveInsight.fact;
@@ -250,7 +253,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     if (saved) setUnderstanding(next);
     else showToast('提炼尚未保存，请重试');
   };
-
   const continueRecall = () => {
     const query = input.trim();
     if (!query) {
@@ -260,7 +262,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     setRecallMemories(selectAvatarRecallMemories(pastEntries, query));
     sendMessage();
   };
-
   const finish = async (
     conversationUserMessages = userMessages,
     conversationMessages = messages,
@@ -362,7 +363,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       setGenerating(false);
     }
   };
-
   const requestReply = async (conversation: ChatMessage[]) => {
     if (chatController.current) return;
     const controller = new AbortController();
@@ -371,7 +371,30 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     setChatError('');
     failedChat.current = conversation;
     try {
-      const context = selectAvatarGuidanceContext(conversation, guidanceSources);
+      const question = conversation.at(-1)?.content ?? '';
+      const plan = parseAvatarQueryPlan(question);
+      const eligibleEntries = pastEntries.filter(
+        (entry) =>
+          isAccessibleDiaryEntry(entry) &&
+          (!plan.range ||
+            (entry.createdAt >= plan.range.start && entry.createdAt < plan.range.end)),
+      );
+      const intent = detectAvatarConversationIntent(question);
+      const preferredEntryIds =
+        (plan.kind === 'general_recall' || plan.kind === 'period_recall') &&
+        ['unknown', 'advice', 'emotion'].includes(intent)
+          ? await searchNeuralRelatedEntryIds(
+              { title: '', content: question, tags: [] },
+              eligibleEntries,
+              3,
+            ).catch(() => [])
+          : [];
+      const context = selectAvatarGuidanceContext(
+        conversation,
+        guidanceSources,
+        launchContext,
+        preferredEntryIds,
+      );
       const reply = await chatWithAvatar(conversation, context, controller.signal);
       if (controller.signal.aborted) return;
       const assistantMessage = buildAssistantTextMessage(reply, {
@@ -389,7 +412,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       chatController.current = null;
     }
   };
-
   const sendMessage = () => {
     const content = input.trim();
     if (!content || chatController.current) return;
@@ -435,6 +457,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       principles,
       pastEntries,
     );
+    localAnswer ??= buildDeterministicEntryCountReply(content, pastEntries);
     if (localAnswer) {
       setMessages((current) => [
         ...current,
@@ -474,27 +497,10 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     if (general) void requestReply(nextMessages);
     if (!general && wantsDirectRecord(content)) void finish(nextUserMessages, nextMessages);
   };
-
   const memoryCapture = useAvatarMemoryCapture({
     draft,
     sessionId,
-    avatarMemoryReferences: avatarMemories.flatMap((memory) => {
-      if (
-        memory.status !== 'candidate' &&
-        memory.status !== 'confirmed' &&
-        memory.status !== 'retained'
-      )
-        return [];
-      return [
-        {
-          id: memory.id,
-          text: memory.statement,
-          status: memory.status,
-          ...(memory.patternKey ? { patternKey: memory.patternKey } : {}),
-          ...(memory.category ? { category: memory.category } : {}),
-        },
-      ];
-    }),
+    avatarMemoryReferences: buildAvatarMemoryReferences(avatarMemories),
     onSend,
     showToast,
     refreshAvatarMemories: () => setAvatarMemories(readAvatarAtomicMemories()),
@@ -527,6 +533,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         input={input}
         inputRef={inputRef}
         launchContext={launchContext}
+        focusedObjectText={getFocusText(guidanceSources, launchContext)}
         libraryOpen={libraryOpen}
         memoryFacets={
           memoryCapture.extractedFacets ??

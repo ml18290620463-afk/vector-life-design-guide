@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Check, Pencil, Plus, Shield, Star, Trash2, X } from 'lucide-react';
 import type { Language, Principle, PrincipleApplication, Theme } from '../types';
+import type { PrincipleRevisionKind } from '../services/principleRevision';
+import { currentPrinciples } from '../services/principleRevision';
 import type { TranslationDictionary } from '../i18n/translations';
 import { EVENT_TAGS } from '../features/now/constants/tags';
 import { PastActionDialog } from './PastActionDialog';
@@ -59,9 +61,15 @@ interface ArchivePrinciplesViewProps {
     application?: PrincipleApplication,
     sourcePatternIds?: string[],
     tags?: string[],
+    derivedFromPracticeIds?: string[],
   ) => void | Promise<void>;
   onDeletePrinciple: (id: string) => void | Promise<void>;
   onUpdatePrinciple: (principle: Principle) => void | Promise<void>;
+  onRevisePrinciple?: (
+    original: Principle,
+    text: string,
+    revisionKind: PrincipleRevisionKind,
+  ) => void | Promise<void>;
   /** @deprecated Legacy data is accepted for migration compatibility and is never rendered here. */
   patterns?: Array<{ id: string; statement: string; status?: string }>;
   displayFirst?: boolean;
@@ -72,7 +80,7 @@ interface ArchivePrinciplesViewProps {
   emptyReason?: 'source-deletion';
 }
 
-const PRINCIPLE_MAX_LENGTH = 30;
+const PRINCIPLE_MAX_LENGTH = 120;
 const UNCATEGORIZED_SECTION = '__uncategorized__';
 const ALL_SECTION = '__all__';
 type PrincipleSection = 'extract' | typeof ALL_SECTION | string;
@@ -92,6 +100,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   onAddPrinciple,
   onDeletePrinciple,
   onUpdatePrinciple,
+  onRevisePrinciple,
   displayFirst = false,
   onManagementChange,
   practiceReflectionContext,
@@ -105,6 +114,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   const [managementOpen, setManagementOpen] = useState(!displayFirst);
   const [editingPrincipleId, setEditingPrincipleId] = useState<string | null>(null);
   const [editingPrincipleText, setEditingPrincipleText] = useState('');
+  const [revisionKind, setRevisionKind] = useState<PrincipleRevisionKind>('correction');
 
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -197,7 +207,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
     ? principles.find((principle) => principle.id === editingPrincipleId)
     : undefined;
   const editorText = editingPrinciple ? editingPrincipleText : newPrincipleText;
-  const editorOverLimit = editorText.length >= PRINCIPLE_MAX_LENGTH;
+  const editorOverLimit = editorText.length > PRINCIPLE_MAX_LENGTH;
   const allTags = Array.from(
     new Set([
       ...EVENT_TAGS.filter((tag) => tag !== '自定义锚点'),
@@ -211,7 +221,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
     if (bIndex >= 0) return 1;
     return a.localeCompare(b, language);
   });
-  const visiblePrinciples = principles.filter((principle) =>
+  const visiblePrinciples = currentPrinciples(principles).filter((principle) =>
     selectedSection === ALL_SECTION
       ? true
       : selectedSection === UNCATEGORIZED_SECTION
@@ -297,8 +307,8 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
               <strong>{language === 'zh' ? '我的原则' : 'My principles'}</strong>
               <small>
                 {language === 'zh'
-                  ? `${principles.length} 条原则`
-                  : `${principles.length} principle${principles.length === 1 ? '' : 's'}`}
+                  ? `${currentPrinciples(principles).length} 条原则`
+                  : `${currentPrinciples(principles).length} principle${currentPrinciples(principles).length === 1 ? '' : 's'}`}
               </small>
             </div>
             <button
@@ -455,13 +465,12 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                 </label>
                 <textarea
                   disabled={busy}
-                  maxLength={PRINCIPLE_MAX_LENGTH}
                   id="archive-principle-text"
                   ref={editorTextareaRef}
                   autoFocus
                   value={editorText}
                   onChange={(e) => {
-                    const nextText = e.target.value.slice(0, PRINCIPLE_MAX_LENGTH);
+                    const nextText = e.target.value;
                     if (editingPrinciple) setEditingPrincipleText(nextText);
                     else setNewPrincipleText(nextText);
                   }}
@@ -474,7 +483,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                   }
                   placeholder={
                     language === 'zh'
-                      ? '例如：先确认事实，再作判断。'
+                      ? '例如：重要会议前，先写下一个要确认的问题。'
                       : 'For example: Verify the facts before making a judgment.'
                   }
                   className={`mobile-principles-view__textarea w-full border p-3 text-sm focus:border-vector-cyan-brand outline-none min-h-[80px] resize-none font-mono ${theme === 'light' ? 'bg-vector-cyan-brand/2 border-vector-cyan-brand/5 text-vector-ink-strong placeholder:text-vector-slate-soft/30' : 'bg-black border-white/5 text-cyan-400 placeholder:text-cyan-900'} ${editorOverLimit ? 'border-vector-magenta/50' : ''}`}
@@ -485,19 +494,60 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                   </span>
                   {editorOverLimit && <span role="alert">{t.charLimitWarning}</span>}
                 </div>
+                {editingPrinciple && editorText.trim() !== editingPrinciple.text.trim() && (
+                  <fieldset className="mt-5 space-y-3 border-t border-current/10 pt-4">
+                    <legend className="text-sm font-semibold">
+                      {language === 'zh' ? '这次修改代表什么？' : 'What does this change mean?'}
+                    </legend>
+                    <p className="text-xs opacity-70">
+                      {language === 'zh'
+                        ? '分开记录，分身才不会把过去的说法误当成现在的事实。'
+                        : 'Separate records keep the avatar from treating a past view as a current fact.'}
+                    </p>
+                    <label className="block cursor-pointer text-sm">
+                      <input
+                        type="radio"
+                        name="principle-revision-kind"
+                        checked={revisionKind === 'correction'}
+                        onChange={() => setRevisionKind('correction')}
+                      />{' '}
+                      <strong>{language === 'zh' ? '纠正原记录' : 'Correct the record'}</strong>
+                      <span className="block pl-5 text-xs opacity-70">
+                        {language === 'zh'
+                          ? '原来的说法不准确。新内容会替代它，分身不再把旧说法作为当前依据。'
+                          : 'The earlier wording was inaccurate. The new one replaces it as current guidance.'}
+                      </span>
+                    </label>
+                    <label className="block cursor-pointer text-sm">
+                      <input
+                        type="radio"
+                        name="principle-revision-kind"
+                        checked={revisionKind === 'evolution'}
+                        onChange={() => setRevisionKind('evolution')}
+                      />{' '}
+                      <strong>{language === 'zh' ? '记录新的变化' : 'Record a real change'}</strong>
+                      <span className="block pl-5 text-xs opacity-70">
+                        {language === 'zh'
+                          ? '原来的判断在当时成立，后来发生了变化。分身会保留它作为过去背景，并优先使用新内容。'
+                          : 'The earlier judgment was true then. The avatar keeps it as background and prioritizes the new one.'}
+                      </span>
+                    </label>
+                  </fieldset>
+                )}
               </main>
 
               <footer className="principle-editor__footer">
                 <CyberButton
                   onClick={() => {
-                    if (!editorText.trim()) return;
+                    if (!editorText.trim() || editorOverLimit) return;
                     void runMutation(
                       () =>
                         editingPrinciple
-                          ? onUpdatePrinciple({
-                              ...editingPrinciple,
-                              text: editorText.trim(),
-                            })
+                          ? editorText.trim() === editingPrinciple.text.trim()
+                            ? onUpdatePrinciple(editingPrinciple)
+                            : onRevisePrinciple
+                              ? onRevisePrinciple(editingPrinciple, editorText.trim(), revisionKind)
+                              : onUpdatePrinciple({ ...editingPrinciple, text: editorText.trim() })
                           : onAddPrinciple(
                               editorText.trim(),
                               new Date().getFullYear(),
@@ -506,11 +556,15 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                               undefined,
                               undefined,
                               [],
+                              practiceReflectionContext
+                                ? [practiceReflectionContext.practiceRecordId]
+                                : [],
                             ),
                       () => {
                         setNewPrincipleText('');
                         setEditingPrincipleId(null);
                         setEditingPrincipleText('');
+                        setRevisionKind('correction');
                         if (displayFirst) {
                           setManagementOpen(false);
                           onManagementChange?.(false);
@@ -518,7 +572,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                       },
                     );
                   }}
-                  disabled={busy || !editorText.trim()}
+                  disabled={busy || !editorText.trim() || editorOverLimit}
                   className="principle-editor__save-button w-full"
                   theme={theme}
                 >
@@ -665,12 +719,14 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                         setNewPrincipleText('');
                                         setEditingPrincipleId(principle.id);
                                         setEditingPrincipleText(principle.text);
+                                        setRevisionKind('correction');
                                         setManagementOpen(true);
                                         onManagementChange?.(true);
                                         return;
                                       }
                                       setEditingPrincipleId(principle.id);
                                       setEditingPrincipleText(principle.text);
+                                      setRevisionKind('correction');
                                     }}
                                     aria-label={
                                       language === 'zh'

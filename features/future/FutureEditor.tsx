@@ -187,27 +187,32 @@ export function FutureEditor({
                 行动内容
                 <textarea name="title" required defaultValue={editor.value?.title} autoFocus />
               </label>
-              <label>
-                计划日期（可选）
-                <input
-                  name="scheduledOn"
-                  type="date"
-                  defaultValue={editor.value?.scheduledOn ?? editor.scheduledOn}
-                />
-              </label>
-              <label>
-                所属目标（可选）
-                <select name="goalId" defaultValue={editor.value?.goalId ?? editor.goalId ?? ''}>
-                  <option value="">不关联</option>
-                  {state.goals
-                    .filter((goal) => goal.status === 'active' || goal.id === editor.value?.goalId)
-                    .map((goal) => (
-                      <option key={goal.id} value={goal.id}>
-                        {goal.title}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              <details>
+                <summary>可选设置</summary>
+                <label>
+                  计划日期（可选）
+                  <input
+                    name="scheduledOn"
+                    type="date"
+                    defaultValue={editor.value?.scheduledOn ?? editor.scheduledOn}
+                  />
+                </label>
+                <label>
+                  所属目标（可选）
+                  <select name="goalId" defaultValue={editor.value?.goalId ?? editor.goalId ?? ''}>
+                    <option value="">不关联</option>
+                    {state.goals
+                      .filter(
+                        (goal) => goal.status === 'active' || goal.id === editor.value?.goalId,
+                      )
+                      .map((goal) => (
+                        <option key={goal.id} value={goal.id}>
+                          {goal.title}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </details>
             </>
           )}
 

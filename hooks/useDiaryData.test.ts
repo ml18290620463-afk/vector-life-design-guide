@@ -229,6 +229,28 @@ describe('useDiaryData', () => {
     expect(result.current.patternPrincipleLinks).toEqual([]);
   });
 
+  it('persists a stable practice source when a principle is distilled from an action', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.addPrinciple(
+        '会议前先确认范围',
+        2026,
+        true,
+        [],
+        undefined,
+        [],
+        [],
+        ['practice-2026-10-09'],
+      );
+    });
+
+    expect(result.current.principles).toEqual([
+      expect.objectContaining({ derivedFromPracticeIds: ['practice-2026-10-09'] }),
+    ]);
+  });
+
   it('retains patterns, principles, and links when requested during record deletion', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
     await waitFor(() => expect(result.current.loading).toBe(false));

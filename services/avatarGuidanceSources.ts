@@ -5,6 +5,8 @@ import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../features
 import { isCurrentAvatarMemory, readAvatarNameStatement } from './avatarMemoryPolicy';
 import { goalProgress } from './futureRepository';
 import type { GuidanceSource } from './avatarGuidance';
+import { describeActionPractice } from './actionPracticeSemantics';
+import { currentPrinciples, historicalEvolutionPrinciples } from './principleRevision';
 
 /** Read-only context. Suggestions never become user commitments implicitly. */
 export function buildGuidanceSources(input: {
@@ -33,12 +35,24 @@ export function buildGuidanceSources(input: {
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 700);
+  const searchableExcerpt = (text: string) =>
+    text
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 4000);
   const evidence = (ids: string[]) =>
     [...new Set(ids)]
       .flatMap((id) => {
         const entry = entries.get(id);
         return entry
-          ? [{ text: excerpt(`${entry.title}：${entry.content}`), occurredAt: entry.createdAt }]
+          ? [
+              {
+                text: excerpt(`${entry.title}：${entry.content}`),
+                searchText: searchableExcerpt(`${entry.title}：${entry.content}`),
+                occurredAt: entry.createdAt,
+              },
+            ]
           : [];
       })
       .sort((a, b) => b.occurredAt - a.occurredAt)
@@ -49,7 +63,7 @@ export function buildGuidanceSources(input: {
       !denied(p.sourceEntryIds) &&
       (p.retainedAfterSourceDeletion || p.sourceEntryIds.some((id) => entries.has(id))),
   );
-  const principles = input.principles.filter(
+  const principles = currentPrinciples(input.principles).filter(
     (p) =>
       !denied([
         ...(p.derivedFromEntryIds ?? []),
@@ -76,25 +90,48 @@ export function buildGuidanceSources(input: {
         !actions.some((a) => a.id === e.sourceActionId)
       ),
   );
+  const practiceResults = (ids: string[]): NonNullable<GuidanceSource['results']> =>
+    (input.future?.practiceRecords ?? [])
+      .filter((record) => ids.includes(record.id))
+      .map((record) => ({
+        // An empty note is deliberately represented as an empty description: status is evidence,
+        // but it is not evidence that the action produced a useful result.
+        text: excerpt(describeActionPractice(record)),
+        occurredOn: record.occurredOn,
+        createdAt: record.createdAt,
+        status: record.status,
+      }));
   const actionResults = (id: string): NonNullable<GuidanceSource['results']> => {
     // Goal-linked outcomes and independent practice are two views of explicit user feedback.
     const eventResults = validEvents
       .filter((e) => e.sourceActionId === id && e.actionFeedback)
       .map((e) => ({
-        text: excerpt(`${e.actionFeedback!.note}；后续选择：${e.actionFeedback!.nextStep}`),
+        text: excerpt(describeActionPractice(e.actionFeedback!)),
         occurredOn: e.occurredOn,
+        createdAt: e.createdAt,
         status: e.actionFeedback!.status,
       }));
     const practices = (input.future?.practiceRecords ?? [])
       .filter((r) => r.actionId === id)
       .map((r) => ({
-        text: excerpt(`${r.note}；后续选择：${r.nextStep}`),
+        text: excerpt(describeActionPractice(r)),
         occurredOn: r.occurredOn,
+        createdAt: r.createdAt,
         status: r.status,
       }));
     return [...eventResults, ...practices]
-      .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
-      .slice(0, 3);
+      .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt - a.createdAt)
+      .filter(
+        (result, index, all) =>
+          all.findIndex(
+            (other) =>
+              other.text === result.text &&
+              other.occurredOn === result.occurredOn &&
+              other.status === result.status,
+          ) === index,
+      )
+      .slice(0, 3)
+      .map(({ text, occurredOn, status }) => ({ text, occurredOn, status }));
   };
   const sourceExists = (memory: AvatarAtomicMemory) => {
     const entryIds = memory.sourceRefs.filter((ref) => ref.source === 'entry').map((ref) => ref.id);
@@ -104,6 +141,8 @@ export function buildGuidanceSources(input: {
       if (ref.source === 'pattern') return patterns.some((p) => p.id === ref.id);
       if (ref.source === 'principle') return principles.some((p) => p.id === ref.id);
       if (ref.source === 'action') return actions.some((a) => a.id === ref.id);
+      if (ref.source === 'practice')
+        return input.future?.practiceRecords?.some((r) => r.id === ref.id);
       if (ref.source === 'future')
         return (
           input.future?.goals.some((g) => g.id === ref.id) ||
@@ -172,10 +211,42 @@ export function buildGuidanceSources(input: {
             })),
         ),
         ...actions.filter((a) => a.principleId === p.id).flatMap((a) => actionResults(a.id)),
+        ...practiceResults(p.derivedFromPracticeIds ?? []),
       ]
+        .filter(
+          (result, index, all) =>
+            all.findIndex(
+              (other) =>
+                other.text === result.text &&
+                other.occurredOn === result.occurredOn &&
+                other.status === result.status,
+            ) === index,
+        )
         .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
-        .slice(0, 4),
+        .slice(0, 4)
+        .map(({ text, occurredOn, status }) => ({ text, occurredOn, status })),
     })),
+    ...historicalEvolutionPrinciples(input.principles)
+      .filter(
+        ({ principle }) =>
+          !denied([
+            ...(principle.derivedFromEntryIds ?? []),
+            ...input.patterns
+              .filter((pattern) => principle.sourcePatternIds?.includes(pattern.id))
+              .flatMap((pattern) => pattern.sourceEntryIds),
+          ]),
+      )
+      .map(({ principle, successor }) => ({
+        id: `${principle.id}:historical`,
+        kind: '背景' as const,
+        text: principle.text,
+        module: 'past' as const,
+        nature: 'explicit' as const,
+        validFrom: principle.createdAt,
+        validTo: successor.revisedAt ?? successor.createdAt,
+        detail: `过去的判断；在 ${new Date(successor.revisedAt ?? successor.createdAt).toLocaleDateString('zh-CN')} 后已发生变化，不作为当前原则`,
+        evidence: evidence(principle.derivedFromEntryIds ?? []),
+      })),
     ...actions
       .filter(
         (a) =>
@@ -187,6 +258,7 @@ export function buildGuidanceSources(input: {
       )
       .map((a) => ({
         id: a.id,
+        sourceKey: `行动:${a.id}`,
         kind:
           a.status === 'completed' || a.status === 'abandoned'
             ? ('背景' as const)
@@ -212,6 +284,7 @@ export function buildGuidanceSources(input: {
       })),
     ...(input.future?.visions ?? []).map((v) => ({
       id: v.id,
+      sourceKey: `愿景:${v.id}`,
       kind: v.status === 'active' ? ('愿景' as const) : ('背景' as const),
       text: v.text,
       status: v.status,
@@ -220,6 +293,7 @@ export function buildGuidanceSources(input: {
     })),
     ...(input.future?.goals ?? []).map((g) => ({
       id: g.id,
+      sourceKey: `目标:${g.id}`,
       kind: g.status === 'active' ? ('目标' as const) : ('背景' as const),
       status: g.status,
       text: g.title,

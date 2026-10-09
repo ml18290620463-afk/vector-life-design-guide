@@ -180,3 +180,44 @@ it('uses canonical content after conversion without suppressing independent equa
     'independent',
   ]);
 });
+
+describe('principle revision projection', () => {
+  it('projects only the current successor and starts it at its revision time', () => {
+    const original: Principle = {
+      id: 'old-principle',
+      text: '先忍耐',
+      year: 2026,
+      createdAt: 1,
+      showOnHome: false,
+    };
+    const successor: Principle = {
+      ...original,
+      id: 'new-principle',
+      text: '先确认边界再回应',
+      createdAt: 2,
+      revisedAt: 5,
+      supersedesPrincipleId: original.id,
+      revisionKind: 'correction',
+    };
+
+    const projected = resolveAvatarKnowledge({
+      memories: [],
+      principles: [original, successor],
+      actions: [],
+    }).memories;
+
+    expect(projected.map((memory) => memory.id)).toContain(
+      avatarMemoryIdForPrinciple(successor.id),
+    );
+    expect(projected.map((memory) => memory.id)).not.toContain(
+      avatarMemoryIdForPrinciple(original.id),
+    );
+    expect(
+      projected.find((memory) => memory.id === avatarMemoryIdForPrinciple(successor.id)),
+    ).toMatchObject({
+      validFrom: 5,
+      updatedAt: 5,
+      confirmedAt: 5,
+    });
+  });
+});

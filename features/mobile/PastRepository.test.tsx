@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PastRepository } from './PastRepository';
-import type { DiaryEntry, Principle } from '../../types';
+import type { ActionItem, DiaryEntry, Principle } from '../../types';
 
 afterEach(() => {
   cleanup();
@@ -23,6 +23,7 @@ const makeEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 const renderRepository = ({
   entries = [makeEntry()],
   principles = [],
+  actions = [],
   onAddPrinciple = vi.fn(),
   onDeleteEntries = vi.fn(),
   onUpdatePrinciple = vi.fn(),
@@ -30,6 +31,7 @@ const renderRepository = ({
 }: {
   entries?: DiaryEntry[];
   principles?: Principle[];
+  actions?: ActionItem[];
   onAddPrinciple?: ComponentProps<typeof PastRepository>['onAddPrinciple'];
   onDeleteEntries?: ComponentProps<typeof PastRepository>['onDeleteEntries'];
   onUpdatePrinciple?: ComponentProps<typeof PastRepository>['onUpdatePrinciple'];
@@ -40,6 +42,7 @@ const renderRepository = ({
       language="zh"
       entries={entries}
       principles={principles}
+      actions={actions}
       onAddPrinciple={onAddPrinciple}
       onDeletePrinciple={onDeletePrinciple}
       onUpdatePrinciple={onUpdatePrinciple}
@@ -77,6 +80,84 @@ describe('PastRepository', () => {
     expect(screen.getByText('长期项目')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '清除搜索' }));
     expect((search as HTMLInputElement).value).toBe('');
+  });
+
+  it('searches a current principle and returns the records that support it', () => {
+    renderRepository({
+      entries: [
+        makeEntry({ id: 'principle-source', title: '一次复盘', content: '保留原始观察' }),
+        makeEntry({ id: 'unrelated', title: '其他记录', content: '无关内容' }),
+      ],
+      principles: [
+        {
+          id: 'principle-evidence',
+          text: '先确认事实，再作判断',
+          tags: ['决策'],
+          year: 2026,
+          createdAt: 1,
+          showOnHome: true,
+          derivedFromEntryIds: ['principle-source'],
+        },
+      ],
+    });
+
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记录' }), {
+      target: { value: '确认事实' },
+    });
+
+    expect(screen.getByLabelText('关联依据').textContent).toContain('原则');
+    expect(screen.getByLabelText('关联依据').textContent).toContain('先确认事实，再作判断');
+    expect(screen.getByText('一次复盘')).toBeTruthy();
+    expect(screen.queryByText('其他记录')).toBeNull();
+  });
+
+  it('searches an action and returns its evidence and result records', () => {
+    renderRepository({
+      entries: [
+        makeEntry({ id: 'action-evidence', title: '周一记录' }),
+        makeEntry({ id: 'action-result', title: '周五复盘' }),
+        makeEntry({ id: 'unrelated', title: '生活随笔' }),
+      ],
+      actions: [
+        {
+          id: 'action-1',
+          title: '完成一次项目复盘',
+          status: 'active',
+          createdAt: 1,
+          evidenceEntryIds: ['action-evidence'],
+          resultEntryId: 'action-result',
+        },
+      ],
+    });
+
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记录' }), {
+      target: { value: '项目复盘' },
+    });
+
+    expect(screen.getByLabelText('关联依据').textContent).toContain('行动');
+    expect(screen.getByText('周一记录')).toBeTruthy();
+    expect(screen.getByText('周五复盘')).toBeTruthy();
+    expect(screen.queryByText('生活随笔')).toBeNull();
+  });
+
+  it('counts only current principles in the tab', () => {
+    renderRepository({
+      principles: [
+        { id: 'old', text: '旧原则', year: 2025, createdAt: 1, showOnHome: true },
+        {
+          id: 'current',
+          text: '新原则',
+          year: 2026,
+          createdAt: 2,
+          showOnHome: true,
+          supersedesPrincipleId: 'old',
+          revisionKind: 'correction',
+          revisedAt: 2,
+        },
+      ],
+    });
+
+    expect(screen.getByRole('tab', { name: '我的原则' }).textContent).toContain('1');
   });
 
   it('supports bulk deleting the current search result and explains retained understanding', async () => {
@@ -126,6 +207,7 @@ describe('PastRepository', () => {
       undefined,
       undefined,
       undefined,
+      [],
       [],
     );
   });

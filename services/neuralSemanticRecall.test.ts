@@ -48,3 +48,25 @@ describe('rankNeuralSemanticMatches', () => {
     expect(rankNeuralSemanticMatches([1, 0], [changed], [staleRecord], 3, 0.5)).toEqual([]);
   });
 });
+
+it('never returns locked, encrypted, sample, or not-yet-unlocked records even when callers pass them in', () => {
+  const available = buildEntry('available', 1);
+  const locked = buildEntry('locked', 2);
+  locked.isLocked = true;
+  const encrypted = buildEntry('encrypted', 3);
+  encrypted.isEncrypted = true;
+  const sample = buildEntry('sample', 4);
+  sample.isSample = true;
+  const delayed = buildEntry('delayed', 5);
+  delayed.unlockAt = Date.now() + 60_000;
+
+  expect(
+    rankNeuralSemanticMatches(
+      [1, 0],
+      [locked, encrypted, sample, delayed, available],
+      [locked, encrypted, sample, delayed, available].map((entry) => buildRecord(entry, [1, 0])),
+      5,
+      0.5,
+    ),
+  ).toEqual(['available']);
+});

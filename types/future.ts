@@ -42,6 +42,10 @@ export interface ActionFeedback {
  * for themselves whether an action is worth turning into a lasting reminder.
  */
 export interface PracticeReflectionContext {
+  actionId: string;
+  /** Stable ID for the practice record the person chose to distill. */
+  practiceRecordId: string;
+  occurredOn: DateOnly;
   actionTitle: string;
   result: string;
   nextStep: ActionFeedbackNextStep;

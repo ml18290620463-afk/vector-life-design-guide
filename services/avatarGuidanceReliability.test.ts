@@ -79,6 +79,22 @@ describe('guidance evidence and outcome boundaries', () => {
     expect(JSON.stringify(sources)).not.toContain('<p>');
     expect(JSON.stringify(data)).toBe(before);
   });
+  it('retrieves a matching passage from late in a long record without exposing the full record', () => {
+    const data = input();
+    data.entries = [
+      {
+        ...entry,
+        content: `${'无关开场。'.repeat(180)}真正需要确认的是预算边界，之后再决定方案。${'无关收尾。'.repeat(180)}`,
+      },
+    ];
+    const sources = buildGuidanceSources(data);
+    const guidance = buildGroundedGuidance('预算边界怎么确认', sources);
+    const matchedPattern = guidance.sources.find((source) => source.id === 'p');
+
+    expect(matchedPattern?.evidence?.[0]?.text).toContain('预算边界');
+    expect(matchedPattern?.evidence?.[0]?.text.length).toBeLessThanOrEqual(702);
+    expect(matchedPattern?.evidence?.[0]).not.toHaveProperty('searchText');
+  });
   it('does not invent evidence for an explicitly retained memory after source deletion', () => {
     const memory: AvatarAtomicMemory = {
       id: 'm',
@@ -100,6 +116,45 @@ describe('guidance evidence and outcome boundaries', () => {
     expect(saved?.evidence).toEqual([]);
     expect(JSON.stringify(saved)).not.toContain('deleted secret');
   });
+  it('keeps a principle tied to its exact practice record, even when actions share a title', () => {
+    const data = input();
+    data.principles = [{ ...principle, derivedFromPracticeIds: ['practice-new'] }];
+    data.future.practiceRecords = [
+      {
+        id: 'practice-old',
+        actionId: 'a',
+        status: 'completed',
+        note: '旧结果',
+        nextStep: 'end',
+        occurredOn: '2026-09-01',
+        createdAt: 1,
+      },
+      {
+        id: 'practice-new',
+        actionId: 'a',
+        status: 'partial',
+        note: '新结果',
+        nextStep: 'continue',
+        occurredOn: '2026-10-09',
+        createdAt: 2,
+      },
+    ];
+
+    const learned = buildGuidanceSources(data).find((source) => source.id === 'r');
+    expect(learned?.results).toEqual([
+      expect.objectContaining({
+        text: '执行状态：部分完成；实际记录：新结果；后续选择：继续完成',
+        occurredOn: '2026-10-09',
+        status: 'partial',
+      }),
+      expect.objectContaining({
+        text: '执行状态：已完成；实际记录：旧结果；后续选择：结束行动',
+        occurredOn: '2026-09-01',
+        status: 'completed',
+      }),
+    ]);
+  });
+
   it('keeps negative, partial and cancelled feedback available to the linked principle without changing confidence', () => {
     const data = input();
     data.future.practiceRecords = ['not_completed', 'partial', 'cancelled'].map((status, i) => ({
@@ -120,9 +175,33 @@ describe('guidance evidence and outcome boundaries', () => {
       'not_completed',
     ]);
     expect(sources.find((s) => s.id === 'a')?.kind).toBe('背景');
-    expect(buildGroundedGuidance('预算限制', sources).sources).toContain(learned);
+    expect(buildGroundedGuidance('预算限制', sources).sources.map((source) => source.id)).toContain(
+      learned?.id,
+    );
     expect(JSON.stringify(data)).toBe(before);
   });
+  it('keeps the newest same-day feedback, removes duplicates and preserves completed action links', () => {
+    const data = input();
+    data.future.practiceRecords = [1, 2, 3, 4, 5].map((createdAt) => ({
+      id: String(createdAt),
+      actionId: 'a',
+      status: 'completed' as const,
+      note: createdAt === 4 ? '结果5' : `结果${createdAt}`,
+      nextStep: 'end' as const,
+      occurredOn: '2026-10-08',
+      createdAt,
+    }));
+    const sources = buildGuidanceSources(data);
+    const completed = sources.find((source) => source.id === 'a');
+    expect(completed).toMatchObject({ kind: '背景', sourceKey: '行动:a' });
+    expect(completed?.results?.map((result) => result.text)).toEqual([
+      '执行状态：已完成；实际记录：结果5；后续选择：结束行动',
+      '执行状态：已完成；实际记录：结果3；后续选择：结束行动',
+      '执行状态：已完成；实际记录：结果2；后续选择：结束行动',
+    ]);
+    expect(sources.find((source) => source.id === 'r')?.results).toEqual(completed?.results);
+  });
+
   it('excludes revoked and inaccessible event results', () => {
     const data = input();
     data.future.goals = [
@@ -191,5 +270,63 @@ describe('guidance evidence and outcome boundaries', () => {
     const source = buildGuidanceSources(data).find((s) => s.id === 'p');
     expect(source?.text).toHaveLength(4000);
     expect(source?.detail).toHaveLength(2400);
+  });
+});
+
+describe('principle revision guidance', () => {
+  it('excludes a corrected principle from current avatar guidance', () => {
+    const original: Principle = {
+      id: 'old-principle',
+      text: '所有会议都应该快速决定',
+      year: 2026,
+      createdAt: 1,
+      showOnHome: false,
+    };
+    const correction: Principle = {
+      ...original,
+      id: 'corrected-principle',
+      text: '先确认目标和事实，再决定',
+      createdAt: 2,
+      revisedAt: 2,
+      supersedesPrincipleId: original.id,
+      revisionKind: 'correction',
+    };
+
+    const sources = buildGuidanceSources({ ...input(), principles: [original, correction] });
+    expect(sources.find((source) => source.id === original.id)).toBeUndefined();
+    expect(sources.find((source) => source.id === correction.id)).toMatchObject({
+      kind: '原则',
+      text: correction.text,
+    });
+  });
+
+  it('keeps an evolved principle only as historical context', () => {
+    const original: Principle = {
+      id: 'old-principle',
+      text: '冲突时先自己消化',
+      year: 2026,
+      createdAt: 1,
+      showOnHome: false,
+    };
+    const evolution: Principle = {
+      ...original,
+      id: 'evolved-principle',
+      text: '冲突时先确认感受和边界，再决定是否沟通',
+      createdAt: 2,
+      revisedAt: 2,
+      supersedesPrincipleId: original.id,
+      revisionKind: 'evolution',
+    };
+
+    const sources = buildGuidanceSources({ ...input(), principles: [original, evolution] });
+    expect(sources.find((source) => source.id === evolution.id)).toMatchObject({
+      kind: '原则',
+      text: evolution.text,
+    });
+    expect(sources.find((source) => source.id === `${original.id}:historical`)).toMatchObject({
+      kind: '背景',
+      text: original.text,
+      detail: expect.stringContaining('过去的判断'),
+    });
   });
 });

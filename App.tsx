@@ -96,6 +96,7 @@ const App: React.FC = () => {
     updatePatternPrincipleLink,
     removePatternPrincipleLink,
     updatePrinciple,
+    revisePrinciple,
     actions,
     addAction,
     updateAction,
@@ -286,6 +287,7 @@ const App: React.FC = () => {
             guidingStars={selectedStars}
             theme={theme}
             updatePrinciple={updatePrinciple}
+            revisePrinciple={revisePrinciple}
             useMobileShell={useMobileShell}
             avatarLaunchContext={avatarLaunchContext ?? DEFAULT_AVATAR_CONTEXT}
           />

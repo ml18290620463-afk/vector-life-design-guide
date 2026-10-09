@@ -1,5 +1,9 @@
 import type { ActionItem } from '../../types';
-import type { Goal, Vision } from '../../types/future';
+import type { ActionPracticeRecord, Goal, Vision } from '../../types/future';
+import {
+  actionExecutionStatusLabel,
+  actionNextStepLabel,
+} from '../../services/actionPracticeSemantics';
 
 const readableDate = (value?: string) => (value ? value.replaceAll('-', '.') : '未设日期');
 
@@ -28,18 +32,32 @@ const goalSummary = (goal: Goal, visions: Vision[]): Summary => {
     accessibilityText: `${time}达成「${goal.title}」${vision ? `，为了「${vision.text}」` : ''}`,
   };
 };
-const actionSummary = (action: ActionItem, goals: Goal[]): Summary => {
+const actionStateLabel: Record<ActionItem['status'], string> = {
+  pending: '待开始',
+  active: '进行中',
+  completed: '已完成',
+  abandoned: '已结束',
+};
+const actionSummary = (
+  action: ActionItem,
+  goals: Goal[],
+  latestPractice?: ActionPracticeRecord,
+): Summary => {
   const goal = goals.find((candidate) => candidate.id === action.goalId);
-  const time = action.scheduledOn ? `${readableDate(action.scheduledOn)}，` : '';
+  const practice = latestPractice
+    ? `${actionExecutionStatusLabel[latestPractice.status]} · 后续${actionNextStepLabel[latestPractice.nextStep]}`
+    : '';
   return {
     primary: action.title,
     context: [
+      goal ? `所属目标 · ${goal.title}` : '独立行动',
+      `状态 · ${actionStateLabel[action.status]}`,
+      practice,
       action.scheduledOn ? `${readableDate(action.scheduledOn)} 计划` : '',
-      goal ? `推进目标 · ${goal.title}` : '',
     ]
       .filter(Boolean)
       .join(' · '),
-    accessibilityText: `${time}计划「${action.title}」${goal ? `，推进「${goal.title}」` : ''}`,
+    accessibilityText: `行动「${action.title}」，${goal ? `所属目标「${goal.title}」` : '独立行动'}，当前${actionStateLabel[action.status]}${practice ? `，最近践行${practice}` : ''}${action.scheduledOn ? `，计划于${readableDate(action.scheduledOn)}` : ''}`,
   };
 };
 
@@ -104,6 +122,7 @@ export function FutureDesignResults({
   onEditGoal,
   onEditAction,
   onOpenEditor,
+  latestPracticeByAction,
 }: {
   visions: Vision[];
   goals: Goal[];
@@ -112,35 +131,61 @@ export function FutureDesignResults({
   onEditGoal: (value: Goal) => void;
   onEditAction: (value: ActionItem) => void;
   onOpenEditor: () => void;
+  latestPracticeByAction: Record<string, ActionPracticeRecord | undefined>;
 }) {
   const hasPlanning = visions.length + goals.length + actions.length > 0;
+  const nextAction = actions[0];
   return (
     <div className={`future-design-content${hasPlanning ? '' : ' future-design-content--empty'}`}>
+      {nextAction && (
+        <section className="future-next-action" aria-labelledby="future-next-action-heading">
+          <header>
+            <div>
+              <h2 id="future-next-action-heading">现在推进</h2>
+              <small>按计划日期、待继续的记录和目标期限排序</small>
+            </div>
+          </header>
+          <button
+            type="button"
+            className="future-next-action__entry"
+            onClick={() => onEditAction(nextAction)}
+            aria-label={`记录行动：${actionSummary(nextAction, goals, latestPracticeByAction[nextAction.id]).accessibilityText}`}
+          >
+            <span>
+              <strong>{nextAction.title}</strong>
+              <small>
+                {actionSummary(nextAction, goals, latestPracticeByAction[nextAction.id]).context}
+              </small>
+            </span>
+            <span aria-hidden="true">记录</span>
+          </button>
+        </section>
+      )}
       {hasPlanning ? (
         <button type="button" className="future-design-entry" onClick={onOpenEditor}>
           编辑未来规划
         </button>
       ) : (
         <div className="future-design-empty-intro">
-          <p>先写下想去的方向</p>
+          <p>写下接下来想做的事</p>
           <button type="button" className="future-design-entry" onClick={onOpenEditor}>
-            从愿景开始
+            添加行动
           </button>
         </div>
       )}
-      <DesignSummary title="愿景" items={visions} summary={visionSummary} onEdit={onEditVision} />
+      <DesignSummary
+        title="行动规划"
+        items={actions}
+        summary={(action) => actionSummary(action, goals, latestPracticeByAction[action.id])}
+        onEdit={onEditAction}
+      />
       <DesignSummary
         title="目标"
         items={goals}
         summary={(goal) => goalSummary(goal, visions)}
         onEdit={onEditGoal}
       />
-      <DesignSummary
-        title="行动规划"
-        items={actions}
-        summary={(action) => actionSummary(action, goals)}
-        onEdit={onEditAction}
-      />
+      <DesignSummary title="愿景" items={visions} summary={visionSummary} onEdit={onEditVision} />
     </div>
   );
 }

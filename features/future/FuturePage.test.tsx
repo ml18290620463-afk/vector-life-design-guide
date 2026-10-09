@@ -21,18 +21,19 @@ beforeEach(async () => {
   };
 });
 
-const mount = async (onNavigateModule = vi.fn()) => {
+const mount = async (onNavigateModule = vi.fn(), onReflectInPast = vi.fn()) => {
   render(
     <FuturePage
       archiveMode
       entries={[]}
       onSelectEntry={vi.fn()}
       onNavigateModule={onNavigateModule}
+      onReflectInPast={onReflectInPast}
     />,
   );
   await screen.findByRole('tablist', { name: '未来分区' });
   await screen.findByRole('heading', { name: '行动规划' });
-  return onNavigateModule;
+  return { onNavigateModule, onReflectInPast };
 };
 
 const mountain = () =>
@@ -60,14 +61,15 @@ describe('Future page', () => {
   it('uses one editor entry for all future planning types', async () => {
     await mount();
     const planningEntry = screen.getByRole('button', {
-      name: /^(从愿景开始|编辑未来规划)$/,
+      name: /^(添加行动|编辑未来规划)$/,
     });
     expect(planningEntry).toBeTruthy();
     expect(screen.queryByRole('button', { name: '新增' })).toBeNull();
 
     fireEvent.click(planningEntry);
-    const dialog = screen.getByRole('dialog', { name: '愿景' });
-    expect(within(dialog).getByRole('button', { name: '愿景', pressed: true })).toBeTruthy();
+    const dialog = screen.getByRole('dialog', { name: '行动规划' });
+    expect(within(dialog).getByRole('button', { name: '行动规划', pressed: true })).toBeTruthy();
+    expect(within(dialog).getByText('可选设置').closest('details')?.open).toBe(false);
     fireEvent.click(within(dialog).getByRole('button', { name: '目标' }));
     expect(screen.getByRole('dialog', { name: '目标' })).toBeTruthy();
     fireEvent.click(
@@ -80,7 +82,7 @@ describe('Future page', () => {
 
   it('gives an empty future a single, explicit first step', async () => {
     await mount();
-    expect(screen.getByRole('button', { name: '从愿景开始' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '添加行动' })).toBeTruthy();
     switchToPractice();
     expect(screen.getByText('先规划一个行动，再在这里留下真实进展。')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '去设计行动' }));
@@ -119,10 +121,34 @@ describe('Future page', () => {
     // into a quieter second line, so long planning chains remain scannable.
     expect(screen.getByText('今年完成十次登山')).toBeTruthy();
     expect(screen.getByText('2026.12.31 前完成 · 关联愿景 · 拥有持续探索世界的生活')).toBeTruthy();
-    expect(screen.getByText('规划黄山路线')).toBeTruthy();
-    expect(screen.getByText('2026.10.01 计划 · 推进目标 · 今年完成十次登山')).toBeTruthy();
+    expect(screen.getAllByText('规划黄山路线')).toHaveLength(2);
+    expect(
+      screen.getAllByText('所属目标 · 今年完成十次登山 · 状态 · 待开始 · 2026.10.01 计划'),
+    ).toHaveLength(2);
     expect(screen.queryByText('行动结果')).toBeNull();
     expect(screen.queryByText(/完成「规划黄山路线」/)).toBeNull();
+  });
+
+  it('puts one actionable item before the planning summaries and exposes its working context', async () => {
+    const goal = await mountain();
+    await saveFutureAction({
+      title: '稍后整理装备',
+      goalId: goal.id,
+      status: 'pending',
+    });
+    await saveFutureAction({
+      title: '今天确认路线',
+      scheduledOn: '2000-01-01',
+      goalId: goal.id,
+      status: 'pending',
+    });
+    await mount();
+
+    const now = screen.getByRole('heading', { name: '现在推进' }).closest('section')!;
+    expect(within(now).getByText('今天确认路线')).toBeTruthy();
+    expect(
+      within(now).getByText(/所属目标 · 爬十座山 · 状态 · 待开始 · 2000.01.01 计划/),
+    ).toBeTruthy();
   });
 
   it('keeps extra design records folded and labels the total count', async () => {
@@ -137,7 +163,7 @@ describe('Future page', () => {
     expect(details.open).toBe(true);
   });
 
-  it('shows the completed growth loop and its next path after saving an action record', async () => {
+  it('shows the saved result directly with optional reflection', async () => {
     const goal = await mountain();
     await saveFutureAction({
       title: '完成泰山路线勘察',
@@ -158,20 +184,17 @@ describe('Future page', () => {
     const workspace = screen.getByRole('dialog', { name: '行动记录' });
     expect(within(workspace).getByText('完成泰山路线勘察')).toBeTruthy();
     expect(within(workspace).getByText('所属目标 · 爬十座山')).toBeTruthy();
-    expect(within(workspace).getByLabelText('状态')).toBeTruthy();
-    expect(within(workspace).getByLabelText('实际情况')).toBeTruthy();
-    expect(within(workspace).getByLabelText('下一步')).toBeTruthy();
+    expect(within(workspace).getByLabelText('本次执行状态')).toBeTruthy();
+    expect(within(workspace).getByLabelText('实际发生了什么（可选）')).toBeTruthy();
+    expect(within(workspace).queryByLabelText('下一步')).toBeNull();
 
-    fireEvent.change(within(workspace).getByLabelText('实际情况'), {
+    fireEvent.change(within(workspace).getByLabelText('实际发生了什么（可选）'), {
       target: { value: '路线已经确认，可以按计划出发' },
     });
     fireEvent.click(within(workspace).getByRole('button', { name: '保存记录' }));
-    const completion = await screen.findByRole('dialog', { name: '行动已完成' });
-    expect(within(completion).getByText('完成泰山路线勘察')).toBeTruthy();
-    expect(within(completion).getByText('路线已经确认，可以按计划出发')).toBeTruthy();
-    expect(within(completion).getByText('结束行动')).toBeTruthy();
-    expect(within(completion).getByRole('button', { name: '去沉淀这次行动' })).toBeTruthy();
-    expect(within(completion).getByRole('button', { name: '返回践行' })).toBeTruthy();
+    await screen.findByText('践行已记录');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: '沉淀这次行动' })).toBeTruthy();
 
     const snapshot = await readFutureSnapshot();
     expect(snapshot.actions[0].status).toBe('completed');
@@ -184,7 +207,7 @@ describe('Future page', () => {
         nextStep: 'end',
       },
     ]);
-    expect(screen.getAllByText('路线已经确认，可以按计划出发')).toHaveLength(2);
+    expect(screen.getAllByText('路线已经确认，可以按计划出发')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /待检视/ })).toBeNull();
     expect(
       screen.getByRole('heading', { name: '践行记录' }).closest('section')?.querySelector('select'),
@@ -193,6 +216,7 @@ describe('Future page', () => {
 
   it('links a completed action to past and avatar without creating another record', async () => {
     const onNavigateModule = vi.fn();
+    const onReflectInPast = vi.fn();
     const goal = await mountain();
     await saveFutureAction({
       title: '完成泰山路线勘察',
@@ -201,7 +225,7 @@ describe('Future page', () => {
       resultIntent: 'outcome',
       status: 'pending',
     });
-    await mount(onNavigateModule);
+    await mount(onNavigateModule, onReflectInPast);
     switchToPractice();
     fireEvent.click(screen.getByRole('button', { name: '待检视 1' }));
     fireEvent.click(
@@ -210,13 +234,20 @@ describe('Future page', () => {
       }),
     );
     const workspace = screen.getByRole('dialog', { name: '行动记录' });
-    fireEvent.change(within(workspace).getByLabelText('实际情况'), {
+    fireEvent.change(within(workspace).getByLabelText('实际发生了什么（可选）'), {
       target: { value: '路线已经确认，可以按计划出发' },
     });
     fireEvent.click(within(workspace).getByRole('button', { name: '保存记录' }));
-    const completion = await screen.findByRole('dialog', { name: '行动已完成' });
-    fireEvent.click(within(completion).getByRole('button', { name: '去沉淀这次行动' }));
-    expect(onNavigateModule).toHaveBeenCalledWith('past');
+    fireEvent.click(await screen.findByRole('button', { name: '沉淀这次行动' }));
+    expect(onReflectInPast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: expect.any(String),
+        practiceRecordId: expect.any(String),
+        occurredOn: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        actionTitle: '完成泰山路线勘察',
+      }),
+    );
+    expect(onNavigateModule).not.toHaveBeenCalled();
 
     const snapshot = await readFutureSnapshot();
     expect(snapshot.actions).toHaveLength(1);
@@ -242,16 +273,17 @@ describe('Future page', () => {
       }),
     );
     const workspace = screen.getByRole('dialog', { name: '行动记录' });
-    fireEvent.change(within(workspace).getByLabelText('状态'), { target: { value: 'partial' } });
-    fireEvent.change(within(workspace).getByLabelText('实际情况'), {
+    fireEvent.change(within(workspace).getByLabelText('本次执行状态'), {
+      target: { value: 'partial' },
+    });
+    fireEvent.change(within(workspace).getByLabelText('实际发生了什么（可选）'), {
       target: { value: '路线已初步确认' },
     });
     fireEvent.change(within(workspace).getByLabelText('下一步'), { target: { value: 'continue' } });
     fireEvent.click(within(workspace).getByRole('button', { name: '保存记录' }));
-    const completion = await screen.findByRole('dialog', { name: '本次践行已记录' });
-    expect(within(completion).getByText('继续完成')).toBeTruthy();
-    expect(within(completion).queryByRole('button', { name: '前往过去' })).toBeNull();
-    expect(screen.queryByRole('dialog', { name: '行动已完成' })).toBeNull();
+    await screen.findByText('践行已记录');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: '沉淀这次行动' })).toBeNull();
   });
 
   it('keeps long planning details secondary and collects remaining plans', async () => {
@@ -346,15 +378,17 @@ describe('Future practice continuation', () => {
     fireEvent.click(screen.getByRole('button', { name: '待检视 1' }));
     fireEvent.click(screen.getByRole('button', { name: /每周练习西语三次/ }));
     const firstEditor = screen.getByRole('dialog', { name: '行动记录' });
-    fireEvent.change(within(firstEditor).getByLabelText('状态'), { target: { value: 'partial' } });
-    fireEvent.change(within(firstEditor).getByLabelText('实际情况'), {
+    fireEvent.change(within(firstEditor).getByLabelText('本次执行状态'), {
+      target: { value: 'partial' },
+    });
+    fireEvent.change(within(firstEditor).getByLabelText('实际发生了什么（可选）'), {
       target: { value: '已完成两次练习' },
     });
     fireEvent.change(within(firstEditor).getByLabelText('下一步'), {
       target: { value: 'continue' },
     });
     fireEvent.click(within(firstEditor).getByRole('button', { name: '保存记录' }));
-    fireEvent.click(await screen.findByRole('button', { name: '返回践行' }));
+    await screen.findByText('践行已记录');
 
     expect(screen.getByRole('button', { name: '继续记录' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /待检视/ })).toBeNull();
@@ -362,11 +396,11 @@ describe('Future practice continuation', () => {
     const secondEditor = screen.getByRole('dialog', { name: '行动记录' });
     expect(within(secondEditor).getByText('所属目标 · 爬十座山')).toBeTruthy();
     expect(within(secondEditor).getByRole('button', { name: '‹ 返回践行' })).toBeTruthy();
-    fireEvent.change(within(secondEditor).getByLabelText('实际情况'), {
+    fireEvent.change(within(secondEditor).getByLabelText('实际发生了什么（可选）'), {
       target: { value: '第三次练习也完成了' },
     });
     fireEvent.click(within(secondEditor).getByRole('button', { name: '保存记录' }));
-    fireEvent.click(await screen.findByRole('button', { name: '关闭完成结果' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     await waitFor(async () => {
       const snapshot = await readFutureSnapshot();

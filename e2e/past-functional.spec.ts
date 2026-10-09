@@ -51,7 +51,7 @@ for (const width of [1440, 390]) {
       .getByRole('navigation', { name: '主页面导航' })
       .getByRole('button', { name: /^过去/ })
       .click();
-    await page.getByRole('tab', { name: /沉淀/ }).click();
+    await page.getByRole('tab', { name: '我的原则', exact: true }).click();
     await page.getByRole('button', { name: '写原则', exact: true }).click();
     const input = page.getByRole('textbox', { name: '刻录新原则' });
     await expect(input).toBeFocused();
@@ -93,7 +93,6 @@ for (const width of [1440, 390]) {
     await page
       .getByRole('button', { name: '编辑原则：先明确目标，再选择行动', exact: true })
       .click();
-    await page.getByRole('button', { name: '更多设置', exact: true }).click();
     await page.getByRole('button', { name: /抹除原则/ }).click();
     await page.getByRole('button', { name: '确认删除', exact: true }).click();
     await expect(page.getByText('先明确目标，再选择行动', { exact: true })).toHaveCount(0);

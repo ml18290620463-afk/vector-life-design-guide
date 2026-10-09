@@ -114,7 +114,8 @@ export type AvatarMemorySourceKind =
   | 'future'
   | 'principle'
   | 'pattern'
-  | 'action';
+  | 'action'
+  | 'practice';
 
 export interface AvatarMemorySourceRef {
   source: AvatarMemorySourceKind;

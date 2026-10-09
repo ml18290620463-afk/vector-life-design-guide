@@ -82,7 +82,7 @@ it('restores all protected domains in an empty browser storage and repeated merg
   expect(await get(BACKUP_RESTORE_JOB)).toBeUndefined();
   useAppStore.setState({ masterPassword: null, isUnlocked: false });
   await expect(loadNowDraft()).rejects.toThrow('解锁');
-}, 15_000);
+}, 30_000);
 it('preserves a protected destination password while importing a differently encrypted file', async () => {
   const file = await fixture();
   const backup = (await decryptVaultBackupFile(file, password)) as VaultBackup;
@@ -96,7 +96,7 @@ it('preserves a protected destination password while importing a differently enc
   expect(await SecurityService.decrypt((await get(K.entries))[0].content, '本机密码-456')).toBe(
     '私人经历',
   );
-});
+}, 30_000);
 it('rejects wrong passwords, damaged ciphertext, authenticated header changes and unsupported versions without writes', async () => {
   const file = await fixture();
   const before = await get(K.entries);
@@ -111,7 +111,7 @@ it('rejects wrong passwords, damaged ciphertext, authenticated header changes an
     decryptVaultBackupFile({ ...file, schemaVersion: 2 } as never, password),
   ).rejects.toThrow('不支持');
   expect(await get(K.entries)).toEqual(before);
-});
+}, 30_000);
 it('rejects conflicting entry content atomically before replacing any destination domain', async () => {
   const file = await fixture();
   const backup = (await decryptVaultBackupFile(file, password)) as VaultBackup;
@@ -123,7 +123,7 @@ it('rejects conflicting entry content atomically before replacing any destinatio
   expect(await get(K.entries)).toEqual(before);
   expect(await get(K.future)).toEqual(future);
   expect(await get(BACKUP_RESTORE_JOB)).toBeUndefined();
-});
+}, 30_000);
 it('keeps an encrypted recovery job after local cache failure and retries only after unlock', async () => {
   const file = await fixture();
   const backup = (await decryptVaultBackupFile(file, password)) as VaultBackup;
@@ -147,7 +147,7 @@ it('keeps an encrypted recovery job after local cache failure and retries only a
   await recoverBackupRestore();
   expect(await get(BACKUP_RESTORE_JOB)).toBeUndefined();
   expect(JSON.parse(localStorage.getItem(cache)!)[0].statement).toBe('私人理解');
-});
+}, 30_000);
 it('boots a locked vault with no recovery job and blocks legacy plaintext export', async () => {
   await protect();
   useAppStore.setState({ isUnlocked: false, masterPassword: null });

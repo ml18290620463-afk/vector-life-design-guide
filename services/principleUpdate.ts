@@ -63,3 +63,45 @@ export async function commitPrincipleUpdate(
     return { principles: saved, links };
   });
 }
+
+/**
+ * Revisions keep the original record intact and add a successor in one vault
+ * transaction, so a concurrent edit cannot silently rewrite history.
+ */
+export async function commitPrincipleRevision(
+  original: Principle,
+  successor: Principle,
+  baseline: Principle[],
+  fallbackLinks: PatternPrincipleLink[],
+  userId?: string,
+) {
+  const keys = getDiaryStorageKeys(userId);
+  return vaultTransaction([keys.principles, keys.patternPrincipleLinks], (values) => {
+    const principles = ((values[keys.principles] as Principle[] | undefined) ?? baseline).map(
+      sanitizePrinciple,
+    );
+    const current = principles.find((item) => item.id === original.id);
+    if (!current) throw new Error('这条原则已被移除，请重新选择');
+    if (JSON.stringify(sanitizePrinciple(current)) !== JSON.stringify(sanitizePrinciple(original)))
+      throw new Error('原则已在其他页面更新，请重新读取后重试');
+    if (principles.some((item) => item.id === successor.id))
+      throw new Error('原则版本已存在，请重试');
+
+    const savedSuccessor = sanitizePrinciple(successor);
+    const links =
+      (values[keys.patternPrincipleLinks] as PatternPrincipleLink[] | undefined) ?? fallbackLinks;
+    const revisionLinks = links
+      .filter((link) => link.principleId === original.id && link.status !== 'inactive')
+      .map((link) => ({
+        ...link,
+        id: `${link.id}-revision-${savedSuccessor.id}`,
+        principleId: savedSuccessor.id,
+        createdAt: savedSuccessor.revisedAt ?? Date.now(),
+        updatedAt: savedSuccessor.revisedAt ?? Date.now(),
+      }));
+    const saved = [savedSuccessor, ...principles];
+    values[keys.principles] = saved;
+    values[keys.patternPrincipleLinks] = [...revisionLinks, ...links];
+    return { principles: saved, links: [...revisionLinks, ...links] };
+  });
+}

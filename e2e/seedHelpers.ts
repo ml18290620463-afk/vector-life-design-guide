@@ -61,11 +61,12 @@ export const seedOnboardedApp = async (
   // W4.1 — keep the cover entry anchored on the initialize testid so
   // copy changes on the homepage do not break all onboarding specs.
   const coverEntry = page.getByTestId('cover-initialize');
-  await coverEntry.waitFor({ state: 'visible' });
+  const passwordEntry = page.getByTestId('onboarding-password');
+  await coverEntry.or(passwordEntry).first().waitFor({ state: 'visible' });
   // The cover entry starts a decorative launch animation. Dispatch the
   // activation directly so E2E setup exercises the same handler without
   // intermittently waiting for a moving visual layer to become actionable.
-  await coverEntry.dispatchEvent('click');
+  if (await coverEntry.isVisible()) await coverEntry.dispatchEvent('click');
   await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
 
   // Calibration: master password (twice) then issue recovery key.

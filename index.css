@@ -716,6 +716,13 @@
   display: none;
 }
 
+.now-materials-hint {
+  margin: 0;
+  color: var(--now-text-dim);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
 .now-material {
   display: grid;
   grid-template-columns: 42px 1fr 32px;
@@ -6237,6 +6244,47 @@ html.vector-force-mobile .archive-past-record {
 
 .mobile-past-search input::placeholder {
   color: rgba(255, 255, 255, 0.35);
+}
+
+/* Search can begin with an action or principle, but review always returns to records. */
+.mobile-past-search-sources {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: -0.2rem 0 1rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.mobile-past-search-sources > span,
+.mobile-past-search-sources small {
+  color: rgba(103, 232, 249, 0.72);
+  font-size: inherit;
+  white-space: nowrap;
+}
+
+.mobile-past-search-sources ul {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-past-search-sources li {
+  display: inline-flex;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.mobile-past-search-sources li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-past-empty {

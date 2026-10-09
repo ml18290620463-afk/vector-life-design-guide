@@ -9,6 +9,7 @@ import type {
 } from '../features/avatar/types';
 import type { ActionItem, DiaryEntry, Principle } from '../types';
 import type { FutureState, Goal, Measurement, Vision } from '../types/future';
+import { currentPrinciples } from './principleRevision';
 
 const stableId = (prefix: string, parts: Array<string | number | undefined>): string => {
   const input = parts.filter((part) => part !== undefined && part !== '').join('|');
@@ -83,15 +84,19 @@ export function projectPrincipleToAvatarMemory(principle: Principle): AvatarAtom
       sourceRefs: [
         { source: 'principle', id: principle.id, excerpt: text, createdAt: principle.createdAt },
         ...(principle.derivedFromEntryIds ?? []).map((id) => ({ source: 'entry' as const, id })),
+        ...(principle.derivedFromPracticeIds ?? []).map((id) => ({
+          source: 'practice' as const,
+          id,
+        })),
         ...(principle.sourcePatternIds ?? []).map((id) => ({ source: 'pattern' as const, id })),
       ],
       confidence: principle.confidence ?? 0.82,
       status: 'confirmed',
       sensitivity: 'normal',
-      validFrom: principle.createdAt,
+      validFrom: principle.revisedAt ?? principle.createdAt,
       createdAt: principle.createdAt,
-      updatedAt: principle.createdAt,
-      confirmedAt: principle.createdAt,
+      updatedAt: principle.revisedAt ?? principle.createdAt,
+      confirmedAt: principle.revisedAt ?? principle.createdAt,
       confirmedBy: 'user',
     },
   ];
@@ -322,7 +327,7 @@ export function resolveAvatarKnowledge(input: {
           confirmedBy: 'user',
         }),
       ),
-    ...input.principles.flatMap(projectPrincipleToAvatarMemory),
+    ...currentPrinciples(input.principles).flatMap(projectPrincipleToAvatarMemory),
     ...(input.future
       ? projectFutureStateToAvatarMemories(input.future, input.actions)
       : input.actions.flatMap(projectActionToAvatarMemory)),

@@ -2,20 +2,10 @@ import { useEffect, useRef } from 'react';
 import type { ActionItem } from '../../types';
 import type { ActionFeedback, PracticeReflectionContext } from '../../types/future';
 import type { MobileMainTab } from '../mobile/types';
-
-const feedbackStatusLabel: Record<ActionFeedback['status'], string> = {
-  completed: '已完成',
-  partial: '有进展',
-  not_completed: '尚未完成',
-  cancelled: '不再继续',
-};
-
-const nextStepLabel: Record<ActionFeedback['nextStep'], string> = {
-  continue: '继续完成',
-  adjust: '调整后再做',
-  pause: '暂不安排',
-  end: '结束行动',
-};
+import {
+  actionExecutionStatusLabel,
+  actionNextStepLabel,
+} from '../../services/actionPracticeSemantics';
 
 interface GrowthLoopCompletionDialogProps {
   action: ActionItem;
@@ -81,7 +71,7 @@ export function GrowthLoopCompletionDialog({
         <section className="growth-loop-completion__summary" aria-label="本次行动">
           <small>本次行动</small>
           <strong>{action.title}</strong>
-          <span>{feedbackStatusLabel[feedback.status]}</span>
+          <span>{actionExecutionStatusLabel[feedback.status]}</span>
         </section>
         <section className="growth-loop-completion__summary" aria-label="留下的结果">
           <small>留下的结果</small>
@@ -89,7 +79,7 @@ export function GrowthLoopCompletionDialog({
         </section>
         <section className="growth-loop-completion__summary" aria-label="下一步">
           <small>下一步</small>
-          <p>{nextStepLabel[feedback.nextStep]}</p>
+          <p>{actionNextStepLabel[feedback.nextStep]}</p>
         </section>
         {actionCompleted ? (
           <>
@@ -98,13 +88,9 @@ export function GrowthLoopCompletionDialog({
                 type="button"
                 className="future-primary"
                 onClick={() => {
-                  const context = {
-                    actionTitle: action.title,
-                    result: feedback.note,
-                    nextStep: feedback.nextStep,
-                  };
-                  if (onReflectInPast) onReflectInPast(context);
-                  else onNavigateModule?.('past');
+                  // This legacy dialog has no stable practice-record ID, so it can only
+                  // take the person to Past for an intentional, unlinked principle.
+                  onNavigateModule?.('past');
                 }}
               >
                 去沉淀这次行动

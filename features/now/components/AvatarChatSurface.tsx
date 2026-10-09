@@ -53,6 +53,7 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
 });
 
 interface AvatarChatSurfaceProps {
+  focusedObjectText?: string;
   avatarMemories: ReturnType<
     typeof import('../../../services/avatarKnowledgeProjection').resolveAvatarKnowledge
   >['memories'];
@@ -121,6 +122,7 @@ interface AvatarChatSurfaceProps {
 }
 
 export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
+  focusedObjectText,
   avatarMemories,
   candidateSummary,
   chatError,
@@ -256,7 +258,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
         <section className="now-avatar-mode-intro">
           <div>
             <span>VECTOR</span>
-            <p>{modeCopy.description}</p>
+            <p>{focusedObjectText ? `当前讨论：${focusedObjectText}` : modeCopy.title}</p>
           </div>
         </section>
       )}

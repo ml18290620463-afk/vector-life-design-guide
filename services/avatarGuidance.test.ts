@@ -58,6 +58,45 @@ describe('read-only avatar guidance', () => {
     expect(JSON.stringify(input)).toBe(before);
     expect(result.text).not.toContain('你应该');
   });
+  it('keeps a requested period bounded to dated evidence and historical validity', () => {
+    const sources = [
+      {
+        id: 'march',
+        kind: '背景' as const,
+        text: '三月的项目复盘',
+        module: 'past' as const,
+        evidence: [{ text: '三月项目复盘', occurredAt: new Date(2026, 2, 12).getTime() }],
+      },
+      {
+        id: 'may',
+        kind: '背景' as const,
+        text: '五月的项目复盘',
+        module: 'past' as const,
+        evidence: [{ text: '五月项目复盘', occurredAt: new Date(2026, 4, 12).getTime() }],
+      },
+    ];
+    const result = buildGroundedGuidance('2026年3月项目复盘', sources, undefined, {
+      range: { start: new Date(2026, 2, 1).getTime(), end: new Date(2026, 3, 1).getTime() },
+      preferredSourceIds: ['march'],
+    });
+    expect(result.sources.map((source) => source.id)).toEqual(['march']);
+  });
+  it('keeps two independent matching diary records rather than treating one as the whole period', () => {
+    const sources = ['one', 'two'].map((id, index) => ({
+      id,
+      kind: '背景' as const,
+      text: `项目复盘 ${index + 1}`,
+      module: 'past' as const,
+      evidence: [
+        { text: `项目复盘 ${index + 1}`, occurredAt: new Date(2026, 2, index + 1).getTime() },
+      ],
+    }));
+    expect(
+      buildGroundedGuidance('项目复盘', sources, undefined, {
+        preferredSourceIds: ['one', 'two'],
+      }).sources.map((source) => source.id),
+    ).toEqual(['one', 'two']);
+  });
   it('offers useful starter context and refuses unrelated confident claims', () => {
     const sources = buildGuidanceSources(fixture());
     expect(buildGroundedGuidance(GUIDANCE_STARTERS[0], sources).sources.length).toBe(2);

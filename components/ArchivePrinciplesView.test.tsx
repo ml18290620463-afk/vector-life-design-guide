@@ -81,6 +81,43 @@ describe('ArchivePrinciplesView', () => {
     expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
   });
 
+  it('records a wording change as a selected principle revision', async () => {
+    const onRevisePrinciple = vi.fn();
+    const principle: Principle = {
+      id: 'revised-principle',
+      text: '先确认事实，再作判断',
+      year: 2026,
+      createdAt: 1,
+      showOnHome: true,
+    };
+    render(
+      <ArchivePrinciplesView
+        {...baseProps}
+        language="zh"
+        displayFirst
+        principles={[principle]}
+        onRevisePrinciple={onRevisePrinciple}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '编辑原则：先确认事实，再作判断' }));
+    fireEvent.change(screen.getByLabelText('编辑原则：先确认事实，再作判断'), {
+      target: { value: '先核对事实，再作判断' },
+    });
+    expect(screen.getByText('这次修改代表什么？')).toBeTruthy();
+    expect(screen.getByText('纠正原记录')).toBeTruthy();
+    fireEvent.click(screen.getByText('记录新的变化'));
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    await waitFor(() =>
+      expect(onRevisePrinciple).toHaveBeenCalledWith(
+        principle,
+        '先核对事实，再作判断',
+        'evolution',
+      ),
+    );
+  });
+
   it('updates the homepage star directly from the principle card', async () => {
     const onUpdatePrinciple = vi.fn();
     const principle: Principle = {
@@ -122,7 +159,7 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
     expect(screen.getByRole('heading', { name: '写下原则' })).toBeTruthy();
     expect(screen.getByText('原则内容')).toBeTruthy();
-    expect(screen.getByPlaceholderText('例如：先确认事实，再作判断。')).toBeTruthy();
+    expect(screen.getByPlaceholderText('例如：重要会议前，先写下一个要确认的问题。')).toBeTruthy();
     fireEvent.change(screen.getByLabelText(t.addPrinciple), {
       target: { value: '先确认事实，再作判断' },
     });
@@ -136,10 +173,46 @@ describe('ArchivePrinciplesView', () => {
       undefined,
       undefined,
       [],
+      [],
     );
     await waitFor(() => expect(onManagementChange).toHaveBeenLastCalledWith(false));
     expect(screen.queryByLabelText(t.addPrinciple)).toBeNull();
     expect(screen.getByRole('button', { name: '写原则' })).toBeTruthy();
+  });
+
+  it('keeps the exact practice record as the source when an action is distilled', () => {
+    const onAddPrinciple = vi.fn();
+    render(
+      <ArchivePrinciplesView
+        {...baseProps}
+        language="zh"
+        onAddPrinciple={onAddPrinciple}
+        practiceReflectionContext={{
+          actionId: 'action-1',
+          practiceRecordId: 'practice-2',
+          occurredOn: '2026-10-09',
+          actionTitle: '确认会议范围',
+          result: '已确认范围',
+          nextStep: 'end',
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(t.addPrinciple), {
+      target: { value: '会议开始前先确认范围' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: t.addPrinciple }));
+
+    expect(onAddPrinciple).toHaveBeenLastCalledWith(
+      '会议开始前先确认范围',
+      expect.any(Number),
+      true,
+      undefined,
+      undefined,
+      undefined,
+      [],
+      ['practice-2'],
+    );
   });
 
   it('keeps writing focused and records principle metadata automatically', () => {
@@ -149,7 +222,14 @@ describe('ArchivePrinciplesView', () => {
 
     expect(screen.getByText('原则内容')).toBeTruthy();
     expect(screen.getByRole('button', { name: '保存原则' })).toBeTruthy();
-    for (const hiddenControl of ['记录于', '更多设置', '归档年份', '标签（可选）', '在首页呈现', '关联模式（可选）']) {
+    for (const hiddenControl of [
+      '记录于',
+      '更多设置',
+      '归档年份',
+      '标签（可选）',
+      '在首页呈现',
+      '关联模式（可选）',
+    ]) {
       expect(screen.queryByText(hiddenControl)).toBeNull();
     }
   });
@@ -179,11 +259,24 @@ describe('ArchivePrinciplesView', () => {
     expect(textarea.value).toBe('Be water');
   });
 
-  it('truncates input at 30 chars and surfaces the warning role="alert"', () => {
+  it('saves the complete principle at the 120-character boundary', () => {
+    const onAddPrinciple = vi.fn();
+    render(<ArchivePrinciplesView {...baseProps} onAddPrinciple={onAddPrinciple} />);
+    const text = 'A'.repeat(120);
+    fireEvent.change(screen.getByLabelText(t.addPrinciple), { target: { value: text } });
+    fireEvent.click(screen.getByRole('button', { name: t.addPrinciple }));
+    expect(onAddPrinciple).toHaveBeenCalledTimes(1);
+    expect(onAddPrinciple.mock.calls[0][0]).toBe(text);
+  });
+
+  it('preserves over-limit input and blocks saving with a visible warning', () => {
     render(<ArchivePrinciplesView {...baseProps} />);
     const textarea = screen.getByLabelText(t.addPrinciple) as HTMLTextAreaElement;
-    fireEvent.change(textarea, { target: { value: 'A'.repeat(40) } });
-    expect(textarea.value.length).toBe(30);
+    fireEvent.change(textarea, { target: { value: 'A'.repeat(121) } });
+    expect(textarea.value.length).toBe(121);
+    expect(screen.getByRole('button', { name: t.addPrinciple }).hasAttribute('disabled')).toBe(
+      true,
+    );
     expect(screen.getByRole('alert').textContent).toContain(t.charLimitWarning);
   });
 
@@ -342,6 +435,7 @@ describe('ArchivePrinciplesView', () => {
       undefined,
       undefined,
       [],
+      [],
     );
   });
 
@@ -361,6 +455,7 @@ describe('ArchivePrinciplesView', () => {
       undefined,
       undefined,
       undefined,
+      [],
       [],
     );
     expect(screen.queryByLabelText('标签（可选）')).toBeNull();

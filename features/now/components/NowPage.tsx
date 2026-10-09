@@ -36,7 +36,7 @@ export const NowPage: React.FC<NowPageProps> = ({
   const [exiting, setExiting] = useState(false);
   const exitInFlight = useRef(false);
   const finishExit = async (discard: boolean) => {
-    if (exitInFlight.current) return;
+    if (exitInFlight.current || sending) return;
     exitInFlight.current = true;
     setExiting(true);
     try {
@@ -45,7 +45,9 @@ export const NowPage: React.FC<NowPageProps> = ({
         return;
       }
       setExitOpen(false);
-      onExit();
+      if (!discard) onExit();
+    } catch {
+      showToast(discard ? '草稿未能清除，请重试' : '草稿保存失败，请继续编辑并重试');
     } finally {
       exitInFlight.current = false;
       setExiting(false);
@@ -90,14 +92,16 @@ export const NowPage: React.FC<NowPageProps> = ({
   };
 
   const handleBack = () => {
+    if (sending || exitInFlight.current) return;
     if (isDraftEmpty(draft)) {
       onExit();
       return;
     }
-    setExitOpen(true);
+    void finishExit(false);
   };
 
   const removeMaterial = (id: string) => {
+    if (sending || exitInFlight.current) return;
     setDraft((current) => ({
       ...current,
       materials: current.materials.filter((material) => material.id !== id),
@@ -111,6 +115,7 @@ export const NowPage: React.FC<NowPageProps> = ({
           type="button"
           className="now-icon-button"
           onClick={handleBack}
+          disabled={sending || exiting}
           aria-label={mobileShell ? '返回过去' : '返回'}
         >
           <ArrowLeft size={20} />
@@ -118,7 +123,18 @@ export const NowPage: React.FC<NowPageProps> = ({
         <time className="now-time" dateTime={draft.record_time}>
           {draft.display_time}
         </time>
-        <span className="now-header__spacer" aria-hidden="true" />
+        {isDraftEmpty(draft) ? (
+          <span className="now-header__spacer" aria-hidden="true" />
+        ) : (
+          <button
+            type="button"
+            className="now-tool-button"
+            disabled={sending || exiting}
+            onClick={() => setExitOpen(true)}
+          >
+            清空草稿
+          </button>
+        )}
       </header>
 
       <div className={`now-card${isDraftEmpty(draft) ? ' now-card--empty' : ''}`}>
@@ -131,6 +147,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               id="now-record-text"
               value={draft.text}
               maxLength={CONFIG.MAX_TEXT_LENGTH}
+              disabled={sending || exiting}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, text: event.target.value }))
               }
@@ -147,6 +164,9 @@ export const NowPage: React.FC<NowPageProps> = ({
 
         <div className="now-materials-row">
           <MaterialPreview materials={draft.materials} onRemove={removeMaterial} />
+          <p className="now-materials-hint" id="now-materials-hint">
+            素材是这次经历的证据；分身会结合这条记录理解，不会自动把素材当成结论。
+          </p>
         </div>
 
         <div className="now-actions">
@@ -155,6 +175,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               type="button"
               className="now-anchor-point"
               onClick={() => onRouteChange('tags')}
+              disabled={sending || exiting}
               aria-label="心情与事件"
             >
               <span className="now-anchor-point__icon" aria-hidden="true">
@@ -169,8 +190,10 @@ export const NowPage: React.FC<NowPageProps> = ({
             <button
               type="button"
               className={`now-tool-button now-tool-button--add ${materialMenuOpen ? 'is-open' : ''}`}
+              disabled={sending || exiting}
               aria-label={materialMenuOpen ? '收起素材' : '添加素材'}
               aria-expanded={materialMenuOpen}
+              aria-describedby="now-materials-hint"
               onClick={() => setMaterialMenuOpen((open) => !open)}
             >
               <Plus size={21} />
@@ -181,6 +204,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               <button
                 type="button"
                 className="now-tool-button"
+                disabled={sending || exiting}
                 aria-label="图片"
                 onClick={handleImageImport}
               >
@@ -189,6 +213,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               <button
                 type="button"
                 className="now-tool-button"
+                disabled={sending || exiting}
                 aria-label="视频"
                 onClick={handleVideoImport}
               >
@@ -197,6 +222,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               <button
                 type="button"
                 className="now-tool-button"
+                disabled={sending || exiting}
                 aria-label="链接"
                 onClick={handleLinkImport}
               >
@@ -220,7 +246,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               onSend();
             }}
             aria-label="保存到过去"
-            disabled={sending}
+            disabled={sending || exiting}
           >
             <span>保存</span>
           </button>
@@ -236,18 +262,10 @@ export const NowPage: React.FC<NowPageProps> = ({
             if (!exiting) setExitOpen(false);
           }}
         >
-          <h2 id="now-exit-title">保留这次草稿？</h2>
+          <h2 id="now-exit-title">清空草稿？</h2>
           <div className="now-exit-dialog__actions">
-            <button
-              type="button"
-              className="now-exit-dialog__save"
-              disabled={exiting}
-              onClick={() => void finishExit(false)}
-            >
-              保存草稿
-            </button>
             <button type="button" disabled={exiting} onClick={() => void finishExit(true)}>
-              放弃
+              确认清空
             </button>
             <button
               disabled={exiting}

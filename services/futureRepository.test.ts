@@ -724,4 +724,22 @@ describe('archive canonical direction writes', () => {
       }),
     ).toThrow('数据结构');
   });
+  it('records a status-only completion without requiring a note', async () => {
+    const action = await saveFutureAction({
+      title: '整理材料',
+      status: 'pending',
+      resultIntent: 'preparation',
+    });
+    await recordActionPractice({
+      actionId: action.id,
+      expectedActionRevision: action.revision!,
+      occurredOn: '2026-10-08',
+      note: '',
+      status: 'completed',
+      nextStep: 'end',
+    });
+    const snapshot = await readFutureSnapshot();
+    expect(snapshot.state.practiceRecords.at(-1)?.note).toBe('');
+    expect(snapshot.actions.find((item) => item.id === action.id)?.status).toBe('completed');
+  });
 });

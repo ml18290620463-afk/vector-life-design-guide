@@ -21,22 +21,22 @@ import {
 } from '../../services/futureRepository';
 import type { MobileMainTab } from '../mobile/types';
 import { FutureEditor, type Editor } from './FutureEditor';
-import { GrowthLoopCompletionDialog } from './GrowthLoopCompletionDialog';
 import { FutureDesignResults } from './FutureDesignResults';
-import { newestFirst, readableDate, visionSimilarity } from './futureTextRules';
+import {
+  latestPracticesByAction,
+  newestFirst,
+  prioritizedActionItems,
+  readableDate,
+  visionSimilarity,
+} from './futureTextRules';
+import {
+  actionExecutionStatusHint,
+  actionExecutionStatusLabel,
+  actionNextStepLabel,
+} from '../../services/actionPracticeSemantics';
 import './future.css';
-
 type FutureSection = 'design' | 'practice';
 type PendingVision = Pick<Vision, 'text' | 'status'> & Partial<Pick<Vision, 'id' | 'revision'>>;
-type PracticeCompletion = {
-  action: ActionItem;
-  feedback: {
-    status: ActionFeedbackStatus;
-    note: string;
-    nextStep: ActionFeedbackNextStep;
-  };
-};
-
 interface FuturePageProps {
   archiveMode?: boolean;
   entries: DiaryEntry[];
@@ -45,7 +45,6 @@ interface FuturePageProps {
   onReflectInPast?: (context: PracticeReflectionContext) => void;
   initialGoalId?: string;
 }
-
 const field = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
 export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: FuturePageProps) {
   const { state, actions, ready, error, refresh, protectedVault } = useFuture();
@@ -62,14 +61,11 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
   const [practiceNextStep, setPracticeNextStep] = useState<ActionFeedbackNextStep>('end');
   const [duplicateVision, setDuplicateVision] = useState<Vision | null>(null);
   const [pendingVision, setPendingVision] = useState<PendingVision | null>(null);
-  const [completion, setCompletion] = useState<PracticeCompletion | null>(null);
   const saving = useRef(false);
   const editorOpener = useRef<HTMLElement | null>(null);
-  const completionOpener = useRef<HTMLElement | null>(null);
   const practiceOpener = useRef<HTMLElement | null>(null);
   const practicePanel = useRef<HTMLDialogElement | null>(null);
   const practiceWasOpen = useRef(false);
-
   useEffect(() => {
     if (!practicePanelOpen) return;
     practiceWasOpen.current = true;
@@ -86,7 +82,6 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       if (panel?.open) panel.close();
     };
   }, [practicePanelOpen]);
-
   useEffect(() => {
     if (practicePanelOpen || !practiceWasOpen.current) return;
     practiceWasOpen.current = false;
@@ -96,7 +91,6 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
     });
     return () => cancelAnimationFrame(frame);
   }, [practicePanelOpen]);
-
   const openEditor = (next: Editor) => {
     // Switching type or following a duplicate-warning link happens inside the
     // same sheet. Keep the original trigger so Close always returns people to
@@ -110,7 +104,6 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
     setPendingVision(null);
     setEditor(next);
   };
-
   const closeEditor = () => {
     if (busy) return;
     setEditor(null);
@@ -118,7 +111,6 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
     setPendingVision(null);
     setNotice('');
   };
-
   async function run(task: () => Promise<unknown>, close = true) {
     if (saving.current) return false;
     saving.current = true;
@@ -137,13 +129,17 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       setBusy(false);
     }
   }
-
   const activeVisions = newestFirst(state.visions.filter((vision) => vision.status !== 'archived'));
   const activeGoals = newestFirst(
     state.goals.filter((goal) => goal.status === 'active' || goal.status === 'paused'),
   );
-  const plannedActions = newestFirst(
+  const practiceRecords = state.practiceRecords ?? [];
+  const latestPracticeByAction = latestPracticesByAction(practiceRecords);
+  const plannedActions = prioritizedActionItems(
     actions.filter((action) => action.status === 'pending' || action.status === 'active'),
+    state.goals,
+    latestPracticeByAction,
+    localDate(),
   );
   const validEvents = [...state.events]
     .filter((event) => event.status === 'valid')
@@ -187,23 +183,25 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       id: record.id,
       action: actions.find((action) => action.id === record.actionId),
       note: record.note,
+      feedback: record,
+      practiceRecordId: record.id,
+      occurredOn: record.occurredOn,
       createdAt: record.createdAt,
     })),
     ...legacyFeedbackResults.map(({ event, action }) => ({
       id: event.id,
       action,
       note: event.actionFeedback!.note,
+      feedback: event.actionFeedback!,
+      practiceRecordId: undefined,
+      occurredOn: event.occurredOn,
       createdAt: event.createdAt,
     })),
   ]
     .filter((result): result is typeof result & { action: ActionItem } => Boolean(result.action))
     .sort((left, right) => right.createdAt - left.createdAt);
 
-  const practiceRecords = state.practiceRecords ?? [];
-  const latestPracticeFor = (actionId: string) =>
-    practiceRecords
-      .filter((record) => record.actionId === actionId)
-      .sort((left, right) => right.createdAt - left.createdAt)[0];
+  const latestPracticeFor = (actionId: string) => latestPracticeByAction[actionId];
   const continuableActions = plannedActions.filter((action) => {
     if (action.status !== 'active') return false;
     const latest = latestPracticeFor(action.id);
@@ -299,12 +297,9 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
     if (!selectedFeedbackAction) return;
     const data = new FormData(event.currentTarget);
     const feedbackStatus = practiceStatus;
-    const nextStep = practiceNextStep;
+    const nextStep =
+      feedbackStatus === 'completed' || feedbackStatus === 'cancelled' ? 'end' : practiceNextStep;
     const note = field(data, 'note');
-    const savedAction = selectedFeedbackAction;
-    const savedFeedback = { status: feedbackStatus, note, nextStep };
-    completionOpener.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     void run(
       () =>
         recordActionPractice({
@@ -320,7 +315,7 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       if (saved) {
         setSelectedFeedbackActionId(null);
         setPracticePanelOpen(false);
-        setCompletion({ action: savedAction, feedback: savedFeedback });
+        setNotice('践行已记录');
       }
     });
   };
@@ -339,7 +334,8 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       visions={activeVisions}
       goals={activeGoals}
       actions={plannedActions}
-      onOpenEditor={() => openEditor({ kind: 'vision' })}
+      latestPracticeByAction={latestPracticeByAction}
+      onOpenEditor={() => openEditor({ kind: 'action' })}
       onEditVision={(value) => openEditor({ kind: 'vision', value })}
       onEditGoal={(value) => openEditor({ kind: 'goal', value })}
       onEditAction={(value) => openEditor({ kind: 'action', value })}
@@ -371,10 +367,32 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
         </header>
         {feedbackResults.length ? (
           <div className="future-feedback-list">
-            {feedbackResults.map(({ id, action, note }) => (
+            {feedbackResults.map(({ id, action, note, feedback, practiceRecordId, occurredOn }) => (
               <article className="future-feedback-result" key={id}>
                 <strong>{action.title}</strong>
-                <p>{note}</p>
+                <span>{actionExecutionStatusLabel[feedback.status]}</span>
+                {note && <p>{note}</p>}
+                <small>后续：{actionNextStepLabel[feedback.nextStep]}</small>
+                {feedback.status === 'completed' && (onReflectInPast || onNavigateModule) && (
+                  <button
+                    type="button"
+                    className="future-continue-practice"
+                    onClick={() => {
+                      if (onReflectInPast && practiceRecordId && occurredOn)
+                        onReflectInPast({
+                          actionId: action.id,
+                          practiceRecordId,
+                          occurredOn,
+                          actionTitle: action.title,
+                          result: note,
+                          nextStep: feedback.nextStep,
+                        });
+                      else onNavigateModule?.('past');
+                    }}
+                  >
+                    沉淀这次行动
+                  </button>
+                )}
                 {continuableActions.some((candidate) => candidate.id === action.id) &&
                   isLatestPractice(id, action.id) && (
                     <button
@@ -508,7 +526,7 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
                   </small>
                 </div>
                 <label>
-                  状态
+                  本次执行状态
                   <select
                     name="feedbackStatus"
                     value={practiceStatus}
@@ -518,40 +536,42 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
                       setPracticeStatus(status);
                       if (status === 'completed' || status === 'cancelled')
                         setPracticeNextStep('end');
+                      else setPracticeNextStep('continue');
                     }}
                   >
                     <option value="completed">已完成</option>
-                    <option value="partial">有进展</option>
+                    <option value="partial">部分完成</option>
                     <option value="not_completed">尚未完成</option>
-                    <option value="cancelled">不再继续</option>
+                    <option value="cancelled">停止这项行动</option>
                   </select>
                 </label>
+                <p className="future-feedback-status-hint">
+                  {actionExecutionStatusHint[practiceStatus]}
+                </p>
                 <label>
-                  实际情况
-                  <textarea name="note" required />
+                  实际发生了什么（可选）
+                  <textarea name="note" />
                 </label>
-                <label>
-                  下一步
-                  <select
-                    name="nextStep"
-                    value={practiceNextStep}
-                    disabled={practiceStatus === 'completed' || practiceStatus === 'cancelled'}
-                    onChange={(event) =>
-                      setPracticeNextStep(event.target.value as ActionFeedbackNextStep)
-                    }
-                  >
-                    {practiceStatus === 'completed' || practiceStatus === 'cancelled' ? (
-                      <option value="end">结束行动</option>
-                    ) : (
-                      <>
+                {(practiceStatus === 'partial' || practiceStatus === 'not_completed') && (
+                  <details>
+                    <summary>下一步（默认继续完成）</summary>
+                    <label>
+                      下一步
+                      <select
+                        name="nextStep"
+                        value={practiceNextStep}
+                        onChange={(event) =>
+                          setPracticeNextStep(event.target.value as ActionFeedbackNextStep)
+                        }
+                      >
                         <option value="continue">继续完成</option>
                         <option value="adjust">调整后再做</option>
                         <option value="pause">暂不安排</option>
                         <option value="end">结束行动</option>
-                      </>
-                    )}
-                  </select>
-                </label>
+                      </select>
+                    </label>
+                  </details>
+                )}
                 {notice && <p role="alert">{notice}</p>}
                 <div className="future-feedback-submit">
                   <button type="submit" className="future-primary">
@@ -582,6 +602,7 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
         ))}
       </div>
       {content}
+      {!practicePanelOpen && !editor && notice && <p role="status">{notice}</p>}
       {editor && !protectedVault && (
         <FutureEditor
           key={`${editor.kind}:${editor.value?.id ?? 'new'}`}
@@ -606,16 +627,6 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
               void run(() => deleteGoal(editor.value!.id, editor.value!.revision));
             else void run(() => deleteFutureAction(editor.value!.id, editor.value!.revision ?? 0));
           }}
-        />
-      )}
-      {completion && !protectedVault && (
-        <GrowthLoopCompletionDialog
-          action={completion.action}
-          feedback={completion.feedback}
-          opener={completionOpener.current}
-          onClose={() => setCompletion(null)}
-          onNavigateModule={onNavigateModule}
-          onReflectInPast={onReflectInPast}
         />
       )}
     </main>

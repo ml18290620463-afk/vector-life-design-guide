@@ -45,7 +45,13 @@ for (const viewport of [
     await expect(page.getByLabel('心情与事件')).toContainText('工作事业 · 平静');
     await expect(page.getByLabel('心情与事件')).not.toContainText('2/2');
     await page.getByRole('button', { name: /^(返回|返回过去)$/ }).click();
-    await expect(page.getByRole('dialog', { name: '保留这次草稿？' })).toBeVisible();
+    await expect(page.getByTestId('past-page')).toBeVisible();
+    await page
+      .getByRole('navigation', { name: '主页面导航' })
+      .getByRole('button', { name: /^现在/ })
+      .click();
+    await page.getByRole('button', { name: '清空草稿' }).click();
+    await expect(page.getByRole('dialog', { name: '清空草稿？' })).toBeVisible();
     await expect(page.getByRole('button', { name: '继续编辑', exact: true })).toBeFocused();
     await page.screenshot({ path: testInfo.outputPath('draft-exit.png') });
     await page.keyboard.press('Escape');

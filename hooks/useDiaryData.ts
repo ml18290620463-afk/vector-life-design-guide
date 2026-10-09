@@ -45,7 +45,8 @@ import {
 import { useActionItems } from './useActionItems';
 import { commitArrayDelta, subscribeVault, vaultTransaction } from '../services/vaultTransaction';
 import { stateFrom } from '../services/futureRepository';
-import { commitPrincipleUpdate } from '../services/principleUpdate';
+import { commitPrincipleRevision, commitPrincipleUpdate } from '../services/principleUpdate';
+import type { PrincipleRevisionKind } from '../services/principleRevision';
 import { deleteSourceEntries, recoverSourceDeletion } from '../services/sourceDeletion';
 import { recoverBackupRestore } from '../services/vaultBackup';
 import { wipeVault, recoverVaultWipe } from '../services/vaultWipe';
@@ -558,6 +559,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       application?: PrincipleApplication,
       sourcePatternIds: string[] = [],
       tags: string[] = [],
+      derivedFromPracticeIds: string[] = [],
     ) => {
       const newPrinciple: Principle = {
         id: generateSecureId(),
@@ -569,6 +571,8 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         showOnHome,
         derivedFromEntryIds:
           derivedFromEntryIds.length > 0 ? [...new Set(derivedFromEntryIds)] : undefined,
+        derivedFromPracticeIds:
+          derivedFromPracticeIds.length > 0 ? [...new Set(derivedFromPracticeIds)] : undefined,
         application,
         sourcePatternIds: sourcePatternIds.length > 0 ? [...new Set(sourcePatternIds)] : undefined,
         confidence: DEFAULT_PRINCIPLE_CONFIDENCE,
@@ -674,6 +678,41 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     async (updatedPrinciple: Principle) => {
       const saved = await commitPrincipleUpdate(
         updatedPrinciple,
+        principlesRef.current,
+        linksRef.current,
+        userId,
+      );
+      principlesRef.current = saved.principles;
+      linksRef.current = saved.links;
+      setPrinciples(saved.principles);
+      setPatternPrincipleLinks(saved.links);
+    },
+    [userId],
+  );
+
+  const revisePrinciple = useCallback(
+    async (original: Principle, text: string, revisionKind: PrincipleRevisionKind) => {
+      const revisedAt = Date.now();
+      const successor: Principle = {
+        ...original,
+        id: generateSecureId('principle'),
+        text: text.trim(),
+        year: new Date(revisedAt).getFullYear(),
+        createdAt: revisedAt,
+        supersedesPrincipleId: original.id,
+        revisionKind,
+        revisedAt,
+        confidence: DEFAULT_PRINCIPLE_CONFIDENCE,
+        recallCount: 0,
+        appliedFeedbackEntryIds: undefined,
+        helpfulCount: 0,
+        partialCount: 0,
+        unhelpfulCount: 0,
+        lastFeedbackAt: undefined,
+      };
+      const saved = await commitPrincipleRevision(
+        original,
+        successor,
         principlesRef.current,
         linksRef.current,
         userId,
@@ -809,6 +848,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     updatePatternPrincipleLink,
     removePatternPrincipleLink,
     updatePrinciple,
+    revisePrinciple,
     actions,
     addAction,
     updateAction,

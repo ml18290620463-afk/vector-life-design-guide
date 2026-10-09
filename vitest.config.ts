@@ -15,7 +15,7 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./test-setup/indexeddb.ts'],
-    exclude: ['node_modules/**', 'dist/**', 'coverage/**', 'e2e/**', 'output/**'],
+    exclude: ['**/node_modules/**', 'dist/**', 'coverage/**', 'e2e/**', 'output/**'],
     env: {
       NODE_ENV: 'test',
       // Keep PBKDF2 fast in tests; production / browsers always run at the

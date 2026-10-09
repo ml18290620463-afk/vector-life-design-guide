@@ -22,6 +22,7 @@ import { ScreenLoader } from './ScreenLoader';
 import { AppPageFrame } from './AppPageFrame';
 import type { AvatarLaunchContext } from '../features/avatar/types';
 import type { PracticeReflectionContext } from '../types/future';
+import type { PrincipleRevisionKind } from '../services/principleRevision';
 
 type AppMainModuleScreensProps = {
   actions: ActionItem[];
@@ -45,6 +46,7 @@ type AppMainModuleScreensProps = {
     application?: PrincipleApplication,
     sourcePatternIds?: string[],
     tags?: string[],
+    derivedFromPracticeIds?: string[],
   ) => void;
   appState: AppState;
   deletePrinciple: (id: string) => void;
@@ -67,6 +69,11 @@ type AppMainModuleScreensProps = {
   guidingStars: string[];
   theme: Theme;
   updatePrinciple: (principle: Principle) => void;
+  revisePrinciple: (
+    original: Principle,
+    text: string,
+    revisionKind: PrincipleRevisionKind,
+  ) => void | Promise<void>;
   useMobileShell: boolean;
   avatarLaunchContext: AvatarLaunchContext;
 };
@@ -97,6 +104,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   principles,
   theme,
   updatePrinciple,
+  revisePrinciple,
   useMobileShell,
   avatarLaunchContext,
 }) => {
@@ -148,9 +156,11 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
                 theme={theme}
                 entries={entries}
                 principles={principles}
+                actions={actions}
                 onAddPrinciple={addPrinciple}
                 onDeletePrinciple={deletePrinciple}
                 onUpdatePrinciple={updatePrinciple}
+                onRevisePrinciple={revisePrinciple}
                 onSelectEntry={onSelectEntry}
                 onDeleteEntries={deleteEntries}
               />
@@ -206,9 +216,11 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               theme={theme}
               entries={entries}
               principles={principles}
+              actions={actions}
               onAddPrinciple={addPrinciple}
               onDeletePrinciple={deletePrinciple}
               onUpdatePrinciple={updatePrinciple}
+              onRevisePrinciple={revisePrinciple}
               onSelectEntry={onSelectEntry}
               onDeleteEntries={deleteEntries}
             />

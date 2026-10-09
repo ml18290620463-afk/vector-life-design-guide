@@ -205,7 +205,7 @@ export function stateFrom(value: unknown): FutureState {
       e.actionFeedback &&
       (!['completed', 'partial', 'not_completed', 'cancelled'].includes(e.actionFeedback.status) ||
         !['continue', 'adjust', 'pause', 'end'].includes(e.actionFeedback.nextStep) ||
-        !nonempty(e.actionFeedback.note))
+        typeof e.actionFeedback.note !== 'string')
     )
       invalid();
     if (e.sourceState === 'linked' && !nonempty(e.sourceEntryId)) invalid();
@@ -268,7 +268,7 @@ export function stateFrom(value: unknown): FutureState {
       !nonempty(record.actionId) ||
       !['completed', 'partial', 'not_completed', 'cancelled'].includes(record.status) ||
       !['continue', 'adjust', 'pause', 'end'].includes(record.nextStep) ||
-      !nonempty(record.note) ||
+      typeof record.note !== 'string' ||
       !timestamp(record.createdAt)
     )
       invalid();
