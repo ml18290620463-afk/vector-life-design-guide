@@ -281,9 +281,18 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
                       .map(([key, count]) => `${key} ${count}`)
                       .join('；')}
                   </p>
+                  {inspection.materialReferences && (
+                    <p>
+                      素材引用：内嵌可恢复 {inspection.materialReferences.embedded}
+                      ；网页链接仅保存地址 {inspection.materialReferences.externalLink}
+                      ；无法保证恢复 {inspection.materialReferences.unstableReference}。
+                    </p>
+                  )}
                 </>
               )}
-              <p>链接和媒体地址属于外部或本机引用；检查不会验证它们仍可访问。</p>
+              <p>
+                检查不会验证网页链接或本机引用仍可访问。网页失效后，请在新记录中重新链接并保留说明。
+              </p>
             </section>
           )}
           {drill && (
@@ -295,6 +304,11 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
                 将导入记录：{drill.importedCount}；演练后记录：{drill.totalAfter}
               </p>
               {drill.conflicts.length > 0 && <p>冲突：{drill.conflicts.join('；')}</p>}
+              <p>
+                素材：内嵌可恢复 {drill.materialReferences.embedded}；仅保存地址{' '}
+                {drill.materialReferences.externalLink}；无法保证恢复{' '}
+                {drill.materialReferences.unstableReference}。
+              </p>
               <p>{drill.externalReferenceLimitations}</p>
             </section>
           )}

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Paperclip, Trash2 } from 'lucide-react';
+import { Link as LinkIcon, Paperclip, Trash2 } from 'lucide-react';
 import type { Material } from '../types/now';
 import { getAudioPlayLabel, getMaterialAlt, getMaterialTitle } from '../../../lib/materialDisplay';
 
@@ -7,12 +7,14 @@ interface MaterialPreviewProps {
   materials: Material[];
   onRemove: (id: string) => void;
   onUpdateDescription: (id: string, description: string) => void;
+  onReplaceLink: (id: string) => void;
 }
 
 export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
   materials,
   onRemove,
   onUpdateDescription,
+  onReplaceLink,
 }) => {
   if (materials.length === 0) return null;
   return (
@@ -40,6 +42,17 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
               onChange={(event) => onUpdateDescription(material.id, event.target.value)}
             />
           </label>
+          {material.type === 'link' && (
+            <button
+              type="button"
+              className="now-material__replace-link"
+              onClick={() => onReplaceLink(material.id)}
+              aria-label={`更换链接：${getMaterialTitle(material)}`}
+            >
+              <LinkIcon size={15} />
+              更换链接
+            </button>
+          )}
           <button type="button" onClick={() => onRemove(material.id)} aria-label="删除素材">
             <Trash2 size={16} />
           </button>

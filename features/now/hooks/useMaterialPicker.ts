@@ -3,6 +3,7 @@ import type { Material, MaterialType } from '../types/now';
 import { CONFIG } from '../constants/config';
 import { canAddMaterialType } from '../state/nowRules';
 import { generateSecureId } from '../../../services/idGenerator';
+import { normalizeWebMaterialUrl } from '../../../lib/materialPersistence';
 
 const readFileAsDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -30,14 +31,8 @@ export const useMaterialPicker = (args: {
     if (input === null) return;
     const trimmed = input.trim();
     if (!trimmed) return;
-    let url: string;
-    try {
-      const parsed = new URL(/^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`);
-      if (!['https:', 'http:'].includes(parsed.protocol) || !parsed.hostname.includes('.')) {
-        throw new Error('invalid link');
-      }
-      url = parsed.href;
-    } catch {
+    const url = normalizeWebMaterialUrl(trimmed);
+    if (!url) {
       args.onError('请输入有效的网页链接，例如 example.com');
       return;
     }

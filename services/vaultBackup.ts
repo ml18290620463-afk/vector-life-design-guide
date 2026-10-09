@@ -22,6 +22,10 @@ import { encryptVaultBackupFile } from './vaultBackupFile';
 import { recoverSourceDeletion } from './sourceDeletion';
 import { storedArray, withLegacyValue } from './vaultLegacyRead';
 import { decodeEntries, type UnreadableEntry } from './readableEntries';
+import {
+  summarizeMaterialReferences,
+  type MaterialReferenceSummary,
+} from '../lib/materialPersistence';
 
 const domainsFor = (userId?: string) => ({
   entries: K.entries,
@@ -288,8 +292,30 @@ export interface VaultRecoveryDrill {
   totalAfter: number;
   conflicts: string[];
   dataCounts: Record<string, number>;
+  materialReferences: MaterialReferenceSummary;
   externalReferenceLimitations: string;
 }
+
+const summarizeBackupMaterialReferences = (backup: VaultBackup): MaterialReferenceSummary => {
+  const references: Array<string | null | undefined> = [];
+  for (const entry of backup.entries) {
+    if (entry.attachment) references.push(entry.attachment.data);
+    for (const material of entry.nowMaterials ?? []) references.push(material.url);
+  }
+  for (const material of backup.vault.draft?.materials ?? []) references.push(material.url);
+  for (const row of backup.vault.data.materials) {
+    if (!row || typeof row !== 'object') continue;
+    const candidate = row as { data?: unknown; url?: unknown };
+    references.push(
+      typeof candidate.data === 'string'
+        ? candidate.data
+        : typeof candidate.url === 'string'
+          ? candidate.url
+          : undefined,
+    );
+  }
+  return summarizeMaterialReferences(references);
+};
 
 /** Computes a restore result in memory only. It does not create restore jobs or write any vault key. */
 export async function drillVaultBackupRestore(
@@ -338,8 +364,9 @@ export async function drillVaultBackupRestore(
         dataCounts: Object.fromEntries(
           Object.entries(backup.vault.data).map(([key, rows]) => [key, rows.length]),
         ),
+        materialReferences: summarizeBackupMaterialReferences(backup),
         externalReferenceLimitations:
-          '演练不会访问外部链接、本机媒体或网络资源，也不会写入当前资料库。',
+          '演练不会访问外部链接、本机媒体或网络资源，也不会写入当前资料库。内嵌素材可随备份恢复；网页链接仅保存地址。',
       };
     },
     true,

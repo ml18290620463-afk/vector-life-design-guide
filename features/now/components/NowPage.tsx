@@ -5,6 +5,7 @@ import { useMaterialPicker } from '../hooks/useMaterialPicker';
 import { getCanSend, getDisabledSendReason, isDraftEmpty } from '../state/nowRules';
 import type { NowDraft, NowRoute } from '../types/now';
 import { MaterialPreview } from './MaterialPreview';
+import { normalizeWebMaterialUrl } from '../../../lib/materialPersistence';
 
 interface NowPageProps {
   draft: NowDraft;
@@ -116,6 +117,26 @@ export const NowPage: React.FC<NowPageProps> = ({
       ),
     }));
   };
+  const replaceMaterialLink = (id: string) => {
+    if (sending || exitInFlight.current) return;
+    const material = draft.materials.find((candidate) => candidate.id === id);
+    if (!material) return;
+    const input = window.prompt('替换网页链接', material.url);
+    if (input === null) return;
+    const url = normalizeWebMaterialUrl(input);
+    if (!url) {
+      showToast('请输入有效的网页链接，例如 example.com');
+      return;
+    }
+    setDraft((current) => ({
+      ...current,
+      materials: current.materials.map((candidate) =>
+        candidate.id === id
+          ? { ...candidate, url, meta: { ...candidate.meta, title: url } }
+          : candidate,
+      ),
+    }));
+  };
 
   return (
     <main className="now-page" data-testid="now-page">
@@ -179,6 +200,7 @@ export const NowPage: React.FC<NowPageProps> = ({
             materials={draft.materials}
             onRemove={removeMaterial}
             onUpdateDescription={updateMaterialDescription}
+            onReplaceLink={replaceMaterialLink}
           />
           <p className="now-materials-hint" id="now-materials-hint">
             素材是这次经历的证据；分身会结合这条记录理解，不会自动把素材当成结论。

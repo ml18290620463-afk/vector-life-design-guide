@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
 import type { DiaryEntry, Language, Theme } from '../types';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../lib/entryContent';
 import { getEntryMediaGroups } from '../lib/entryMedia';
 import { getAudioPlayLabel, getMaterialAlt, getMaterialTitle } from '../lib/materialDisplay';
+import { classifyMaterialReference } from '../lib/materialPersistence';
 
 type PastEntryMediaVariant = 'archive' | 'mobile';
 
@@ -20,6 +21,44 @@ interface PastEntryMediaProps {
 }
 
 const stopPropagation = (event: React.MouseEvent) => event.stopPropagation();
+
+const LinkReferenceNotice: React.FC<{ url: string }> = ({ url }) => {
+  const [failed, setFailed] = useState(false);
+  const persistence = classifyMaterialReference(url);
+  if (persistence === 'external-link') {
+    return (
+      <span className="material-reference-notice" role={failed ? 'status' : undefined}>
+        {failed ? '链接可能已失效；备份仅保存地址。' : '原网站链接；备份仅保存地址。'}
+        <button type="button" onClick={() => setFailed(true)}>
+          {failed ? '已标记' : '无法打开？'}
+        </button>
+      </span>
+    );
+  }
+  return <span className="material-reference-notice">此引用无法随备份恢复。</span>;
+};
+
+const ArchiveLinkMaterial: React.FC<{ title: string; url: string; theme: Theme }> = ({
+  title,
+  url,
+  theme,
+}) => {
+  const isWebLink = classifyMaterialReference(url) === 'external-link';
+  return (
+    <div className="archive-entry-media__link">
+      <a
+        className={theme === 'light' ? 'archive-entry-media__link--light' : ''}
+        href={isWebLink ? url : undefined}
+        target="_blank"
+        rel="noreferrer"
+        onClick={stopPropagation}
+      >
+        {title}
+      </a>
+      <LinkReferenceNotice url={url} />
+    </div>
+  );
+};
 
 const ArchiveAttachmentPreview: React.FC<{
   entry: DiaryEntry;
@@ -164,16 +203,7 @@ const ArchiveInlineMedia: React.FC<{
         })),
         ...legacyLinkMaterials.map((link) => ({ title: link, url: link })),
       ].map(({ title, url }) => (
-        <a
-          key={`${title}-${url}`}
-          className={theme === 'light' ? 'archive-entry-media__link--light' : ''}
-          href={/^https?:\/\//i.test(url) ? url : undefined}
-          target="_blank"
-          rel="noreferrer"
-          onClick={stopPropagation}
-        >
-          {title}
-        </a>
+        <ArchiveLinkMaterial key={`${title}-${url}`} title={title} url={url} theme={theme} />
       ))}
     </div>
   );
@@ -198,13 +228,19 @@ const MobileAudioPlayback: React.FC<{ src: string; language: Language }> = ({ sr
 
 const MobileLinkMaterialCard: React.FC<{ title: string; url?: string }> = ({ title, url }) => {
   const displayTitle = title.trim() || url || '链接';
-  return url ? (
-    <a className="mobile-past-link-card" href={url} target="_blank" rel="noreferrer">
-      <span>{displayTitle}</span>
-    </a>
-  ) : (
-    <div className="mobile-past-link-card">
-      <span>{displayTitle}</span>
+  const isWebLink = url && classifyMaterialReference(url) === 'external-link';
+  return (
+    <div>
+      {isWebLink ? (
+        <a className="mobile-past-link-card" href={url} target="_blank" rel="noreferrer">
+          <span>{displayTitle}</span>
+        </a>
+      ) : (
+        <div className="mobile-past-link-card">
+          <span>{displayTitle}</span>
+        </div>
+      )}
+      <LinkReferenceNotice url={url ?? ''} />
     </div>
   );
 };

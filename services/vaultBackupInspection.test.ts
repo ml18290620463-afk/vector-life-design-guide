@@ -40,4 +40,28 @@ describe('inspectVaultBackup', () => {
     await expect(inspectVaultBackup({ nope: true })).rejects.toThrow('完整备份格式无效');
     expect((await inspectVaultBackup(encrypted, 'secret')).entryCount).toBe(0);
   });
+
+  it('discloses whether material bytes or only references are recoverable', async () => {
+    await set(K.entries, [
+      {
+        id: 'entry',
+        title: 'record',
+        content: 'fact',
+        createdAt: 1,
+        tags: [],
+        isLocked: false,
+        attachment: { type: 'image', data: 'data:image/png;base64,AAAA', name: 'proof.png' },
+        nowMaterials: [
+          { id: 'web', type: 'link', url: 'https://example.com/proof', sort_order: 0 },
+          { id: 'old', type: 'link', url: 'blob:unavailable', sort_order: 1 },
+        ],
+      },
+    ]);
+    const inspection = await inspectVaultBackup(await exportVaultBackup('inspection-test'));
+    expect(inspection.materialReferences).toEqual({
+      embedded: 1,
+      externalLink: 1,
+      unstableReference: 1,
+    });
+  });
 });
