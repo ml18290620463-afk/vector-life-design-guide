@@ -7,12 +7,8 @@
  * docs/testing/past-search-performance-2026-10-09.md.
  */
 import { performance } from 'node:perf_hooks';
-import type { ActionItem, DiaryEntry, Principle } from '../types';
-import {
-  buildPastEntryRelationIndex,
-  filterPastEntries,
-  type PastSearchFilters,
-} from '../features/mobile/pastSearch';
+import type { DiaryEntry } from '../types';
+import { filterPastEntries, type PastSearchFilters } from '../features/mobile/pastSearch';
 
 const RUNS = 15;
 const WARM_UP_RUNS = 3;
@@ -26,22 +22,7 @@ const makeFixture = (count: number) => {
     tags: index % 2 === 0 ? ['工作'] : ['生活'],
     isLocked: false,
   }));
-  const actions: ActionItem[] = Array.from({ length: count }, (_, index) => ({
-    id: `action-${index}`,
-    title: `行动 ${index}`,
-    status: 'active',
-    createdAt: index,
-    evidenceEntryIds: index % 3 === 0 ? [`entry-${index}`] : [],
-  }));
-  const principles: Principle[] = Array.from({ length: count }, (_, index) => ({
-    id: `principle-${index}`,
-    text: `原则 ${index}`,
-    year: 2026,
-    createdAt: index,
-    showOnHome: true,
-    derivedFromEntryIds: index % 4 === 0 ? [`entry-${index}`] : [],
-  }));
-  return { entries, actions, principles };
+  return { entries };
 };
 
 const median = (samples: number[]) =>
@@ -58,19 +39,16 @@ const measure = (run: () => unknown) => {
 };
 
 const scenarios: Array<{ name: string; filters: PastSearchFilters }> = [
-  { name: 'date-and-tag', filters: { tags: ['工作'], from: 100, to: 9_000 } },
-  { name: 'action-link', filters: { linkedTo: 'action' } },
-  { name: 'principle-link', filters: { linkedTo: 'principle' } },
+  { name: 'tag', filters: { tags: ['工作'] } },
+  { name: 'all', filters: {} },
 ];
 
 const results = [1_000, 10_000].flatMap((count) => {
-  const { entries, actions, principles } = makeFixture(count);
-  const index = buildPastEntryRelationIndex(actions, principles);
+  const { entries } = makeFixture(count);
   return scenarios.map(({ name, filters }) => ({
     entries: count,
     scenario: name,
-    relationIndexMs: measure(() => buildPastEntryRelationIndex(actions, principles)),
-    filterMs: measure(() => filterPastEntries(entries, filters, actions, principles, index)),
+    filterMs: measure(() => filterPastEntries(entries, filters)),
   }));
 });
 

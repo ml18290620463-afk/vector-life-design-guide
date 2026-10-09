@@ -130,7 +130,7 @@ Vector 的核心定位是可长期积累、随时调取的个人资料资源。�
 ## 本轮证据
 
 - `features/now/NowFlow.tsx`：记录保存后的下一步与行动上下文。
-- `features/mobile/PastRepository.tsx`、`features/mobile/pastSearch.ts`：多条件确定性筛选、关系回溯和无模型事实回顾。
+- `features/mobile/PastRepository.tsx`、`features/mobile/pastSearch.ts`：关键词检索、标签筛选与分批呈现。日期、关联筛选及事实回顾已按用户要求删除。
 - `features/future/FuturePage.tsx`、`features/future/PracticeFeedbackFields.tsx`：行动、践行状态与下一步语义。
 - `features/now/components/AvatarChatPage.tsx`、`features/now/components/AvatarModelSettings.tsx`、`services/avatarGuidanceSources.ts`：来源边界与用户自选模型配置。
 - `services/vaultBackup.ts`、`services/vaultBackupInspection.ts`：可恢复副本、恢复演练与只读备份检查。

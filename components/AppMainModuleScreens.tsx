@@ -161,7 +161,6 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
                 onViewChange={rememberPastView}
                 practiceReflectionContext={practiceReflectionContext}
                 onPracticeReflectionContextDismiss={() => setPracticeReflectionContext(null)}
-                onOpenNow={() => (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('now')}
                 onOpenFutureGoal={openFutureGoal}
                 onOpenFutureAction={openFutureAction}
                 language={language}
@@ -227,7 +226,6 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               onViewChange={rememberPastView}
               practiceReflectionContext={practiceReflectionContext}
               onPracticeReflectionContextDismiss={() => setPracticeReflectionContext(null)}
-              onOpenNow={() => (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('now')}
               onOpenFutureGoal={openFutureGoal}
               onOpenFutureAction={openFutureAction}
               language={language}

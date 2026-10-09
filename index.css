@@ -827,22 +827,6 @@
   gap: 0.15rem;
   font-size: 0.75rem;
 }
-.mobile-past-filter-result {
-  margin: 0.4rem 0;
-  font-size: 0.78rem;
-  color: var(--now-text-dim);
-}
-.mobile-past-fact-review {
-  margin: 0.75rem 0;
-  padding: 0.8rem;
-  border: 1px solid var(--now-border);
-  border-radius: 12px;
-}
-.mobile-past-fact-review p,
-.mobile-past-fact-review ul {
-  margin: 0.4rem 0;
-}
-
 .now-anchor-point {
   min-width: 0;
   min-height: 48px;
@@ -6358,32 +6342,6 @@ html.vector-force-mobile .archive-past-record {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* First meaningful entry, shown only until a real record exists. */
-.mobile-past-first-record {
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border: 1px solid var(--color-archive-border-strong);
-  border-radius: 1rem;
-  color: var(--color-archive-text-main);
-  background: var(--color-archive-surface);
-}
-.mobile-past-first-record p {
-  margin: 0 0 0.75rem;
-  line-height: 1.6;
-}
-.mobile-past-first-record button {
-  min-height: 44px;
-  padding: 0.5rem 1rem;
-  border: 1px solid currentColor;
-  border-radius: 0.75rem;
-  color: inherit;
-  background: transparent;
-}
-.mobile-past-first-record button:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 3px;
 }
 
 .mobile-past-empty {

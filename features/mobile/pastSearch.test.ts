@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ActionItem, DiaryEntry, Principle } from '../../types';
-import {
-  availablePastTags,
-  buildDeterministicReview,
-  buildPastEntryRelationIndex,
-  filterPastEntries,
-} from './pastSearch';
+import type { DiaryEntry } from '../../types';
+import { availablePastTags, filterPastEntries } from './pastSearch';
 
 const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry => ({
   id,
@@ -22,100 +17,16 @@ describe('pastSearch', () => {
       entry(`entry-${index}`, index, index % 2 ? ['work'] : ['life']),
     );
     const original = [...entries];
-    const result = filterPastEntries(entries, { tags: ['work'], from: 200, to: 210 });
-    expect(result.map((item) => item.id)).toEqual([
-      'entry-201',
-      'entry-203',
-      'entry-205',
-      'entry-207',
-      'entry-209',
-    ]);
+    const result = filterPastEntries(entries, { tags: ['work'] });
+    expect(result).toHaveLength(5_000);
+    expect(result.every((item) => item.tags?.includes('work'))).toBe(true);
     expect(entries).toEqual(original);
     expect(availablePastTags(entries)).toEqual(['life', 'work']);
   });
 
-  it('finds records linked through persisted actions and principles', () => {
-    const entries = [entry('e1', 1), entry('e2', 2)];
-    const actions: ActionItem[] = [
-      { id: 'a1', title: 'action', status: 'active', createdAt: 1, evidenceEntryIds: ['e1'] },
-    ];
-    const principles: Principle[] = [
-      {
-        id: 'p1',
-        text: 'principle',
-        year: 2026,
-        createdAt: 1,
-        showOnHome: true,
-        derivedFromEntryIds: ['e2'],
-      },
-    ];
-    expect(
-      filterPastEntries(entries, { linkedTo: 'action' }, actions, principles).map(
-        (item) => item.id,
-      ),
-    ).toEqual(['e1']);
-    expect(
-      filterPastEntries(entries, { linkedTo: 'principle' }, actions, principles).map(
-        (item) => item.id,
-      ),
-    ).toEqual(['e2']);
-  });
-
-  it('uses the same persisted relation semantics when an index is reused', () => {
-    const entries = [entry('e1', 1), entry('e2', 2), entry('e3', 3)];
-    const actions: ActionItem[] = [
-      { id: 'a1', title: 'action', status: 'active', createdAt: 1, resultEntryId: 'e1' },
-    ];
-    const principles: Principle[] = [
-      {
-        id: 'p1',
-        text: 'principle',
-        year: 2026,
-        createdAt: 1,
-        showOnHome: true,
-        derivedFromEntryIds: ['e2'],
-      },
-    ];
-    const index = buildPastEntryRelationIndex(actions, principles);
-
-    expect(filterPastEntries(entries, { linkedTo: 'action' }, actions, principles, index)).toEqual([
-      entries[0],
-    ]);
-    expect(
-      filterPastEntries(entries, { linkedTo: 'principle' }, actions, principles, index),
-    ).toEqual([entries[1]]);
-  });
-
-  it('builds an evidence-only review and an explicit action context', () => {
-    const result = buildDeterministicReview(
-      [entry('old', 1), entry('latest', 2)],
-      [
-        {
-          id: 'p',
-          text: '先确认事实',
-          year: 2026,
-          createdAt: 1,
-          showOnHome: true,
-          derivedFromEntryIds: ['latest'],
-        },
-      ],
-      [
-        {
-          id: 'a',
-          title: '复盘项目',
-          status: 'completed',
-          createdAt: 1,
-          evidenceEntryIds: ['latest'],
-        },
-      ],
-    );
-    expect(result.entries.map((item) => item.id)).toEqual(['latest', 'old']);
-    expect(result.principles.map((item) => item.text)).toEqual(['先确认事实']);
-    expect(result.actions.map((item) => item.title)).toEqual(['复盘项目']);
-    expect(result.actionContext).toEqual({
-      sourceEntryId: 'latest',
-      evidenceEntryIds: ['latest'],
-      rationale: 'latest',
-    });
+  it('keeps all records when no tag is selected', () => {
+    const entries = [entry('e1', 1), entry('e2', 2, ['work'])];
+    expect(filterPastEntries(entries, {})).toEqual(entries);
+    expect(filterPastEntries(entries, { tags: ['missing'] })).toEqual([]);
   });
 });

@@ -21,12 +21,7 @@ import { goalProgress } from '../../services/futureRepository';
 import type { ActionDraftContext, PracticeReflectionContext } from '../../types/future';
 import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
-import {
-  availablePastTags,
-  buildPastEntryRelationIndex,
-  filterPastEntries,
-  type PastSearchFilters,
-} from './pastSearch';
+import { availablePastTags, filterPastEntries, type PastSearchFilters } from './pastSearch';
 
 interface PastRepositoryProps {
   archiveMode?: boolean;
@@ -38,7 +33,6 @@ interface PastRepositoryProps {
   onPracticeReflectionContextDismiss?: () => void;
   /** @deprecated Past no longer opens the avatar; retained for call-site compatibility. */
   onOpenAvatar?: () => void;
-  onOpenNow?: () => void;
   onOpenFutureGoal?: (goalId: string) => void;
   onOpenFutureAction?: (context: ActionDraftContext) => void;
   language: Language;
@@ -140,10 +134,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const safePrinciples = useMemo(() => (Array.isArray(principles) ? principles : []), [principles]);
   const safeActions = useMemo(() => (Array.isArray(actions) ? actions : []), [actions]);
   const activePrinciples = useMemo(() => currentPrinciples(safePrinciples), [safePrinciples]);
-  const relationIndex = useMemo(
-    () => buildPastEntryRelationIndex(safeActions, activePrinciples),
-    [safeActions, activePrinciples],
-  );
   const filterTags = useMemo(() => availablePastTags(safeEntries), [safeEntries]);
   const searchMatches = useMemo(() => {
     const query = normalizedTimelineQuery.toLocaleLowerCase();
@@ -225,9 +215,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     );
   }, [safeEntries, safeActions, activePrinciples, searchMatches, normalizedTimelineQuery]);
   const timelineEntries = useMemo(
-    () =>
-      filterPastEntries(textMatchedEntries, filters, safeActions, activePrinciples, relationIndex),
-    [textMatchedEntries, filters, safeActions, activePrinciples, relationIndex],
+    () => filterPastEntries(textMatchedEntries, filters),
+    [textMatchedEntries, filters],
   );
   const visibleEntryIds = useMemo(
     () => timelineEntries.map((entry) => entry.id),
