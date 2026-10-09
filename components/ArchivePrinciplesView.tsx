@@ -8,7 +8,7 @@ import type { TranslationDictionary } from '../i18n/translations';
 import { EVENT_TAGS } from '../features/now/constants/tags';
 import { PastActionDialog } from './PastActionDialog';
 import { CyberButton } from './CyberButton';
-import type { PracticeReflectionContext } from '../types/future';
+import type { ActionDraftContext, PracticeReflectionContext } from '../types/future';
 
 function PrincipleEditorSurface({
   open,
@@ -76,6 +76,8 @@ interface ArchivePrinciplesViewProps {
   onManagementChange?: (open: boolean) => void;
   practiceReflectionContext?: PracticeReflectionContext | null;
   onPracticeReflectionContextDismiss?: () => void;
+  /** Starts a new action with this principle and its recorded evidence. */
+  onOpenFutureAction?: (context: ActionDraftContext) => void;
   /** A short, session-only explanation after the user removes source entries. */
   emptyReason?: 'source-deletion';
 }
@@ -105,6 +107,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   onManagementChange,
   practiceReflectionContext,
   onPracticeReflectionContextDismiss,
+  onOpenFutureAction,
   emptyReason,
 }) => {
   const [newPrincipleText, setNewPrincipleText] = useState('');
@@ -706,6 +709,21 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                         <dd>{principle.application.action}</dd>
                                       </div>
                                     </dl>
+                                  )}
+                                  {onOpenFutureAction && (
+                                    <button
+                                      type="button"
+                                      className="mobile-past-timeline__action mt-3"
+                                      onClick={() =>
+                                        onOpenFutureAction({
+                                          principleId: principle.id,
+                                          evidenceEntryIds: principle.derivedFromEntryIds,
+                                          rationale: principle.text,
+                                        })
+                                      }
+                                    >
+                                      {language === 'zh' ? '作为行动依据' : 'Use as action context'}
+                                    </button>
                                   )}
                                 </div>
                               </div>

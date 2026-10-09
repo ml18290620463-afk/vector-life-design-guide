@@ -635,6 +635,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               displayFirst={!archiveMode}
               practiceReflectionContext={practiceReflectionContext}
               onPracticeReflectionContextDismiss={onPracticeReflectionContextDismiss}
+              onOpenFutureAction={onOpenFutureAction}
               emptyReason={clearedDerivedKnowledge ? 'source-deletion' : undefined}
             />
           </div>

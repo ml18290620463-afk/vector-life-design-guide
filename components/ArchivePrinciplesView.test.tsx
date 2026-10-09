@@ -16,6 +16,35 @@ const baseProps = {
 };
 
 describe('ArchivePrinciplesView', () => {
+  it('carries a principle and its evidence into a new action', () => {
+    const onOpenFutureAction = vi.fn();
+    const principle: Principle = {
+      id: 'principle-context',
+      text: '先确认事实，再作判断',
+      year: 2026,
+      createdAt: 1,
+      showOnHome: true,
+      derivedFromEntryIds: ['entry-a', 'entry-b'],
+    };
+
+    render(
+      <ArchivePrinciplesView
+        {...baseProps}
+        language="zh"
+        displayFirst
+        principles={[principle]}
+        onOpenFutureAction={onOpenFutureAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '作为行动依据' }));
+    expect(onOpenFutureAction).toHaveBeenCalledWith({
+      principleId: 'principle-context',
+      evidenceEntryIds: ['entry-a', 'entry-b'],
+      rationale: '先确认事实，再作判断',
+    });
+  });
+
   it('keeps an empty principles area focused on extraction', () => {
     render(<ArchivePrinciplesView {...baseProps} />);
     expect(screen.getByRole('button', { name: '萃取' }).getAttribute('aria-current')).toBe('page');
