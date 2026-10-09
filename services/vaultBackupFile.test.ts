@@ -11,6 +11,8 @@ import { changeFutureProtection, BACKUP_RESTORE_JOB } from './vaultTransaction';
 import {
   exportVaultBackup,
   exportVaultBackupFile,
+  exportRecoverableVaultBackupFile,
+  drillVaultBackupRestore,
   importVaultBackup,
   recoverBackupRestore,
   type VaultBackup,
@@ -166,6 +168,29 @@ it('boots a locked vault with no recovery job and blocks legacy plaintext export
   useAppStore.setState({ isUnlocked: false, masterPassword: null });
   await expect(recoverBackupRestore()).resolves.toBeUndefined();
   await expect(exportVaultBackup('test')).rejects.toThrow('解锁');
+});
+
+it('creates an explicit recoverable backup without changing a vault that has one unreadable record', async () => {
+  await fixture();
+  const entries = await get(K.entries);
+  await set(K.entries, [...entries, { ...entries[0], id: 'broken', content: 'not-ciphertext' }]);
+  await expect(exportVaultBackupFile('test')).rejects.toThrow('无法解密');
+  const recovered = await exportRecoverableVaultBackupFile('test');
+  const backup = (await decryptVaultBackupFile(recovered.file as never, password)) as VaultBackup;
+  expect(recovered.skippedEntries).toEqual([{ id: 'broken', reason: expect.any(String) }]);
+  expect(backup.entries.map((entry) => entry.id)).toEqual(['e1']);
+  expect(await get(K.entries)).toHaveLength(2);
+});
+
+it('runs a restore drill without writing the current vault', async () => {
+  const file = await fixture();
+  const backup = (await decryptVaultBackupFile(file, password)) as VaultBackup;
+  const before = await get(K.entries);
+  const drill = await drillVaultBackupRestore(backup, 'merge');
+  expect(drill.canRestore).toBe(true);
+  expect(drill.totalAfter).toBe(1);
+  expect(await get(K.entries)).toEqual(before);
+  expect(await get(BACKUP_RESTORE_JOB)).toBeUndefined();
 });
 
 it('round-trips every backup domain, embedded media and complete linked future history', async () => {

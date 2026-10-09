@@ -4,7 +4,10 @@ import type { AvatarReliabilityTask } from '../state/avatarReliabilityTasks';
 import { useAppStore } from '../../../stores/appStore';
 import {
   exportVaultBackupFile,
+  exportRecoverableVaultBackupFile,
+  drillVaultBackupRestore,
   importVaultBackup,
+  type VaultRecoveryDrill,
   type VaultBackup,
 } from '../../../services/vaultBackup';
 import { decryptVaultBackupFile, isEncryptedVaultBackup } from '../../../services/vaultBackupFile';
@@ -39,6 +42,7 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [inspection, setInspection] = useState<VaultBackupInspection | null>(null);
+  const [drill, setDrill] = useState<VaultRecoveryDrill | null>(null);
 
   const exportBackup = async () => {
     setBusy(true);
@@ -54,6 +58,31 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       showToast(isUnlocked ? '已生成加密备份文件' : '已生成备份文件');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '生成备份失败，请重试');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const exportRecoverableBackup = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const { file, skippedEntries } = await exportRecoverableVaultBackupFile('1.1.0', userId);
+      if (!skippedEntries.length) {
+        setError('当前没有无法读取的记录，请使用普通备份。');
+        return;
+      }
+      await downloadTextFile(
+        JSON.stringify(file),
+        `vector-recovery-backup-${new Date().toISOString().slice(0, 10)}.json`,
+        'application/json',
+      );
+      showToast(`已生成可抢救备份，跳过 ${skippedEntries.length} 条无法读取的记录`);
+      setError(
+        `未写入或修改当前资料库。未包含：${skippedEntries.map((entry) => `${entry.id}（${entry.reason}）`).join('；')}`,
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '生成可抢救备份失败');
     } finally {
       setBusy(false);
     }
@@ -105,6 +134,24 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
     }
   };
 
+  const drillRestore = async () => {
+    if (!restoreFile || busy) return;
+    setBusy(true);
+    setError('');
+    setDrill(null);
+    try {
+      const raw: unknown = JSON.parse(await restoreFile.text());
+      const backup = isEncryptedVaultBackup(raw)
+        ? await decryptVaultBackupFile(raw, restorePassword || masterPassword || '')
+        : raw;
+      setDrill(await drillVaultBackupRestore(backup as VaultBackup, restoreMode, userId));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '演练失败，请检查备份文件或密令');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (task === 'draft') {
     const available = hasDraftContent(draft);
     return (
@@ -149,6 +196,9 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       <div className="avatar-reliability-card__actions">
         <button type="button" onClick={() => void exportBackup()} disabled={busy}>
           生成备份
+        </button>
+        <button type="button" onClick={() => void exportRecoverableBackup()} disabled={busy}>
+          生成可抢救备份
         </button>
         <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}>
           选择备份文件
@@ -196,6 +246,9 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
           <button type="button" onClick={() => void inspectBackup()} disabled={busy}>
             {busy ? '检查中…' : '检查备份'}
           </button>
+          <button type="button" onClick={() => void drillRestore()} disabled={busy}>
+            {busy ? '演练中…' : '隔离恢复演练'}
+          </button>
           {inspection && (
             <section className="avatar-reliability-inspection" aria-label="备份检查结果">
               <p>
@@ -231,6 +284,18 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
                 </>
               )}
               <p>链接和媒体地址属于外部或本机引用；检查不会验证它们仍可访问。</p>
+            </section>
+          )}
+          {drill && (
+            <section className="avatar-reliability-inspection" aria-label="隔离恢复演练结果">
+              <p>
+                {drill.canRestore ? '演练通过：可以执行恢复。' : '演练发现冲突：实际恢复会中止。'}
+              </p>
+              <p>
+                将导入记录：{drill.importedCount}；演练后记录：{drill.totalAfter}
+              </p>
+              {drill.conflicts.length > 0 && <p>冲突：{drill.conflicts.join('；')}</p>}
+              <p>{drill.externalReferenceLimitations}</p>
             </section>
           )}
           {restoreMode === 'replace' && (

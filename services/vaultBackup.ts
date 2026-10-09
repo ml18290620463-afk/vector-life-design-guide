@@ -21,6 +21,7 @@ import { useAppStore } from '../stores/appStore';
 import { encryptVaultBackupFile } from './vaultBackupFile';
 import { recoverSourceDeletion } from './sourceDeletion';
 import { storedArray, withLegacyValue } from './vaultLegacyRead';
+import { decodeEntries, type UnreadableEntry } from './readableEntries';
 
 const domainsFor = (userId?: string) => ({
   entries: K.entries,
@@ -171,7 +172,12 @@ export function recoverBackupRestore(): Promise<void> {
   });
   return recovery;
 }
-async function snapshotVaultBackup(version: string, userId?: string, allowProtected = false) {
+async function snapshotVaultBackup(
+  version: string,
+  userId?: string,
+  allowProtected = false,
+  allowUnreadableEntries = false,
+) {
   const domains = domainsFor(userId);
   await loadNowDraft();
   await recoverSourceDeletion();
@@ -184,10 +190,20 @@ async function snapshotVaultBackup(version: string, userId?: string, allowProtec
       const data = Object.fromEntries(
         Object.entries(domains).map(([name, key]) => [name, storedArray(v[key], key) ?? []]),
       ) as VaultBackup['vault']['data'];
-      data.entries = await plaintextEntries(
+      const decoded = await decodeEntries(
         data.entries as DiaryEntry[],
         useAppStore.getState().masterPassword,
       );
+      if (decoded.unreadableEntries.length && !allowUnreadableEntries)
+        throw new Error(`有 ${decoded.unreadableEntries.length} 条记录无法解密，未导出任何文件`);
+      data.entries = decoded.entries;
+      if (decoded.unreadableEntries.length) {
+        const readableIds = new Set(decoded.entries.map((entry) => entry.id));
+        const future = stateFrom(withLegacyValue(v[K.future], K.future));
+        future.events = future.events.filter(
+          (event) => !event.sourceEntryId || readableIds.has(event.sourceEntryId),
+        );
+      }
       const caches = Object.fromEntries(
         cacheKeys.map((key) => [key, JSON.parse(localStorage.getItem(key) ?? '[]')]),
       );
@@ -200,7 +216,16 @@ async function snapshotVaultBackup(version: string, userId?: string, allowProtec
         entries: data.entries as DiaryEntry[],
         vault: {
           data,
-          future: stateFrom(withLegacyValue(v[K.future], K.future)),
+          future: (() => {
+            const future = stateFrom(withLegacyValue(v[K.future], K.future));
+            if (decoded.unreadableEntries.length)
+              future.events = future.events.filter(
+                (event) =>
+                  !event.sourceEntryId ||
+                  (data.entries as DiaryEntry[]).some((entry) => entry.id === event.sourceEntryId),
+              );
+            return future;
+          })(),
           caches,
           draft: (v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined)?.draft ?? null,
         },
@@ -208,6 +233,7 @@ async function snapshotVaultBackup(version: string, userId?: string, allowProtec
       validateVaultBackup(result);
       return {
         backup: result,
+        skippedEntries: decoded.unreadableEntries,
         protectedVault: Boolean(v[K.passwordHash] ?? localStorage.getItem(K.passwordHash)),
       };
     },
@@ -231,6 +257,93 @@ export async function exportVaultBackupFile(version: string, userId?: string) {
   )
     throw new VaultLockedError();
   return result;
+}
+/** Explicitly produces a usable copy of readable records after damage. The source vault is never changed. */
+export async function exportRecoverableVaultBackupFile(version: string, userId?: string) {
+  const session = useAppStore.getState();
+  const { backup, protectedVault, skippedEntries } = await snapshotVaultBackup(
+    version,
+    userId,
+    true,
+    true,
+  );
+  const file = protectedVault
+    ? await encryptVaultBackupFile(backup, session.masterPassword ?? '')
+    : backup;
+  const current = useAppStore.getState();
+  if (
+    current.isUnlocked !== session.isUnlocked ||
+    current.masterPassword !== session.masterPassword
+  )
+    throw new VaultLockedError();
+  return { file, skippedEntries } as {
+    file: VaultBackup | Awaited<ReturnType<typeof encryptVaultBackupFile>>;
+    skippedEntries: UnreadableEntry[];
+  };
+}
+export interface VaultRecoveryDrill {
+  mode: 'merge' | 'replace';
+  canRestore: boolean;
+  importedCount: number;
+  totalAfter: number;
+  conflicts: string[];
+  dataCounts: Record<string, number>;
+  externalReferenceLimitations: string;
+}
+
+/** Computes a restore result in memory only. It does not create restore jobs or write any vault key. */
+export async function drillVaultBackupRestore(
+  backup: VaultBackup,
+  mode: 'merge' | 'replace' = 'merge',
+  userId?: string,
+): Promise<VaultRecoveryDrill> {
+  validateVaultBackup(backup);
+  const localDomains = domainsFor(userId);
+  return preparedVaultTransaction(
+    [...Object.values(localDomains), K.passwordHash, PRIVATE_DRAFT_KEY],
+    async (v) => {
+      const current = await decodeEntries(
+        (storedArray(v[K.entries], K.entries) as DiaryEntry[]) ?? [],
+        useAppStore.getState().masterPassword,
+      );
+      const conflicts = current.unreadableEntries.map(
+        (entry) => `本机记录无法读取：${entry.id}（${entry.reason}）`,
+      );
+      const byId = new Map(current.entries.map((entry) => [entry.id, entry]));
+      for (const entry of backup.entries) {
+        const old = byId.get(entry.id);
+        if (old && canonical(old) !== canonical(entry)) conflicts.push(`记录编号冲突：${entry.id}`);
+      }
+      const oldDraft = v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined;
+      if (
+        mode === 'merge' &&
+        backup.vault.draft &&
+        oldDraft?.draft &&
+        canonical(backup.vault.draft) !== canonical(oldDraft.draft)
+      )
+        conflicts.push('本机和备份都存在不同草稿');
+      const totalAfter =
+        mode === 'replace'
+          ? backup.entries.length
+          : new Set([
+              ...current.entries.map((entry) => entry.id),
+              ...backup.entries.map((entry) => entry.id),
+            ]).size;
+      return {
+        mode,
+        canRestore: conflicts.length === 0,
+        importedCount: backup.entries.length,
+        totalAfter,
+        conflicts,
+        dataCounts: Object.fromEntries(
+          Object.entries(backup.vault.data).map(([key, rows]) => [key, rows.length]),
+        ),
+        externalReferenceLimitations:
+          '演练不会访问外部链接、本机媒体或网络资源，也不会写入当前资料库。',
+      };
+    },
+    true,
+  );
 }
 async function plaintextEntries(
   entries: DiaryEntry[],
