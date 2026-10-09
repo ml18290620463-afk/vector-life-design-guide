@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clear, get, set } from 'idb-keyval';
-import type { DiaryEntry } from '../types';
+import type { DiaryEntry, Principle } from '../types';
 import type { Goal, OutcomeInput } from '../types/future';
 import { DiaryStorageKeys as K } from './diaryStorage';
 import {
@@ -57,6 +57,13 @@ const outcome = (goal: Goal, operationId: string, itemLabel = '黄山'): Outcome
   value: { kind: 'quantity', amount: 1 },
 });
 const total = async (goal: Goal) => goalProgress((await readFutureSnapshot()).state, goal).total;
+const principle = (id = 'principle-1'): Principle => ({
+  id,
+  text: '重要沟通前先定义目标',
+  year: 2026,
+  createdAt: 1,
+  showOnHome: true,
+});
 
 beforeEach(async () => {
   await clear();
@@ -64,6 +71,106 @@ beforeEach(async () => {
 });
 
 describe('Future atomic outcome ledger', () => {
+  it('atomically connects an explicit practice judgment to its linked principle', async () => {
+    await set(K.principles, [principle()]);
+    const action = await saveFutureAction({
+      title: '在客户会前写下决策目标',
+      status: 'pending',
+      resultIntent: 'preparation',
+      principleId: 'principle-1',
+    });
+
+    const record = await recordActionPractice({
+      actionId: action.id,
+      expectedActionRevision: action.revision!,
+      occurredOn: '2026-10-09',
+      status: 'completed',
+      note: '先写清目标后，会议聚焦且推进顺利。',
+      nextStep: 'end',
+      principleFeedback: { principleId: 'principle-1', outcome: 'helpful' },
+    });
+
+    expect(record.principleFeedback).toEqual({
+      principleId: 'principle-1',
+      principleText: '重要沟通前先定义目标',
+      outcome: 'helpful',
+    });
+    const saved = (await get<Principle[]>(K.principles))![0];
+    expect(saved).toMatchObject({
+      derivedFromPracticeIds: [record.id],
+      appliedFeedbackPracticeIds: [record.id],
+      helpfulCount: 1,
+      recallCount: 1,
+      confidence: 0.62,
+    });
+  });
+
+  it('keeps an unrelated practice judgment as context without changing the principle evidence', async () => {
+    await set(K.principles, [principle()]);
+    const action = await saveFutureAction({
+      title: '尝试新的会前准备',
+      status: 'pending',
+      resultIntent: 'preparation',
+      principleId: 'principle-1',
+    });
+
+    const record = await recordActionPractice({
+      actionId: action.id,
+      expectedActionRevision: action.revision!,
+      occurredOn: '2026-10-09',
+      status: 'completed',
+      note: '这次结果主要受外部时间限制影响。',
+      nextStep: 'end',
+      principleFeedback: { principleId: 'principle-1', outcome: 'unrelated' },
+    });
+
+    expect(record.principleFeedback?.outcome).toBe('unrelated');
+    expect((await get<Principle[]>(K.principles))![0]).toMatchObject({
+      id: 'principle-1',
+      confidence: 0.5,
+      recallCount: 0,
+      helpfulCount: 0,
+      partialCount: 0,
+      unhelpfulCount: 0,
+      appliedFeedbackPracticeIds: undefined,
+      derivedFromPracticeIds: undefined,
+    });
+  });
+
+  it('rejects a practice judgment for a principle other than the action link without writing', async () => {
+    await set(K.principles, [principle(), principle('principle-2')]);
+    const action = await saveFutureAction({
+      title: '准备会议议程',
+      status: 'pending',
+      resultIntent: 'preparation',
+      principleId: 'principle-1',
+    });
+    const before = await readFutureSnapshot();
+
+    await expect(
+      recordActionPractice({
+        actionId: action.id,
+        expectedActionRevision: action.revision!,
+        occurredOn: '2026-10-09',
+        status: 'completed',
+        note: '完成准备。',
+        nextStep: 'end',
+        principleFeedback: { principleId: 'principle-2', outcome: 'helpful' },
+      }),
+    ).rejects.toThrow('原则关联已更新');
+
+    expect(await readFutureSnapshot()).toEqual(before);
+    expect(
+      (await get<Principle[]>(K.principles))!.map(({ id, appliedFeedbackPracticeIds }) => ({
+        id,
+        appliedFeedbackPracticeIds,
+      })),
+    ).toEqual([
+      { id: 'principle-1', appliedFeedbackPracticeIds: undefined },
+      { id: 'principle-2', appliedFeedbackPracticeIds: undefined },
+    ]);
+  });
+
   it('keeps independent action practice outside the goal-progress ledger', async () => {
     const action = await saveFutureAction({
       title: '整理旅行证件',

@@ -44,6 +44,28 @@ export const applyPrincipleFeedback = (
   };
 };
 
+/** Apply a voluntary practice outcome once. Practice and entry sources stay separate. */
+export const applyPrinciplePracticeFeedback = (
+  principle: Principle,
+  outcome: ExperienceFeedbackOutcome,
+  now = Date.now(),
+  practiceId?: string,
+): Principle => {
+  if (
+    outcome === 'unrelated' ||
+    (practiceId && principle.appliedFeedbackPracticeIds?.includes(practiceId))
+  )
+    return principle;
+
+  const withFeedback = applyPrincipleFeedback(principle, outcome, now);
+  return {
+    ...withFeedback,
+    appliedFeedbackPracticeIds: practiceId
+      ? [...(principle.appliedFeedbackPracticeIds ?? []), practiceId]
+      : principle.appliedFeedbackPracticeIds,
+  };
+};
+
 export const applyPrincipleFeedbackToLinks = (
   links: PatternPrincipleLink[],
   principleId: string,

@@ -9,6 +9,7 @@ import {
   saveVision,
 } from '../../services/futureRepository';
 import { DiaryStorageKeys as K } from '../../services/diaryStorage';
+import type { Principle } from '../../types';
 
 beforeEach(async () => {
   await clear();
@@ -21,11 +22,16 @@ beforeEach(async () => {
   };
 });
 
-const mount = async (onNavigateModule = vi.fn(), onReflectInPast = vi.fn()) => {
+const mount = async (
+  onNavigateModule = vi.fn(),
+  onReflectInPast = vi.fn(),
+  principles: Principle[] = [],
+) => {
   render(
     <FuturePage
       archiveMode
       entries={[]}
+      principles={principles}
       onSelectEntry={vi.fn()}
       onNavigateModule={onNavigateModule}
       onReflectInPast={onReflectInPast}
@@ -243,6 +249,99 @@ describe('Future page', () => {
     expect(
       screen.getByRole('heading', { name: '践行记录' }).closest('section')?.querySelector('select'),
     ).toBeNull();
+  });
+
+  it('lets a practice explicitly challenge its linked principle and preserves that judgment', async () => {
+    const linkedPrinciple: Principle = {
+      id: 'principle-1',
+      text: '重要沟通前先定义目标',
+      year: 2026,
+      createdAt: 1,
+      showOnHome: true,
+    };
+    await set(K.principles, [linkedPrinciple]);
+    await saveFutureAction({
+      title: '为客户会写下决策目标',
+      scheduledOn: '2000-01-01',
+      resultIntent: 'preparation',
+      status: 'pending',
+      principleId: linkedPrinciple.id,
+    });
+    await mount(vi.fn(), vi.fn(), [linkedPrinciple]);
+    switchToPractice();
+    fireEvent.click(screen.getByRole('button', { name: '待检视 1' }));
+    fireEvent.click(screen.getByRole('button', { name: /为客户会写下决策目标/ }));
+    const dialog = screen.getByRole('dialog', { name: '行动记录' });
+
+    expect(within(dialog).getByText(`关联原则：${linkedPrinciple.text}`)).toBeTruthy();
+    fireEvent.change(within(dialog).getByLabelText('我的判断'), {
+      target: { value: 'unhelpful' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存记录' }));
+
+    await screen.findByText(`原则判断：${linkedPrinciple.text} · 挑战`);
+    expect((await readFutureSnapshot()).state.practiceRecords?.[0].principleFeedback).toEqual({
+      principleId: linkedPrinciple.id,
+      principleText: linkedPrinciple.text,
+      outcome: 'unhelpful',
+    });
+  });
+
+  it('shows an action source chain before editing its planning details', async () => {
+    const linkedPrinciple: Principle = {
+      id: 'principle-1',
+      text: '重要沟通前先定义目标',
+      year: 2026,
+      createdAt: 1,
+      showOnHome: true,
+    };
+    await saveFutureAction({
+      title: '在下次客户会前确定决策目标',
+      status: 'pending',
+      resultIntent: 'preparation',
+      principleId: linkedPrinciple.id,
+      sourceEntryId: 'entry-1',
+      evidenceEntryIds: ['entry-2'],
+      rationale: '把复盘中的有效准备方法用于下一次沟通。',
+    });
+    render(
+      <FuturePage
+        archiveMode
+        entries={[
+          {
+            id: 'entry-1',
+            title: '客户会复盘',
+            content: '...',
+            tags: [],
+            createdAt: 1,
+            isLocked: false,
+          },
+          {
+            id: 'entry-2',
+            title: '会前准备记录',
+            content: '...',
+            tags: [],
+            createdAt: 2,
+            isLocked: false,
+          },
+        ]}
+        principles={[linkedPrinciple]}
+        onSelectEntry={vi.fn()}
+      />,
+    );
+    await screen.findByRole('heading', { name: '行动规划' });
+    fireEvent.click(
+      screen.getByRole('button', { name: /编辑行动规划：行动「在下次客户会前确定决策目标」/ }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: '查看行动脉络' }));
+
+    const dialog = screen.getByRole('dialog', { name: '行动脉络' });
+    expect(
+      within(dialog).getByText('行动依据：把复盘中的有效准备方法用于下一次沟通。'),
+    ).toBeTruthy();
+    expect(within(dialog).getByText(`关联原则：${linkedPrinciple.text}`)).toBeTruthy();
+    expect(within(dialog).getByText('客户会复盘')).toBeTruthy();
+    expect(within(dialog).getByText('会前准备记录')).toBeTruthy();
   });
 
   it('links a completed action to past and avatar without creating another record', async () => {

@@ -184,6 +184,7 @@ export const sanitizePrinciple = (principle: Principle): Principle => ({
   derivedFromPracticeIds: sanitizeStringArray(principle.derivedFromPracticeIds),
   sourcePatternIds: sanitizeStringArray(principle.sourcePatternIds),
   appliedFeedbackEntryIds: sanitizeStringArray(principle.appliedFeedbackEntryIds),
+  appliedFeedbackPracticeIds: sanitizeStringArray(principle.appliedFeedbackPracticeIds),
   confidence:
     typeof principle.confidence === 'number' && Number.isFinite(principle.confidence)
       ? Math.min(1, Math.max(0, principle.confidence))

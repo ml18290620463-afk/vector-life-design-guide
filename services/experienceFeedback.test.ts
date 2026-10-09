@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiaryEntry, Principle } from '../types';
 import {
   applyPrincipleFeedback,
+  applyPrinciplePracticeFeedback,
   applyPrincipleFeedbackToLinks,
   findRelatedPrinciples,
   getPrincipleConfidence,
@@ -55,6 +56,20 @@ describe('experienceFeedback', () => {
   it('does not mutate a principle when the association is unrelated', () => {
     const principle = buildPrinciple();
     expect(applyPrincipleFeedback(principle, 'unrelated')).toBe(principle);
+  });
+
+  it('records a practice outcome once without sharing entry-feedback identifiers', () => {
+    const first = applyPrinciplePracticeFeedback(buildPrinciple(), 'helpful', 100, 'practice-1');
+    const repeated = applyPrinciplePracticeFeedback(first, 'helpful', 101, 'practice-1');
+
+    expect(first).toMatchObject({
+      appliedFeedbackPracticeIds: ['practice-1'],
+      helpfulCount: 1,
+      recallCount: 1,
+      confidence: 0.62,
+    });
+    expect(first.appliedFeedbackEntryIds).toBeUndefined();
+    expect(repeated).toBe(first);
   });
 
   it('validates the relationship after a helpful real-world result', () => {

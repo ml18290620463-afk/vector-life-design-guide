@@ -1,4 +1,5 @@
 import type { AvatarMemorySourceRef } from '../features/avatar/types';
+import type { ExperienceFeedbackOutcome } from './models';
 import type { ActionItem, ActionItemStatus, DiaryEntry } from './models';
 
 export type DateOnly = string;
@@ -69,6 +70,12 @@ export interface ActionPracticeRecord {
   status: ActionFeedbackStatus;
   note: string;
   nextStep: ActionFeedbackNextStep;
+  /** A voluntary evaluation of the action's linked principle, never inferred from completion. */
+  principleFeedback?: {
+    principleId: string;
+    principleText: string;
+    outcome: ExperienceFeedbackOutcome;
+  };
   occurredOn: DateOnly;
   createdAt: number;
 }
@@ -158,6 +165,10 @@ export interface ActionPracticeInput {
   note: string;
   nextStep: ActionFeedbackNextStep;
   occurredOn: DateOnly;
+  principleFeedback?: {
+    principleId: string;
+    outcome: ExperienceFeedbackOutcome;
+  };
 }
 export interface FutureSnapshot {
   state: FutureState;

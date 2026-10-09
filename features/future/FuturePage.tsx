@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { PracticeFeedbackFields } from './PracticeFeedbackFields';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import type { ActionItem, DiaryEntry } from '../../types';
+import type { ActionItem, DiaryEntry, ExperienceFeedbackOutcome, Principle } from '../../types';
 import type {
   ActionFeedbackNextStep,
   ActionFeedbackStatus,
@@ -47,13 +47,18 @@ interface FuturePageProps {
   onReflectInPast?: (context: PracticeReflectionContext) => void;
   initialGoalId?: string;
   initialActionContext?: ActionDraftContext | null;
+  principles?: Principle[];
 }
 const field = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
 export function FuturePage({
   onNavigateModule,
   onReflectInPast,
   initialActionContext,
-  ..._props
+  entries,
+  principles = [],
+  onSelectEntry: _onSelectEntry,
+  archiveMode: _archiveMode,
+  initialGoalId: _initialGoalId,
 }: FuturePageProps) {
   const { state, actions, ready, error, refresh, protectedVault } = useFuture();
   const [section, setSection] = useState<FutureSection>('design');
@@ -67,6 +72,10 @@ export function FuturePage({
   const [practicePanelOpen, setPracticePanelOpen] = useState(false);
   const [practiceStatus, setPracticeStatus] = useState<ActionFeedbackStatus>('completed');
   const [practiceNextStep, setPracticeNextStep] = useState<ActionFeedbackNextStep>('end');
+  const [practicePrincipleOutcome, setPracticePrincipleOutcome] = useState<
+    ExperienceFeedbackOutcome | ''
+  >('');
+  const [selectedActionDetails, setSelectedActionDetails] = useState<ActionItem | null>(null);
   const [duplicateVision, setDuplicateVision] = useState<Vision | null>(null);
   const [pendingVision, setPendingVision] = useState<PendingVision | null>(null);
   const saving = useRef(false);
@@ -203,6 +212,7 @@ export function FuturePage({
       actionTitle: record.actionTitle,
       nextAction: record.nextAction,
       feedback: record,
+      principleFeedback: record.principleFeedback,
       practiceRecordId: record.id,
       occurredOn: record.occurredOn,
       createdAt: record.createdAt,
@@ -214,6 +224,7 @@ export function FuturePage({
       actionTitle: undefined,
       nextAction: undefined,
       feedback: event.actionFeedback!,
+      principleFeedback: undefined,
       practiceRecordId: undefined,
       occurredOn: event.occurredOn,
       createdAt: event.createdAt,
@@ -234,6 +245,24 @@ export function FuturePage({
   const selectedFeedbackGoal = selectedFeedbackAction?.goalId
     ? state.goals.find((goal) => goal.id === selectedFeedbackAction.goalId)
     : undefined;
+  const selectedFeedbackPrinciple = selectedFeedbackAction?.principleId
+    ? principles.find((principle) => principle.id === selectedFeedbackAction.principleId)
+    : undefined;
+  const actionDetailPractices = selectedActionDetails
+    ? (state.practiceRecords ?? [])
+        .filter((record) => record.actionId === selectedActionDetails.id)
+        .sort((left, right) => right.createdAt - left.createdAt)
+    : [];
+  const actionDetailEvidence = selectedActionDetails
+    ? Array.from(
+        new Set(
+          [
+            selectedActionDetails.sourceEntryId,
+            ...(selectedActionDetails.evidenceEntryIds ?? []),
+          ].filter((id): id is string => Boolean(id)),
+        ),
+      )
+    : [];
 
   const savePendingVision = () => {
     if (!pendingVision) return;
@@ -332,6 +361,13 @@ export function FuturePage({
           note,
           nextStep,
           nextAction: nextStep === 'adjust' ? field(data, 'nextAction') : undefined,
+          principleFeedback:
+            selectedFeedbackPrinciple && practicePrincipleOutcome
+              ? {
+                  principleId: selectedFeedbackPrinciple.id,
+                  outcome: practicePrincipleOutcome,
+                }
+              : undefined,
         }),
       false,
     ).then((saved) => {
@@ -398,6 +434,7 @@ export function FuturePage({
                 nextAction,
                 note,
                 feedback,
+                principleFeedback,
                 practiceRecordId,
                 occurredOn,
               }) => (
@@ -407,6 +444,21 @@ export function FuturePage({
                   {note && <p>{note}</p>}
                   <small>后续：{actionNextStepLabel[feedback.nextStep]}</small>
                   {nextAction && <p>调整后的行动：{nextAction}</p>}
+                  {principleFeedback && (
+                    <small>
+                      原则判断：{principleFeedback.principleText} ·{' '}
+                      {
+                        (
+                          {
+                            helpful: '支持',
+                            partial: '部分支持',
+                            unhelpful: '挑战',
+                            unrelated: '暂不评价',
+                          } as const
+                        )[principleFeedback.outcome]
+                      }
+                    </small>
+                  )}
                   {feedback.status === 'completed' && (onReflectInPast || onNavigateModule) && (
                     <button
                       type="button"
@@ -459,6 +511,9 @@ export function FuturePage({
                 ? '完成待检视行动后，记录会在这里出现。'
                 : '先规划一个行动，再在这里留下真实进展。'}
             </p>
+            {!feedbackCandidates.length && (
+              <small>经历 → 当前理解 → 下一次尝试 → 结果，会在这里形成可回看的闭环。</small>
+            )}
             {!feedbackCandidates.length && (
               <button
                 type="button"
@@ -520,6 +575,7 @@ export function FuturePage({
                         setPracticeEditorSource('pending');
                         setPracticeStatus('completed');
                         setPracticeNextStep('end');
+                        setPracticePrincipleOutcome('');
                         setSelectedFeedbackActionId(action.id);
                       }}
                     >
@@ -565,6 +621,9 @@ export function FuturePage({
                   nextStep={practiceNextStep}
                   setStatus={setPracticeStatus}
                   setNextStep={setPracticeNextStep}
+                  principle={selectedFeedbackPrinciple}
+                  principleOutcome={practicePrincipleOutcome}
+                  setPrincipleOutcome={setPracticePrincipleOutcome}
                 />
                 {notice && <p role="alert">{notice}</p>}
                 <div className="future-feedback-submit">
@@ -613,6 +672,7 @@ export function FuturePage({
             if (duplicateVision) openEditor({ kind: 'vision', value: duplicateVision });
           }}
           onSaveDuplicate={savePendingVision}
+          onViewActionDetails={setSelectedActionDetails}
           onDelete={() => {
             if (!editor.value) return;
             if (editor.kind === 'vision')
@@ -622,6 +682,78 @@ export function FuturePage({
             else void run(() => deleteFutureAction(editor.value!.id, editor.value!.revision ?? 0));
           }}
         />
+      )}
+      {selectedActionDetails && (
+        <section
+          className="future-practice-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="行动脉络"
+        >
+          <header className="future-section-header">
+            <h2>行动脉络</h2>
+            <button type="button" onClick={() => setSelectedActionDetails(null)}>
+              关闭
+            </button>
+          </header>
+          <section>
+            <h3>{selectedActionDetails.title}</h3>
+            {selectedActionDetails.rationale && <p>行动依据：{selectedActionDetails.rationale}</p>}
+            {selectedActionDetails.principleId && (
+              <p>
+                关联原则：
+                {principles.find((item) => item.id === selectedActionDetails.principleId)?.text ??
+                  '关联原则已删除'}
+              </p>
+            )}
+          </section>
+          <section>
+            <h3>来源经历</h3>
+            {actionDetailEvidence.length ? (
+              <ul>
+                {actionDetailEvidence.map((id) => {
+                  const entry = entries.find((item) => item.id === id);
+                  return <li key={id}>{entry ? entry.title : '来源已删除'}</li>;
+                })}
+              </ul>
+            ) : (
+              <p>未关联来源经历。</p>
+            )}
+          </section>
+          <section>
+            <h3>实践过程</h3>
+            {actionDetailPractices.length ? (
+              <ol>
+                {actionDetailPractices.map((record) => (
+                  <li key={record.id}>
+                    <strong>
+                      {record.occurredOn} · {actionExecutionStatusLabel[record.status]}
+                    </strong>
+                    {record.note && <p>{record.note}</p>}
+                    {record.nextAction && <p>调整后的行动：{record.nextAction}</p>}
+                    {record.principleFeedback && (
+                      <p>
+                        原则判断：{record.principleFeedback.principleText} ·{' '}
+                        {
+                          (
+                            {
+                              helpful: '支持',
+                              partial: '部分支持',
+                              unhelpful: '挑战',
+                              unrelated: '暂不评价',
+                            } as const
+                          )[record.principleFeedback.outcome]
+                        }
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p>尚无实践记录。</p>
+            )}
+          </section>
+        </section>
       )}
     </main>
   );

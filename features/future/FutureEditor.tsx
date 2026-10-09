@@ -73,6 +73,7 @@ interface FutureEditorProps {
   onContinueExisting?: () => void;
   onSaveDuplicate?: () => void;
   onDelete?: () => void;
+  onViewActionDetails?: (action: ActionItem) => void;
 }
 
 export function FutureEditor({
@@ -88,6 +89,7 @@ export function FutureEditor({
   onContinueExisting,
   onSaveDuplicate,
   onDelete,
+  onViewActionDetails,
 }: FutureEditorProps) {
   const isNewDesign = !editor.value;
   // A fresh vision is the only editor made up of one writing field.  Let that
@@ -249,29 +251,41 @@ export function FutureEditor({
             </div>
           )}
           {editor.value && onDelete && (
-            <div className="future-delete-control">
-              {confirmingDelete ? (
-                <div className="future-delete-confirmation" role="alert">
-                  <p>删除后无法恢复，确定删除吗？</p>
-                  <div className="future-toolbar">
-                    <button type="button" onClick={() => setConfirmingDelete(false)}>
-                      取消
-                    </button>
-                    <button type="button" className="future-danger" onClick={onDelete}>
-                      确认删除
-                    </button>
-                  </div>
+            <>
+              {editor.kind === 'action' && onViewActionDetails && (
+                <div className="future-delete-control">
+                  <button
+                    type="button"
+                    onClick={() => onViewActionDetails(editor.value as ActionItem)}
+                  >
+                    查看行动脉络
+                  </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className="future-delete-button"
-                  onClick={() => setConfirmingDelete(true)}
-                >
-                  删除{title}
-                </button>
               )}
-            </div>
+              <div className="future-delete-control">
+                {confirmingDelete ? (
+                  <div className="future-delete-confirmation" role="alert">
+                    <p>删除后无法恢复，确定删除吗？</p>
+                    <div className="future-toolbar">
+                      <button type="button" onClick={() => setConfirmingDelete(false)}>
+                        取消
+                      </button>
+                      <button type="button" className="future-danger" onClick={onDelete}>
+                        确认删除
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="future-delete-button"
+                    onClick={() => setConfirmingDelete(true)}
+                  >
+                    删除{title}
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </fieldset>
       </form>

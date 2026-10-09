@@ -1,4 +1,5 @@
 import type { ActionFeedbackNextStep, ActionFeedbackStatus } from '../../types/future';
+import type { ExperienceFeedbackOutcome, Principle } from '../../types';
 import { actionExecutionStatusHint } from '../../services/actionPracticeSemantics';
 
 interface Props {
@@ -6,8 +7,19 @@ interface Props {
   nextStep: ActionFeedbackNextStep;
   setStatus: (status: ActionFeedbackStatus) => void;
   setNextStep: (step: ActionFeedbackNextStep) => void;
+  principle?: Principle;
+  principleOutcome?: ExperienceFeedbackOutcome | '';
+  setPrincipleOutcome?: (outcome: ExperienceFeedbackOutcome | '') => void;
 }
-export function PracticeFeedbackFields({ status, nextStep, setStatus, setNextStep }: Props) {
+export function PracticeFeedbackFields({
+  status,
+  nextStep,
+  setStatus,
+  setNextStep,
+  principle,
+  principleOutcome = '',
+  setPrincipleOutcome,
+}: Props) {
   return (
     <>
       <label>
@@ -34,6 +46,28 @@ export function PracticeFeedbackFields({ status, nextStep, setStatus, setNextSte
         实际发生了什么（可选）
         <textarea name="note" />
       </label>
+      {principle && setPrincipleOutcome && (
+        <fieldset className="future-principle-feedback">
+          <legend>这次实践与当前理解的关系（可选）</legend>
+          <p>关联原则：{principle.text}</p>
+          <label>
+            我的判断
+            <select
+              name="principleOutcome"
+              value={principleOutcome}
+              onChange={(event) =>
+                setPrincipleOutcome(event.target.value as ExperienceFeedbackOutcome | '')
+              }
+            >
+              <option value="">暂不评价</option>
+              <option value="helpful">结果支持这条原则</option>
+              <option value="partial">部分支持：条件或结果有限</option>
+              <option value="unhelpful">结果挑战这条原则</option>
+              <option value="unrelated">本次不能据此评价</option>
+            </select>
+          </label>
+        </fieldset>
+      )}
       {(status === 'partial' || status === 'not_completed') && (
         <details>
           <summary>下一步（默认继续完成）</summary>

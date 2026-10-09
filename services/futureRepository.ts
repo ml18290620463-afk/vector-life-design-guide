@@ -1,6 +1,14 @@
+/* eslint-disable max-lines -- This repository keeps future-state transactions together for atomic writes. */
 import type { AvatarMemorySourceRef } from '../features/avatar/types';
-import type { ActionItem, DiaryEntry } from '../types';
-import type { ActionPracticeInput, FutureState, Goal, OutcomeInput, Vision } from '../types/future';
+import type { ActionItem, DiaryEntry, Principle } from '../types';
+import type {
+  ActionPracticeInput,
+  ActionPracticeRecord,
+  FutureState,
+  Goal,
+  OutcomeInput,
+  Vision,
+} from '../types/future';
 import {
   emptyFutureState,
   goalProgress,
@@ -16,7 +24,8 @@ import {
   units,
 } from './futureDomain';
 import { DiaryStorageKeys as K } from './diaryStorage';
-import { sanitizeActionItem } from './diaryDataRead';
+import { sanitizeActionItem, sanitizePrinciple } from './diaryDataRead';
+import { applyPrinciplePracticeFeedback } from './experienceFeedback';
 import { generateSecureId } from './idGenerator';
 import { vaultTransaction, VaultLockedError } from './vaultTransaction';
 import { storedArray, withLegacyValue } from './vaultLegacyRead';
@@ -36,7 +45,7 @@ export {
   units,
 };
 
-const keys = [K.future, K.actions, K.entries, K.backup, K.passwordHash];
+const keys = [K.future, K.actions, K.entries, K.principles, K.backup, K.passwordHash];
 export function readFutureSnapshot() {
   return vaultTransaction(
     keys,
@@ -66,6 +75,9 @@ function command<T>(fn: (state: FutureState, values: Record<string, unknown>) =>
     const state = stateFrom(withLegacyValue(values[K.future], K.future));
     values[K.actions] = storedArray<ActionItem>(values[K.actions], K.actions);
     values[K.entries] = storedArray<DiaryEntry>(values[K.entries], K.entries);
+    values[K.principles] = (storedArray<Principle>(values[K.principles], K.principles) ?? []).map(
+      sanitizePrinciple,
+    );
     const result = fn(state, values);
     state.revision += 1;
     values[K.future] = stateFrom(state);
@@ -319,8 +331,41 @@ export async function recordActionPractice(input: ActionPracticeInput) {
           ? 'abandoned'
           : 'active';
     const reviewedAt = Date.now();
+    const recordId = generateSecureId('practice');
+    const requestedFeedback = input.principleFeedback;
+    let principleFeedback: ActionPracticeRecord['principleFeedback'];
+    if (requestedFeedback) {
+      if (!['helpful', 'partial', 'unhelpful', 'unrelated'].includes(requestedFeedback.outcome))
+        throw new Error('原则反馈无效');
+      if (requestedFeedback.principleId !== action.principleId)
+        throw new Error('原则关联已更新，请重新选择');
+      const principles = (values[K.principles] as Principle[] | undefined) ?? [];
+      const principle = principles.find(
+        (candidate) => candidate.id === requestedFeedback.principleId,
+      );
+      if (!principle) throw new Error('关联原则已删除，请重新选择');
+      principleFeedback = {
+        principleId: principle.id,
+        principleText: principle.text,
+        outcome: requestedFeedback.outcome,
+      };
+      if (requestedFeedback.outcome !== 'unrelated') {
+        const updated = applyPrinciplePracticeFeedback(
+          principle,
+          requestedFeedback.outcome,
+          reviewedAt,
+          recordId,
+        );
+        updated.derivedFromPracticeIds = Array.from(
+          new Set([...(updated.derivedFromPracticeIds ?? []), recordId]),
+        );
+        values[K.principles] = principles.map((candidate) =>
+          candidate.id === principle.id ? updated : candidate,
+        );
+      }
+    }
     const record = {
-      id: generateSecureId('practice'),
+      id: recordId,
       actionId: action.id,
       actionTitle: action.title,
       nextAction,
@@ -329,6 +374,7 @@ export async function recordActionPractice(input: ActionPracticeInput) {
       nextStep: input.nextStep,
       occurredOn: input.occurredOn,
       createdAt: reviewedAt,
+      principleFeedback,
     };
     state.practiceRecords = [record, ...(state.practiceRecords ?? [])];
     values[K.actions] = actions.map((candidate) =>

@@ -60,6 +60,8 @@ export interface Principle {
   confidence?: number;
   recallCount?: number;
   appliedFeedbackEntryIds?: string[];
+  /** Practice records whose explicit outcome was used to update this principle. */
+  appliedFeedbackPracticeIds?: string[];
   helpfulCount?: number;
   partialCount?: number;
   unhelpfulCount?: number;
