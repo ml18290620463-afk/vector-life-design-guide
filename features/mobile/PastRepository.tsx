@@ -112,7 +112,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   onDeleteEntries,
   onOpenFutureGoal,
   onOpenFutureAction,
-  onOpenNow,
 }) => {
   const t = TRANSLATIONS[language];
   const [section, setSection] = useState<PastRepositorySection>(initialSection ?? 'timeline');
@@ -352,21 +351,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       detail: activePrinciples.length,
     },
   ];
-  const hasFilters = Boolean(
-    filters.tags?.length ||
-    filters.from !== undefined ||
-    filters.to !== undefined ||
-    filters.linkedTo,
-  );
-  const updateDateFilter = (key: 'from' | 'to', value: string) => {
-    setFilters((current) => ({
-      ...current,
-      [key]: value
-        ? new Date(`${value}T${key === 'to' ? '23:59:59.999' : '00:00:00.000'}`).getTime()
-        : undefined,
-    }));
-    setSelectedEntryIds(new Set());
-  };
+  const hasFilters = Boolean(filters.tags?.length);
 
   const renderTimelineRows = (isManaging = false) => {
     if (timelineRows.length === 0) {
@@ -377,8 +362,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               ? '没有找到相关记录。'
               : 'No matching records found.'
             : language === 'zh'
-              ? '还没有记录。请前往「现在」写入。'
-              : 'No records yet. Write in Now.'}
+              ? '还没有记录。'
+              : 'No records yet.'}
         </p>
       );
     }
@@ -477,11 +462,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     setTimelineQuery(event.target.value);
                     setSelectedEntryIds(new Set());
                   }}
-                  placeholder={
-                    language === 'zh'
-                      ? '搜索记录、原则或行动'
-                      : 'Search records, principles, or actions'
-                  }
+                  placeholder={language === 'zh' ? '搜索关键词或标签' : 'Search keywords or tags'}
                 />
                 {timelineQuery.length > 0 && (
                   <button
@@ -512,24 +493,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               className="mobile-past-filters"
               aria-label={language === 'zh' ? '筛选记录' : 'Filter records'}
             >
-              <label>
-                {language === 'zh' ? '从' : 'From'}
-                <input
-                  type="date"
-                  aria-label={language === 'zh' ? '开始日期' : 'Start date'}
-                  value={filters.from ? new Date(filters.from).toISOString().slice(0, 10) : ''}
-                  onChange={(event) => updateDateFilter('from', event.target.value)}
-                />
-              </label>
-              <label>
-                {language === 'zh' ? '到' : 'To'}
-                <input
-                  type="date"
-                  aria-label={language === 'zh' ? '结束日期' : 'End date'}
-                  value={filters.to ? new Date(filters.to).toISOString().slice(0, 10) : ''}
-                  onChange={(event) => updateDateFilter('to', event.target.value)}
-                />
-              </label>
               <select
                 aria-label={language === 'zh' ? '按标签筛选' : 'Filter by tag'}
                 value={filters.tags?.[0] ?? ''}
@@ -547,21 +510,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     {tag}
                   </option>
                 ))}
-              </select>
-              <select
-                aria-label={language === 'zh' ? '按关联筛选' : 'Filter by relation'}
-                value={filters.linkedTo ?? ''}
-                onChange={(event) => {
-                  const linkedTo = event.target.value as PastSearchFilters['linkedTo'] | '';
-                  setFilters((current) => ({ ...current, linkedTo: linkedTo || undefined }));
-                  setSelectedEntryIds(new Set());
-                }}
-              >
-                <option value="">{language === 'zh' ? '所有关联' : 'All relations'}</option>
-                <option value="action">{language === 'zh' ? '关联行动' : 'Linked actions'}</option>
-                <option value="principle">
-                  {language === 'zh' ? '关联原则' : 'Linked principles'}
-                </option>
               </select>
               {hasFilters && (
                 <button type="button" onClick={() => setFilters({})}>
@@ -626,17 +574,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 </ul>
               </aside>
             )}
-            {!entries.some((entry) => !entry.isSample) && onOpenNow && !hasTimelineQuery && (
-              <aside
-                className="mobile-past-first-record"
-                aria-label={language === 'zh' ? '开始记录' : 'Start journaling'}
-              >
-                <p>{language === 'zh' ? '写下此刻，留待回看。' : 'Save a moment to revisit.'}</p>
-                <button type="button" onClick={onOpenNow}>
-                  {language === 'zh' ? '写下第一条记录' : 'Write your first entry'}
-                </button>
-              </aside>
-            )}
             {renderTimelineRows()}
           </div>
         )}
@@ -679,36 +616,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               </button>
             </header>
             <div className="past-bulk-editor-screen__content">
-              <div className="mobile-past-search">
-                <Search className="h-4 w-4" aria-hidden="true" />
-                <input
-                  type="search"
-                  aria-label={language === 'zh' ? '搜索记录' : 'Search records'}
-                  value={timelineQuery}
-                  onChange={(event) => {
-                    setTimelineQuery(event.target.value);
-                    setSelectedEntryIds(new Set());
-                  }}
-                  placeholder={
-                    language === 'zh'
-                      ? '搜索记录、原则或行动'
-                      : 'Search records, principles, or actions'
-                  }
-                />
-                {timelineQuery.length > 0 && (
-                  <button
-                    type="button"
-                    className="mobile-past-search__clear"
-                    aria-label={language === 'zh' ? '清除搜索' : 'Clear search'}
-                    onClick={() => {
-                      setTimelineQuery('');
-                      setSelectedEntryIds(new Set());
-                    }}
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                )}
-              </div>
               <p className="past-bulk-editor-screen__count" aria-live="polite">
                 {language === 'zh'
                   ? `已选 ${selectedEntryIds.size} 条`
