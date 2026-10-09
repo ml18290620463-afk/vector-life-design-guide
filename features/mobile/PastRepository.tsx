@@ -24,7 +24,6 @@ import { currentPrinciples } from '../../services/principleRevision';
 import {
   availablePastTags,
   buildPastEntryRelationIndex,
-  buildDeterministicReview,
   filterPastEntries,
   type PastSearchFilters,
 } from './pastSearch';
@@ -230,10 +229,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       filterPastEntries(textMatchedEntries, filters, safeActions, activePrinciples, relationIndex),
     [textMatchedEntries, filters, safeActions, activePrinciples, relationIndex],
   );
-  const deterministicReview = useMemo(
-    () => buildDeterministicReview(timelineEntries, activePrinciples, safeActions),
-    [timelineEntries, activePrinciples, safeActions],
-  );
   const visibleEntryIds = useMemo(
     () => timelineEntries.map((entry) => entry.id),
     [timelineEntries],
@@ -404,7 +399,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                   selectionMode={isManaging}
                   selected={selectedEntryIds.has(row.id)}
                   onToggleSelection={toggleEntrySelection}
-                  onOpenFutureAction={onOpenFutureAction}
                 />
               </li>
             ),
@@ -517,11 +511,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 </button>
               )}
             </div>
-            <p className="mobile-past-filter-result" role="status">
-              {language === 'zh'
-                ? `显示 ${timelineEntries.length} 条记录`
-                : `${timelineEntries.length} records shown`}
-            </p>
             {deleteStatus && (
               <p className="mobile-past-delete-status" role="status">
                 {deleteStatus}
@@ -540,37 +529,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                       <span>{source.text}</span>
                     </li>
                   ))}
-                </ul>
-              </aside>
-            )}
-            {deterministicReview.entries.length > 0 && (
-              <aside
-                className="mobile-past-fact-review"
-                aria-label={language === 'zh' ? '事实回顾' : 'Fact review'}
-              >
-                <strong>{language === 'zh' ? '事实回顾' : 'Fact review'}</strong>
-                <p>
-                  {language === 'zh'
-                    ? '以下内容均来自你已保存的资料，不包含模型推断。'
-                    : 'Everything below comes from your saved data; no model inference is included.'}
-                </p>
-                <ul>
-                  <li>
-                    {language === 'zh' ? '最近记录：' : 'Recent records: '}
-                    {deterministicReview.entries.map((entry) => entry.title).join('、')}
-                  </li>
-                  {deterministicReview.principles.length > 0 && (
-                    <li>
-                      {language === 'zh' ? '已有原则：' : 'Existing principles: '}
-                      {deterministicReview.principles.map((principle) => principle.text).join('、')}
-                    </li>
-                  )}
-                  {deterministicReview.actions.length > 0 && (
-                    <li>
-                      {language === 'zh' ? '关联行动：' : 'Related actions: '}
-                      {deterministicReview.actions.map((action) => action.title).join('、')}
-                    </li>
-                  )}
                 </ul>
               </aside>
             )}

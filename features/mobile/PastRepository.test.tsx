@@ -52,7 +52,7 @@ const renderRepository = ({
   );
 
 describe('PastRepository', () => {
-  it('offers a record as explicit action context', () => {
+  it('keeps record cards free of action prompts and review annotations', () => {
     const onOpenFutureAction = vi.fn();
     render(
       <PastRepository
@@ -68,12 +68,10 @@ describe('PastRepository', () => {
         onOpenFutureAction={onOpenFutureAction}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '作为行动依据' }));
-    expect(onOpenFutureAction).toHaveBeenCalledWith({
-      sourceEntryId: 'decision',
-      evidenceEntryIds: ['decision'],
-      rationale: '项目复盘',
-    });
+    expect(screen.queryByRole('button', { name: '作为行动依据' })).toBeNull();
+    expect(screen.queryByText('事实回顾')).toBeNull();
+    expect(screen.queryByText('显示 1 条记录')).toBeNull();
+    expect(onOpenFutureAction).not.toHaveBeenCalled();
   });
 
   it('keeps past focused on review and user-maintained principles', () => {
@@ -117,7 +115,7 @@ describe('PastRepository', () => {
     );
     renderRepository({ entries });
 
-    expect(screen.getByText('显示 101 条记录')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: '回看' }).textContent).toContain('101');
     expect(screen.getByText('记录 100')).toBeTruthy();
     expect(screen.queryByText('记录 0')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '加载更多（剩余 1 条）' }));
