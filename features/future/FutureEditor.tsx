@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ActionItem } from '../../types';
-import type { Goal, Vision, FutureState } from '../../types/future';
+import type { ActionDraftContext, Goal, Vision, FutureState } from '../../types/future';
 
 export type Editor =
   | { kind: 'vision'; value?: Vision }
   | { kind: 'goal'; value?: Goal; visionId?: string }
-  | { kind: 'action'; value?: ActionItem; goalId?: string; scheduledOn?: string };
+  | {
+      kind: 'action';
+      value?: ActionItem;
+      goalId?: string;
+      scheduledOn?: string;
+      context?: ActionDraftContext;
+    };
 
 function Sheet({
   title,
@@ -183,6 +189,11 @@ export function FutureEditor({
 
           {editor.kind === 'action' && (
             <>
+              {editor.context?.rationale && (
+                <p className="future-action-context" role="status">
+                  行动依据：{editor.context.rationale}
+                </p>
+              )}
               <label>
                 行动内容
                 <textarea name="title" required defaultValue={editor.value?.title} autoFocus />

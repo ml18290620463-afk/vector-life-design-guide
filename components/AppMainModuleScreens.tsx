@@ -21,7 +21,7 @@ import { DesktopNowFrame } from '../features/now/components/DesktopNowFrame';
 import { ScreenLoader } from './ScreenLoader';
 import { AppPageFrame } from './AppPageFrame';
 import type { AvatarLaunchContext } from '../features/avatar/types';
-import type { PracticeReflectionContext } from '../types/future';
+import type { ActionDraftContext, PracticeReflectionContext } from '../types/future';
 import type { PrincipleRevisionKind } from '../services/principleRevision';
 
 type AppMainModuleScreensProps = {
@@ -109,6 +109,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   avatarLaunchContext,
 }) => {
   const [futureGoalId, setFutureGoalId] = useState<string>();
+  const [futureActionContext, setFutureActionContext] = useState<ActionDraftContext | null>(null);
   const [pastSection, setPastSection] = useState<'timeline' | 'principle'>('timeline');
   const [pastQuery, setPastQuery] = useState('');
   const rememberPastView = useCallback(
@@ -122,6 +123,10 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
     useState<PracticeReflectionContext | null>(null);
   const openFutureGoal = (goalId: string) => {
     setFutureGoalId(goalId);
+    (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('future');
+  };
+  const openFutureAction = (context: ActionDraftContext) => {
+    setFutureActionContext(context);
     (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('future');
   };
   const openPastReflection = useCallback(
@@ -153,6 +158,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
                 onPracticeReflectionContextDismiss={() => setPracticeReflectionContext(null)}
                 onOpenNow={() => (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('now')}
                 onOpenFutureGoal={openFutureGoal}
+                onOpenFutureAction={openFutureAction}
                 language={language}
                 theme={theme}
                 entries={entries}
@@ -169,6 +175,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             {appState === AppState.FUTURE && (
               <FuturePage
                 initialGoalId={futureGoalId}
+                initialActionContext={futureActionContext}
                 entries={entries}
                 onSelectEntry={onSelectEntry}
                 onNavigateModule={onMobileTabChange}
@@ -214,6 +221,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               onPracticeReflectionContextDismiss={() => setPracticeReflectionContext(null)}
               onOpenNow={() => (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('now')}
               onOpenFutureGoal={openFutureGoal}
+              onOpenFutureAction={openFutureAction}
               language={language}
               theme={theme}
               entries={entries}
@@ -261,6 +269,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
           <AppPageFrame activeTab="future" language={language} onNavigate={onMainModuleNavigate}>
             <FuturePage
               initialGoalId={futureGoalId}
+              initialActionContext={futureActionContext}
               entries={entries}
               onSelectEntry={onSelectEntry}
               onNavigateModule={onMainModuleNavigate}

@@ -18,7 +18,7 @@ import { MobilePastTimelineEntry } from './MobilePastTimelineEntry';
 import type { PastRepositorySection } from './types';
 import { useFuture } from '../../hooks/useFuture';
 import { goalProgress } from '../../services/futureRepository';
-import type { PracticeReflectionContext } from '../../types/future';
+import type { ActionDraftContext, PracticeReflectionContext } from '../../types/future';
 import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
 
@@ -34,6 +34,7 @@ interface PastRepositoryProps {
   onOpenAvatar?: () => void;
   onOpenNow?: () => void;
   onOpenFutureGoal?: (goalId: string) => void;
+  onOpenFutureAction?: (context: ActionDraftContext) => void;
   language: Language;
   theme?: Theme;
   entries: DiaryEntry[];
@@ -101,6 +102,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   onSelectEntry,
   onDeleteEntries,
   onOpenFutureGoal,
+  onOpenFutureAction,
   onOpenNow,
 }) => {
   const t = TRANSLATIONS[language];
@@ -367,6 +369,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 selectionMode={isManaging}
                 selected={selectedEntryIds.has(row.id)}
                 onToggleSelection={toggleEntrySelection}
+                onOpenFutureAction={onOpenFutureAction}
               />
             </li>
           ),

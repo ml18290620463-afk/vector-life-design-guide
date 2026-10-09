@@ -1,9 +1,11 @@
+/* eslint-disable max-lines */
 import { PracticeFeedbackFields } from './PracticeFeedbackFields';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ActionItem, DiaryEntry } from '../../types';
 import type {
   ActionFeedbackNextStep,
   ActionFeedbackStatus,
+  ActionDraftContext,
   Goal,
   PracticeReflectionContext,
   Vision,
@@ -44,9 +46,15 @@ interface FuturePageProps {
   onNavigateModule?: (tab: MobileMainTab) => void;
   onReflectInPast?: (context: PracticeReflectionContext) => void;
   initialGoalId?: string;
+  initialActionContext?: ActionDraftContext | null;
 }
 const field = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
-export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: FuturePageProps) {
+export function FuturePage({
+  onNavigateModule,
+  onReflectInPast,
+  initialActionContext,
+  ..._props
+}: FuturePageProps) {
   const { state, actions, ready, error, refresh, protectedVault } = useFuture();
   const [section, setSection] = useState<FutureSection>('design');
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -66,6 +74,14 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
   const practiceOpener = useRef<HTMLElement | null>(null);
   const practicePanel = useRef<HTMLDialogElement | null>(null);
   const practiceWasOpen = useRef(false);
+  const openedActionContext = useRef<ActionDraftContext | null>(null);
+  // `openEditor` intentionally changes identity on render; the context is a
+  // one-shot cross-module handoff and must not reopen after it has been closed.
+  useEffect(() => {
+    if (!initialActionContext || openedActionContext.current === initialActionContext) return;
+    openedActionContext.current = initialActionContext;
+    openEditor({ kind: 'action', context: initialActionContext });
+  }, [initialActionContext]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!practicePanelOpen) return;
     practiceWasOpen.current = true;
@@ -285,6 +301,7 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       const goalId = field(data, 'goalId') || undefined;
       void run(() =>
         saveFutureAction({
+          ...editor.context,
           ...editor.value,
           title: field(data, 'title'),
           status: editor.value?.status ?? 'pending',

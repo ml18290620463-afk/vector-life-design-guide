@@ -1,6 +1,7 @@
 import React, { useId, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import type { DiaryEntry, Language } from '../../types';
+import type { ActionDraftContext } from '../../types/future';
 import { PastEntryMedia } from '../../components/PastEntryMedia';
 import { PastEntryBody, PastEntryTags, PastEntryTitle } from '../../components/PastEntryText';
 import { splitEntryContent } from '../../lib/entryContent';
@@ -17,6 +18,7 @@ interface MobilePastTimelineEntryProps {
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelection?: (id: string) => void;
+  onOpenFutureAction?: (context: ActionDraftContext) => void;
 }
 
 export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = ({
@@ -26,6 +28,7 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
   selectionMode = false,
   selected = false,
   onToggleSelection,
+  onOpenFutureAction,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
@@ -105,6 +108,21 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
           />
           <PastEntryTags entry={entry} />
           <PastEntryMedia entry={entry} variant="mobile" language={language} />
+          {!selectionMode && onOpenFutureAction && (
+            <button
+              type="button"
+              className="mobile-past-timeline__action"
+              onClick={() =>
+                onOpenFutureAction({
+                  sourceEntryId: entry.id,
+                  evidenceEntryIds: [entry.id],
+                  rationale: entry.title || entry.content.slice(0, 120),
+                })
+              }
+            >
+              {language === 'zh' ? '作为行动依据' : 'Use as action context'}
+            </button>
+          )}
         </div>
       </div>
     </article>

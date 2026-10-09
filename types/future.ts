@@ -50,6 +50,14 @@ export interface PracticeReflectionContext {
   result: string;
   nextStep: ActionFeedbackNextStep;
 }
+/** A deliberate link from a past record or current understanding to a new action. */
+export interface ActionDraftContext {
+  sourceEntryId?: string;
+  principleId?: string;
+  evidenceEntryIds?: string[];
+  rationale?: string;
+  question?: string;
+}
 /** A user-authored record of carrying out an action. It deliberately does not
  * require a goal: actions can be useful preparations in their own right. */
 export interface ActionPracticeRecord {

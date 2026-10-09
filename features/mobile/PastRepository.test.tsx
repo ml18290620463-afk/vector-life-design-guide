@@ -52,6 +52,30 @@ const renderRepository = ({
   );
 
 describe('PastRepository', () => {
+  it('offers a record as explicit action context', () => {
+    const onOpenFutureAction = vi.fn();
+    render(
+      <PastRepository
+        language="zh"
+        entries={[makeEntry({ id: 'decision', title: '项目复盘', content: '先确认事实' })]}
+        principles={[]}
+        actions={[]}
+        onAddPrinciple={vi.fn()}
+        onDeletePrinciple={vi.fn()}
+        onUpdatePrinciple={vi.fn()}
+        onSelectEntry={vi.fn()}
+        onDeleteEntries={vi.fn()}
+        onOpenFutureAction={onOpenFutureAction}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '作为行动依据' }));
+    expect(onOpenFutureAction).toHaveBeenCalledWith({
+      sourceEntryId: 'decision',
+      evidenceEntryIds: ['decision'],
+      rationale: '项目复盘',
+    });
+  });
+
   it('keeps past focused on review and user-maintained principles', () => {
     renderRepository();
 

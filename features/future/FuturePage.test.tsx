@@ -50,6 +50,37 @@ const switchToPractice = () =>
   );
 
 describe('Future page', () => {
+  it('carries a deliberate record context into a newly saved action', async () => {
+    render(
+      <FuturePage
+        archiveMode
+        entries={[]}
+        onSelectEntry={vi.fn()}
+        initialActionContext={{
+          sourceEntryId: 'entry-1',
+          evidenceEntryIds: ['entry-1'],
+          rationale: '项目复盘记录',
+        }}
+      />,
+    );
+    const dialog = await screen.findByRole('dialog', { name: '行动规划' });
+    expect(within(dialog).getByText('行动依据：项目复盘记录')).toBeTruthy();
+    fireEvent.change(within(dialog).getByRole('textbox', { name: '行动内容' }), {
+      target: { value: '先确认下次会议的问题' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: '确定' }));
+
+    await waitFor(async () => {
+      const snapshot = await readFutureSnapshot();
+      expect(snapshot.actions[0]).toMatchObject({
+        title: '先确认下次会议的问题',
+        sourceEntryId: 'entry-1',
+        evidenceEntryIds: ['entry-1'],
+        rationale: '项目复盘记录',
+      });
+    });
+  });
+
   it('uses design and practice as the only primary navigation', async () => {
     await mount();
     const navigation = screen.getByRole('tablist', { name: '未来分区' });
