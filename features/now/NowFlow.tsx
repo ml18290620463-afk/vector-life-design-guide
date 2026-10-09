@@ -333,14 +333,14 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   if (completedEntry)
     return (
       <main className="now-shell now-completion" aria-labelledby="now-completion-title">
-        <h1 id="now-completion-title">记录已存入过去</h1>
-        <p>你可以继续写下此刻，回看这条资料，或把它作为下一步行动的依据。</p>
+        <h1 id="now-completion-title">经历已保存</h1>
+        <p>回看这段经历，整理当前理解，再决定下一次想尝试什么。也可以继续记录。</p>
         <div className="now-completion__actions">
           <button type="button" onClick={() => setCompletedEntry(null)}>
             继续记录
           </button>
           <button type="button" onClick={() => onReviewSavedRecord?.(completedEntry)}>
-            回看资料
+            回看这段经历
           </button>
           <button
             type="button"
@@ -352,7 +352,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
               })
             }
           >
-            建立行动
+            设计下一次尝试
           </button>
         </div>
       </main>

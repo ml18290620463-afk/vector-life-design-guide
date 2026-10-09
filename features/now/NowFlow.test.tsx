@@ -261,12 +261,12 @@ describe('NowFlow action review', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'save-result' }));
-    await screen.findByRole('heading', { name: '记录已存入过去' });
-    fireEvent.click(screen.getByRole('button', { name: '回看资料' }));
+    await screen.findByRole('heading', { name: '经历已保存' });
+    fireEvent.click(screen.getByRole('button', { name: '回看这段经历' }));
     expect(onReviewSavedRecord).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'saved-entry' }),
     );
-    fireEvent.click(screen.getByRole('button', { name: '建立行动' }));
+    fireEvent.click(screen.getByRole('button', { name: '设计下一次尝试' }));
     expect(onOpenFutureAction).toHaveBeenCalledWith({
       sourceEntryId: 'saved-entry',
       evidenceEntryIds: ['saved-entry'],

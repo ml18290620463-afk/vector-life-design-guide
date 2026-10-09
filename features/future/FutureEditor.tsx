@@ -191,6 +191,7 @@ export function FutureEditor({
 
           {editor.kind === 'action' && (
             <>
+              <p>设计下一次尝试：把当前理解变成一件具体可做的事，之后记录实际结果。</p>
               {editor.context?.rationale && (
                 <p className="future-action-context" role="status">
                   行动依据：{editor.context.rationale}

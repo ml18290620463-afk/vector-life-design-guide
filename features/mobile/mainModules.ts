@@ -17,7 +17,7 @@ export const getMainModules = (language: Language): MainModuleDefinition[] => {
     {
       id: 'past',
       title: isZh ? '过去' : 'Past',
-      hint: isZh ? '回看与沉淀' : 'Review and distill',
+      hint: isZh ? '回看经历与当前理解' : 'Review experiences and understanding',
       commandLabel: isZh ? '打开 Past' : 'Open Past',
       Icon: Archive,
     },
@@ -31,14 +31,14 @@ export const getMainModules = (language: Language): MainModuleDefinition[] => {
     {
       id: 'future',
       title: isZh ? '未来' : 'Future',
-      hint: isZh ? '设计与践行' : 'Design and practice',
+      hint: isZh ? '设计尝试与记录结果' : 'Plan attempts and record results',
       commandLabel: isZh ? '打开 Future' : 'Open Future',
       Icon: Sparkles,
     },
     {
       id: 'avatar',
       title: isZh ? '分身' : 'Avatar',
-      hint: isZh ? '关于我、我的模式与变化' : 'About me, patterns and changes',
+      hint: isZh ? '借助资料理解自己' : 'Understand yourself through your records',
       commandLabel: isZh ? '打开 Avatar' : 'Open Avatar',
       Icon: Bot,
     },

@@ -374,7 +374,7 @@ export function FuturePage({
       if (saved) {
         setSelectedFeedbackActionId(null);
         setPracticePanelOpen(false);
-        setNotice('践行已记录');
+        setNotice('结果已保存');
       }
     });
   };
@@ -404,7 +404,7 @@ export function FuturePage({
       <section className="future-practice-records" aria-labelledby="practice-records-heading">
         <header className="future-section-header future-practice-header">
           <div>
-            <h2 id="practice-records-heading">践行记录</h2>
+            <h2 id="practice-records-heading">尝试结果</h2>
             <small>{feedbackResults.length} 条</small>
           </div>
           {feedbackCandidates.length > 0 && (
@@ -476,7 +476,7 @@ export function FuturePage({
                         else onNavigateModule?.('past');
                       }}
                     >
-                      沉淀这次行动
+                      回顾这次尝试
                     </button>
                   )}
                   {continuableActions.some((candidate) => candidate.id === action.id) &&
@@ -508,8 +508,8 @@ export function FuturePage({
           <div className="future-empty-state future-practice-empty">
             <p>
               {feedbackCandidates.length
-                ? '完成待检视行动后，记录会在这里出现。'
-                : '先规划一个行动，再在这里留下真实进展。'}
+                ? '记录一次尝试的结果后，会在这里出现。'
+                : '先设计下一次尝试，再在这里记录实际发生了什么。'}
             </p>
             {!feedbackCandidates.length && (
               <small>经历 → 当前理解 → 下一次尝试 → 结果，会在这里形成可回看的闭环。</small>
@@ -520,7 +520,7 @@ export function FuturePage({
                 className="future-empty-action"
                 onClick={() => setSection('design')}
               >
-                去设计行动
+                去设计下一次尝试
               </button>
             )}
           </div>

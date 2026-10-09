@@ -629,7 +629,9 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     type="button"
                     onClick={() => onOpenFutureAction(deterministicReview.actionContext!)}
                   >
-                    {language === 'zh' ? '以最近记录建立行动' : 'Create action from latest record'}
+                    {language === 'zh'
+                      ? '从最近经历设计下一次尝试'
+                      : 'Plan an attempt from the latest experience'}
                   </button>
                 )}
               </aside>
