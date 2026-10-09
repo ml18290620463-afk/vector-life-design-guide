@@ -400,8 +400,12 @@ export function AvatarModelSettings({
               checked={rememberKey}
               onChange={(e) => setRememberKey(e.target.checked)}
             />
-            <span>记住 API Key，下次自动使用</span>
+            <span>在此设备浏览器中记住 API Key，下次自动使用</span>
           </label>
+          <small className="avatar-model-hint">
+            仅在你的个人设备上启用。该 Key
+            会保存在浏览器本地存储中；关闭此选项后仅保留到本次浏览器会话结束。
+          </small>
           {fieldErrors.apiKey && (
             <small id="avatar-api-key-error" className="avatar-model-error">
               {fieldErrors.apiKey}

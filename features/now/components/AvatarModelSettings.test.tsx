@@ -68,6 +68,15 @@ it('connects with only an API Key by applying the default provider and model', a
   expect(readAvatarModel()?.endpoint).toBe('chat');
 });
 
+it('explains the device-local storage boundary before a key can be remembered', () => {
+  render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  expect(
+    screen.getByText(
+      '仅在你的个人设备上启用。该 Key 会保存在浏览器本地存储中；关闭此选项后仅保留到本次浏览器会话结束。',
+    ),
+  ).toBeTruthy();
+});
+
 it('remembers the API Key when the user enables the remember option', async () => {
   const fetcher = vi
     .fn()
@@ -79,7 +88,7 @@ it('remembers the API Key when the user enables the remember option', async () =
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
 
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'remembered-key' } });
-  fireEvent.click(screen.getByLabelText('记住 API Key，下次自动使用'));
+  fireEvent.click(screen.getByLabelText('在此设备浏览器中记住 API Key，下次自动使用'));
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
 
   await waitFor(() => expect(saved).toHaveBeenCalledOnce());
@@ -404,9 +413,10 @@ it('restores remembered Gemini settings without revalidation or automatic model 
   expect((screen.getByLabelText('服务商') as HTMLSelectElement).value).toBe('3');
   expect((screen.getByLabelText('API Key') as HTMLInputElement).value).toBe(workingGemini.apiKey);
   expect((screen.getByLabelText('模型') as HTMLSelectElement).value).toBe(workingGemini.model);
-  expect((screen.getByLabelText('记住 API Key，下次自动使用') as HTMLInputElement).checked).toBe(
-    true,
-  );
+  expect(
+    (screen.getByLabelText('在此设备浏览器中记住 API Key，下次自动使用') as HTMLInputElement)
+      .checked,
+  ).toBe(true);
   expect(fetcher).not.toHaveBeenCalled();
 });
 
