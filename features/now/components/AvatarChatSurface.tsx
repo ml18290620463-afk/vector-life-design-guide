@@ -20,6 +20,7 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
   preview,
   sending,
   launchContext,
+  onSelectEntry,
   onSetPreview,
   onEditTags,
   onSendPreview,
@@ -28,6 +29,7 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
   preview: RecordPreviewPayload | null;
   sending: boolean;
   launchContext: AvatarLaunchContext;
+  onSelectEntry?: (entryId: string) => void;
   onSetPreview: (payload: RecordPreviewPayload | null) => void;
   onEditTags: () => void;
   onSendPreview: (payload: RecordPreviewPayload) => void;
@@ -48,6 +50,28 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
   return (
     <div className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}>
       {message.content}
+      {message.role === 'assistant' && message.references !== undefined && (
+        <details className="avatar-message-evidence">
+          <summary>本次依据与推断边界</summary>
+          {message.references?.length ? (
+            <ul>
+              {message.references.map((reference) => (
+                <li key={reference.entryId}>
+                  <button type="button" onClick={() => onSelectEntry?.(reference.entryId)}>
+                    {reference.title}（{new Date(reference.date).toLocaleDateString('zh-CN')}）
+                  </button>
+                  <span>：{reference.excerpt}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>本次没有从资料库检索到可引用资料。回答仅是模型的通用推断，请以你的实际情况判断。</p>
+          )}
+          {message.references?.length ? (
+            <p>以上是可打开核对的资料；其余表述属于模型推断，并非已确认事实。</p>
+          ) : null}
+        </details>
+      )}
     </div>
   );
 });
@@ -303,6 +327,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
               preview={preview}
               sending={sending}
               launchContext={launchContext}
+              onSelectEntry={onSelectEntry}
               onSetPreview={onSetPreview}
               onEditTags={onEditTags}
               onSendPreview={onSendPreview}

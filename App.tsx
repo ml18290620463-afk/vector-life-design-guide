@@ -116,11 +116,11 @@ const App: React.FC = () => {
     loadError,
   } = useDiaryData(userId, language);
 
-  const { entries, error: entryReadError } = useReadableEntries(
-    storedEntries,
-    isUnlocked,
-    masterPassword,
-  );
+  const {
+    entries,
+    error: entryReadError,
+    unreadableEntries,
+  } = useReadableEntries(storedEntries, isUnlocked, masterPassword);
 
   const { enterPendingOrPastMain, nowRoute, setNowRoute } = useAppEntryRouting({
     isUnlocked,
@@ -202,11 +202,11 @@ const App: React.FC = () => {
   const showGlobalBackground = shouldShowGlobalBackground(appState);
   const showLoadingOverlay = shouldShowLoadingOverlay(loading, appState);
 
-  if (loadError || entryReadError)
+  if (loadError)
     return (
       <main className="min-h-screen grid place-content-center gap-4 p-6" role="alert">
         <h1>暂时无法打开资料库</h1>
-        <p>{loadError || entryReadError}</p>
+        <p>{loadError}</p>
         <button type="button" onClick={() => window.location.reload()}>
           重新加载
         </button>
@@ -244,6 +244,18 @@ const App: React.FC = () => {
           />
 
           {showLoadingOverlay && <ScreenLoader language={language} />}
+
+          {entryReadError && (
+            <aside
+              className="fixed z-50 top-3 inset-x-3 mx-auto max-w-2xl rounded-lg border border-amber-400/50 bg-amber-50 px-4 py-3 text-amber-950 shadow-lg"
+              role="status"
+            >
+              <p>{entryReadError}</p>
+              <p className="mt-1 text-sm">
+                不可读取记录：{unreadableEntries.map((entry) => entry.id).join('、')}
+              </p>
+            </aside>
+          )}
 
           <AppEntryGateScreens
             appState={appState}

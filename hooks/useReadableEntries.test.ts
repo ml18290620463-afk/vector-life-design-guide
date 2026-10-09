@@ -40,7 +40,23 @@ it('hides plaintext immediately on lock and discards a late decryption', async (
   );
   rerender({ unlocked: false });
   await act(async () => finish('late plaintext'));
-  expect(result.current).toEqual({ entries: [], error: null });
+  expect(result.current).toEqual({ entries: [], error: null, unreadableEntries: [] });
+});
+
+it('keeps readable records available and reports only entries that could not decrypt', async () => {
+  vi.spyOn(SecurityService, 'decrypt')
+    .mockResolvedValueOnce('可以恢复')
+    .mockRejectedValueOnce(new Error('认证失败'));
+  const stored = [
+    { ...entry, id: 'good' },
+    { ...entry, id: 'bad' },
+  ];
+  const { result } = renderHook(() => useReadableEntries(stored, true, 'key'));
+  await waitFor(() => expect(result.current.entries).toHaveLength(1));
+  expect(result.current.entries[0]).toMatchObject({ id: 'good', content: '可以恢复' });
+  expect(result.current.error).toContain('已跳过 1 条');
+  expect(result.current.unreadableEntries).toEqual([{ id: 'bad', reason: '认证失败' }]);
+  expect(stored.map((item) => item.content)).toEqual(['ciphertext', 'ciphertext']);
 });
 
 it('does not expose stale data when the source or session key changes', async () => {

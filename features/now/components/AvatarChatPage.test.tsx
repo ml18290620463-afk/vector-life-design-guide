@@ -723,7 +723,9 @@ describe('AvatarChatPage', () => {
     fireEvent.click(screen.getByText('发送'));
 
     expect(screen.getByRole('complementary', { name: '数据保护状态' })).toBeTruthy();
-    expect(screen.getByText(/密令/)).toBeTruthy();
+    expect(
+      screen.getByText('我可以检查这台设备的资料库保护状态。你的密令不会出现在对话中。'),
+    ).toBeTruthy();
     expect(fetch).not.toHaveBeenCalled();
   });
 

@@ -404,6 +404,28 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       const assistantMessage = buildAssistantTextMessage(reply, {
         id: generateSecureId('msg'),
         createdAt: new Date().toISOString(),
+        references: context
+          .flatMap((source) =>
+            (source.evidence ?? []).map((evidence) => ({ evidence, reason: source.kind })),
+          )
+          .map(({ evidence, reason }) => {
+            const entry = pastEntries.find(
+              (candidate) =>
+                isAccessibleDiaryEntry(candidate) &&
+                candidate.createdAt === evidence.occurredAt &&
+                `${candidate.title}：${candidate.content}`.includes(evidence.text),
+            );
+            return entry
+              ? {
+                  entryId: entry.id,
+                  title: entry.title,
+                  date: entry.createdAt,
+                  excerpt: evidence.text,
+                  reason,
+                }
+              : undefined;
+          })
+          .flatMap((reference) => (reference ? [reference] : [])),
       });
       setMessages((current) => [...current, assistantMessage]);
       setAssistantTurns((value) => value + 1);

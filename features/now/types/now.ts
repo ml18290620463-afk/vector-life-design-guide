@@ -39,6 +39,14 @@ export interface NowRecord {
   sync_status?: 'synced' | 'pending';
 }
 
+export interface ChatMessageSourceReference {
+  entryId: string;
+  title: string;
+  date: number;
+  excerpt: string;
+  reason: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -47,6 +55,8 @@ export interface ChatMessage {
   audio_url?: string;
   created_at: string;
   payload?: RecordPreviewPayload;
+  /** Evidence shown with this reply; it is not a claim that the model output is a fact. */
+  references?: ChatMessageSourceReference[];
 }
 
 export interface RecordPreviewPayload {

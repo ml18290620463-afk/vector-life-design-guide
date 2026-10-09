@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import type { DiaryEntry } from '../types';
 import { SecurityService } from '../services/securityService';
 
+export interface UnreadableEntry {
+  id: string;
+  reason: string;
+}
+
 /** Session-only read model. Never pass this array back to the storage delta writer. */
 export function useReadableEntries(
   stored: DiaryEntry[],
@@ -13,6 +18,7 @@ export function useReadableEntries(
     password: string | null;
     entries: DiaryEntry[];
     error: string | null;
+    unreadableEntries: UnreadableEntry[];
   }>();
   useEffect(() => {
     let cancelled = false;
@@ -20,7 +26,7 @@ export function useReadableEntries(
       setResult(undefined);
       return;
     }
-    void Promise.all(
+    void Promise.allSettled(
       stored.map(async (entry) => {
         if (entry.isLocked || (entry.unlockAt && entry.unlockAt > Date.now()))
           return {
@@ -38,25 +44,36 @@ export function useReadableEntries(
           isEncrypted: false,
         };
       }),
-    ).then(
-      (entries) => {
-        if (!cancelled) setResult({ source: stored, password, entries, error: null });
-      },
-      () => {
-        if (!cancelled)
-          setResult({
-            source: stored,
-            password,
-            entries: [],
-            error:
-              '部分记录无法解密。请确认使用本机密令解锁，或从完好的备份恢复。原始资料未被修改。',
-          });
-      },
-    );
+    ).then((settled) => {
+      if (cancelled) return;
+      const entries: DiaryEntry[] = [];
+      const unreadableEntries: UnreadableEntry[] = [];
+      settled.forEach((item, index) => {
+        if (item.status === 'fulfilled') entries.push(item.value);
+        else {
+          const reason = item.reason instanceof Error ? item.reason.message : '无法读取此记录';
+          unreadableEntries.push({ id: stored[index].id, reason });
+        }
+      });
+      setResult({
+        source: stored,
+        password,
+        entries,
+        unreadableEntries,
+        error:
+          unreadableEntries.length > 0
+            ? `已跳过 ${unreadableEntries.length} 条无法解密或读取的记录。请确认本机密令或从完好的备份恢复；原始资料未被修改。`
+            : null,
+      });
+    });
     return () => {
       cancelled = true;
     };
   }, [stored, isUnlocked, password]);
   const current = isUnlocked && result?.source === stored && result.password === password;
-  return { entries: current ? result.entries : [], error: current ? result.error : null };
+  return {
+    entries: current ? result.entries : [],
+    error: current ? result.error : null,
+    unreadableEntries: current ? result.unreadableEntries : [],
+  };
 }
