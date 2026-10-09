@@ -34,6 +34,7 @@ import { readCustomAnchors } from './state/nowStorage';
 import type { NowRecord, NowRoute } from './types/now';
 import type { AvatarLaunchContext } from '../avatar/types';
 import { DEFAULT_AVATAR_CONTEXT } from '../avatar/types';
+import type { ActionDraftContext } from '../../types/future';
 
 interface NowFlowProps {
   route: NowRoute;
@@ -47,6 +48,9 @@ interface NowFlowProps {
   ) => Promise<DiaryEntry>;
   onRelatedEntriesResolved?: (entryId: string, relatedEntryIds: string[]) => void;
   onRecordComplete?: () => void;
+  /** Session-only next steps after a record is safely stored. */
+  onReviewSavedRecord?: (entry: DiaryEntry) => void;
+  onOpenFutureAction?: (context: ActionDraftContext) => void;
   pastEntries?: DiaryEntry[];
   principles?: Principle[];
   actions?: ActionItem[];
@@ -67,6 +71,8 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   onPersistRecord,
   onRelatedEntriesResolved,
   onRecordComplete,
+  onReviewSavedRecord,
+  onOpenFutureAction,
   pastEntries = [],
   principles = [],
   actions = [],
@@ -91,11 +97,8 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   const [sending, setSending] = useState(false);
   const inFlight = useRef(false);
   const [completionError, setCompletionError] = useState('');
+  const [completedEntry, setCompletedEntry] = useState<DiaryEntry | null>(null);
   const pendingCompletion = useRef<(() => Promise<void>) | null>(null);
-  const complete = () => {
-    if (onRecordComplete) onRecordComplete();
-    else onRouteChange('now');
-  };
   const retryCompletion = async () => {
     if (inFlight.current || !pendingCompletion.current) return;
     inFlight.current = true;
@@ -268,7 +271,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         setCompletionError('');
         retry.current = null;
         showToast('已存入过去');
-        complete();
+        setCompletedEntry(persistedEntry);
       };
       if (onRelatedEntriesResolved) {
         void findNeuralRelatedEntryIds(persistedEntry.id, entryPayload, pastEntries)
@@ -325,6 +328,34 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           继续完成
         </button>
       </div>
+    );
+
+  if (completedEntry)
+    return (
+      <main className="now-shell now-completion" aria-labelledby="now-completion-title">
+        <h1 id="now-completion-title">记录已存入过去</h1>
+        <p>你可以继续写下此刻，回看这条资料，或把它作为下一步行动的依据。</p>
+        <div className="now-completion__actions">
+          <button type="button" onClick={() => setCompletedEntry(null)}>
+            继续记录
+          </button>
+          <button type="button" onClick={() => onReviewSavedRecord?.(completedEntry)}>
+            回看资料
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onOpenFutureAction?.({
+                sourceEntryId: completedEntry.id,
+                evidenceEntryIds: [completedEntry.id],
+                rationale: completedEntry.title || completedEntry.content.slice(0, 120),
+              })
+            }
+          >
+            建立行动
+          </button>
+        </div>
+      </main>
     );
 
   return (

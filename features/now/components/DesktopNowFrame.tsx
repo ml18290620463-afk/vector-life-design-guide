@@ -5,6 +5,7 @@ import { NowFlow } from '../nowLazyComponents';
 import type { AvatarLaunchContext } from '../../avatar/types';
 import { AppPageFrame } from '../../../components/AppPageFrame';
 import type { MobileMainTab } from '../../mobile/types';
+import type { ActionDraftContext } from '../../../types/future';
 
 type DesktopNowFrameProps = {
   language: Language;
@@ -15,6 +16,8 @@ type DesktopNowFrameProps = {
   ) => Promise<DiaryEntry>;
   onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void;
   onRecordComplete: () => void;
+  onReviewSavedRecord?: (entry: DiaryEntry) => void;
+  onOpenFutureAction?: (context: ActionDraftContext) => void;
   onRouteChange: (route: NowRoute) => void;
   pastEntries: DiaryEntry[];
   principles: Principle[];
@@ -34,6 +37,8 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
   onPersistRecord,
   onRelatedEntriesResolved,
   onRecordComplete,
+  onReviewSavedRecord,
+  onOpenFutureAction,
   onRouteChange,
   pastEntries,
   principles,
@@ -64,6 +69,8 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
       onPersistRecord={onPersistRecord}
       onRelatedEntriesResolved={onRelatedEntriesResolved}
       onRecordComplete={onRecordComplete}
+      onReviewSavedRecord={onReviewSavedRecord}
+      onOpenFutureAction={onOpenFutureAction}
       onActionResultRecorded={onActionResultRecorded}
       onUpdatePrinciple={onUpdatePrinciple}
       avatarLaunchContext={avatarLaunchContext}

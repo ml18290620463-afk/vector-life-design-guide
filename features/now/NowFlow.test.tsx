@@ -238,6 +238,41 @@ describe('NowFlow action review', () => {
       expect.objectContaining({ id: 'principle-1', confidence: 0.62, helpfulCount: 1 }),
     );
   });
+
+  it('offers optional review and action next steps after saving a record', async () => {
+    const onReviewSavedRecord = vi.fn();
+    const onOpenFutureAction = vi.fn();
+    render(
+      <NowFlow
+        route="now"
+        theme="dark"
+        language="zh"
+        onRouteChange={vi.fn()}
+        onExit={vi.fn()}
+        onPersistRecord={async (payload) => ({
+          ...payload,
+          id: 'saved-entry',
+          createdAt: 2,
+          isLocked: false,
+        })}
+        onReviewSavedRecord={onReviewSavedRecord}
+        onOpenFutureAction={onOpenFutureAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'save-result' }));
+    await screen.findByRole('heading', { name: '记录已存入过去' });
+    fireEvent.click(screen.getByRole('button', { name: '回看资料' }));
+    expect(onReviewSavedRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'saved-entry' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: '建立行动' }));
+    expect(onOpenFutureAction).toHaveBeenCalledWith({
+      sourceEntryId: 'saved-entry',
+      evidenceEntryIds: ['saved-entry'],
+      rationale: '2026年7月16日15点',
+    });
+  });
 });
 
 describe('NowFlow interrupted completion', () => {

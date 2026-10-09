@@ -129,6 +129,11 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
     setFutureActionContext(context);
     (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('future');
   };
+  const reviewSavedRecord = (entry: DiaryEntry) => {
+    setPastSection('timeline');
+    setPastQuery(entry.title || entry.content.slice(0, 120));
+    (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('past');
+  };
   const openPastReflection = useCallback(
     (context: PracticeReflectionContext) => {
       setPracticeReflectionContext(context);
@@ -197,6 +202,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
                 onPersistRecord={onPersistNowRecord}
                 onRelatedEntriesResolved={onRelatedEntriesResolved}
                 onRecordComplete={onNowRecordComplete}
+                onReviewSavedRecord={reviewSavedRecord}
+                onOpenFutureAction={openFutureAction}
                 onActionResultRecorded={onActionResultRecorded}
                 onUpdatePrinciple={updatePrinciple}
                 avatarLaunchContext={avatarLaunchContext}
@@ -252,6 +259,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             onPersistRecord={onPersistNowRecord}
             onRelatedEntriesResolved={onRelatedEntriesResolved}
             onRecordComplete={onNowRecordComplete}
+            onReviewSavedRecord={reviewSavedRecord}
+            onOpenFutureAction={openFutureAction}
             onActionResultRecorded={onActionResultRecorded}
             onUpdatePrinciple={updatePrinciple}
             avatarLaunchContext={avatarLaunchContext}
