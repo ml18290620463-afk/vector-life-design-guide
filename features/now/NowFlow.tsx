@@ -72,7 +72,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   onRelatedEntriesResolved,
   onRecordComplete,
   onReviewSavedRecord,
-  onOpenFutureAction,
   pastEntries = [],
   principles = [],
   actions = [],
@@ -334,25 +333,13 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     return (
       <main className="now-shell now-completion" aria-labelledby="now-completion-title">
         <h1 id="now-completion-title">经历已保存</h1>
-        <p>回看这段经历，整理当前理解，再决定下一次想尝试什么。也可以继续记录。</p>
+        <p>这段经历已保存在过去。你可以随时回看、整理，或在需要时调取参考。</p>
         <div className="now-completion__actions">
           <button type="button" onClick={() => setCompletedEntry(null)}>
             继续记录
           </button>
           <button type="button" onClick={() => onReviewSavedRecord?.(completedEntry)}>
             回看这段经历
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              onOpenFutureAction?.({
-                sourceEntryId: completedEntry.id,
-                evidenceEntryIds: [completedEntry.id],
-                rationale: completedEntry.title || completedEntry.content.slice(0, 120),
-              })
-            }
-          >
-            设计下一次尝试
           </button>
         </div>
       </main>

@@ -98,7 +98,7 @@ describe('Future page', () => {
   it('uses one editor entry for all future planning types', async () => {
     await mount();
     const planningEntry = screen.getByRole('button', {
-      name: /^(设计下一次尝试|编辑未来规划)$/,
+      name: /^(添加规划|编辑未来规划)$/,
     });
     expect(planningEntry).toBeTruthy();
     expect(screen.queryByRole('button', { name: '新增' })).toBeNull();
@@ -119,10 +119,10 @@ describe('Future page', () => {
 
   it('gives an empty future a single, explicit first step', async () => {
     await mount();
-    expect(screen.getByRole('button', { name: '设计下一次尝试' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '添加规划' })).toBeTruthy();
     switchToPractice();
-    expect(screen.getByText('先设计下一次尝试，再在这里记录实际发生了什么。')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '去设计下一次尝试' }));
+    expect(screen.getByText('有想做的事时，可以先添加行动计划，再按需记录实际结果。')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '去添加规划' }));
     expect(
       within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', {
         name: '设计',

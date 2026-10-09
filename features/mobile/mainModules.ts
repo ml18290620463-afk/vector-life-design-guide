@@ -31,7 +31,7 @@ export const getMainModules = (language: Language): MainModuleDefinition[] => {
     {
       id: 'future',
       title: isZh ? '未来' : 'Future',
-      hint: isZh ? '设计尝试与记录结果' : 'Plan attempts and record results',
+      hint: isZh ? '规划未来与记录结果' : 'Plan your future and record results',
       commandLabel: isZh ? '打开 Future' : 'Open Future',
       Icon: Sparkles,
     },

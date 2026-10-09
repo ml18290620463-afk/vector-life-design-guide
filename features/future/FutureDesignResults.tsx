@@ -168,9 +168,9 @@ export function FutureDesignResults({
       ) : (
         <div className="future-design-empty-intro">
           <p>写下接下来想做的事</p>
-          <small>可以从一段经历或当前理解出发，设计下一次可验证的尝试。</small>
+          <small>记录你的愿望、目标或行动计划，也可以在需要时参考已有经验。</small>
           <button type="button" className="future-design-entry" onClick={onOpenEditor}>
-            设计下一次尝试
+            添加规划
           </button>
         </div>
       )}

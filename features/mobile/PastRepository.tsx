@@ -624,16 +624,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     </li>
                   )}
                 </ul>
-                {onOpenFutureAction && deterministicReview.actionContext && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenFutureAction(deterministicReview.actionContext!)}
-                  >
-                    {language === 'zh'
-                      ? '从最近经历设计下一次尝试'
-                      : 'Plan an attempt from the latest experience'}
-                  </button>
-                )}
               </aside>
             )}
             {!entries.some((entry) => !entry.isSample) && onOpenNow && !hasTimelineQuery && (
@@ -643,8 +633,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               >
                 <p>
                   {language === 'zh'
-                    ? '从一件刚发生的小事开始。保存后，可以在这里搜索、回看，再决定下一步。'
-                    : 'Start with something that just happened. Save it here to search, revisit, and decide your next step.'}
+                    ? '从一件刚发生的小事开始。保存后，可以在这里搜索、回看，在需要时调取参考。'
+                    : 'Start with something that just happened. Save it here to search, revisit, and reference when needed.'}
                 </p>
                 <button type="button" onClick={onOpenNow}>
                   {language === 'zh' ? '写下第一条记录' : 'Write your first entry'}

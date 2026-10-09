@@ -41,7 +41,7 @@ for (const width of [320, 393, 768, 1280]) {
       'aria-selected',
       'true',
     );
-    await expect(page.getByRole('button', { name: '设计下一次尝试', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '添加规划', exact: true })).toBeVisible();
     for (const name of ['愿景', '目标', '行动规划']) {
       await expect(page.getByRole('region', { name })).toBeVisible();
     }
@@ -49,7 +49,7 @@ for (const width of [320, 393, 768, 1280]) {
 
     // Planning types are deliberately chosen in the one full-page editor;
     // they are not separate top-level creation paths.
-    await page.getByRole('button', { name: '设计下一次尝试', exact: true }).click();
+    await page.getByRole('button', { name: '添加规划', exact: true }).click();
     const editor = page.getByRole('dialog', { name: '行动规划' });
     await expect(editor).toBeVisible();
     const bounds = (await editor.boundingBox())!;
@@ -74,9 +74,11 @@ for (const width of [320, 393, 768, 1280]) {
       'aria-selected',
       'true',
     );
-    await expect(page.getByText('先设计下一次尝试，再在这里记录实际发生了什么。')).toBeVisible();
-    await expect(page.getByRole('button', { name: '去设计下一次尝试', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: '去设计下一次尝试', exact: true }).click();
+    await expect(
+      page.getByText('有想做的事时，可以先添加行动计划，再按需记录实际结果。'),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: '去添加规划', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '去添加规划', exact: true }).click();
     await expect(sections.getByRole('tab', { name: '设计', exact: true })).toHaveAttribute(
       'aria-selected',
       'true',

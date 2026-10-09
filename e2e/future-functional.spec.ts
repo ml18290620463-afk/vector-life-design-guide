@@ -13,11 +13,9 @@ for (const width of [1440, 390]) {
       .getByRole('navigation', { name: '主页面导航' })
       .getByRole('button', { name: /^未来/ })
       .click();
-    await expect(
-      page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ })).toBeVisible();
 
-    await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+    await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
     await page.getByRole('button', { name: '行动规划', exact: true }).click();
     const action = `未来测试${width}：整理旅行证件`;
     await page.getByLabel('行动内容').fill(action);
@@ -94,7 +92,7 @@ test('未来：相似愿景先确认，并可回到原有愿景编辑', async ({
     .getByRole('button', { name: /^未来/ })
     .click();
 
-  const openEditor = page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ });
+  const openEditor = page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ });
   const original = '在自然中保持长期探索的生活';
   await openEditor.click();
   await page.getByRole('button', { name: '愿景', exact: true }).click();
@@ -123,7 +121,7 @@ test('未来：待检视支持明确的键盘返回与关闭', async ({ page }) 
     .getByRole('button', { name: /^未来/ })
     .click();
 
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '行动规划', exact: true }).click();
   const action = '未来键盘测试：整理下周会议资料';
   await page.getByLabel('行动内容').fill(action);
@@ -159,7 +157,7 @@ test('未来：继续完成的行动可追加践行，且刷新后保留完整�
     .click();
 
   const action = '未来续记测试：完成三次西语练习';
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '行动规划', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   await page.getByText('可选设置', { exact: true }).click();
@@ -209,7 +207,7 @@ test('未来：草稿行动可在确认后删除，已有下级记录的目标�
     .click();
 
   const draft = '未来删除测试：清理临时草稿';
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '行动规划', exact: true }).click();
   await page.getByLabel('行动内容').fill(draft);
   await page.getByRole('button', { name: '确定', exact: true }).click();
@@ -230,16 +228,16 @@ test('未来：草稿行动可在确认后删除，已有下级记录的目标�
   const vision = '未来关联删除测试：持续学习';
   const goal = '未来关联删除测试：完成阅读计划';
   const action = '未来关联删除测试：阅读第一章';
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '愿景', exact: true }).click();
   await page.getByLabel('愿景内容').fill(vision);
   await page.getByRole('button', { name: '确定', exact: true }).click();
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '目标', exact: true }).click();
   await page.getByLabel('目标内容').fill(goal);
   await page.getByLabel('所属愿景（可选）').selectOption({ label: vision });
   await page.getByRole('button', { name: '确定', exact: true }).click();
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '行动规划', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   if (!(await page.getByLabel('所属目标（可选）').isVisible()))
@@ -266,17 +264,17 @@ test('未来：愿景、目标、行动规划与尝试结果保持关联且互�
   const vision = '未来全链路：成为稳定的创作者';
   const goal = '未来全链路：十月完成作品集';
   const action = '未来全链路：今天整理三个案例';
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '愿景', exact: true }).click();
   await page.getByLabel('愿景内容').fill(vision);
   await page.getByRole('button', { name: '确定', exact: true }).click();
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '目标', exact: true }).click();
   await page.getByLabel('目标内容').fill(goal);
   await page.getByLabel('完成时间（可选）').fill('2026-10-31');
   await page.getByLabel('所属愿景（可选）').selectOption({ label: vision });
   await page.getByRole('button', { name: '确定', exact: true }).click();
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '行动规划', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   await page.getByText('可选设置', { exact: true }).click();
@@ -323,7 +321,7 @@ test('未来：320px 小屏幕的长规划可保存，编辑器不横向溢出�
     .getByRole('navigation', { name: '主页面导航' })
     .getByRole('button', { name: /^未来/ })
     .click();
-  const entry = page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ });
+  const entry = page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ });
   await entry.click();
   const longVision =
     '未来小屏测试：在有限时间里持续积累可复用的创作能力，并把每次选择沉淀为下一次行动的清晰依据';
@@ -356,7 +354,7 @@ test('未来：完成行动可带着上下文主动进入过去沉淀，但不�
 
   const action = '未来沉淀测试：整理本周创作素材';
   const result = '已完成素材归档，也发现了命名规则需要统一。';
-  await page.getByRole('button', { name: /^(设计下一次尝试|编辑未来规划)$/ }).click();
+  await page.getByRole('button', { name: /^(添加规划|编辑未来规划)$/ }).click();
   await page.getByRole('button', { name: '行动规划', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   await page.getByText('可选设置', { exact: true }).click();

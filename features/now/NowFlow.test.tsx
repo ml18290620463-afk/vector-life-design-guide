@@ -239,7 +239,7 @@ describe('NowFlow action review', () => {
     );
   });
 
-  it('offers optional review and action next steps after saving a record', async () => {
+  it('offers review after saving without prompting an immediate action', async () => {
     const onReviewSavedRecord = vi.fn();
     const onOpenFutureAction = vi.fn();
     render(
@@ -266,12 +266,8 @@ describe('NowFlow action review', () => {
     expect(onReviewSavedRecord).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'saved-entry' }),
     );
-    fireEvent.click(screen.getByRole('button', { name: '设计下一次尝试' }));
-    expect(onOpenFutureAction).toHaveBeenCalledWith({
-      sourceEntryId: 'saved-entry',
-      evidenceEntryIds: ['saved-entry'],
-      rationale: '2026年7月16日15点',
-    });
+    expect(screen.queryByRole('button', { name: '设计下一次尝试' })).toBeNull();
+    expect(onOpenFutureAction).not.toHaveBeenCalled();
   });
 });
 

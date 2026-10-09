@@ -509,10 +509,10 @@ export function FuturePage({
             <p>
               {feedbackCandidates.length
                 ? '记录一次尝试的结果后，会在这里出现。'
-                : '先设计下一次尝试，再在这里记录实际发生了什么。'}
+                : '有想做的事时，可以先添加行动计划，再按需记录实际结果。'}
             </p>
             {!feedbackCandidates.length && (
-              <small>经历 → 当前理解 → 下一次尝试 → 结果，会在这里形成可回看的闭环。</small>
+              <small>计划可以独立创建；已有经历和原则可在需要时作为参考。</small>
             )}
             {!feedbackCandidates.length && (
               <button
@@ -520,7 +520,7 @@ export function FuturePage({
                 className="future-empty-action"
                 onClick={() => setSection('design')}
               >
-                去设计下一次尝试
+                去添加规划
               </button>
             )}
           </div>
