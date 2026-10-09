@@ -6,7 +6,18 @@
 
 evals/avatar/corpus.ts 包含 60 个单段、20 个多轮场景；其中 40 个保留场景（50%），包含 8 个跨会话资料状态变化。全部为虚构素材，不读取实际资料库。
 
-先执行 `npx tsx scripts/avatar-eval.ts` 生成评审清单，不调用模型。配置环境中的 OPENROUTER_API_KEY / OPENROUTER_MODEL 或 GEMINI_API_KEY / GEMINI_MODEL 后，执行 `npx tsx scripts/avatar-eval.ts --run`，实际调用生产使用的主对话路由。运行保留集加 `--holdout`。未配置模型时输出 model_not_configured，质量分保持空值。
+先执行 `npx tsx scripts/avatar-eval.ts` 生成评审清单，不调用模型。评测必须使用用户自行选择的模型：参照「模型接入」中新建一个仅保存在本机、被 `.gitignore` 忽略的 JSON 配置文件，内容为 `baseUrl`、`apiKey`、`model` 和可选的 `endpoint`（`chat` 或 `responses`）。例如：
+
+```json
+{
+  "baseUrl": "https://你的服务商.example/v1",
+  "apiKey": "你的本机密钥",
+  "model": "你选定的模型",
+  "endpoint": "chat"
+}
+```
+
+将文件保存为 `avatar-eval.model-config.local.json` 后，执行 `npx tsx scripts/avatar-eval.ts --run --model-config ./avatar-eval.model-config.local.json`，实际调用与产品相同的主对话路由；运行保留集加 `--holdout`。配置文件及其密钥绝不写入评测输出。旧有 `OPENROUTER_*` / `GEMINI_*` 环境变量仍可供本地兼容运行，但不是产品或评测的必选方案。未选择模型时输出 `model_not_configured`，质量分保持空值。
 
 每例包含期待行为及具体禁止判断，分别运行带历史和仅当前对话两个条件。后者仍可承接本次多轮对话。跨会话步骤清空聊天并使用明确确认后的合成资料快照，不模拟聊天自动改写记忆。调用失败的后续轮次不评分。
 

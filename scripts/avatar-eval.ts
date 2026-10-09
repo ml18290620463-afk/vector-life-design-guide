@@ -1,12 +1,22 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import express from 'express';
 import { loadEnv } from 'vite';
 import { avatarEvaluationCases } from '../evals/avatar/corpus';
 import { registerAvatarChatRoutes } from '../server/avatarChatRoutes';
+import { validateModelConfig } from '../server/avatarCustomModel';
 import { chooseProvider, resolveProviderModel, type ProviderConfig } from '../server/aiProviders';
 import { AVATAR_BEHAVIOR_VERSION } from '../services/avatarBehaviorStandard';
+import type { AvatarModelConfig } from '../features/now/api/avatarModel';
 
 const env = { ...loadEnv('development', process.cwd(), ''), ...process.env };
+const modelConfigFlag = process.argv.indexOf('--model-config');
+const modelConfigPath = modelConfigFlag >= 0 ? process.argv[modelConfigFlag + 1] : undefined;
+if (modelConfigFlag >= 0 && !modelConfigPath) {
+  throw new Error('缺少 --model-config 的配置文件路径');
+}
+const customModelConfig: AvatarModelConfig | undefined = modelConfigPath
+  ? validateModelConfig(JSON.parse(await readFile(modelConfigPath, 'utf8')))
+  : undefined;
 
 // No browser reads, real records, model credentials, or model-side grading in output.
 const config: ProviderConfig = {
@@ -28,7 +38,12 @@ const results: unknown[] = [];
 const app = express();
 app.use(express.json());
 registerAvatarChatRoutes(app, config);
-const server = run && provider ? app.listen(0, '127.0.0.1') : undefined;
+// Evaluation must use an explicitly selected model. A custom config follows
+// the same server route as the product's "模型接入" setting; environment
+// providers remain only as a backwards-compatible local-runner option.
+const selectedModel =
+  customModelConfig?.model ?? (provider ? resolveProviderModel(config, provider) : null);
+const server = run && selectedModel ? app.listen(0, '127.0.0.1') : undefined;
 try {
   if (server)
     await new Promise<void>((resolve) =>
@@ -54,6 +69,7 @@ try {
             body: JSON.stringify({
               messages,
               memories: condition === 'with-history' ? memories : [],
+              ...(customModelConfig ? { modelConfig: customModelConfig } : {}),
             }),
             signal: AbortSignal.timeout(50_000),
           }).catch(() => null);
@@ -93,9 +109,10 @@ try {
       {
         version: AVATAR_BEHAVIOR_VERSION,
         split,
-        model: provider ? resolveProviderModel(config, provider) : null,
+        model: selectedModel,
+        modelSelection: customModelConfig ? 'user-config-file' : provider ? 'environment' : null,
         executed: !!server,
-        reason: run ? (provider ? null : 'model_not_configured') : 'manifest_only',
+        reason: run ? (selectedModel ? null : 'model_not_configured') : 'manifest_only',
         qualityScore: null,
         results,
       },
