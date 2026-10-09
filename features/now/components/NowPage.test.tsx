@@ -75,7 +75,7 @@ describe('NowPage', () => {
     expect(showToast).not.toHaveBeenCalled();
     expect(onSend).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('心情与事件')).toBeDefined();
-    expect(screen.getByText('标签（选填）')).toBeDefined();
+    expect(screen.getByText('标签')).toBeDefined();
   });
 
   it('sends when content and tags are complete', () => {
@@ -175,7 +175,7 @@ describe('NowPage', () => {
     expect(screen.queryByLabelText('导入音频文件')).toBeNull();
   });
 
-  it('explains that materials are evidence rather than automatic avatar conclusions', () => {
+  it('keeps the editor free of persistent feature annotations', () => {
     render(
       <NowPage
         draft={makeDraft()}
@@ -190,10 +190,12 @@ describe('NowPage', () => {
       />,
     );
 
-    const hint = screen.getByText(
-      '素材是这次经历的证据；分身会结合这条记录理解，不会自动把素材当成结论。',
+    expect(screen.getByLabelText('添加素材').getAttribute('aria-describedby')).toBeNull();
+    expect(screen.getByLabelText('此刻发生了什么？').getAttribute('aria-describedby')).toBe(
+      'now-record-count',
     );
-    expect(screen.getByLabelText('添加素材').getAttribute('aria-describedby')).toBe(hint.id);
+    expect(screen.queryByText(/素材是这次经历的证据/)).toBeNull();
+    expect(screen.queryByText(/保存后可在/)).toBeNull();
   });
 
   it('saves a non-empty draft before leaving without a confirmation', async () => {

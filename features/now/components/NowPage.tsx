@@ -182,11 +182,8 @@ export const NowPage: React.FC<NowPageProps> = ({
                 setDraft((current) => ({ ...current, text: event.target.value }))
               }
               placeholder="写下此刻"
-              aria-describedby="now-record-count now-record-guide"
+              aria-describedby="now-record-count"
             />
-            <p id="now-record-guide" className="now-materials-hint">
-              写下发生了什么，以及你在意的一点。保存后可在「过去」搜索找回，无需先选标签。
-            </p>
             <div className="now-editor__meta">
               <span id="now-record-count" aria-live="polite">
                 {draft.text.length}/{CONFIG.MAX_TEXT_LENGTH}
@@ -195,17 +192,16 @@ export const NowPage: React.FC<NowPageProps> = ({
           </div>
         </section>
 
-        <div className="now-materials-row">
-          <MaterialPreview
-            materials={draft.materials}
-            onRemove={removeMaterial}
-            onUpdateDescription={updateMaterialDescription}
-            onReplaceLink={replaceMaterialLink}
-          />
-          <p className="now-materials-hint" id="now-materials-hint">
-            素材是这次经历的证据；分身会结合这条记录理解，不会自动把素材当成结论。
-          </p>
-        </div>
+        {draft.materials.length > 0 && (
+          <div className="now-materials-row">
+            <MaterialPreview
+              materials={draft.materials}
+              onRemove={removeMaterial}
+              onUpdateDescription={updateMaterialDescription}
+              onReplaceLink={replaceMaterialLink}
+            />
+          </div>
+        )}
 
         <div className="now-actions">
           <div className="now-tool-row">
@@ -221,7 +217,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               </span>
               <span className="now-anchor-point__meta">
                 <span className="now-anchor-point__summary" title={tagSummary || undefined}>
-                  {tagSummary || '标签（选填）'}
+                  {tagSummary || '标签'}
                 </span>
               </span>
             </button>
@@ -231,7 +227,6 @@ export const NowPage: React.FC<NowPageProps> = ({
               disabled={sending || exiting}
               aria-label={materialMenuOpen ? '收起素材' : '添加素材'}
               aria-expanded={materialMenuOpen}
-              aria-describedby="now-materials-hint"
               onClick={() => setMaterialMenuOpen((open) => !open)}
             >
               <Plus size={21} />

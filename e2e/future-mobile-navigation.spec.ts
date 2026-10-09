@@ -74,9 +74,7 @@ for (const width of [320, 393, 768, 1280]) {
       'aria-selected',
       'true',
     );
-    await expect(
-      page.getByText('有想做的事时，可以先添加行动计划，再按需记录实际结果。'),
-    ).toBeVisible();
+    await expect(page.getByText('添加行动后，可在这里记录结果。')).toBeVisible();
     await expect(page.getByRole('button', { name: '去添加规划', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '去添加规划', exact: true }).click();
     await expect(sections.getByRole('tab', { name: '设计', exact: true })).toHaveAttribute(

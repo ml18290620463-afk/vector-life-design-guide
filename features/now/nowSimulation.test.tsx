@@ -186,7 +186,7 @@ describe('Now simulated input integration', () => {
     fireEvent.click(screen.getByLabelText('心情与事件'));
     fireEvent.click(screen.getByText('平静'));
     fireEvent.click(screen.getByLabelText('返回'));
-    expect(screen.getByText('标签（选填）')).toBeDefined();
+    expect(screen.getByText('标签')).toBeDefined();
   });
   it.each([' ', '短', '这是超过十二个字符的自定义标签内容'])(
     'rejects invalid custom tag %s',

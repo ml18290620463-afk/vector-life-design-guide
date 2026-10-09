@@ -631,11 +631,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 className="mobile-past-first-record"
                 aria-label={language === 'zh' ? '开始记录' : 'Start journaling'}
               >
-                <p>
-                  {language === 'zh'
-                    ? '从一件刚发生的小事开始。保存后，可以在这里搜索、回看，在需要时调取参考。'
-                    : 'Start with something that just happened. Save it here to search, revisit, and reference when needed.'}
-                </p>
+                <p>{language === 'zh' ? '写下此刻，留待回看。' : 'Save a moment to revisit.'}</p>
                 <button type="button" onClick={onOpenNow}>
                   {language === 'zh' ? '写下第一条记录' : 'Write your first entry'}
                 </button>

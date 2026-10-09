@@ -509,11 +509,8 @@ export function FuturePage({
             <p>
               {feedbackCandidates.length
                 ? '记录一次尝试的结果后，会在这里出现。'
-                : '有想做的事时，可以先添加行动计划，再按需记录实际结果。'}
+                : '添加行动后，可在这里记录结果。'}
             </p>
-            {!feedbackCandidates.length && (
-              <small>计划可以独立创建；已有经历和原则可在需要时作为参考。</small>
-            )}
             {!feedbackCandidates.length && (
               <button
                 type="button"

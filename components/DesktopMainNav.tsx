@@ -18,7 +18,7 @@ export const DesktopMainNav: FC<DesktopMainNavProps> = ({ activeTab, language, o
       V<span>VECTOR</span>
     </div>
     <div className="desktop-main-nav__links">
-      {getMainModules(language).map(({ id, title, hint, Icon }) => {
+      {getMainModules(language).map(({ id, title, Icon }) => {
         const isActive = activeTab === id;
         return (
           <button
@@ -29,10 +29,7 @@ export const DesktopMainNav: FC<DesktopMainNavProps> = ({ activeTab, language, o
             onClick={() => onNavigate(id)}
           >
             <Icon aria-hidden="true" />
-            <span>
-              {title}
-              <small>{hint}</small>
-            </span>
+            <span>{title}</span>
           </button>
         );
       })}

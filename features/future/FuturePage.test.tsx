@@ -121,7 +121,7 @@ describe('Future page', () => {
     await mount();
     expect(screen.getByRole('button', { name: '添加规划' })).toBeTruthy();
     switchToPractice();
-    expect(screen.getByText('有想做的事时，可以先添加行动计划，再按需记录实际结果。')).toBeTruthy();
+    expect(screen.getByText('添加行动后，可在这里记录结果。')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '去添加规划' }));
     expect(
       within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', {

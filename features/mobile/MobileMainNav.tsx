@@ -18,7 +18,7 @@ export const MobileMainNav: React.FC<MobileMainNavProps> = ({
     className="mobile-main-nav"
     aria-label={language === 'zh' ? '主页面导航' : 'Main page navigation'}
   >
-    {getMainModules(language).map(({ id, title, hint, Icon }) => {
+    {getMainModules(language).map(({ id, title, Icon }) => {
       const isActive = activeTab === id;
       return (
         <button
@@ -31,9 +31,6 @@ export const MobileMainNav: React.FC<MobileMainNavProps> = ({
         >
           <Icon className="mobile-main-nav__icon" aria-hidden="true" />
           <span className="mobile-main-nav__label">{title}</span>
-          <span className="mobile-main-nav__hint" aria-hidden="true">
-            {hint}
-          </span>
         </button>
       );
     })}

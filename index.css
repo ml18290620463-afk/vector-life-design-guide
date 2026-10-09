@@ -716,13 +716,6 @@
   display: none;
 }
 
-.now-materials-hint {
-  margin: 0;
-  color: var(--now-text-dim);
-  font-size: 0.72rem;
-  line-height: 1.55;
-}
-
 .now-material {
   display: grid;
   grid-template-columns: 42px 1fr 32px;

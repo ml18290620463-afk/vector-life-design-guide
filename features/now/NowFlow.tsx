@@ -333,7 +333,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     return (
       <main className="now-shell now-completion" aria-labelledby="now-completion-title">
         <h1 id="now-completion-title">经历已保存</h1>
-        <p>这段经历已保存在过去。你可以随时回看、整理，或在需要时调取参考。</p>
         <div className="now-completion__actions">
           <button type="button" onClick={() => setCompletedEntry(null)}>
             继续记录
