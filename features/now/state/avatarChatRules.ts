@@ -6,7 +6,12 @@ import type { AvatarMode } from '../../avatar/types';
 
 export const buildAssistantTextMessage = (
   content: string,
-  options: { id: string; createdAt: string; references?: ChatMessage['references'] },
+  options: {
+    id: string;
+    createdAt: string;
+    references?: ChatMessage['references'];
+    modelAssistance?: ChatMessage['modelAssistance'];
+  },
 ): ChatMessage => ({
   id: options.id,
   role: 'assistant',
@@ -14,6 +19,7 @@ export const buildAssistantTextMessage = (
   content,
   created_at: options.createdAt,
   references: options.references,
+  modelAssistance: options.modelAssistance,
 });
 
 export const buildUserTextMessage = (

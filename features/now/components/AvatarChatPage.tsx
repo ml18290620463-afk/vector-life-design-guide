@@ -401,31 +401,47 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       );
       const reply = await chatWithAvatar(conversation, context, controller.signal);
       if (controller.signal.aborted) return;
+      const replyReferences = context
+        .flatMap((source) =>
+          (source.evidence ?? []).map((evidence) => ({ evidence, reason: source.kind })),
+        )
+        .map(({ evidence, reason }) => {
+          const entry = pastEntries.find(
+            (candidate) =>
+              isAccessibleDiaryEntry(candidate) &&
+              candidate.createdAt === evidence.occurredAt &&
+              `${candidate.title}：${candidate.content}`.includes(evidence.text),
+          );
+          return entry
+            ? {
+                entryId: entry.id,
+                title: entry.title,
+                date: entry.createdAt,
+                excerpt: evidence.text,
+                reason,
+              }
+            : undefined;
+        })
+        .flatMap((reference) => (reference ? [reference] : []));
+      const uniqueReplyReferences = Array.from(
+        new Map(replyReferences.map((reference) => [reference.entryId, reference])).values(),
+      );
+      const sourceDates = uniqueReplyReferences
+        .map((reference) => reference.date)
+        .sort((a, b) => a - b);
       const assistantMessage = buildAssistantTextMessage(reply, {
         id: generateSecureId('msg'),
         createdAt: new Date().toISOString(),
-        references: context
-          .flatMap((source) =>
-            (source.evidence ?? []).map((evidence) => ({ evidence, reason: source.kind })),
-          )
-          .map(({ evidence, reason }) => {
-            const entry = pastEntries.find(
-              (candidate) =>
-                isAccessibleDiaryEntry(candidate) &&
-                candidate.createdAt === evidence.occurredAt &&
-                `${candidate.title}：${candidate.content}`.includes(evidence.text),
-            );
-            return entry
-              ? {
-                  entryId: entry.id,
-                  title: entry.title,
-                  date: entry.createdAt,
-                  excerpt: evidence.text,
-                  reason,
-                }
-              : undefined;
-          })
-          .flatMap((reference) => (reference ? [reference] : [])),
+        references: uniqueReplyReferences,
+        modelAssistance: {
+          sourceCount: uniqueReplyReferences.length,
+          ...(sourceDates.length
+            ? {
+                earliestSourceDate: sourceDates[0],
+                latestSourceDate: sourceDates[sourceDates.length - 1],
+              }
+            : {}),
+        },
       });
       setMessages((current) => [...current, assistantMessage]);
       setAssistantTurns((value) => value + 1);

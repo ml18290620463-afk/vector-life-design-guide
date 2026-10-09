@@ -280,6 +280,9 @@ describe('AvatarChatPage', () => {
     fireEvent.click(screen.getByText('发送'));
 
     expect(await screen.findByText('你好，今天过得怎么样？')).toBeTruthy();
+    fireEvent.click(screen.getByText('本次依据与推断边界'));
+    expect(screen.getByText(/此回复由模型辅助生成/)).toBeTruthy();
+    expect(screen.getByText(/模型的通用推断/)).toBeTruthy();
     expect(fetch).toHaveBeenCalledWith(
       '/api/v1/avatar/chat',
       expect.objectContaining({ method: 'POST' }),

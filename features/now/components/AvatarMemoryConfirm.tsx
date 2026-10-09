@@ -15,7 +15,7 @@ export function AvatarMemoryConfirm({
   facets = [],
   candidateKind,
   categoryOverride,
-
+  sourceCount = 0,
   candidatePosition = 0,
   candidateTotal = 0,
   replacementStatement = null,
@@ -108,6 +108,12 @@ export function AvatarMemoryConfirm({
           本段对话中的第 {candidatePosition + 1} / {candidateTotal} 条
         </p>
       )}
+      <div className="avatar-memory-dialog__context">
+        <p className="avatar-memory-dialog__hint">
+          此内容由模型从当前对话的 {sourceCount}{' '}
+          条用户表述中提炼，属于候选理解，不是已确认事实。请修改或确认后再保存。
+        </p>
+      </div>
       <label htmlFor="avatar-memory-candidate">
         {facets.includes('preference')
           ? '你的喜好'

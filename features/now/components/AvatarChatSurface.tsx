@@ -50,9 +50,15 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
   return (
     <div className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}>
       {message.content}
-      {message.role === 'assistant' && message.references !== undefined && (
+      {message.role === 'assistant' && message.modelAssistance && (
         <details className="avatar-message-evidence">
           <summary>本次依据与推断边界</summary>
+          <p>
+            此回复由模型辅助生成。
+            {message.modelAssistance.sourceCount > 0 && message.modelAssistance.earliestSourceDate
+              ? `它收到 ${message.modelAssistance.sourceCount} 条可核对的过去记录，时间范围为 ${new Date(message.modelAssistance.earliestSourceDate).toLocaleDateString('zh-CN')} 至 ${new Date(message.modelAssistance.latestSourceDate ?? message.modelAssistance.earliestSourceDate).toLocaleDateString('zh-CN')}。`
+              : '它没有收到可核对的过去记录。'}
+          </p>
           {message.references?.length ? (
             <ul>
               {message.references.map((reference) => (
@@ -357,6 +363,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
         {chatError && (
           <div role="alert">
             <p>{chatError}</p>
+            <p>本次没有生成替代回复；你的原始提问仍在对话记录中，可在修复连接后重试。</p>
             <button type="button" disabled={chatPending} onClick={onOpenModelSettings}>
               检查模型接入
             </button>
