@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { AppState } from './types';
+import { AppState, type DiaryEntry } from './types';
+import { useReadableEntries } from './hooks/useReadableEntries';
 import { useDiaryData } from './hooks/useDiaryData';
 import { useAppBilling } from './hooks/useAppBilling';
 import { useAppStore } from './stores/appStore';
@@ -83,7 +84,7 @@ const App: React.FC = () => {
 
   // Data Layer Hook
   const {
-    entries,
+    entries: storedEntries,
     principles,
     patternPrincipleLinks,
     addEntry,
@@ -114,6 +115,12 @@ const App: React.FC = () => {
     loading,
     loadError,
   } = useDiaryData(userId, language);
+
+  const { entries, error: entryReadError } = useReadableEntries(
+    storedEntries,
+    isUnlocked,
+    masterPassword,
+  );
 
   const { enterPendingOrPastMain, nowRoute, setNowRoute } = useAppEntryRouting({
     isUnlocked,
@@ -162,12 +169,21 @@ const App: React.FC = () => {
 
   const homePrinciples = getHomePrinciples(principles);
 
-  const { handleBackToPast, handlePersistNowRecord, handleSelectEntry } = useEntrySurfaceActions({
+  const {
+    handleBackToPast,
+    handlePersistNowRecord,
+    handleSelectEntry: selectStoredEntry,
+  } = useEntrySurfaceActions({
     addEntry,
     handleMobileTabChange,
     setAppState,
     setSelectedEntry,
   });
+
+  const handleSelectEntry = (entry: DiaryEntry) => {
+    const stored = storedEntries.find((item) => item.id === entry.id);
+    if (stored) selectStoredEntry(stored);
+  };
 
   const mobileMainTab = getMobileMainTab(appState);
   const navigateMainModule = (tab: Parameters<typeof handleMainModuleNavigate>[0]) => {
@@ -186,11 +202,11 @@ const App: React.FC = () => {
   const showGlobalBackground = shouldShowGlobalBackground(appState);
   const showLoadingOverlay = shouldShowLoadingOverlay(loading, appState);
 
-  if (loadError)
+  if (loadError || entryReadError)
     return (
       <main className="min-h-screen grid place-content-center gap-4 p-6" role="alert">
         <h1>暂时无法打开资料库</h1>
-        <p>{loadError}</p>
+        <p>{loadError || entryReadError}</p>
         <button type="button" onClick={() => window.location.reload()}>
           重新加载
         </button>

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { selectAvatarGuidanceContext } from './avatarGuidanceContext';
 import type { ChatMessage } from '../types/now';
 import type { GuidanceSource } from '../../../services/avatarGuidance';
@@ -89,5 +89,34 @@ describe('hybrid avatar recall', () => {
         (source) => source.id,
       ),
     ).toEqual(['entry:keyword']);
+  });
+});
+
+describe('time scope across conversation turns', () => {
+  afterEach(() => vi.useRealTimers());
+  const evidence: GuidanceSource[] = [2025, 2026].map((year) => ({
+    id: `entry:${year}`,
+    kind: '背景',
+    module: 'past',
+    text: '工作压力导致疲惫',
+    evidence: [{ text: '工作压力导致疲惫', occurredAt: new Date(year, 5, 1).getTime() }],
+  }));
+  const ids = (...questions: string[]) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 9));
+    return selectAvatarGuidanceContext(messages(...questions), evidence).map((s) => s.id);
+  };
+  it('keeps last year through multiple short continuations', () => {
+    expect(ids('去年工作压力', '继续', '那为什么')).toEqual(['entry:2025']);
+  });
+  it('applies explicit years and replaces the scope when a new period is requested', () => {
+    expect(ids('2025年工作压力')).toEqual(['entry:2025']);
+    expect(ids('去年工作压力', '今年工作压力', '继续')).toEqual(['entry:2026']);
+  });
+  it('does not carry the old period into a new substantive question', () => {
+    expect(ids('去年工作压力', '工作压力导致疲惫', '继续')).toEqual(['entry:2025', 'entry:2026']);
+  });
+  it('allows explicit cross-year comparison and retains it in follow-ups', () => {
+    expect(ids('比较去年和今年工作压力', '继续')).toEqual(['entry:2025', 'entry:2026']);
   });
 });

@@ -1,5 +1,9 @@
 /* eslint-disable max-lines -- This page composes the complete chat flow; focused logic lives in state and hooks. */
-import { selectAvatarGuidanceContext, getFocusText } from '../state/avatarGuidanceContext';
+import {
+  selectAvatarGuidanceContext,
+  getFocusText,
+  resolveAvatarQueryScope,
+} from '../state/avatarGuidanceContext';
 import { PatternReviewDialog } from '../../../components/PatternReviewDialog';
 import {
   answerAvatarEvidence,
@@ -371,7 +375,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     setChatError('');
     failedChat.current = conversation;
     try {
-      const question = conversation.at(-1)?.content ?? '';
+      const { scopedQuestion: question } = resolveAvatarQueryScope(conversation);
       const plan = parseAvatarQueryPlan(question);
       const eligibleEntries = pastEntries.filter(
         (entry) =>

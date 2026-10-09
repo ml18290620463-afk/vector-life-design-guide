@@ -19,8 +19,7 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: '行动规划', exact: true }).click();
     const action = `未来测试${width}：整理旅行证件`;
     await page.getByLabel('行动内容').fill(action);
-    await page.getByText('可选设置', { exact: true }).click();
-    await page.getByLabel('计划日期（可选）').fill(new Date().toISOString().slice(0, 10));
+    // The first action needs neither a goal nor a scheduled date.
     // Keep the default “不关联”: this is a valid preparation action.
     await page.getByRole('button', { name: '确定', exact: true }).click();
     await expect(page.getByText(action, { exact: false }).first()).toBeVisible();
@@ -35,7 +34,13 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole('heading', { name: '待检视' })).toBeVisible();
     await page.getByRole('button', { name: action, exact: false }).click();
     await page.getByLabel('状态').selectOption('partial');
-    await page.getByLabel('实际情况').fill('证件已核对，签证材料明天补齐。');
+    await page
+      .getByLabel('实际发生了什么（可选）', { exact: true })
+      .fill('证件已核对，签证材料明天补齐。');
+    await page.getByText('下一步（默认继续完成）', { exact: true }).click();
+    await page.getByRole('combobox', { name: /^下一步/ }).selectOption('adjust');
+    await page.getByLabel('调整后的行动', { exact: true }).fill('明天先核对签证材料');
+    await page.screenshot({ path: info.outputPath(`action-adjust-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: '保存记录' }).click();
     await expect(page.getByText('证件已核对，签证材料明天补齐。')).toBeVisible();
     await expect(page.getByRole('button', { name: /待检视/ })).toHaveCount(0);
@@ -52,6 +57,16 @@ for (const width of [1440, 390]) {
     await navigation.getByRole('button', { name: /^未来/ }).click();
     await page.getByRole('tab', { name: '践行', exact: true }).click();
     await expect(page.getByText('证件已核对，签证材料明天补齐。')).toBeVisible();
+    await expect(page.getByText(action, { exact: true })).toBeVisible();
+    await expect(page.getByText('调整后的行动：明天先核对签证材料', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '继续记录', exact: true }).click();
+    await expect(page.getByText('明天先核对签证材料', { exact: true })).toBeVisible();
+    await page.getByRole('combobox', { name: /^本次执行状态/ }).selectOption('completed');
+    await page.getByLabel('实际发生了什么（可选）', { exact: true }).fill('签证材料已核对完成');
+    await page.getByRole('button', { name: '保存记录', exact: true }).click();
+    await expect(page.getByText('签证材料已核对完成', { exact: true })).toBeVisible();
+    await expect(page.getByText(action, { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '继续记录', exact: true })).toHaveCount(0);
 
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
@@ -153,14 +168,14 @@ test('未来：继续完成的行动可追加践行，且刷新后保留完整�
   await page.getByRole('button', { name: /待检视 1/ }).click();
   await page.getByRole('button', { name: action, exact: false }).click();
   await page.getByLabel('状态').selectOption('partial');
-  await page.getByLabel('实际情况').fill('完成两次练习。');
+  await page.getByLabel('实际发生了什么（可选）', { exact: true }).fill('完成两次练习。');
   await page.getByRole('button', { name: '保存记录' }).click();
 
   await expect(page.getByRole('button', { name: '继续记录' })).toBeVisible();
   await expect(page.getByRole('button', { name: /待检视/ })).toHaveCount(0);
   await page.getByRole('button', { name: '继续记录' }).click();
   await expect(page.getByRole('button', { name: '‹ 返回践行' })).toBeVisible();
-  await page.getByLabel('实际情况').fill('完成第三次练习。');
+  await page.getByLabel('实际发生了什么（可选）', { exact: true }).fill('完成第三次练习。');
   await page.getByRole('button', { name: '保存记录' }).click();
 
   await expect(page.getByText('完成两次练习。')).toBeVisible();
@@ -196,7 +211,9 @@ test('未来：草稿行动可在确认后删除，已有下级记录的目标�
   await page.getByRole('button', { name: '行动规划', exact: true }).click();
   await page.getByLabel('行动内容').fill(draft);
   await page.getByRole('button', { name: '确定', exact: true }).click();
-  const draftEditor = page.getByRole('button', { name: `编辑行动规划：计划「${draft}」` });
+  const draftEditor = page.getByRole('button', {
+    name: new RegExp(`^编辑行动规划：行动「${draft}」`),
+  });
   await draftEditor.click();
   await page.getByRole('button', { name: '删除行动规划', exact: true }).click();
   await expect(page.getByText('删除后无法恢复，确定删除吗？')).toBeVisible();
@@ -204,7 +221,9 @@ test('未来：草稿行动可在确认后删除，已有下级记录的目标�
   await expect(page.getByLabel('行动内容')).toHaveValue(draft);
   await page.getByRole('button', { name: '删除行动规划', exact: true }).click();
   await page.getByRole('button', { name: '确认删除', exact: true }).click();
-  await expect(page.getByRole('button', { name: `编辑行动规划：计划「${draft}」` })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: new RegExp(`^编辑行动规划：行动「${draft}」`) }),
+  ).toHaveCount(0);
 
   const vision = '未来关联删除测试：持续学习';
   const goal = '未来关联删除测试：完成阅读计划';
@@ -271,7 +290,9 @@ test('未来：愿景、目标、行动规划与践行记录保持关联且互�
   await page.getByRole('button', { name: action, exact: false }).click();
   await expect(page.getByText(`所属目标 · ${goal}`)).toBeVisible();
   await page.getByLabel('状态').selectOption('completed');
-  await page.getByLabel('实际情况').fill('三个案例已整理完成，准备开始写说明。');
+  await page
+    .getByLabel('实际发生了什么（可选）', { exact: true })
+    .fill('三个案例已整理完成，准备开始写说明。');
   await page.getByRole('button', { name: '保存记录' }).click();
   await expect(page.getByText('三个案例已整理完成，准备开始写说明。')).toBeVisible();
 
@@ -344,7 +365,7 @@ test('未来：完成行动可带着上下文主动进入过去沉淀，但不�
   await page.getByRole('button', { name: /待检视 1/ }).click();
   await page.getByRole('button', { name: action, exact: false }).click();
   await page.getByLabel('状态').selectOption('completed');
-  await page.getByLabel('实际情况').fill(result);
+  await page.getByLabel('实际发生了什么（可选）', { exact: true }).fill(result);
   await expect(page.getByLabel('下一步')).toHaveCount(0);
   await page.getByRole('button', { name: '保存记录' }).click();
 

@@ -8,6 +8,19 @@ import type { AvatarLaunchContext } from '../../avatar/types';
 import type { ChatMessage } from '../types/now';
 import { parseAvatarQueryPlan } from '../../../services/avatarQueryPlan';
 
+export function resolveAvatarQueryScope(conversation: ChatMessage[]) {
+  const question = conversation.at(-1)?.content ?? '';
+  const previousQuestion = conversation
+    .slice(0, -1)
+    .filter((m) => m.role === 'user' && !isAvatarContextContinuation(m.content))
+    .at(-1)?.content;
+  // Resolve subject and time scope together. New substantive questions reset
+  // the scope, while any number of short continuations keeps it intact.
+  const scopedQuestion =
+    isAvatarContextContinuation(question) && previousQuestion ? previousQuestion : question;
+  return { question, previousQuestion, scopedQuestion };
+}
+
 /** Short follow-ups retain the latest substantive subject; identity remains independent. */
 export function selectAvatarGuidanceContext(
   conversation: ChatMessage[],
@@ -16,8 +29,8 @@ export function selectAvatarGuidanceContext(
   preferredEntryIds?: string[],
 ) {
   const now = Date.now();
-  const question = conversation.at(-1)?.content ?? '';
-  const plan = parseAvatarQueryPlan(question, now);
+  const { question, previousQuestion, scopedQuestion } = resolveAvatarQueryScope(conversation);
+  const plan = parseAvatarQueryPlan(scopedQuestion, now);
   sources = sources.filter((source) =>
     plan.range
       ? Boolean(
@@ -31,10 +44,6 @@ export function selectAvatarGuidanceContext(
       : (source.validFrom === undefined || source.validFrom <= now) &&
         (source.validTo === undefined || now < source.validTo),
   );
-  const previousQuestion = conversation
-    .slice(0, -1)
-    .filter((m) => m.role === 'user' && !isAvatarContextContinuation(m.content))
-    .at(-1)?.content;
   let selected = buildGroundedGuidance(question, sources, previousQuestion, {
     range: plan.range,
     preferredSourceIds: preferredEntryIds?.map((id) => `entry:${id}`),

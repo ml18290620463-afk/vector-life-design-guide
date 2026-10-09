@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppState } from '../types';
-import { pushAppPath } from '../lib/previewMode';
+import { isMobileExperience, pushAppPath } from '../lib/previewMode';
 import { rememberMainRoute } from '../lib/appEntryRoutes';
 import { useAppMainNavigation } from './useAppMainNavigation';
 
@@ -37,6 +37,23 @@ describe('useAppMainNavigation', () => {
     expect(rememberMainRoute).toHaveBeenNthCalledWith(1, '/avatar');
     expect(rememberMainRoute).toHaveBeenNthCalledWith(2, '/past');
   });
+
+  it.each(['past', 'future'] as const)(
+    'leaves the avatar subroute when navigating to %s on mobile',
+    (tab) => {
+      vi.mocked(isMobileExperience).mockReturnValue(true);
+      const setAppState = vi.fn();
+      const setNowRoute = vi.fn();
+      const { result } = renderHook(() => useAppMainNavigation({ setAppState, setNowRoute }));
+      act(() => result.current.handleMainModuleNavigate('avatar'));
+      act(() => result.current.handleMainModuleNavigate(tab));
+      expect(setNowRoute).toHaveBeenLastCalledWith('now');
+      expect(setAppState).toHaveBeenLastCalledWith(
+        tab === 'past' ? AppState.PAST : AppState.FUTURE,
+      );
+      vi.mocked(isMobileExperience).mockReturnValue(false);
+    },
+  );
 
   it('clears the avatar subroute when navigating to Future on desktop', () => {
     const setAppState = vi.fn();

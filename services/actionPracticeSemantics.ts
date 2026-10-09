@@ -23,9 +23,13 @@ export const actionExecutionStatusHint: Record<ActionFeedbackStatus, string> = {
 };
 
 /** A stable, self-explanatory sentence for sources consumed by the avatar. */
-export const describeActionPractice = (feedback: ActionFeedback) =>
+export const describeActionPractice = (
+  feedback: ActionFeedback & { actionTitle?: string; nextAction?: string },
+) =>
   [
+    ...(feedback.actionTitle ? [`当时行动：${feedback.actionTitle}`] : []),
     `执行状态：${actionExecutionStatusLabel[feedback.status]}`,
     feedback.note.trim() ? `实际记录：${feedback.note.trim()}` : '未填写实际记录',
     `后续选择：${actionNextStepLabel[feedback.nextStep]}`,
+    ...(feedback.nextAction ? [`调整后的行动：${feedback.nextAction}`] : []),
   ].join('；');

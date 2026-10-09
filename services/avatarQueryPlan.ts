@@ -46,6 +46,23 @@ export const parseAvatarTimeRange = (
 ): AvatarTimeRange | undefined => {
   const date = new Date(now);
   const year = localYear(date);
+  // A comparison must include both periods instead of silently choosing one.
+  if (/今年/.test(question) && /去年/.test(question))
+    return {
+      start: localDay(year - 1, 0),
+      end: localDay(year + 1, 0),
+      label: `${year - 1} 年至${year} 年`,
+    };
+  const yearSpan = question.match(/(\d{4})\s*年\s*(?:至|到|-|和|与|、)\s*(\d{4})\s*年/);
+  if (yearSpan) {
+    const first = Math.min(Number(yearSpan[1]), Number(yearSpan[2]));
+    const last = Math.max(Number(yearSpan[1]), Number(yearSpan[2]));
+    return {
+      start: localDay(first, 0),
+      end: localDay(last + 1, 0),
+      label: `${first} 年至${last} 年`,
+    };
+  }
   if (/今年/.test(question))
     return { start: localDay(year, 0), end: localDay(year + 1, 0), label: `${year} 年` };
   if (/去年/.test(question))
@@ -91,6 +108,11 @@ export const parseAvatarTimeRange = (
   const month = question.match(/(\d{4})年(\d{1,2})月/);
   if (month && Number(month[2]) >= 1 && Number(month[2]) <= 12)
     return monthRange(Number(month[1]), Number(month[2]) - 1, `${month[1]} 年 ${month[2]} 月`);
+  const explicitYear = question.match(/(?<!\d)(\d{4})\s*年(?!\s*\d{1,2}\s*月)/);
+  if (explicitYear) {
+    const y = Number(explicitYear[1]);
+    return { start: localDay(y, 0), end: localDay(y + 1, 0), label: `${y} 年` };
+  }
   const days = question.match(/过去\s*(\d{1,3})\s*天/);
   if (days) {
     const end = now;

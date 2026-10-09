@@ -32,6 +32,7 @@ interface PastRepositoryProps {
   onPracticeReflectionContextDismiss?: () => void;
   /** @deprecated Past no longer opens the avatar; retained for call-site compatibility. */
   onOpenAvatar?: () => void;
+  onOpenNow?: () => void;
   onOpenFutureGoal?: (goalId: string) => void;
   language: Language;
   theme?: Theme;
@@ -100,6 +101,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   onSelectEntry,
   onDeleteEntries,
   onOpenFutureGoal,
+  onOpenNow,
 }) => {
   const t = TRANSLATIONS[language];
   const [section, setSection] = useState<PastRepositorySection>(initialSection ?? 'timeline');
@@ -460,6 +462,21 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     </li>
                   ))}
                 </ul>
+              </aside>
+            )}
+            {!entries.some((entry) => !entry.isSample) && onOpenNow && !hasTimelineQuery && (
+              <aside
+                className="mobile-past-first-record"
+                aria-label={language === 'zh' ? '开始记录' : 'Start journaling'}
+              >
+                <p>
+                  {language === 'zh'
+                    ? '从一件刚发生的小事开始。保存后，可以在这里搜索、回看，再决定下一步。'
+                    : 'Start with something that just happened. Save it here to search, revisit, and decide your next step.'}
+                </p>
+                <button type="button" onClick={onOpenNow}>
+                  {language === 'zh' ? '写下第一条记录' : 'Write your first entry'}
+                </button>
               </aside>
             )}
             {renderTimelineRows()}

@@ -124,6 +124,7 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
     >
       <span className="avatar-reliability-card__eyebrow">备份与恢复</span>
       <p>备份会包含记录、目标、分身档案和未完成草稿。已启用本地加密时，导出的文件也会加密。</p>
+      <p>恢复凭证用于找回访问权限，不包含日记资料。请另存数据备份，并保管好备份时使用的密令。</p>
       <div className="avatar-reliability-card__actions">
         <button type="button" onClick={() => void exportBackup()} disabled={busy}>
           生成备份

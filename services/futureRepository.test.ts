@@ -743,3 +743,43 @@ describe('archive canonical direction writes', () => {
     expect(snapshot.actions.find((item) => item.id === action.id)?.status).toBe('completed');
   });
 });
+
+it('saves a concrete adjustment atomically and preserves previous action wording', async () => {
+  const action = await saveFutureAction({ title: '整理所有材料', status: 'pending' });
+  const input = {
+    actionId: action.id,
+    expectedActionRevision: action.revision!,
+    occurredOn: '2026-10-09',
+    status: 'not_completed' as const,
+    note: '范围太大',
+    nextStep: 'adjust' as const,
+  };
+  const before = await readFutureSnapshot();
+  await expect(recordActionPractice({ ...input, nextAction: '  ' })).rejects.toThrow(
+    '调整后的行动',
+  );
+  expect(await readFutureSnapshot()).toEqual(before);
+  const first = await recordActionPractice({ ...input, nextAction: ' 明天先核对一份材料 ' });
+  const adjusted = await readFutureSnapshot();
+  expect(first).toMatchObject({ actionTitle: '整理所有材料', nextAction: '明天先核对一份材料' });
+  expect(adjusted.actions[0]).toMatchObject({
+    title: '明天先核对一份材料',
+    status: 'active',
+    revision: action.revision! + 1,
+  });
+  await expect(recordActionPractice({ ...input, nextAction: '过期覆盖' })).rejects.toThrow(
+    '行动已更新',
+  );
+  await recordActionPractice({
+    ...input,
+    expectedActionRevision: adjusted.actions[0].revision!,
+    status: 'completed',
+    nextStep: 'end',
+    note: '已核对',
+  });
+  const done = await readFutureSnapshot();
+  expect(done.actions[0].status).toBe('completed');
+  expect(done.state.practiceRecords).toHaveLength(2);
+  expect(done.state.practiceRecords?.find((r) => r.id === first.id)).toEqual(first);
+  expect(done.state.events).toEqual([]);
+});

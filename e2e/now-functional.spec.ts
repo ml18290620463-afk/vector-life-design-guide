@@ -9,10 +9,9 @@ for (const viewport of [
     test.setTimeout(120_000);
     await page.setViewportSize(viewport);
     await seedOnboardedApp(page);
-    await page
-      .getByRole('navigation', { name: '主页面导航' })
-      .getByRole('button', { name: /^现在/ })
-      .click();
+    await expect(page.getByRole('button', { name: '写下第一条记录' })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('first-entry.png'), fullPage: true });
+    await page.getByRole('button', { name: '写下第一条记录' }).click();
     await expect(page.getByTestId('now-page')).toBeVisible();
     const emptyCard = page.locator('.now-card');
     await expect(emptyCard).toHaveClass(/now-card--empty/);
@@ -30,6 +29,7 @@ for (const viewport of [
     await page.getByLabel('保存到过去').click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: '写下第一条记录' })).toHaveCount(0);
     await page
       .getByRole('navigation', { name: '主页面导航' })
       .getByRole('button', { name: /^现在/ })

@@ -89,6 +89,19 @@ describe('avatar query plan', () => {
       label: '2026 年 5 月 2 日',
     });
   });
+  it('recognizes a whole explicit year and cross-year comparisons', () => {
+    expect(parseAvatarTimeRange('2025年工作压力', now)).toMatchObject({
+      start: new Date(2025, 0, 1).getTime(),
+      end: new Date(2026, 0, 1).getTime(),
+    });
+    for (const question of ['比较去年和今年工作压力', '比较2025年与2026年工作压力']) {
+      expect(parseAvatarTimeRange(question, now)).toMatchObject({
+        start: new Date(2025, 0, 1).getTime(),
+        end: new Date(2027, 0, 1).getTime(),
+      });
+    }
+    expect(parseAvatarTimeRange('2026年13月', now)).toBeUndefined();
+  });
   it('answers standalone entry counts locally and excludes inaccessible data', () => {
     expect(buildDeterministicEntryCountReply('本月写了多少篇日记', entries, now)).toContain(
       '1 条可访问记录',

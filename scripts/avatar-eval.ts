@@ -1,25 +1,24 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import express from 'express';
+import { loadEnv } from 'vite';
 import { avatarEvaluationCases } from '../evals/avatar/corpus';
 import { registerAvatarChatRoutes } from '../server/avatarChatRoutes';
 import { chooseProvider, resolveProviderModel, type ProviderConfig } from '../server/aiProviders';
 import { AVATAR_BEHAVIOR_VERSION } from '../services/avatarBehaviorStandard';
 
+const env = { ...loadEnv('development', process.cwd(), ''), ...process.env };
+
 // No browser reads, real records, model credentials, or model-side grading in output.
 const config: ProviderConfig = {
   forcedProvider:
-    process.env.AI_PROVIDER === 'gemini'
-      ? 'gemini'
-      : process.env.AI_PROVIDER === 'openrouter'
-        ? 'openrouter'
-        : '',
-  openrouterKey: process.env.OPENROUTER_API_KEY ?? '',
-  openrouterModel: process.env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini',
+    env.AI_PROVIDER === 'gemini' ? 'gemini' : env.AI_PROVIDER === 'openrouter' ? 'openrouter' : '',
+  openrouterKey: env.OPENROUTER_API_KEY ?? '',
+  openrouterModel: env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini',
   openrouterReferer: '',
   openrouterTitle: 'VECTOR synthetic evaluation',
   openrouterJsonMode: true,
-  geminiKey: process.env.GEMINI_API_KEY ?? '',
-  geminiModel: process.env.GEMINI_MODEL ?? 'gemini-2.0-flash',
+  geminiKey: env.GEMINI_API_KEY ?? '',
+  geminiModel: env.GEMINI_MODEL ?? 'gemini-2.0-flash',
 };
 const provider = chooseProvider(config);
 const run = process.argv.includes('--run');

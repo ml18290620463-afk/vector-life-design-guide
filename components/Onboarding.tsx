@@ -338,8 +338,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         waitingCalibration: '确认密令，签发私钥',
         savedTitle: '离线凭证已保存',
         generatedTitle: '恢复私钥已签发',
-        savedBody: '请妥善保管，忘记密令时会用到。',
-        generatedBody: '请保存离线副本，用于找回入口。',
+        savedBody:
+          '请妥善保管，忘记密令时会用到。它不包含记录；进入后请在「分身 → 数据与备份」另存数据备份。',
+        generatedBody: '请保存离线副本，用于找回入口。恢复凭证不包含记录，记录需要另行备份。',
         savingPng: '正在保存 PNG',
         savePng: '保存离线凭证',
         savedReady: '已保存，可进入',
@@ -383,8 +384,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({
         waitingCalibration: 'Awaiting code calibration',
         savedTitle: 'Pass archived offline',
         generatedTitle: 'Offline key issued',
-        savedBody: 'Ownership confirmed. No plaintext enters VECTOR.',
-        generatedBody: 'Your only recovery key. Save it to enter.',
+        savedBody:
+          'Keep this recovery key safe. Back up your journal separately under Avatar → Data & backup.',
+        generatedBody:
+          'Save your recovery key to enter. It restores access, not journal data; export a separate data backup.',
         savingPng: 'Saving PNG',
         savePng: 'Save offline pass',
         savedReady: 'Archived. Ready to enter',

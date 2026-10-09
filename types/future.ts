@@ -53,6 +53,9 @@ export interface PracticeReflectionContext {
 /** A user-authored record of carrying out an action. It deliberately does not
  * require a goal: actions can be useful preparations in their own right. */
 export interface ActionPracticeRecord {
+  /** Original action wording, preserved when the next attempt changes. */
+  actionTitle?: string;
+  nextAction?: string;
   id: string;
   actionId: string;
   status: ActionFeedbackStatus;
@@ -140,6 +143,7 @@ export interface OutcomeInput extends OutcomeTarget {
   actionStatus?: ActionItemStatus;
 }
 export interface ActionPracticeInput {
+  nextAction?: string;
   actionId: string;
   expectedActionRevision: number;
   status: ActionFeedbackStatus;

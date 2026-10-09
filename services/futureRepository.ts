@@ -310,6 +310,8 @@ export async function recordActionPractice(input: ActionPracticeInput) {
       throw new Error('已完成行动只能结束');
     if (input.status === 'cancelled' && input.nextStep !== 'end')
       throw new Error('已取消行动只能结束');
+    const nextAction = input.nextStep === 'adjust' ? input.nextAction?.trim() : undefined;
+    if (input.nextStep === 'adjust') textRequired(nextAction ?? '', '调整后的行动');
     const nextStatus =
       input.status === 'completed'
         ? 'completed'
@@ -320,6 +322,8 @@ export async function recordActionPractice(input: ActionPracticeInput) {
     const record = {
       id: generateSecureId('practice'),
       actionId: action.id,
+      actionTitle: action.title,
+      nextAction,
       status: input.status,
       note: input.note.trim(),
       nextStep: input.nextStep,
@@ -331,6 +335,7 @@ export async function recordActionPractice(input: ActionPracticeInput) {
       candidate.id === action.id
         ? {
             ...candidate,
+            title: nextAction ?? candidate.title,
             status: nextStatus,
             reviewedAt,
             completedAt: nextStatus === 'completed' ? reviewedAt : undefined,

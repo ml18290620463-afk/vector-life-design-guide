@@ -254,6 +254,17 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           }
         />
       )}
+      {general && (
+        <details className="avatar-data-tools" open={reliabilityTask === 'backup' || undefined}>
+          <summary>数据与备份</summary>
+          <AvatarReliabilityAssistant
+            task="backup"
+            draft={draft}
+            onOpenDraft={onOpenDraft}
+            showToast={showToast}
+          />
+        </details>
+      )}
       {!general && (
         <section className="now-avatar-mode-intro">
           <div>
@@ -297,7 +308,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
               onSendPreview={onSendPreview}
             />
           ))}
-          {general && reliabilityTask && (
+          {general && reliabilityTask && reliabilityTask !== 'backup' && (
             <AvatarReliabilityAssistant
               task={reliabilityTask}
               draft={draft}

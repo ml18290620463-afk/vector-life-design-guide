@@ -1,6 +1,10 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { clear, get, set } from 'idb-keyval';
-import { DiaryStorageKeys as K } from './diaryStorage';
+import {
+  getMaterialsStorageKey,
+  getSelectedStarsStorageKey,
+  DiaryStorageKeys as K,
+} from './diaryStorage';
 import { useAppStore } from '../stores/appStore';
 import { SecurityService } from './securityService';
 import { changeFutureProtection, BACKUP_RESTORE_JOB } from './vaultTransaction';
@@ -14,7 +18,16 @@ import {
 import { decryptVaultBackupFile, isEncryptedVaultBackup } from './vaultBackupFile';
 import { saveNowDraft, loadNowDraft } from './nowDraftRepository';
 import { createEmptyDraft } from '../features/now/state/nowRules';
-import { saveGoal, saveFutureAction, readFutureSnapshot } from './futureRepository';
+import {
+  saveGoal,
+  saveFutureAction,
+  readFutureSnapshot,
+  saveVision,
+  recordOutcome,
+  recordActionPractice,
+  setGoalStatus,
+  saveArchiveDirection,
+} from './futureRepository';
 
 const password = '备份原密码-123';
 const cache = 'vector:avatar:atomic-memories:v1';
@@ -154,3 +167,123 @@ it('boots a locked vault with no recovery job and blocks legacy plaintext export
   await expect(recoverBackupRestore()).resolves.toBeUndefined();
   await expect(exportVaultBackup('test')).rejects.toThrow('解锁');
 });
+
+it('round-trips every backup domain, embedded media and complete linked future history', async () => {
+  await fixture();
+  const uid = 'roundtrip-user';
+  const entries = await get(K.entries);
+  entries[0].attachment = {
+    type: 'image',
+    data: 'data:image/png;base64,aGVsbG8=',
+    name: '证据.png',
+    mimeType: 'image/png',
+  };
+  entries[0].nowMaterials = [
+    { id: 'media-1', type: 'image', url: 'data:image/png;base64,aGVsbG8=', sort_order: 0 },
+  ];
+  await set(K.entries, entries);
+  await set(K.principles, [{ id: 'p1', text: '先核对', derivedFromEntryIds: ['e1'] }]);
+  await set(K.patternPrincipleLinks, [{ id: 'link1', principleId: 'p1', patternId: 'memory' }]);
+  await set(K.guidingStars, ['诚实']);
+  await set(K.containers, [{ id: 'container1', title: '沟通', entryIds: ['e1'] }]);
+  await set(getMaterialsStorageKey(uid), [
+    { id: 'material1', entryId: 'e1', data: 'data:audio/wav;base64,aGVsbG8=' },
+  ]);
+  await set(getSelectedStarsStorageKey(uid), ['诚实']);
+  for (const [key, rows] of Object.entries({
+    'vector:avatar:memory-relations:v1': [{ id: 'relation1', sourceId: 'memory', targetId: 'e1' }],
+    'vector:avatar:memory-tags:v1': [{ name: '沟通' }],
+    'vector:avatar:understandings:v1': [{ id: 'understanding1', sourceEntryIds: ['e1'] }],
+    'vector:avatar:sessions:v1': [
+      { id: 'session1', messages: [{ role: 'user', content: '如何确认范围？' }] },
+    ],
+    user_custom_anchors: ['耐心'],
+  }))
+    localStorage.setItem(key, JSON.stringify(rows));
+  const vision = await saveVision({ text: '持续探索', status: 'active' });
+  const goal = await saveGoal({
+    title: '探索一次',
+    visionId: vision.id,
+    status: 'active',
+    tags: [],
+    measurement: { kind: 'quantity', target: 1, unit: '次', precision: 0, distinctItems: true },
+  });
+  const revised = await saveGoal({ ...goal, title: '完成一次探索' });
+  const action = await saveFutureAction({ title: '整理路线', status: 'pending', goalId: goal.id });
+  await recordActionPractice({
+    actionId: action.id,
+    expectedActionRevision: action.revision!,
+    status: 'completed',
+    note: '路线已整理',
+    nextStep: 'end',
+    occurredOn: '2026-10-09',
+  });
+  await set(K.entries, [{ ...entries[0], content: '私人经历', isEncrypted: false }]);
+  await recordOutcome({
+    goalId: goal.id,
+    expectedRevision: revised.revision,
+    operationId: 'outcome1',
+    itemLabel: '公园',
+    occurredOn: '2026-10-09',
+    value: { kind: 'quantity', amount: 1 },
+    sourceEntryId: 'e1',
+  });
+  await set(K.entries, entries);
+  await setGoalStatus(goal.id, 'completed', revised.revision);
+  await saveArchiveDirection({
+    proposalId: 'proposal1',
+    kind: 'action',
+    text: '再次核对',
+    tags: [],
+    sourceRefs: [{ source: 'entry', id: 'e1' }],
+  });
+  const file = await exportVaultBackupFile('test', uid);
+  const before = (await decryptVaultBackupFile(
+    file as Parameters<typeof decryptVaultBackupFile>[0],
+    password,
+  )) as VaultBackup;
+  for (const key of [
+    'visions',
+    'goals',
+    'items',
+    'events',
+    'revisions',
+    'closures',
+    'receipts',
+    'practiceRecords',
+  ] as const)
+    expect(before.vault.future[key]?.length, key).toBeGreaterThan(0);
+  expect(Object.keys(before.vault.future.archiveOrigins!)).toHaveLength(1);
+  await clear();
+  localStorage.clear();
+  useAppStore.setState({ masterPassword: null, isUnlocked: true });
+  await protect('destination-password');
+  await set(K.semanticEmbeddings, [{ id: 'stale' }]);
+  await importVaultBackup(before, 'merge', uid, password);
+  await importVaultBackup(before, 'merge', uid, password);
+  const afterFile = await exportVaultBackupFile('test', uid);
+  const after = (await decryptVaultBackupFile(
+    afterFile as Parameters<typeof decryptVaultBackupFile>[0],
+    'destination-password',
+  )) as VaultBackup;
+  expect(after.vault.data).toEqual(before.vault.data);
+  expect(after.vault.caches).toEqual(before.vault.caches);
+  expect(after.vault.draft).toEqual(before.vault.draft);
+  expect({ ...after.vault.future, revision: 0 }).toEqual({ ...before.vault.future, revision: 0 });
+  expect(await get(K.semanticEmbeddings)).toBeUndefined();
+  expect((await get(K.entries))[0].content).not.toContain('私人经历');
+}, 30_000);
+it('rejects conflicting drafts without writes, and explicit replacement removes destination-only records', async () => {
+  const file = await fixture();
+  const backup = (await decryptVaultBackupFile(file, password)) as VaultBackup;
+  const draft = await loadNowDraft();
+  await saveNowDraft({ ...draft.draft!, text: '本机另一份草稿' }, draft.revision);
+  const before = await get(K.entries);
+  await expect(importVaultBackup(backup, 'merge', undefined, password)).rejects.toThrow('草稿');
+  expect(await get(K.entries)).toEqual(before);
+  expect((await loadNowDraft()).draft?.text).toBe('本机另一份草稿');
+  await saveFutureAction({ title: '仅在本机', status: 'pending' });
+  await importVaultBackup(backup, 'replace', undefined, password);
+  expect((await loadNowDraft()).draft?.text).toBe('私人草稿');
+  expect((await readFutureSnapshot()).actions.map((a) => a.title)).toEqual(['先确认范围']);
+}, 30_000);

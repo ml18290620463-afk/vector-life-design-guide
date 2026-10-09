@@ -1,3 +1,4 @@
+import { PracticeFeedbackFields } from './PracticeFeedbackFields';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ActionItem, DiaryEntry } from '../../types';
 import type {
@@ -30,7 +31,6 @@ import {
   visionSimilarity,
 } from './futureTextRules';
 import {
-  actionExecutionStatusHint,
   actionExecutionStatusLabel,
   actionNextStepLabel,
 } from '../../services/actionPracticeSemantics';
@@ -164,6 +164,7 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       return false;
     return (
       action.resultIntent === 'outcome' ||
+      !action.scheduledOn ||
       Boolean(action.scheduledOn && action.scheduledOn <= localDate())
     );
   });
@@ -183,6 +184,8 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       id: record.id,
       action: actions.find((action) => action.id === record.actionId),
       note: record.note,
+      actionTitle: record.actionTitle,
+      nextAction: record.nextAction,
       feedback: record,
       practiceRecordId: record.id,
       occurredOn: record.occurredOn,
@@ -192,6 +195,8 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
       id: event.id,
       action,
       note: event.actionFeedback!.note,
+      actionTitle: undefined,
+      nextAction: undefined,
       feedback: event.actionFeedback!,
       practiceRecordId: undefined,
       occurredOn: event.occurredOn,
@@ -309,6 +314,7 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
           status: feedbackStatus,
           note,
           nextStep,
+          nextAction: nextStep === 'adjust' ? field(data, 'nextAction') : undefined,
         }),
       false,
     ).then((saved) => {
@@ -367,55 +373,67 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
         </header>
         {feedbackResults.length ? (
           <div className="future-feedback-list">
-            {feedbackResults.map(({ id, action, note, feedback, practiceRecordId, occurredOn }) => (
-              <article className="future-feedback-result" key={id}>
-                <strong>{action.title}</strong>
-                <span>{actionExecutionStatusLabel[feedback.status]}</span>
-                {note && <p>{note}</p>}
-                <small>后续：{actionNextStepLabel[feedback.nextStep]}</small>
-                {feedback.status === 'completed' && (onReflectInPast || onNavigateModule) && (
-                  <button
-                    type="button"
-                    className="future-continue-practice"
-                    onClick={() => {
-                      if (onReflectInPast && practiceRecordId && occurredOn)
-                        onReflectInPast({
-                          actionId: action.id,
-                          practiceRecordId,
-                          occurredOn,
-                          actionTitle: action.title,
-                          result: note,
-                          nextStep: feedback.nextStep,
-                        });
-                      else onNavigateModule?.('past');
-                    }}
-                  >
-                    沉淀这次行动
-                  </button>
-                )}
-                {continuableActions.some((candidate) => candidate.id === action.id) &&
-                  isLatestPractice(id, action.id) && (
+            {feedbackResults.map(
+              ({
+                id,
+                action,
+                actionTitle,
+                nextAction,
+                note,
+                feedback,
+                practiceRecordId,
+                occurredOn,
+              }) => (
+                <article className="future-feedback-result" key={id}>
+                  <strong>{actionTitle ?? action.title}</strong>
+                  <span>{actionExecutionStatusLabel[feedback.status]}</span>
+                  {note && <p>{note}</p>}
+                  <small>后续：{actionNextStepLabel[feedback.nextStep]}</small>
+                  {nextAction && <p>调整后的行动：{nextAction}</p>}
+                  {feedback.status === 'completed' && (onReflectInPast || onNavigateModule) && (
                     <button
                       type="button"
                       className="future-continue-practice"
                       onClick={() => {
-                        practiceOpener.current =
-                          document.activeElement instanceof HTMLElement
-                            ? document.activeElement
-                            : null;
-                        setNotice('');
-                        setPracticeEditorSource('continue');
-                        setPracticeStatus('completed');
-                        setPracticeNextStep('end');
-                        setSelectedFeedbackActionId(action.id);
-                        setPracticePanelOpen(true);
+                        if (onReflectInPast && practiceRecordId && occurredOn)
+                          onReflectInPast({
+                            actionId: action.id,
+                            practiceRecordId,
+                            occurredOn,
+                            actionTitle: actionTitle ?? action.title,
+                            result: note,
+                            nextStep: feedback.nextStep,
+                          });
+                        else onNavigateModule?.('past');
                       }}
                     >
-                      继续记录
+                      沉淀这次行动
                     </button>
                   )}
-              </article>
-            ))}
+                  {continuableActions.some((candidate) => candidate.id === action.id) &&
+                    isLatestPractice(id, action.id) && (
+                      <button
+                        type="button"
+                        className="future-continue-practice"
+                        onClick={() => {
+                          practiceOpener.current =
+                            document.activeElement instanceof HTMLElement
+                              ? document.activeElement
+                              : null;
+                          setNotice('');
+                          setPracticeEditorSource('continue');
+                          setPracticeStatus('completed');
+                          setPracticeNextStep('end');
+                          setSelectedFeedbackActionId(action.id);
+                          setPracticePanelOpen(true);
+                        }}
+                      >
+                        继续记录
+                      </button>
+                    )}
+                </article>
+              ),
+            )}
           </div>
         ) : (
           <div className="future-empty-state future-practice-empty">
@@ -525,53 +543,12 @@ export function FuturePage({ onNavigateModule, onReflectInPast, ..._props }: Fut
                     {selectedFeedbackGoal ? `所属目标 · ${selectedFeedbackGoal.title}` : '独立行动'}
                   </small>
                 </div>
-                <label>
-                  本次执行状态
-                  <select
-                    name="feedbackStatus"
-                    value={practiceStatus}
-                    autoFocus
-                    onChange={(event) => {
-                      const status = event.target.value as ActionFeedbackStatus;
-                      setPracticeStatus(status);
-                      if (status === 'completed' || status === 'cancelled')
-                        setPracticeNextStep('end');
-                      else setPracticeNextStep('continue');
-                    }}
-                  >
-                    <option value="completed">已完成</option>
-                    <option value="partial">部分完成</option>
-                    <option value="not_completed">尚未完成</option>
-                    <option value="cancelled">停止这项行动</option>
-                  </select>
-                </label>
-                <p className="future-feedback-status-hint">
-                  {actionExecutionStatusHint[practiceStatus]}
-                </p>
-                <label>
-                  实际发生了什么（可选）
-                  <textarea name="note" />
-                </label>
-                {(practiceStatus === 'partial' || practiceStatus === 'not_completed') && (
-                  <details>
-                    <summary>下一步（默认继续完成）</summary>
-                    <label>
-                      下一步
-                      <select
-                        name="nextStep"
-                        value={practiceNextStep}
-                        onChange={(event) =>
-                          setPracticeNextStep(event.target.value as ActionFeedbackNextStep)
-                        }
-                      >
-                        <option value="continue">继续完成</option>
-                        <option value="adjust">调整后再做</option>
-                        <option value="pause">暂不安排</option>
-                        <option value="end">结束行动</option>
-                      </select>
-                    </label>
-                  </details>
-                )}
+                <PracticeFeedbackFields
+                  status={practiceStatus}
+                  nextStep={practiceNextStep}
+                  setStatus={setPracticeStatus}
+                  setNextStep={setPracticeNextStep}
+                />
                 {notice && <p role="alert">{notice}</p>}
                 <div className="future-feedback-submit">
                   <button type="submit" className="future-primary">

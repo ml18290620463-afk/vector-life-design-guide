@@ -269,6 +269,8 @@ export function stateFrom(value: unknown): FutureState {
       !['completed', 'partial', 'not_completed', 'cancelled'].includes(record.status) ||
       !['continue', 'adjust', 'pause', 'end'].includes(record.nextStep) ||
       typeof record.note !== 'string' ||
+      (record.actionTitle !== undefined && !nonempty(record.actionTitle)) ||
+      (record.nextAction !== undefined && !nonempty(record.nextAction)) ||
       !timestamp(record.createdAt)
     )
       invalid();

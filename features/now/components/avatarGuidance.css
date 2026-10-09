@@ -1270,3 +1270,26 @@
     padding-inline: 8px;
   }
 }
+
+.avatar-data-tools {
+  flex: 0 0 auto;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 0 16px;
+  max-height: 45dvh;
+  overflow: auto;
+  color: var(--mobile-ink);
+}
+.avatar-data-tools > summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+.avatar-data-tools > summary:focus-visible {
+  outline: 2px solid var(--mobile-accent);
+  outline-offset: -2px;
+}
+.avatar-data-tools .avatar-reliability-card button {
+  min-height: 44px;
+}

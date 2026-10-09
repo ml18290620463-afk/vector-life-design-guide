@@ -6287,6 +6287,32 @@ html.vector-force-mobile .archive-past-record {
   white-space: nowrap;
 }
 
+/* First meaningful entry, shown only until a real record exists. */
+.mobile-past-first-record {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-archive-border-strong);
+  border-radius: 1rem;
+  color: var(--color-archive-text-main);
+  background: var(--color-archive-surface);
+}
+.mobile-past-first-record p {
+  margin: 0 0 0.75rem;
+  line-height: 1.6;
+}
+.mobile-past-first-record button {
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.75rem;
+  color: inherit;
+  background: transparent;
+}
+.mobile-past-first-record button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
 .mobile-past-empty {
   padding: 2rem 0;
   text-align: center;

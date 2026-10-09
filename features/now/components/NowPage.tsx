@@ -152,8 +152,11 @@ export const NowPage: React.FC<NowPageProps> = ({
                 setDraft((current) => ({ ...current, text: event.target.value }))
               }
               placeholder="写下此刻"
-              aria-describedby="now-record-count"
+              aria-describedby="now-record-count now-record-guide"
             />
+            <p id="now-record-guide" className="now-materials-hint">
+              写下发生了什么，以及你在意的一点。保存后可在「过去」搜索找回，无需先选标签。
+            </p>
             <div className="now-editor__meta">
               <span id="now-record-count" aria-live="polite">
                 {draft.text.length}/{CONFIG.MAX_TEXT_LENGTH}
