@@ -40,6 +40,7 @@ export const rankNeuralSemanticMatches = (
 ): string[] => {
   const recordsById = new Map(records.map((record) => [record.objectId, record]));
   return candidates
+    .filter(isIndexableEntry)
     .flatMap((entry) => {
       const record = recordsById.get(entry.id);
       if (!record || record.contentFingerprint !== createEmbeddingFingerprint(entry)) return [];
