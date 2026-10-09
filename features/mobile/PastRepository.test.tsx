@@ -106,6 +106,24 @@ describe('PastRepository', () => {
     expect((search as HTMLInputElement).value).toBe('');
   });
 
+  it('renders large result sets in bounded batches while keeping the full result count', () => {
+    const entries = Array.from({ length: 101 }, (_, index) =>
+      makeEntry({
+        id: `entry-${index}`,
+        title: `记录 ${index}`,
+        createdAt: index,
+        updatedAt: index,
+      }),
+    );
+    renderRepository({ entries });
+
+    expect(screen.getByText('显示 101 条记录')).toBeTruthy();
+    expect(screen.getByText('记录 100')).toBeTruthy();
+    expect(screen.queryByText('记录 0')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '加载更多（剩余 1 条）' }));
+    expect(screen.getByText('记录 0')).toBeTruthy();
+  });
+
   it('searches a current principle and returns the records that support it', () => {
     renderRepository({
       entries: [

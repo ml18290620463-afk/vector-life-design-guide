@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ActionItem, DiaryEntry, Principle } from '../../types';
-import { availablePastTags, buildDeterministicReview, filterPastEntries } from './pastSearch';
+import {
+  availablePastTags,
+  buildDeterministicReview,
+  buildPastEntryRelationIndex,
+  filterPastEntries,
+} from './pastSearch';
 
 const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry => ({
   id,
@@ -54,6 +59,31 @@ describe('pastSearch', () => {
         (item) => item.id,
       ),
     ).toEqual(['e2']);
+  });
+
+  it('uses the same persisted relation semantics when an index is reused', () => {
+    const entries = [entry('e1', 1), entry('e2', 2), entry('e3', 3)];
+    const actions: ActionItem[] = [
+      { id: 'a1', title: 'action', status: 'active', createdAt: 1, resultEntryId: 'e1' },
+    ];
+    const principles: Principle[] = [
+      {
+        id: 'p1',
+        text: 'principle',
+        year: 2026,
+        createdAt: 1,
+        showOnHome: true,
+        derivedFromEntryIds: ['e2'],
+      },
+    ];
+    const index = buildPastEntryRelationIndex(actions, principles);
+
+    expect(filterPastEntries(entries, { linkedTo: 'action' }, actions, principles, index)).toEqual([
+      entries[0],
+    ]);
+    expect(
+      filterPastEntries(entries, { linkedTo: 'principle' }, actions, principles, index),
+    ).toEqual([entries[1]]);
   });
 
   it('builds an evidence-only review and an explicit action context', () => {

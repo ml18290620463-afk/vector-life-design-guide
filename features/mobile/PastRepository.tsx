@@ -23,6 +23,7 @@ import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
 import {
   availablePastTags,
+  buildPastEntryRelationIndex,
   buildDeterministicReview,
   filterPastEntries,
   type PastSearchFilters,
@@ -89,6 +90,8 @@ const getSafeTags = (tags: unknown) =>
 const getSafeTimestamp = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : 0;
 
+const TIMELINE_RENDER_BATCH_SIZE = 100;
+
 export const PastRepository: React.FC<PastRepositoryProps> = ({
   archiveMode = false,
   initialSection,
@@ -120,6 +123,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const [deleting, setDeleting] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<PastSearchFilters>({});
+  const [timelineRenderLimit, setTimelineRenderLimit] = useState(TIMELINE_RENDER_BATCH_SIZE);
   useEffect(() => {
     onViewChange?.({ section, query: timelineQuery });
   }, [section, timelineQuery, onViewChange]);
@@ -138,6 +142,10 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const safePrinciples = useMemo(() => (Array.isArray(principles) ? principles : []), [principles]);
   const safeActions = useMemo(() => (Array.isArray(actions) ? actions : []), [actions]);
   const activePrinciples = useMemo(() => currentPrinciples(safePrinciples), [safePrinciples]);
+  const relationIndex = useMemo(
+    () => buildPastEntryRelationIndex(safeActions, activePrinciples),
+    [safeActions, activePrinciples],
+  );
   const filterTags = useMemo(() => availablePastTags(safeEntries), [safeEntries]);
   const searchMatches = useMemo(() => {
     const query = normalizedTimelineQuery.toLocaleLowerCase();
@@ -219,8 +227,9 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     );
   }, [safeEntries, safeActions, activePrinciples, searchMatches, normalizedTimelineQuery]);
   const timelineEntries = useMemo(
-    () => filterPastEntries(textMatchedEntries, filters, safeActions, activePrinciples),
-    [textMatchedEntries, filters, safeActions, activePrinciples],
+    () =>
+      filterPastEntries(textMatchedEntries, filters, safeActions, activePrinciples, relationIndex),
+    [textMatchedEntries, filters, safeActions, activePrinciples, relationIndex],
   );
   const deterministicReview = useMemo(
     () => buildDeterministicReview(timelineEntries, activePrinciples, safeActions),
@@ -252,6 +261,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
         createdAt: closure.createdAt,
       })),
   ].sort((a, b) => b.createdAt - a.createdAt);
+  const renderedTimelineRows = timelineRows.slice(0, timelineRenderLimit);
+  const hasMoreTimelineRows = timelineRows.length > renderedTimelineRows.length;
   const allVisibleSelected =
     visibleEntryIds.length > 0 && visibleEntryIds.every((id) => selectedEntryIds.has(id));
 
@@ -307,6 +318,10 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   useEffect(() => {
     if (section !== 'timeline') exitSelectionMode();
   }, [section, exitSelectionMode]);
+
+  useEffect(() => {
+    setTimelineRenderLimit(TIMELINE_RENDER_BATCH_SIZE);
+  }, [normalizedTimelineQuery, filters, entries, actions, principles]);
 
   // Managing records is a task of its own.  A native modal puts it in the
   // browser's top layer, so neither the previous page nor the main navigation
@@ -369,46 +384,59 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     }
 
     return (
-      <ul className="mobile-past-timeline__list">
-        {timelineRows.map((row, index) =>
-          row.kind === 'closure' ? (
-            <li key={row.id}>
-              <article className="mobile-past-goal-summary">
-                <small>
-                  {getSourceDateLabel(row.createdAt, language)} ·{' '}
-                  {row.closure.snapshot.status === 'completed' ? '目标完成' : '目标结束'}
-                </small>
-                <h3>{row.closure.snapshot.title}</h3>
-                <p>
-                  {row.closure.snapshot.measurement.kind === 'quantity'
-                    ? `${row.closure.total} / ${row.closure.snapshot.measurement.target} ${row.closure.snapshot.measurement.unit}`
-                    : '已归档文字进展'}
-                </p>
-                {row.closure.total !== goalProgress(futureState, row.closure.snapshot).total && (
-                  <small>当前进度已变化，以上为结束时快照</small>
-                )}
-                {onOpenFutureGoal && (
-                  <button type="button" onClick={() => onOpenFutureGoal(row.closure.goalId)}>
-                    查看进展与历史
-                  </button>
-                )}
-              </article>
-            </li>
-          ) : (
-            <li key={row.id}>
-              <MobilePastTimelineEntry
-                entry={row.entry}
-                highlight={!isManaging && !hasTimelineQuery && index === 0}
-                language={language}
-                selectionMode={isManaging}
-                selected={selectedEntryIds.has(row.id)}
-                onToggleSelection={toggleEntrySelection}
-                onOpenFutureAction={onOpenFutureAction}
-              />
-            </li>
-          ),
+      <>
+        <ul className="mobile-past-timeline__list">
+          {renderedTimelineRows.map((row, index) =>
+            row.kind === 'closure' ? (
+              <li key={row.id}>
+                <article className="mobile-past-goal-summary">
+                  <small>
+                    {getSourceDateLabel(row.createdAt, language)} ·{' '}
+                    {row.closure.snapshot.status === 'completed' ? '目标完成' : '目标结束'}
+                  </small>
+                  <h3>{row.closure.snapshot.title}</h3>
+                  <p>
+                    {row.closure.snapshot.measurement.kind === 'quantity'
+                      ? `${row.closure.total} / ${row.closure.snapshot.measurement.target} ${row.closure.snapshot.measurement.unit}`
+                      : '已归档文字进展'}
+                  </p>
+                  {row.closure.total !== goalProgress(futureState, row.closure.snapshot).total && (
+                    <small>当前进度已变化，以上为结束时快照</small>
+                  )}
+                  {onOpenFutureGoal && (
+                    <button type="button" onClick={() => onOpenFutureGoal(row.closure.goalId)}>
+                      查看进展与历史
+                    </button>
+                  )}
+                </article>
+              </li>
+            ) : (
+              <li key={row.id}>
+                <MobilePastTimelineEntry
+                  entry={row.entry}
+                  highlight={!isManaging && !hasTimelineQuery && index === 0}
+                  language={language}
+                  selectionMode={isManaging}
+                  selected={selectedEntryIds.has(row.id)}
+                  onToggleSelection={toggleEntrySelection}
+                  onOpenFutureAction={onOpenFutureAction}
+                />
+              </li>
+            ),
+          )}
+        </ul>
+        {hasMoreTimelineRows && (
+          <button
+            type="button"
+            className="mobile-past-load-more"
+            onClick={() => setTimelineRenderLimit((limit) => limit + TIMELINE_RENDER_BATCH_SIZE)}
+          >
+            {language === 'zh'
+              ? `加载更多（剩余 ${timelineRows.length - renderedTimelineRows.length} 条）`
+              : `Load more (${timelineRows.length - renderedTimelineRows.length} remaining)`}
+          </button>
         )}
-      </ul>
+      </>
     );
   };
 

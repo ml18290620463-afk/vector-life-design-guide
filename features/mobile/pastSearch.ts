@@ -8,6 +8,16 @@ export interface PastSearchFilters {
   linkedTo?: 'action' | 'principle';
 }
 
+/**
+ * The relation index is derived only from persisted links. Keeping it separate
+ * from the entries means filtering a large library does not repeatedly scan
+ * every action and principle for every record.
+ */
+export interface PastEntryRelationIndex {
+  actionEntryIds: Set<string>;
+  principleEntryIds: Set<string>;
+}
+
 const timestamp = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : 0;
 
@@ -17,12 +27,31 @@ export const availablePastTags = (entries: DiaryEntry[]) =>
     (left, right) => left.localeCompare(right),
   );
 
+export const buildPastEntryRelationIndex = (
+  actions: ActionItem[] = [],
+  principles: Principle[] = [],
+): PastEntryRelationIndex => ({
+  actionEntryIds: new Set(
+    actions
+      .flatMap((action) => [
+        action.sourceEntryId,
+        action.resultEntryId,
+        ...(action.evidenceEntryIds ?? []),
+      ])
+      .filter((id): id is string => typeof id === 'string' && id.length > 0),
+  ),
+  principleEntryIds: new Set(
+    principles.flatMap((principle) => principle.derivedFromEntryIds ?? []).filter(Boolean),
+  ),
+});
+
 /** Pure, deterministic narrowing for a record set that has already been text-searched. */
 export const filterPastEntries = (
   entries: DiaryEntry[],
   filters: PastSearchFilters,
   actions: ActionItem[] = [],
   principles: Principle[] = [],
+  relationIndex = buildPastEntryRelationIndex(actions, principles),
 ): DiaryEntry[] => {
   const tags = new Set(filters.tags?.filter(Boolean) ?? []);
   return entries.filter((entry) => {
@@ -33,17 +62,13 @@ export const filterPastEntries = (
     if (
       filters.linkedTo === 'action' &&
       !(entry.relatedActionIds?.length ?? 0) &&
-      !actions.some((action) =>
-        [action.sourceEntryId, action.resultEntryId, ...(action.evidenceEntryIds ?? [])].includes(
-          entry.id,
-        ),
-      )
+      !relationIndex.actionEntryIds.has(entry.id)
     )
       return false;
     if (
       filters.linkedTo === 'principle' &&
       !(entry.relatedPrincipleIds?.length ?? 0) &&
-      !principles.some((principle) => (principle.derivedFromEntryIds ?? []).includes(entry.id))
+      !relationIndex.principleEntryIds.has(entry.id)
     )
       return false;
     return true;

@@ -26,6 +26,7 @@
     "i18n:diff": "tsx scripts/i18n-diff.ts",
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "bench:argon2": "tsx scripts/argon2-bench.ts",
+    "bench:past-search": "tsx scripts/past-search-bench.ts",
     "audit:lighthouse": "node scripts/lighthouse-audit.mjs",
     "audit:lighthouse:soft": "node scripts/lighthouse-audit.mjs --no-fail",
     "license:mint": "node scripts/dev-mint-license.mjs",
