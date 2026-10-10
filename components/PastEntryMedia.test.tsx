@@ -30,6 +30,42 @@ const makeEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 });
 
 describe('PastEntryMedia', () => {
+  it.each(['archive', 'mobile'] as const)(
+    'renders a saved link once in %s with a separate description',
+    (variant) => {
+      const url = 'http://127.0.0.1:3000/now';
+      render(
+        <PastEntryMedia
+          variant={variant}
+          entry={makeEntry({
+            content: '正文\n素材:\n- link: ' + url + '（用户说明：填什么？）',
+            nowMaterials: [
+              { id: 'link', type: 'link', url, description: '填什么？', sort_order: 0 },
+            ],
+          })}
+        />,
+      );
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+      expect(screen.getByRole('link').getAttribute('href')).toBe(url);
+      expect(screen.getAllByText('填什么？')).toHaveLength(1);
+      expect(screen.queryByText(/用户说明/)).toBeNull();
+    },
+  );
+
+  it('parses the description of a legacy-only link without corrupting its address', () => {
+    render(
+      <PastEntryMedia
+        variant="mobile"
+        entry={makeEntry({
+          content: '正文\n素材:\n- link: https://example.com（用户说明：备注）',
+          nowMaterials: [],
+        })}
+      />,
+    );
+    expect(screen.getByRole('link').getAttribute('href')).toBe('https://example.com');
+    expect(screen.getByText('备注')).toBeTruthy();
+  });
+
   it('renders archive media with the archive class contract', () => {
     const { container } = render(
       <PastEntryMedia entry={makeEntry()} variant="archive" theme="dark" />,

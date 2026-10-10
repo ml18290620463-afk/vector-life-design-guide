@@ -37,6 +37,12 @@ describe('getEntryMediaGroups', () => {
     expect(groups.linkMaterials).toHaveLength(1);
     expect(groups.legacyAudioUrls).toEqual(['data:audio/webm;base64,DDDD']);
     expect(groups.legacyVideoUrls).toEqual(['data:video/mp4;base64,EEEE']);
-    expect(groups.legacyLinkMaterials).toEqual(['https://legacy.example.com']);
+    expect(groups.legacyLinkMaterials).toEqual([
+      {
+        title: 'https://legacy.example.com',
+        url: 'https://legacy.example.com',
+        description: undefined,
+      },
+    ]);
   });
 });

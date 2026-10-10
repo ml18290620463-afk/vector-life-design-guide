@@ -38,11 +38,12 @@ const LinkReferenceNotice: React.FC<{ url: string }> = ({ url }) => {
   return <span className="material-reference-notice">此引用无法随备份恢复。</span>;
 };
 
-const ArchiveLinkMaterial: React.FC<{ title: string; url: string; theme: Theme }> = ({
-  title,
-  url,
-  theme,
-}) => {
+const ArchiveLinkMaterial: React.FC<{
+  title: string;
+  url: string;
+  description?: string;
+  theme: Theme;
+}> = ({ title, url, description, theme }) => {
   const isWebLink = classifyMaterialReference(url) === 'external-link';
   return (
     <div className="archive-entry-media__link">
@@ -55,6 +56,7 @@ const ArchiveLinkMaterial: React.FC<{ title: string; url: string; theme: Theme }
       >
         {title}
       </a>
+      {description && <div>{description}</div>}
       <LinkReferenceNotice url={url} />
     </div>
   );
@@ -200,10 +202,17 @@ const ArchiveInlineMedia: React.FC<{
         ...linkMaterials.map((material) => ({
           title: getMaterialTitle(material),
           url: material.url,
+          description: material.description,
         })),
-        ...legacyLinkMaterials.map((link) => ({ title: link, url: link })),
-      ].map(({ title, url }) => (
-        <ArchiveLinkMaterial key={`${title}-${url}`} title={title} url={url} theme={theme} />
+        ...legacyLinkMaterials,
+      ].map(({ title, url, description }) => (
+        <ArchiveLinkMaterial
+          key={`${title}-${url}`}
+          title={title}
+          url={url}
+          description={description}
+          theme={theme}
+        />
       ))}
     </div>
   );
@@ -226,7 +235,11 @@ const MobileAudioPlayback: React.FC<{ src: string; language: Language }> = ({ sr
   );
 };
 
-const MobileLinkMaterialCard: React.FC<{ title: string; url?: string }> = ({ title, url }) => {
+const MobileLinkMaterialCard: React.FC<{ title: string; url?: string; description?: string }> = ({
+  title,
+  url,
+  description,
+}) => {
   const displayTitle = title.trim() || url || '链接';
   const isWebLink = url && classifyMaterialReference(url) === 'external-link';
   return (
@@ -240,6 +253,7 @@ const MobileLinkMaterialCard: React.FC<{ title: string; url?: string }> = ({ tit
           <span>{displayTitle}</span>
         </div>
       )}
+      {description && <div>{description}</div>}
       <LinkReferenceNotice url={url ?? ''} />
     </div>
   );
@@ -286,6 +300,7 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
     audioMaterials.length > 0 ||
     legacyAudioUrls.length > 0 ||
     linkMaterials.length > 0 ||
+    legacyLinkMaterials.length > 0 ||
     otherMaterials.length > 0 ||
     materials.length > 0 ||
     Boolean(entry.attachment);
@@ -352,6 +367,7 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
           key={material.id}
           title={getMaterialTitle(material, language)}
           url={material.url}
+          description={material.description}
         />
       ))}
       {otherMaterials.map((material) => (
@@ -360,7 +376,7 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
         </div>
       ))}
       {legacyLinkMaterials.map((material) => (
-        <MobileLinkMaterialCard key={material} title={material} url={material} />
+        <MobileLinkMaterialCard key={material.url} {...material} />
       ))}
       {materials.map((material) =>
         /^link\s*[:：]/i.test(material) ? null : (
