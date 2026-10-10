@@ -153,15 +153,11 @@ export const PastEntryBody: React.FC<PastEntryBodyProps> = ({
 
   if (variant === 'mobile') {
     const isControlled = expanded !== undefined;
-    const visibleBody =
-      isControlled && !expanded && body.length > TEXT_COLLAPSE_LIMIT
-        ? `${body.slice(0, TEXT_COLLAPSE_LIMIT)}…`
-        : body;
 
     return (
       <div className="mobile-past-timeline__content">
         {isControlled ? (
-          <p>{visibleBody}</p>
+          <p>{body}</p>
         ) : showToggle ? (
           <CollapsibleRecordText text={body} language={language} />
         ) : (

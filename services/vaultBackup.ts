@@ -1,3 +1,4 @@
+import { PAST_PROCESSING_KEY } from './pastProcessingCache';
 import { PRIVATE_DRAFT_KEY } from './privateDraftKey';
 import { normalizeNowDraft, loadNowDraft, type DraftSnapshot } from './nowDraftRepository';
 import type { NowDraft } from '../features/now/types/now';
@@ -44,6 +45,7 @@ const memoryKeys = [
   'vector:avatar:memory-tags:v1',
 ] as const;
 const cacheKeys = [
+  PAST_PROCESSING_KEY,
   ...memoryKeys,
   'vector:avatar:understandings:v1',
   'vector:avatar:sessions:v1',
@@ -90,9 +92,11 @@ function strings(value: unknown): asserts value is string[] {
 const scalarDomain = (name: string) =>
   ['guidingStars', 'selectedStars', 'user_custom_anchors'].includes(name);
 const mergeValues = (name: string, current: unknown[], incoming: unknown[]) =>
-  scalarDomain(name)
-    ? [...new Set([...current, ...incoming])]
-    : mergeRows(current, incoming, name === 'vector:avatar:memory-tags:v1' ? 'name' : 'id');
+  name === PAST_PROCESSING_KEY
+    ? []
+    : scalarDomain(name)
+      ? [...new Set([...current, ...incoming])]
+      : mergeRows(current, incoming, name === 'vector:avatar:memory-tags:v1' ? 'name' : 'id');
 export function validateVaultBackup(value: unknown): asserts value is VaultBackup {
   const b = value as VaultBackup;
   if (
@@ -121,6 +125,7 @@ export function validateVaultBackup(value: unknown): asserts value is VaultBacku
   stateFrom(b.vault.future);
   if (b.vault.draft) normalizeNowDraft(b.vault.draft);
   for (const key of cacheKeys) {
+    if (key === PAST_PROCESSING_KEY && b.vault.caches[key] === undefined) continue;
     if (
       b.schemaVersion === 2 &&
       memoryKeys.some((name) => name === key) &&

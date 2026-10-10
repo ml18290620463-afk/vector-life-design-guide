@@ -11353,3 +11353,32 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
     flex: 0 0 auto;
   }
 }
+
+.mobile-past-date-group h3 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  opacity: 0.6;
+}
+.mobile-past-timeline__item[data-expanded='false'] .mobile-past-timeline__content p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.now-link-dialog input {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 16px;
+  padding: 0 12px;
+  border: 1px solid var(--now-border);
+  border-radius: 12px;
+  color: var(--now-text);
+  background: var(--now-surface);
+}
+.now-anchor-point__summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}

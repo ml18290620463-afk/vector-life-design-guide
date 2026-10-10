@@ -290,43 +290,52 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     return (
       <>
         <ul className="mobile-past-timeline__list">
-          {renderedTimelineRows.map((row, index) =>
-            row.kind === 'closure' ? (
-              <li key={row.id}>
-                <article className="mobile-past-goal-summary">
-                  <small>
-                    {getSourceDateLabel(row.createdAt, language)} ·{' '}
-                    {row.closure.snapshot.status === 'completed' ? '目标完成' : '目标结束'}
-                  </small>
-                  <h3>{row.closure.snapshot.title}</h3>
-                  <p>
-                    {row.closure.snapshot.measurement.kind === 'quantity'
-                      ? `${row.closure.total} / ${row.closure.snapshot.measurement.target} ${row.closure.snapshot.measurement.unit}`
-                      : '已归档文字进展'}
-                  </p>
-                  {row.closure.total !== goalProgress(futureState, row.closure.snapshot).total && (
-                    <small>当前进度已变化，以上为结束时快照</small>
-                  )}
-                  {onOpenFutureGoal && (
-                    <button type="button" onClick={() => onOpenFutureGoal(row.closure.goalId)}>
-                      查看进展与历史
-                    </button>
-                  )}
-                </article>
-              </li>
-            ) : (
-              <li key={row.id}>
-                <MobilePastTimelineEntry
-                  entry={row.entry}
-                  highlight={!isManaging && !hasTimelineQuery && index === 0}
-                  language={language}
-                  selectionMode={isManaging}
-                  selected={selectedEntryIds.has(row.id)}
-                  onToggleSelection={toggleEntrySelection}
-                />
-              </li>
-            ),
-          )}
+          {renderedTimelineRows.map((row, index) => (
+            <React.Fragment key={row.id}>
+              {(index === 0 ||
+                getSourceDateLabel(row.createdAt, language) !==
+                  getSourceDateLabel(renderedTimelineRows[index - 1].createdAt, language)) && (
+                <li className="mobile-past-date-group">
+                  <h3>{getSourceDateLabel(row.createdAt, language)}</h3>
+                </li>
+              )}
+              {row.kind === 'closure' ? (
+                <li key={row.id}>
+                  <article className="mobile-past-goal-summary">
+                    <small>
+                      {row.closure.snapshot.status === 'completed' ? '目标完成' : '目标结束'}
+                    </small>
+                    <h3>{row.closure.snapshot.title}</h3>
+                    <p>
+                      {row.closure.snapshot.measurement.kind === 'quantity'
+                        ? `${row.closure.total} / ${row.closure.snapshot.measurement.target} ${row.closure.snapshot.measurement.unit}`
+                        : '已归档文字进展'}
+                    </p>
+                    {row.closure.total !==
+                      goalProgress(futureState, row.closure.snapshot).total && (
+                      <small>当前进度已变化，以上为结束时快照</small>
+                    )}
+                    {onOpenFutureGoal && (
+                      <button type="button" onClick={() => onOpenFutureGoal(row.closure.goalId)}>
+                        查看进展与历史
+                      </button>
+                    )}
+                  </article>
+                </li>
+              ) : (
+                <li key={row.id}>
+                  <MobilePastTimelineEntry
+                    entry={row.entry}
+                    highlight={!isManaging && !hasTimelineQuery && index === 0}
+                    language={language}
+                    selectionMode={isManaging}
+                    selected={selectedEntryIds.has(row.id)}
+                    onToggleSelection={toggleEntrySelection}
+                  />
+                </li>
+              )}
+            </React.Fragment>
+          ))}
         </ul>
         {hasMoreTimelineRows && (
           <button

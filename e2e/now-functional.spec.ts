@@ -33,7 +33,7 @@ for (const viewport of [
       expect((await emptyCard.boundingBox())!.height).toBeGreaterThan(emptyCardHeight + 60);
     }
     await page.getByLabel('保存到过去').click();
-    await expect(page.getByRole('heading', { name: '经历已保存' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '已保存' })).toBeVisible();
     await page.getByRole('button', { name: '回看这段经历' }).click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
@@ -84,10 +84,37 @@ for (const viewport of [
       .toBe(true);
     await page.screenshot({ path: testInfo.outputPath('now-filled.png'), fullPage: true });
     await page.getByLabel('保存到过去').click();
-    await expect(page.getByRole('heading', { name: '经历已保存' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '已保存' })).toBeVisible();
     await page.getByRole('button', { name: '回看这段经历' }).click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('past-saved.png'), fullPage: true });
   });
 }
+
+test('链接输入支持取消、校验和替换', async ({ page }) => {
+  await seedOnboardedApp(page);
+  await page
+    .getByRole('navigation', { name: '主页面导航' })
+    .getByRole('button', { name: /^现在/ })
+    .click();
+  await page.getByRole('button', { name: '添加素材' }).click();
+  await page.getByRole('button', { name: '链接', exact: true }).click();
+  await expect(page.getByLabel('网页链接', { exact: true })).toBeFocused();
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(page.locator('.now-material')).toHaveCount(0);
+  await page.getByRole('button', { name: '添加素材' }).click();
+  await page.getByRole('button', { name: '链接', exact: true }).click();
+  await page.getByLabel('网页链接', { exact: true }).fill('javascript:alert(1)');
+  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '添加链接' })).toBeVisible();
+  await page.getByLabel('网页链接', { exact: true }).fill('example.com');
+  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(page.locator('.now-material')).toHaveCount(1);
+  await page.locator('.now-material__replace-link').click();
+  await expect(page.getByLabel('网页链接', { exact: true })).toHaveValue('https://example.com/');
+  await page.getByLabel('网页链接', { exact: true }).fill('https://example.org');
+  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(page.locator('.now-material')).toHaveCount(1);
+  await expect(page.locator('.now-material')).toContainText('example.org');
+});

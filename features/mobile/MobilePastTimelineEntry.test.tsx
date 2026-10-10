@@ -17,10 +17,12 @@ const renderEntry = (entry: DiaryEntry, options?: { highlight?: boolean }) =>
   render(<MobilePastTimelineEntry entry={entry} highlight={options?.highlight} language="zh" />);
 
 describe('MobilePastTimelineEntry', () => {
-  it('shows cleaned tags directly below the content while keeping full dates', () => {
+  it('shows cleaned tags directly below the content with a compact timestamp', () => {
     const { container } = renderEntry(makeEntry('今天保存了一段录音。'));
 
-    expect(screen.getByText(/2026年7月6日/)).not.toBeNull();
+    expect(container.querySelector('time')?.getAttribute('datetime')).toBe(
+      '2026-07-06T05:45:00.000Z',
+    );
     expect(screen.queryByText('2026年7月6日13点45分')).toBeNull();
     expect(screen.getByText('感动')).not.toBeNull();
     expect(screen.getByText('个人成长')).not.toBeNull();
@@ -36,11 +38,11 @@ describe('MobilePastTimelineEntry', () => {
     ).toBeTruthy();
   });
 
-  it('collapses body text over 100 chars and can expand it', () => {
+  it('keeps original text intact while toggling the line preview', () => {
     const longText = '记'.repeat(101);
     renderEntry(makeEntry(longText));
 
-    expect(screen.getByText(`${'记'.repeat(100)}…`)).not.toBeNull();
+    expect(screen.getByText(longText)).not.toBeNull();
     expect(screen.queryByText('展开全文')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '展开记录内容' }));
     expect(screen.getByText(longText)).not.toBeNull();
@@ -90,7 +92,7 @@ describe('MobilePastTimelineEntry', () => {
     expect(container.querySelector('.mobile-past-timeline__time')).toBeNull();
     const navigator = container.querySelector('.past-record__date');
     expect(navigator?.getAttribute('datetime')).toBe('2026-07-06T05:45:00.000Z');
-    expect(navigator?.textContent).toContain('2026年7月6日');
+    expect(navigator?.textContent).toMatch(/\d{2}:\d{2}/);
   });
 
   it('does not show a detail action or expand control for a short record', () => {

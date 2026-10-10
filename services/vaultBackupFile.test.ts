@@ -312,3 +312,23 @@ it('rejects conflicting drafts without writes, and explicit replacement removes 
   expect((await loadNowDraft()).draft?.text).toBe('私人草稿');
   expect((await readFutureSnapshot()).actions.map((a) => a.title)).toEqual(['先确认范围']);
 }, 30_000);
+
+it('restores Past processing receipts and safely invalidates them on merge', async () => {
+  const key = 'vector:past:processing:v1';
+  const receipt = { id: 'e1', fingerprint: 'original', version: 1 };
+  localStorage.setItem(key, JSON.stringify([receipt]));
+  const backup = await exportVaultBackup('test');
+  localStorage.setItem(key, JSON.stringify([{ ...receipt, fingerprint: 'edited' }]));
+  await importVaultBackup(backup, 'replace');
+  expect(JSON.parse(localStorage.getItem(key) || '[]')).toEqual([receipt]);
+  localStorage.setItem(key, JSON.stringify([{ ...receipt, fingerprint: 'edited' }]));
+  await importVaultBackup(backup, 'merge');
+  expect(JSON.parse(localStorage.getItem(key) || '[]')).toEqual([]);
+});
+
+it('accepts older backups without Past processing receipts', async () => {
+  const backup = await exportVaultBackup('test');
+  delete backup.vault.caches['vector:past:processing:v1'];
+  await importVaultBackup(backup, 'replace');
+  expect(JSON.parse(localStorage.getItem('vector:past:processing:v1') || '[]')).toEqual([]);
+});

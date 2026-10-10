@@ -1,14 +1,9 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import type { DiaryEntry, Language } from '../../types';
 import { PastEntryMedia } from '../../components/PastEntryMedia';
 import { PastEntryBody, PastEntryTags, PastEntryTitle } from '../../components/PastEntryText';
 import { splitEntryContent } from '../../lib/entryContent';
-
-// The preview itself uses the same 100-character threshold in PastEntryBody.
-// Keep the affordance aligned with that behaviour: a short record is already
-// complete, so an expansion button would suggest content that does not exist.
-const TEXT_COLLAPSE_LIMIT = 100;
 
 interface MobilePastTimelineEntryProps {
   entry: DiaryEntry;
@@ -33,14 +28,26 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
   const dateTime = Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   const dateLabel = Number.isNaN(date.getTime())
     ? entry.title
-    : date.toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', {
-        year: 'numeric',
-        month: language === 'zh' ? 'long' : 'short',
-        day: 'numeric',
+    : date.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
         hour: '2-digit',
         minute: '2-digit',
       });
-  const canExpand = splitEntryContent(entry.content).body.length > TEXT_COLLAPSE_LIMIT;
+  const body = splitEntryContent(entry.content).body;
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [canExpand, setCanExpand] = useState(body.length > 100 || body.split('\n').length > 3);
+  useEffect(() => {
+    const paragraph = contentRef.current?.querySelector('p');
+    if (!paragraph) return;
+    const measure = () => {
+      if (expanded || !paragraph.clientHeight) return;
+      setCanExpand(paragraph.scrollHeight > paragraph.clientHeight + 1);
+    };
+    measure();
+    const observer =
+      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
+    observer?.observe(paragraph);
+    return () => observer?.disconnect();
+  }, [body, expanded]);
 
   return (
     <article
@@ -95,7 +102,7 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
             </button>
           )}
         </div>
-        <div id={contentId} className="mobile-past-timeline__fold-content">
+        <div ref={contentRef} id={contentId} className="mobile-past-timeline__fold-content">
           <PastEntryBody
             entry={entry}
             variant="mobile"

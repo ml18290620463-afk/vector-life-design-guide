@@ -1,3 +1,8 @@
+import {
+  pastRecordFingerprint,
+  wasPastRecordProcessed,
+  markPastRecordProcessed,
+} from '../../services/pastProcessingCache';
 import { useEffect, useRef, useState } from 'react';
 import type { DiaryEntry } from '../../types';
 import { buildAvatarGrowthPreview } from '../../services/avatarIntelligence';
@@ -24,35 +29,37 @@ export function usePastRecordProcessing(
     let cancelled = false;
     const accessible = entries.filter((entry) => !entry.isSample && isAccessibleDiaryEntry(entry));
     const index = buildLocalSemanticIndex(accessible);
+    const corpusFingerprint = accessible
+      .map((entry) => `${entry.id}:${pastRecordFingerprint(entry)}`)
+      .join('|');
     void (async () => {
       setError('');
       for (const entry of accessible) {
-        const fingerprint = JSON.stringify([
-          entry.title,
-          entry.content,
-          entry.tags,
-          entry.createdAt,
-        ]);
-        if (processed.current.get(entry.id) === fingerprint) continue;
+        const fingerprint = pastRecordFingerprint(entry);
+        const sessionKey = `${fingerprint}:${corpusFingerprint}`;
+        if (processed.current.get(entry.id) === sessionKey) continue;
         try {
-          const preview = await buildAvatarGrowthPreview(
-            {
-              messages: [{ role: 'user', content: entry.content, createdAt: entry.createdAt }],
-              source: 'past',
-              sourceEntryId: entry.id,
-              occurredAt: entry.createdAt,
-            },
-            { entries: accessible, understandings: readAvatarUnderstandings() },
-          );
-          if (cancelled) return;
-          const existing = new Set(readAvatarAtomicMemories().map((memory) => memory.id));
-          if (
-            !upsertAvatarAtomicMemories(
-              preview.atomicMemoryCandidates.filter((memory) => !existing.has(memory.id)),
+          if (!wasPastRecordProcessed(entry.id, fingerprint)) {
+            const preview = await buildAvatarGrowthPreview(
+              {
+                messages: [{ role: 'user', content: entry.content, createdAt: entry.createdAt }],
+                source: 'past',
+                sourceEntryId: entry.id,
+                occurredAt: entry.createdAt,
+              },
+              { entries: accessible, understandings: readAvatarUnderstandings() },
+            );
+            if (cancelled) return;
+            const existing = new Set(readAvatarAtomicMemories().map((memory) => memory.id));
+            if (
+              !upsertAvatarAtomicMemories(
+                preview.atomicMemoryCandidates.filter((memory) => !existing.has(memory.id)),
+              )
             )
-          )
-            throw new Error('提炼未完成');
-          processed.current.set(entry.id, fingerprint);
+              throw new Error('提炼未完成');
+            if (!markPastRecordProcessed(entry.id, fingerprint)) throw new Error('处理状态未保存');
+          }
+          processed.current.set(entry.id, sessionKey);
           if (onRelatedEntriesResolved) {
             const ids = searchLocalSemanticIndex(entry, index)
               .map(({ entry: related }) => related.id)
@@ -62,7 +69,7 @@ export function usePastRecordProcessing(
               await onRelatedEntriesResolved(entry.id, ids);
           }
           if (cancelled) return;
-          processed.current.set(entry.id, fingerprint);
+          processed.current.set(entry.id, sessionKey);
         } catch {
           processed.current.delete(entry.id);
           if (cancelled) return;

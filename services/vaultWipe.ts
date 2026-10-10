@@ -1,3 +1,4 @@
+import { PAST_PROCESSING_KEY } from './pastProcessingCache';
 import { PRIVATE_DRAFT_KEY } from './privateDraftKey';
 import { getDiaryStorageKeys } from './diaryStorage';
 import { getLegacyStorageKeys, migrationEpochKey } from './diaryMigration';
@@ -33,6 +34,7 @@ export async function wipeVault(userId?: string) {
   const legacyKeys = getLegacyStorageKeys(userId);
   const epochKey = migrationEpochKey(userId);
   const mirrors = [
+    PAST_PROCESSING_KEY,
     ...Object.values(keys),
     ...legacyKeys,
     'vector:avatar:understandings:v1',

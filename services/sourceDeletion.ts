@@ -1,3 +1,4 @@
+import { forgetPastProcessing } from './pastProcessingCache';
 import type { DiaryEntry, Principle, PatternPrincipleLink } from '../types';
 import { DiaryStorageKeys as K, removeDiaryMirror } from './diaryStorage';
 import { detachFutureSources } from './futureRepository';
@@ -28,6 +29,7 @@ export function recoverSourceDeletion(): Promise<void> {
     );
     if (!pending.length) return;
     for (const job of pending) {
+      if (!forgetPastProcessing(job.ids)) throw new Error('处理状态清理失败');
       pruneAvatarUnderstandingsByEntryIds(job.ids, job.retain);
       const prunedMemories = pruneAvatarAtomicMemoriesBySourceIds(job.ids, job.retain);
       pruneAvatarMemoryRelationsByMemoryIds(prunedMemories.removedMemoryIds);

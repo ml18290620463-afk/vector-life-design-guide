@@ -290,24 +290,21 @@ describe('Now material input', () => {
     const hook = renderHook(() => useMaterialPicker({ materials, onAdd, onError }));
     return { ...hook, onAdd, onError };
   };
-  it('adds a valid link and cancels an empty prompt', () => {
+  it('adds a valid link and ignores empty input', () => {
     const h = setup();
-    vi.spyOn(window, 'prompt').mockReturnValueOnce('https://example.com').mockReturnValueOnce(null);
-    act(() => h.result.current.addLink());
-    act(() => h.result.current.addLink());
+    act(() => h.result.current.addLink('https://example.com'));
+    act(() => h.result.current.addLink(''));
     expect(h.onAdd).toHaveBeenCalledTimes(1);
     expect(h.onAdd.mock.calls[0][0][0].url).toBe('https://example.com/');
   });
   it('accepts a pasted domain without requiring a protocol', () => {
     const h = setup();
-    vi.spyOn(window, 'prompt').mockReturnValue('  example.com/article  ');
-    act(() => h.result.current.addLink());
+    act(() => h.result.current.addLink('  example.com/article  '));
     expect(h.onAdd.mock.calls[0][0][0].url).toBe('https://example.com/article');
   });
   it.each(['   ', 'not a url', 'javascript:alert(1)'])('reject invalid link %s', (value) => {
     const h = setup();
-    vi.spyOn(window, 'prompt').mockReturnValue(value);
-    act(() => h.result.current.addLink());
+    act(() => h.result.current.addLink(value));
     expect(h.onAdd).not.toHaveBeenCalled();
   });
   it.each(['image', 'video'] as const)(
@@ -337,7 +334,7 @@ describe('Now material input', () => {
   });
   it('rejects link when an image exists', () => {
     const h = setup([{ id: 'i', type: 'image', url: '', sort_order: 0 }]);
-    act(() => h.result.current.addLink());
+    act(() => h.result.current.addLink('https://example.com'));
     expect(h.onError).toHaveBeenCalled();
     expect(h.onAdd).not.toHaveBeenCalled();
   });

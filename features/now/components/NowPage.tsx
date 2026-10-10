@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Anchor, ArrowLeft, Image, Link as LinkIcon, Plus, Video } from 'lucide-react';
+import { Anchor, ArrowLeft, Image, Link as LinkIcon, Plus, Video, Trash2 } from 'lucide-react';
 import { CONFIG } from '../constants/config';
 import { useMaterialPicker } from '../hooks/useMaterialPicker';
 import { getCanSend, getDisabledSendReason, isDraftEmpty } from '../state/nowRules';
@@ -32,6 +32,21 @@ export const NowPage: React.FC<NowPageProps> = ({
   showToast,
   mobileShell = false,
 }) => {
+  const [linkEditing, setLinkEditing] = useState<string | null>(null);
+  const [linkValue, setLinkValue] = useState('');
+  const linkDialog = useRef<HTMLDialogElement>(null);
+  const linkInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (linkEditing === null) return;
+    const node = linkDialog.current;
+    const opener = document.activeElement as HTMLElement | null;
+    node?.showModal();
+    linkInput.current?.focus();
+    return () => {
+      node?.close();
+      if (opener?.isConnected) opener.focus();
+    };
+  }, [linkEditing]);
   const [materialMenuOpen, setMaterialMenuOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -89,7 +104,8 @@ export const NowPage: React.FC<NowPageProps> = ({
 
   const handleLinkImport = () => {
     setMaterialMenuOpen(false);
-    picker.addLink();
+    setLinkValue('');
+    setLinkEditing('');
   };
 
   const handleBack = () => {
@@ -121,25 +137,69 @@ export const NowPage: React.FC<NowPageProps> = ({
     if (sending || exitInFlight.current) return;
     const material = draft.materials.find((candidate) => candidate.id === id);
     if (!material) return;
-    const input = window.prompt('替换网页链接', material.url);
-    if (input === null) return;
-    const url = normalizeWebMaterialUrl(input);
+    setLinkValue(material.url);
+    setLinkEditing(id);
+  };
+  const submitLink = () => {
+    if (sending || exiting) return;
+    const url = normalizeWebMaterialUrl(linkValue);
     if (!url) {
-      showToast('请输入有效的网页链接，例如 example.com');
+      showToast('请输入有效的网页链接');
       return;
     }
-    setDraft((current) => ({
-      ...current,
-      materials: current.materials.map((candidate) =>
-        candidate.id === id
-          ? { ...candidate, url, meta: { ...candidate.meta, title: url } }
-          : candidate,
-      ),
-    }));
+    if (linkEditing === '') {
+      if (!picker.addLink(url)) return;
+    } else {
+      setDraft((current) => ({
+        ...current,
+        materials: current.materials.map((candidate) =>
+          candidate.id === linkEditing
+            ? { ...candidate, url, meta: { ...candidate.meta, title: url } }
+            : candidate,
+        ),
+      }));
+    }
+    setLinkEditing(null);
   };
 
   return (
     <main className="now-page" data-testid="now-page">
+      <dialog
+        ref={linkDialog}
+        className="now-exit-dialog now-link-dialog"
+        aria-labelledby="now-link-title"
+        onCancel={() => setLinkEditing(null)}
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitLink();
+          }}
+        >
+          <h2 id="now-link-title">{linkEditing ? '替换链接' : '添加链接'}</h2>
+          <label htmlFor="now-link-url" className="sr-only">
+            网页链接
+          </label>
+          <input
+            id="now-link-url"
+            ref={linkInput}
+            type="text"
+            inputMode="url"
+            autoComplete="url"
+            placeholder="example.com"
+            value={linkValue}
+            onChange={(event) => setLinkValue(event.target.value)}
+          />
+          <div className="now-exit-dialog__actions">
+            <button type="submit" disabled={sending || exiting}>
+              确定
+            </button>
+            <button type="button" onClick={() => setLinkEditing(null)}>
+              取消
+            </button>
+          </div>
+        </form>
+      </dialog>
       <header className="now-header">
         <button
           type="button"
@@ -159,10 +219,11 @@ export const NowPage: React.FC<NowPageProps> = ({
           <button
             type="button"
             className="now-tool-button"
+            aria-label="清空草稿"
             disabled={sending || exiting}
             onClick={() => setExitOpen(true)}
           >
-            清空草稿
+            <Trash2 size={16} aria-hidden="true" />
           </button>
         )}
       </header>
@@ -182,13 +243,17 @@ export const NowPage: React.FC<NowPageProps> = ({
                 setDraft((current) => ({ ...current, text: event.target.value }))
               }
               placeholder="写下此刻"
-              aria-describedby="now-record-count"
+              aria-describedby={
+                draft.text.length >= CONFIG.MAX_TEXT_LENGTH * 0.9 ? 'now-record-count' : undefined
+              }
             />
-            <div className="now-editor__meta">
-              <span id="now-record-count" aria-live="polite">
-                {draft.text.length}/{CONFIG.MAX_TEXT_LENGTH}
-              </span>
-            </div>
+            {draft.text.length >= CONFIG.MAX_TEXT_LENGTH * 0.9 && (
+              <div className="now-editor__meta">
+                <span id="now-record-count" aria-live="polite">
+                  {draft.text.length}/{CONFIG.MAX_TEXT_LENGTH}
+                </span>
+              </div>
+            )}
           </div>
         </section>
 

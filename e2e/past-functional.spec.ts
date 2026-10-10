@@ -18,6 +18,7 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: '工作事业', exact: true }).click();
     await page.getByRole('button', { name: '确定', exact: true }).click();
     await page.getByLabel('保存到过去').click();
+    await page.getByRole('button', { name: '回看这段经历' }).click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(content, { exact: false }).first()).toBeVisible();
 
@@ -119,6 +120,7 @@ for (const width of [1440, 390]) {
       await page.getByRole('button', { name: '工作事业', exact: true }).click();
       await page.getByRole('button', { name: '确定', exact: true }).click();
       await page.getByLabel('保存到过去').click();
+      await page.getByRole('button', { name: '回看这段经历' }).click();
       await expect(page.getByTestId('past-page')).toBeVisible();
     }
     await page.getByRole('button', { name: '选择', exact: true }).click();

@@ -21,31 +21,33 @@ export const useMaterialPicker = (args: {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const addLink = useCallback(() => {
-    const check = canAddMaterialType(args.materials, 'link');
-    if (check.ok === false) {
-      args.onError(check.message);
-      return;
-    }
-    const input = window.prompt('粘贴网页链接');
-    if (input === null) return;
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    const url = normalizeWebMaterialUrl(trimmed);
-    if (!url) {
-      args.onError('请输入有效的网页链接，例如 example.com');
-      return;
-    }
-    args.onAdd([
-      {
-        id: generateSecureId('material'),
-        type: 'link',
-        url,
-        meta: { title: url },
-        sort_order: args.materials.length,
-      },
-    ]);
-  }, [args]);
+  const addLink = useCallback(
+    (input: string) => {
+      const check = canAddMaterialType(args.materials, 'link');
+      if (check.ok === false) {
+        args.onError(check.message);
+        return;
+      }
+      const trimmed = input.trim();
+      if (!trimmed) return;
+      const url = normalizeWebMaterialUrl(trimmed);
+      if (!url) {
+        args.onError('请输入有效的网页链接，例如 example.com');
+        return false;
+      }
+      args.onAdd([
+        {
+          id: generateSecureId('material'),
+          type: 'link',
+          url,
+          meta: { title: url },
+          sort_order: args.materials.length,
+        },
+      ]);
+      return true;
+    },
+    [args],
+  );
 
   const addFiles = useCallback(
     async (files: FileList | null, type: Extract<MaterialType, 'image' | 'video'>) => {

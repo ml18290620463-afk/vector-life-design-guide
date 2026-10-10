@@ -18,6 +18,7 @@ const entry: DiaryEntry = {
   tags: [],
 };
 beforeEach(() => {
+  localStorage.clear();
   mocks.preview
     .mockReset()
     .mockResolvedValue({ atomicMemoryCandidates: [{ id: 'candidate', status: 'candidate' }] });
@@ -72,4 +73,31 @@ it('does not extract again when saving relations only changes updatedAt', async 
   rerender({ entries: [{ ...entry, updatedAt: 10, relatedEntryIds: ['other'] }] });
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(mocks.preview).toHaveBeenCalledOnce();
+});
+
+it('persists extraction completion across re-entry but reprocesses edited content', async () => {
+  const first = renderHook(() => usePastRecordProcessing([entry]));
+  await waitFor(() => expect(mocks.preview).toHaveBeenCalledOnce());
+  await waitFor(() =>
+    expect(localStorage.getItem('vector:past:processing:v1')).toContain('fingerprint'),
+  );
+  first.unmount();
+  const second = renderHook(() => usePastRecordProcessing([entry]));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(mocks.preview).toHaveBeenCalledOnce();
+  second.unmount();
+  renderHook(() => usePastRecordProcessing([{ ...entry, content: '新内容' }]));
+  await waitFor(() => expect(mocks.preview).toHaveBeenCalledTimes(2));
+});
+
+it('refreshes relations when the archive grows without extracting unchanged records again', async () => {
+  const resolve = vi.fn();
+  const { rerender } = renderHook(({ entries }) => usePastRecordProcessing(entries, resolve), {
+    initialProps: { entries: [entry] },
+  });
+  await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
+  const other = { ...entry, id: 'other', content: entry.content };
+  rerender({ entries: [entry, other] });
+  await waitFor(() => expect(resolve).toHaveBeenCalledWith(entry.id, ['other']));
+  await waitFor(() => expect(mocks.preview).toHaveBeenCalledTimes(2));
 });
