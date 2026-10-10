@@ -1,20 +1,17 @@
 import type { DiaryEntry } from '../../types';
 
-export interface PastSearchFilters {
-  tags?: string[];
-}
+const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
 
-/** Returns existing user labels only. */
-export const availablePastTags = (entries: DiaryEntry[]) =>
-  [...new Set(entries.flatMap((entry) => (Array.isArray(entry.tags) ? entry.tags : [])))].sort(
-    (left, right) => left.localeCompare(right),
+/** Searches record content and labels through the same query. */
+export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEntry[] => {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return entries;
+  const matches = (value: unknown) => safeText(value).toLocaleLowerCase().includes(normalized);
+  return entries.filter(
+    (entry) =>
+      matches(entry.title) ||
+      matches(entry.content) ||
+      (Array.isArray(entry.tags) && entry.tags.some(matches)) ||
+      (entry.nowMaterials ?? []).some((material) => matches(material.description)),
   );
-
-/** Narrows text search results by user-selected tags. */
-export const filterPastEntries = (
-  entries: DiaryEntry[],
-  filters: PastSearchFilters,
-): DiaryEntry[] => {
-  const tags = new Set(filters.tags?.filter(Boolean) ?? []);
-  return entries.filter((entry) => !tags.size || (entry.tags ?? []).some((tag) => tags.has(tag)));
 };

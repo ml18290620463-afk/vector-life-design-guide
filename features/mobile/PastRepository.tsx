@@ -21,7 +21,7 @@ import { goalProgress } from '../../services/futureRepository';
 import type { ActionDraftContext, PracticeReflectionContext } from '../../types/future';
 import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
-import { availablePastTags, filterPastEntries, type PastSearchFilters } from './pastSearch';
+import { searchPastEntries } from './pastSearch';
 
 interface PastRepositoryProps {
   archiveMode?: boolean;
@@ -74,11 +74,6 @@ interface PastRepositoryProps {
 const getSourceDateLabel = (value: number, language: Language) =>
   new Date(value).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US');
 
-const getSafeText = (value: unknown) => (typeof value === 'string' ? value : '');
-
-const getSafeTags = (tags: unknown) =>
-  Array.isArray(tags) ? tags.filter((tag): tag is string => typeof tag === 'string') : [];
-
 const getSafeTimestamp = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : 0;
 
@@ -114,7 +109,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const { state: futureState } = useFuture();
   const [deleting, setDeleting] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState(initialQuery);
-  const [filters, setFilters] = useState<PastSearchFilters>({});
   const [timelineRenderLimit, setTimelineRenderLimit] = useState(TIMELINE_RENDER_BATCH_SIZE);
   useEffect(() => {
     onViewChange?.({ section, query: timelineQuery });
@@ -133,26 +127,12 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const safeEntries = useMemo(() => (Array.isArray(entries) ? entries : []), [entries]);
   const safePrinciples = useMemo(() => (Array.isArray(principles) ? principles : []), [principles]);
   const activePrinciples = useMemo(() => currentPrinciples(safePrinciples), [safePrinciples]);
-  const filterTags = useMemo(() => availablePastTags(safeEntries), [safeEntries]);
-  const textMatchedEntries = useMemo(() => {
+  const timelineEntries = useMemo(() => {
     const active = [...safeEntries].sort(
       (a, b) => getSafeTimestamp(b.createdAt) - getSafeTimestamp(a.createdAt),
     );
-    const query = normalizedTimelineQuery.toLocaleLowerCase();
-    if (!query) return active;
-    const isDirectMatch = (entry: DiaryEntry) =>
-      getSafeText(entry.title).toLocaleLowerCase().includes(query) ||
-      getSafeText(entry.content).toLocaleLowerCase().includes(query) ||
-      getSafeTags(entry.tags).some((tag) => tag.toLocaleLowerCase().includes(query)) ||
-      (entry.nowMaterials ?? []).some((material) =>
-        getSafeText(material.description).toLocaleLowerCase().includes(query),
-      );
-    return active.filter(isDirectMatch);
+    return searchPastEntries(active, normalizedTimelineQuery);
   }, [safeEntries, normalizedTimelineQuery]);
-  const timelineEntries = useMemo(
-    () => filterPastEntries(textMatchedEntries, filters),
-    [textMatchedEntries, filters],
-  );
   const visibleEntryIds = useMemo(
     () => timelineEntries.map((entry) => entry.id),
     [timelineEntries],
@@ -239,7 +219,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
 
   useEffect(() => {
     setTimelineRenderLimit(TIMELINE_RENDER_BATCH_SIZE);
-  }, [normalizedTimelineQuery, filters, entries]);
+  }, [normalizedTimelineQuery, entries]);
 
   // Managing records is a task of its own.  A native modal puts it in the
   // browser's top layer, so neither the previous page nor the main navigation
@@ -270,7 +250,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       detail: activePrinciples.length,
     },
   ];
-  const hasFilters = Boolean(filters.tags?.length);
 
   const renderTimelineRows = (isManaging = false) => {
     if (timelineRows.length === 0) {
@@ -423,34 +402,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               >
                 {language === 'zh' ? '选择' : 'Select'}
               </button>
-            </div>
-            <div
-              className="mobile-past-filters"
-              aria-label={language === 'zh' ? '筛选记录' : 'Filter records'}
-            >
-              <select
-                aria-label={language === 'zh' ? '按标签筛选' : 'Filter by tag'}
-                value={filters.tags?.[0] ?? ''}
-                onChange={(event) => {
-                  setFilters((current) => ({
-                    ...current,
-                    tags: event.target.value ? [event.target.value] : undefined,
-                  }));
-                  setSelectedEntryIds(new Set());
-                }}
-              >
-                <option value="">{language === 'zh' ? '所有标签' : 'All tags'}</option>
-                {filterTags.map((tag) => (
-                  <option key={tag} value={tag}>
-                    {tag}
-                  </option>
-                ))}
-              </select>
-              {hasFilters && (
-                <button type="button" onClick={() => setFilters({})}>
-                  {language === 'zh' ? '清除筛选' : 'Clear filters'}
-                </button>
-              )}
             </div>
             {deleteStatus && (
               <p className="mobile-past-delete-status" role="status">

@@ -21,6 +21,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(content, { exact: false }).first()).toBeVisible();
 
+    await expect(page.getByRole('combobox', { name: '按标签筛选' })).toHaveCount(0);
     const search = page.getByRole('searchbox', { name: '搜索记录' });
     await search.fill('不存在的测试');
     await expect(page.getByText('没有找到相关记录。', { exact: false })).toBeVisible();

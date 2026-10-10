@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiaryEntry } from '../../types';
-import { availablePastTags, filterPastEntries } from './pastSearch';
+import { searchPastEntries } from './pastSearch';
 
 const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry => ({
   id,
@@ -12,21 +12,26 @@ const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry =
 });
 
 describe('pastSearch', () => {
+  it('matches labels and content case-insensitively with one query', () => {
+    const entries = [entry('meeting', 1, ['工作事业']), entry('rest', 2, ['生活'])];
+    expect(searchPastEntries(entries, ' 工作 ')).toEqual([entries[0]]);
+    expect(searchPastEntries(entries, 'MEETING')).toEqual([entries[0]]);
+    expect(searchPastEntries(entries, 'content rest')).toEqual([entries[1]]);
+  });
   it('filters a large set deterministically without changing its source array', () => {
     const entries = Array.from({ length: 10_000 }, (_, index) =>
       entry(`entry-${index}`, index, index % 2 ? ['work'] : ['life']),
     );
     const original = [...entries];
-    const result = filterPastEntries(entries, { tags: ['work'] });
+    const result = searchPastEntries(entries, 'work');
     expect(result).toHaveLength(5_000);
     expect(result.every((item) => item.tags?.includes('work'))).toBe(true);
     expect(entries).toEqual(original);
-    expect(availablePastTags(entries)).toEqual(['life', 'work']);
   });
 
-  it('keeps all records when no tag is selected', () => {
+  it('keeps all records when the query is empty', () => {
     const entries = [entry('e1', 1), entry('e2', 2, ['work'])];
-    expect(filterPastEntries(entries, {})).toEqual(entries);
-    expect(filterPastEntries(entries, { tags: ['missing'] })).toEqual([]);
+    expect(searchPastEntries(entries, '  ')).toEqual(entries);
+    expect(searchPastEntries(entries, 'missing')).toEqual([]);
   });
 });

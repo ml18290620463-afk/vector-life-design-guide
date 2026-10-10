@@ -1,5 +1,5 @@
 /**
- * Reproducible local baseline for the deterministic Past filters.
+ * Reproducible local baseline for the Past keyword and label search.
  *
  * Run: npm run bench:past-search
  * The script reports medians rather than enforcing machine-specific timings in
@@ -8,7 +8,7 @@
  */
 import { performance } from 'node:perf_hooks';
 import type { DiaryEntry } from '../types';
-import { filterPastEntries, type PastSearchFilters } from '../features/mobile/pastSearch';
+import { searchPastEntries } from '../features/mobile/pastSearch';
 
 const RUNS = 15;
 const WARM_UP_RUNS = 3;
@@ -38,17 +38,17 @@ const measure = (run: () => unknown) => {
   return Number(median(samples).toFixed(2));
 };
 
-const scenarios: Array<{ name: string; filters: PastSearchFilters }> = [
-  { name: 'tag', filters: { tags: ['工作'] } },
-  { name: 'all', filters: {} },
+const scenarios: Array<{ name: string; query: string }> = [
+  { name: 'tag', query: '工作' },
+  { name: 'all', query: '' },
 ];
 
 const results = [1_000, 10_000].flatMap((count) => {
   const { entries } = makeFixture(count);
-  return scenarios.map(({ name, filters }) => ({
+  return scenarios.map(({ name, query }) => ({
     entries: count,
     scenario: name,
-    filterMs: measure(() => filterPastEntries(entries, filters)),
+    filterMs: measure(() => searchPastEntries(entries, query)),
   }));
 });
 
