@@ -1,3 +1,4 @@
+import { usePastRecordProcessing } from './usePastRecordProcessing';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Search, Trash2, X } from 'lucide-react';
 import { TRANSLATIONS } from '../../constants';
@@ -25,6 +26,7 @@ import { availablePastTags, filterPastEntries, type PastSearchFilters } from './
 
 interface PastRepositoryProps {
   archiveMode?: boolean;
+  onRelatedEntriesResolved?: (entryId: string, ids: string[]) => void | Promise<void>;
   /** Allows a deliberate cross-module handoff, such as an action that is ready to be reflected on. */
   initialSection?: PastRepositorySection;
   initialQuery?: string;
@@ -87,6 +89,7 @@ const TIMELINE_RENDER_BATCH_SIZE = 100;
 
 export const PastRepository: React.FC<PastRepositoryProps> = ({
   archiveMode = false,
+  onRelatedEntriesResolved,
   initialSection,
   initialQuery = '',
   onViewChange,
@@ -106,6 +109,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   onOpenFutureGoal,
   onOpenFutureAction,
 }) => {
+  const processing = usePastRecordProcessing(entries, onRelatedEntriesResolved);
   const t = TRANSLATIONS[language];
   const [section, setSection] = useState<PastRepositorySection>(initialSection ?? 'timeline');
   useEffect(() => {
@@ -410,6 +414,14 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
 
   return (
     <section className="mobile-past-page" data-testid="past-page">
+      {processing.error && (
+        <div role="alert">
+          {language === 'zh' ? processing.error : 'Some records could not be processed'}{' '}
+          <button type="button" onClick={processing.retry}>
+            {language === 'zh' ? '重试' : 'Retry'}
+          </button>
+        </div>
+      )}
       <div
         className="mobile-past-page__segments"
         role="tablist"

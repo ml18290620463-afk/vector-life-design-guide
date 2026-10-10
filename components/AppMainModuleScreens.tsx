@@ -63,7 +63,7 @@ type AppMainModuleScreensProps = {
   onPersistNowRecord: (
     payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
   ) => Promise<DiaryEntry>;
-  onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void;
+  onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void | Promise<void>;
   onSelectEntry: (entry: DiaryEntry) => void;
   principles: Principle[];
   guidingStars: string[];
@@ -156,6 +156,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
           >
             {isPastSurfaceState(appState) && (
               <PastRepository
+                onRelatedEntriesResolved={onRelatedEntriesResolved}
                 initialSection={pastSection}
                 initialQuery={pastQuery}
                 onViewChange={rememberPastView}
@@ -221,6 +222,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
         <Suspense fallback={<ScreenLoader language={language} />}>
           <AppPageFrame activeTab="past" language={language} onNavigate={onMainModuleNavigate}>
             <PastRepository
+              onRelatedEntriesResolved={onRelatedEntriesResolved}
               initialSection={pastSection}
               initialQuery={pastQuery}
               onViewChange={rememberPastView}
