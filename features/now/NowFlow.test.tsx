@@ -127,8 +127,15 @@ describe('NowFlow pure capture', () => {
     expect(onActionResultRecorded).not.toHaveBeenCalled();
     expect(onUpdatePrinciple).not.toHaveBeenCalled();
   });
-  it('retries draft cleanup without saving a second record', async () => {
-    draftControls.reset.mockResolvedValueOnce(false).mockResolvedValue(true);
+  it('opens Past immediately even while draft cleanup is pending', async () => {
+    let finishCleanup!: (value: boolean) => void;
+    draftControls.reset.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishCleanup = resolve;
+        }),
+    );
+    const onReviewSavedRecord = vi.fn();
     const onPersistRecord = vi.fn(async (payload) => ({
       ...payload,
       id: 'saved',
@@ -144,13 +151,15 @@ describe('NowFlow pure capture', () => {
         onRouteChange={vi.fn()}
         onExit={vi.fn()}
         onPersistRecord={onPersistRecord}
+        onReviewSavedRecord={onReviewSavedRecord}
       />,
     );
     fireEvent.click(screen.getByText('save-result'));
-    fireEvent.click(await screen.findByText('重试清理草稿'));
-    await waitFor(() => expect(draftControls.reset).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onReviewSavedRecord).toHaveBeenCalledOnce());
+    expect(screen.queryByText('记录已保存，草稿待清理。')).toBeNull();
     expect(onPersistRecord).toHaveBeenCalledOnce();
-    expect(draftControls.reset).toHaveBeenCalledTimes(2);
+    finishCleanup(false);
+    await waitFor(() => expect(draftControls.reset).toHaveBeenCalledOnce());
   });
   it('resumes cleanup of a persisted submission after remount', async () => {
     draftControls.submissionId = 'saved';
@@ -175,7 +184,7 @@ describe('NowFlow pure capture', () => {
         ]}
       />,
     );
-    fireEvent.click(screen.getByText('继续完成'));
+    expect(screen.queryByText('继续完成')).toBeNull();
     await waitFor(() => expect(draftControls.reset).toHaveBeenCalledOnce());
     expect(onPersistRecord).not.toHaveBeenCalled();
   });

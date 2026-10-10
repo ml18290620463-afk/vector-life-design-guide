@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFuture } from '../../hooks/useFuture';
 import { generateSecureId } from '../../services/idGenerator';
 import type {
@@ -39,7 +39,7 @@ interface NowFlowProps {
   ) => Promise<DiaryEntry>;
   onRelatedEntriesResolved?: (entryId: string, relatedEntryIds: string[]) => void;
   onRecordComplete?: () => void;
-  /** Open the saved record in Past after persistence and cleanup succeed. */
+  /** Open the saved record in Past after persistence succeeds. */
   onReviewSavedRecord?: (entry: DiaryEntry) => void;
   onOpenFutureAction?: (context: ActionDraftContext) => void;
   pastEntries?: DiaryEntry[];
@@ -82,19 +82,17 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   const { toastMessage, showToast } = useToast();
   const [sending, setSending] = useState(false);
   const inFlight = useRef(false);
-  const [completionError, setCompletionError] = useState('');
-  const pendingCompletion = useRef<(() => Promise<void>) | null>(null);
-  const retryCompletion = async () => {
-    if (inFlight.current || !pendingCompletion.current) return;
-    inFlight.current = true;
-    setSending(true);
-    try {
-      await pendingCompletion.current();
-    } finally {
-      inFlight.current = false;
-      setSending(false);
-    }
-  };
+  const savedSubmission = pastEntries.some((entry) => entry.id === draft.submission_id);
+  const cleanupStarted = useRef(false);
+  useEffect(() => {
+    if (!ready || !savedSubmission || inFlight.current || cleanupStarted.current) return;
+    cleanupStarted.current = true;
+    void resetAfterSend()
+      .catch(() => false)
+      .finally(() => {
+        cleanupStarted.current = false;
+      });
+  }, [ready, savedSubmission, resetAfterSend]);
   const retry = useRef<{
     key: string;
     id: string;
@@ -109,7 +107,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     avatarSessionId: string | null = null,
     principleOutcome?: ExperienceFeedbackOutcome,
   ) => {
-    if (inFlight.current || pendingCompletion.current) return false;
+    if (inFlight.current || savedSubmission) return false;
     const tagValidation = validateTags(
       overrideDraft.mood_tags,
       overrideDraft.event_tags,
@@ -148,23 +146,13 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       entryPayload.updatedAt = attempt.updatedAt;
       const persistedEntry =
         resumedEntry ?? (await onPersistRecord({ ...entryPayload, id: attempt.id }));
-      pendingCompletion.current = async () => {
-        try {
-          if (!(await resetAfterSend())) throw new Error('草稿清理失败，原文仍保留');
-        } catch (error) {
-          setCompletionError(
-            '记录已保存。' + (error instanceof Error ? error.message : '草稿清理失败'),
-          );
-          return;
-        }
-        pendingCompletion.current = null;
-        setCompletionError('');
-        retry.current = null;
-        if (onReviewSavedRecord) onReviewSavedRecord(persistedEntry);
-        else if (onRecordComplete) onRecordComplete();
-        else onExit();
-      };
-      await pendingCompletion.current();
+      // Start cleanup before navigation so unmount cannot flush the submitted draft again.
+      const cleanup = resetAfterSend().catch(() => false);
+      retry.current = null;
+      if (onReviewSavedRecord) onReviewSavedRecord(persistedEntry);
+      else if (onRecordComplete) onRecordComplete();
+      else onExit();
+      await cleanup;
       return true;
     } catch (error) {
       console.error('NowFlow: failed to persist local record', error);
@@ -188,23 +176,15 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       </div>
     );
 
-  if (pastEntries.some((entry) => entry.id === draft.submission_id))
-    return (
-      <div className="now-shell">
-        <p role={completionError ? 'alert' : 'status'}>
-          {completionError || '记录已保存，草稿待清理。'}
-        </p>
-        <button
-          type="button"
-          disabled={sending}
-          onClick={() =>
-            void (pendingCompletion.current ? retryCompletion() : submitRecord('manual'))
-          }
-        >
-          继续完成
+  if (savedSubmission)
+    return draftError ? (
+      <div className="now-shell" role="alert">
+        {draftError}
+        <button type="button" onClick={() => void resetAfterSend()}>
+          重试
         </button>
       </div>
-    );
+    ) : null;
 
   return (
     <div
@@ -212,14 +192,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         mobileShell ? 'now-flow--mobile-shell' : ''
       }`}
     >
-      {completionError && (
-        <div role="alert" className="now-draft-status">
-          {completionError}
-          <button type="button" disabled={sending} onClick={() => void retryCompletion()}>
-            重试清理草稿
-          </button>
-        </div>
-      )}
       {route !== 'avatar-chat' && draftError && (
         <div role="alert" className="now-draft-status">
           {draftError}
