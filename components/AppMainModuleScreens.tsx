@@ -129,9 +129,9 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
     setFutureActionContext(context);
     (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('future');
   };
-  const reviewSavedRecord = (entry: DiaryEntry) => {
+  const reviewSavedRecord = () => {
     setPastSection('timeline');
-    setPastQuery(entry.title || entry.content.slice(0, 120));
+    setPastQuery('');
     (useMobileShell ? onMobileTabChange : onMainModuleNavigate)('past');
   };
   const openPastReflection = useCallback(

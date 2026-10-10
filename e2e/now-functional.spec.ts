@@ -36,6 +36,8 @@ for (const viewport of [
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: '写下第一条记录' })).toHaveCount(0);
+    await expect(page.getByRole('searchbox', { name: '搜索记录' })).toHaveValue('');
+    await page.getByRole('searchbox', { name: '搜索记录' }).fill('模拟测试');
     await page
       .getByRole('navigation', { name: '主页面导航' })
       .getByRole('button', { name: /^现在/ })
@@ -83,7 +85,11 @@ for (const viewport of [
     await page.screenshot({ path: testInfo.outputPath('now-filled.png'), fullPage: true });
     await page.getByLabel('保存到过去').click();
     await expect(page.getByTestId('past-page')).toBeVisible();
-    await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: '搜索记录' })).toHaveValue('');
+    await expect(page.getByText(message, { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(message + ' 再补充一条带标签的记录。', { exact: true }),
+    ).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('past-saved.png'), fullPage: true });
   });
 }
