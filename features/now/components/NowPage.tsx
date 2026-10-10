@@ -279,9 +279,10 @@ export const NowPage: React.FC<NowPageProps> = ({
               onSend();
             }}
             aria-label="保存到过去"
+            aria-busy={sending}
             disabled={sending || exiting}
           >
-            <span>保存</span>
+            <span>{sending ? '保存中…' : '保存'}</span>
           </button>
         </footer>
       </div>

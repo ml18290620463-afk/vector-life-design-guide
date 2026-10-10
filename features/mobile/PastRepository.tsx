@@ -4,7 +4,6 @@ import { ArrowLeft, Search, Trash2, X } from 'lucide-react';
 import { TRANSLATIONS } from '../../constants';
 import type {
   DiaryEntry,
-  ActionItem,
   Language,
   PatternPrincipleLink,
   PatternPrincipleLinkStatus,
@@ -41,8 +40,6 @@ interface PastRepositoryProps {
   theme?: Theme;
   entries: DiaryEntry[];
   principles: Principle[];
-  /** Actions are only used to make a past search traceable back to its records. */
-  actions?: ActionItem[];
   onAddPrinciple: (
     text: string,
     year: number,
@@ -99,7 +96,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   theme = 'dark',
   entries,
   principles,
-  actions = [],
   onAddPrinciple,
   onDeletePrinciple,
   onUpdatePrinciple,
@@ -136,52 +132,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const hasTimelineQuery = normalizedTimelineQuery.length > 0;
   const safeEntries = useMemo(() => (Array.isArray(entries) ? entries : []), [entries]);
   const safePrinciples = useMemo(() => (Array.isArray(principles) ? principles : []), [principles]);
-  const safeActions = useMemo(() => (Array.isArray(actions) ? actions : []), [actions]);
   const activePrinciples = useMemo(() => currentPrinciples(safePrinciples), [safePrinciples]);
   const filterTags = useMemo(() => availablePastTags(safeEntries), [safeEntries]);
-  const searchMatches = useMemo(() => {
-    const query = normalizedTimelineQuery.toLocaleLowerCase();
-    if (!query) return { principleIds: new Set<string>(), actionIds: new Set<string>() };
-    const includes = (...values: Array<string | undefined>) =>
-      values.some((value) => getSafeText(value).toLocaleLowerCase().includes(query));
-    return {
-      principleIds: new Set(
-        activePrinciples
-          .filter((principle) =>
-            includes(
-              principle.text,
-              ...(principle.tags ?? []),
-              principle.application?.trigger,
-              principle.application?.action,
-            ),
-          )
-          .map((principle) => principle.id),
-      ),
-      actionIds: new Set(
-        safeActions
-          .filter((action) => includes(action.title, action.question, action.rationale))
-          .map((action) => action.id),
-      ),
-    };
-  }, [activePrinciples, safeActions, normalizedTimelineQuery]);
-  const relatedSearchSources = useMemo(() => {
-    if (!hasTimelineQuery) return [];
-    const principles = activePrinciples
-      .filter((principle) => searchMatches.principleIds.has(principle.id))
-      .map((principle) => ({
-        id: principle.id,
-        kind: language === 'zh' ? '原则' : 'Principle',
-        text: principle.text,
-      }));
-    const actions = safeActions
-      .filter((action) => searchMatches.actionIds.has(action.id))
-      .map((action) => ({
-        id: action.id,
-        kind: language === 'zh' ? '行动' : 'Action',
-        text: action.title,
-      }));
-    return [...principles, ...actions].slice(0, 3);
-  }, [activePrinciples, safeActions, searchMatches, hasTimelineQuery, language]);
   const textMatchedEntries = useMemo(() => {
     const active = [...safeEntries].sort(
       (a, b) => getSafeTimestamp(b.createdAt) - getSafeTimestamp(a.createdAt),
@@ -195,29 +147,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       (entry.nowMaterials ?? []).some((material) =>
         getSafeText(material.description).toLocaleLowerCase().includes(query),
       );
-    const matchedActionEntryIds = new Set(
-      safeActions
-        .filter((action) => searchMatches.actionIds.has(action.id))
-        .flatMap((action) => [
-          action.sourceEntryId,
-          action.resultEntryId,
-          ...(action.evidenceEntryIds ?? []),
-        ])
-        .filter((id): id is string => Boolean(id)),
-    );
-    return active.filter(
-      (entry) =>
-        isDirectMatch(entry) ||
-        matchedActionEntryIds.has(entry.id) ||
-        (entry.relatedPrincipleIds ?? []).some((id) => searchMatches.principleIds.has(id)) ||
-        (entry.relatedActionIds ?? []).some((id) => searchMatches.actionIds.has(id)) ||
-        activePrinciples.some(
-          (principle) =>
-            searchMatches.principleIds.has(principle.id) &&
-            (principle.derivedFromEntryIds ?? []).includes(entry.id),
-        ),
-    );
-  }, [safeEntries, safeActions, activePrinciples, searchMatches, normalizedTimelineQuery]);
+    return active.filter(isDirectMatch);
+  }, [safeEntries, normalizedTimelineQuery]);
   const timelineEntries = useMemo(
     () => filterPastEntries(textMatchedEntries, filters),
     [textMatchedEntries, filters],
@@ -308,7 +239,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
 
   useEffect(() => {
     setTimelineRenderLimit(TIMELINE_RENDER_BATCH_SIZE);
-  }, [normalizedTimelineQuery, filters, entries, actions, principles]);
+  }, [normalizedTimelineQuery, filters, entries]);
 
   // Managing records is a task of its own.  A native modal puts it in the
   // browser's top layer, so neither the previous page nor the main navigation
@@ -516,22 +447,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               <p className="mobile-past-delete-status" role="status">
                 {deleteStatus}
               </p>
-            )}
-            {relatedSearchSources.length > 0 && (
-              <aside
-                className="mobile-past-search-sources"
-                aria-label={language === 'zh' ? '关联依据' : 'Related sources'}
-              >
-                <span>{language === 'zh' ? '关联依据' : 'Related sources'}</span>
-                <ul>
-                  {relatedSearchSources.map((source) => (
-                    <li key={`${source.kind}-${source.id}`}>
-                      <small>{source.kind}</small>
-                      <span>{source.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
             )}
             {renderTimelineRows()}
           </div>

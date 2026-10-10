@@ -162,7 +162,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         pendingCompletion.current = null;
         setCompletionError('');
         retry.current = null;
-        showToast('已存入过去');
         setCompletedEntry(persistedEntry);
       };
       await pendingCompletion.current();
@@ -193,7 +192,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     return (
       <div className="now-shell">
         <p role={completionError ? 'alert' : 'status'}>
-          {completionError || '这条记录已保存，正在等待清理草稿。可安全重试，不会重复创建记录。'}
+          {completionError || '记录已保存，草稿待清理。'}
         </p>
         <button
           type="button"
@@ -210,7 +209,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   if (completedEntry)
     return (
       <main className="now-shell now-completion" aria-labelledby="now-completion-title">
-        <h1 id="now-completion-title">经历已保存</h1>
+        <h1 id="now-completion-title">已保存</h1>
         <div className="now-completion__actions">
           <button type="button" onClick={() => setCompletedEntry(null)}>
             继续记录

@@ -107,7 +107,7 @@ describe('NowFlow pure capture', () => {
       />,
     );
     fireEvent.click(screen.getByText('save-result'));
-    await screen.findByRole('heading', { name: '经历已保存' });
+    await screen.findByRole('heading', { name: '已保存' });
     const payload = onPersistRecord.mock.calls[0][0];
     for (const key of [
       'relatedEntryIds',
@@ -142,7 +142,7 @@ describe('NowFlow pure capture', () => {
     );
     fireEvent.click(screen.getByText('save-result'));
     fireEvent.click(await screen.findByText('重试清理草稿'));
-    await screen.findByRole('heading', { name: '经历已保存' });
+    await screen.findByRole('heading', { name: '已保存' });
     expect(onPersistRecord).toHaveBeenCalledOnce();
     expect(draftControls.reset).toHaveBeenCalledTimes(2);
   });

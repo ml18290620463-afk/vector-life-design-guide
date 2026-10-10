@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PastRepository } from './PastRepository';
-import type { ActionItem, DiaryEntry, Principle } from '../../types';
+import type { DiaryEntry, Principle } from '../../types';
 
 afterEach(() => {
   cleanup();
@@ -23,7 +23,6 @@ const makeEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 const renderRepository = ({
   entries = [makeEntry()],
   principles = [],
-  actions = [],
   onAddPrinciple = vi.fn(),
   onDeleteEntries = vi.fn(),
   onUpdatePrinciple = vi.fn(),
@@ -31,7 +30,6 @@ const renderRepository = ({
 }: {
   entries?: DiaryEntry[];
   principles?: Principle[];
-  actions?: ActionItem[];
   onAddPrinciple?: ComponentProps<typeof PastRepository>['onAddPrinciple'];
   onDeleteEntries?: ComponentProps<typeof PastRepository>['onDeleteEntries'];
   onUpdatePrinciple?: ComponentProps<typeof PastRepository>['onUpdatePrinciple'];
@@ -42,7 +40,6 @@ const renderRepository = ({
       language="zh"
       entries={entries}
       principles={principles}
-      actions={actions}
       onAddPrinciple={onAddPrinciple}
       onDeletePrinciple={onDeletePrinciple}
       onUpdatePrinciple={onUpdatePrinciple}
@@ -59,7 +56,6 @@ describe('PastRepository', () => {
         language="zh"
         entries={[makeEntry({ id: 'decision', title: '项目复盘', content: '先确认事实' })]}
         principles={[]}
-        actions={[]}
         onAddPrinciple={vi.fn()}
         onDeletePrinciple={vi.fn()}
         onUpdatePrinciple={vi.fn()}
@@ -122,7 +118,7 @@ describe('PastRepository', () => {
     expect(screen.getByText('记录 0')).toBeTruthy();
   });
 
-  it('searches a current principle and returns the records that support it', () => {
+  it('does not expand record search through a linked principle', () => {
     renderRepository({
       entries: [
         makeEntry({ id: 'principle-source', title: '一次复盘', content: '保留原始观察' }),
@@ -145,39 +141,26 @@ describe('PastRepository', () => {
       target: { value: '确认事实' },
     });
 
-    expect(screen.getByLabelText('关联依据').textContent).toContain('原则');
-    expect(screen.getByLabelText('关联依据').textContent).toContain('先确认事实，再作判断');
-    expect(screen.getByText('一次复盘')).toBeTruthy();
+    expect(screen.queryByLabelText('关联依据')).toBeNull();
+    expect(screen.queryByText('一次复盘')).toBeNull();
     expect(screen.queryByText('其他记录')).toBeNull();
   });
 
-  it('searches an action and returns its evidence and result records', () => {
+  it('matches record content and tags without following stored action links', () => {
     renderRepository({
       entries: [
-        makeEntry({ id: 'action-evidence', title: '周一记录' }),
-        makeEntry({ id: 'action-result', title: '周五复盘' }),
-        makeEntry({ id: 'unrelated', title: '生活随笔' }),
-      ],
-      actions: [
-        {
-          id: 'action-1',
-          title: '完成一次项目复盘',
-          status: 'active',
-          createdAt: 1,
-          evidenceEntryIds: ['action-evidence'],
-          resultEntryId: 'action-result',
-        },
+        makeEntry({ id: 'linked', title: '周一记录', relatedActionIds: ['action-1'] }),
+        makeEntry({ id: 'direct', title: '周五复盘', content: '项目复盘' }),
+        makeEntry({ id: 'tagged', title: '生活随笔', tags: ['项目复盘'] }),
       ],
     });
-
     fireEvent.change(screen.getByRole('searchbox', { name: '搜索记录' }), {
       target: { value: '项目复盘' },
     });
-
-    expect(screen.getByLabelText('关联依据').textContent).toContain('行动');
-    expect(screen.getByText('周一记录')).toBeTruthy();
+    expect(screen.queryByLabelText('关联依据')).toBeNull();
+    expect(screen.queryByText('周一记录')).toBeNull();
     expect(screen.getByText('周五复盘')).toBeTruthy();
-    expect(screen.queryByText('生活随笔')).toBeNull();
+    expect(screen.getByText('生活随笔')).toBeTruthy();
   });
 
   it('counts only current principles in the tab', () => {
