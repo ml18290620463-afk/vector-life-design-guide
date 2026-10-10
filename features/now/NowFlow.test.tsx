@@ -78,6 +78,7 @@ describe('NowFlow pure capture', () => {
       isLocked: false,
       tags: [],
     }));
+    const onReviewSavedRecord = vi.fn();
     const onRelatedEntriesResolved = vi.fn();
     const onActionResultRecorded = vi.fn();
     const onUpdatePrinciple = vi.fn();
@@ -89,6 +90,7 @@ describe('NowFlow pure capture', () => {
         onRouteChange={vi.fn()}
         onExit={vi.fn()}
         onPersistRecord={onPersistRecord}
+        onReviewSavedRecord={onReviewSavedRecord}
         onRelatedEntriesResolved={onRelatedEntriesResolved}
         onActionResultRecorded={onActionResultRecorded}
         onUpdatePrinciple={onUpdatePrinciple}
@@ -107,7 +109,11 @@ describe('NowFlow pure capture', () => {
       />,
     );
     fireEvent.click(screen.getByText('save-result'));
-    await screen.findByRole('heading', { name: '已保存' });
+    await waitFor(() => expect(draftControls.reset).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(onReviewSavedRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'saved' })),
+    );
+    expect(screen.queryByRole('heading', { name: '已保存' })).toBeNull();
     const payload = onPersistRecord.mock.calls[0][0];
     for (const key of [
       'relatedEntryIds',
@@ -142,7 +148,7 @@ describe('NowFlow pure capture', () => {
     );
     fireEvent.click(screen.getByText('save-result'));
     fireEvent.click(await screen.findByText('重试清理草稿'));
-    await screen.findByRole('heading', { name: '已保存' });
+    await waitFor(() => expect(draftControls.reset).toHaveBeenCalledTimes(2));
     expect(onPersistRecord).toHaveBeenCalledOnce();
     expect(draftControls.reset).toHaveBeenCalledTimes(2);
   });

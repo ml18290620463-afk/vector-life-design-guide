@@ -33,8 +33,6 @@ for (const viewport of [
       expect((await emptyCard.boundingBox())!.height).toBeGreaterThan(emptyCardHeight + 60);
     }
     await page.getByLabel('保存到过去').click();
-    await expect(page.getByRole('heading', { name: '已保存' })).toBeVisible();
-    await page.getByRole('button', { name: '回看这段经历' }).click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: '写下第一条记录' })).toHaveCount(0);
@@ -84,8 +82,6 @@ for (const viewport of [
       .toBe(true);
     await page.screenshot({ path: testInfo.outputPath('now-filled.png'), fullPage: true });
     await page.getByLabel('保存到过去').click();
-    await expect(page.getByRole('heading', { name: '已保存' })).toBeVisible();
-    await page.getByRole('button', { name: '回看这段经历' }).click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('past-saved.png'), fullPage: true });

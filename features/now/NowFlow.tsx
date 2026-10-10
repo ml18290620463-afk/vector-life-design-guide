@@ -39,7 +39,7 @@ interface NowFlowProps {
   ) => Promise<DiaryEntry>;
   onRelatedEntriesResolved?: (entryId: string, relatedEntryIds: string[]) => void;
   onRecordComplete?: () => void;
-  /** Session-only next steps after a record is safely stored. */
+  /** Open the saved record in Past after persistence and cleanup succeed. */
   onReviewSavedRecord?: (entry: DiaryEntry) => void;
   onOpenFutureAction?: (context: ActionDraftContext) => void;
   pastEntries?: DiaryEntry[];
@@ -76,7 +76,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     discardDraft,
     resetAfterSend,
     ready,
-    status: draftStatus,
     error: draftError,
     retryLoad,
   } = useNowDraft();
@@ -84,7 +83,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   const [sending, setSending] = useState(false);
   const inFlight = useRef(false);
   const [completionError, setCompletionError] = useState('');
-  const [completedEntry, setCompletedEntry] = useState<DiaryEntry | null>(null);
   const pendingCompletion = useRef<(() => Promise<void>) | null>(null);
   const retryCompletion = async () => {
     if (inFlight.current || !pendingCompletion.current) return;
@@ -162,7 +160,9 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         pendingCompletion.current = null;
         setCompletionError('');
         retry.current = null;
-        setCompletedEntry(persistedEntry);
+        if (onReviewSavedRecord) onReviewSavedRecord(persistedEntry);
+        else if (onRecordComplete) onRecordComplete();
+        else onExit();
       };
       await pendingCompletion.current();
       return true;
@@ -179,7 +179,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   if (!ready)
     return (
       <div className="now-shell" role="status">
-        {draftError || '正在恢复草稿…'}
+        {draftError}
         {draftError && (
           <button type="button" onClick={retryLoad}>
             重新读取草稿
@@ -206,21 +206,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       </div>
     );
 
-  if (completedEntry)
-    return (
-      <main className="now-shell now-completion" aria-labelledby="now-completion-title">
-        <h1 id="now-completion-title">已保存</h1>
-        <div className="now-completion__actions">
-          <button type="button" onClick={() => setCompletedEntry(null)}>
-            继续记录
-          </button>
-          <button type="button" onClick={() => onReviewSavedRecord?.(completedEntry)}>
-            回看这段经历
-          </button>
-        </div>
-      </main>
-    );
-
   return (
     <div
       className={`now-shell ${isLight ? 'now-shell--light' : ''} ${
@@ -235,9 +220,9 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           </button>
         </div>
       )}
-      {route !== 'avatar-chat' && (
-        <div role={draftError ? 'alert' : 'status'} className="now-draft-status">
-          {draftError || draftStatus}
+      {route !== 'avatar-chat' && draftError && (
+        <div role="alert" className="now-draft-status">
+          {draftError}
           {draftError && (
             <button type="button" onClick={() => void saveDraft()}>
               重试保存
