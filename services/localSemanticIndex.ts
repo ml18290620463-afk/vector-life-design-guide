@@ -130,9 +130,9 @@ export const cosineSimilarity = (first: number[], second: number[]): number => {
 };
 
 const entryToSemanticSource = (
-  entry: Pick<DiaryEntry, 'title' | 'content' | 'tags'>,
+  entry: Pick<DiaryEntry, 'title' | 'content' | 'tags' | 'supplements'>,
 ): SemanticSource => ({
-  text: `${entry.title} ${entry.content}`,
+  text: `${entry.title} ${entry.content} ${(entry.supplements ?? []).map((item) => item.content).join(' ')}`,
   tags: entry.tags,
 });
 
@@ -163,7 +163,7 @@ export const buildLocalSemanticIndex = (entries: DiaryEntry[]): LocalSemanticInd
     }));
 
 export const searchLocalSemanticIndex = (
-  query: Pick<DiaryEntry, 'title' | 'content' | 'tags'>,
+  query: Pick<DiaryEntry, 'title' | 'content' | 'tags' | 'supplements'>,
   index: LocalSemanticIndexItem[],
   limit = 3,
   minimumSimilarity = 0.24,

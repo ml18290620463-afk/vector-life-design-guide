@@ -98,3 +98,47 @@ it('keeps sealed or future records out of readable previews and model context', 
   ).toBe(true);
   expect(decrypt).not.toHaveBeenCalled();
 });
+
+it('keeps unchanged readable rows visible during refresh and applies supplements immediately', async () => {
+  vi.spyOn(SecurityService, 'decrypt')
+    .mockResolvedValueOnce('正文')
+    .mockImplementation(() => new Promise(() => {}));
+  const { result, rerender } = renderHook(({ stored }) => useReadableEntries(stored, true, 'key'), {
+    initialProps: { stored: [entry] },
+  });
+  await waitFor(() => expect(result.current.entries[0]?.content).toBe('正文'));
+  const supplements = [{ id: 's1', content: '补充', createdAt: 2 }];
+  rerender({ stored: [{ ...entry, supplements }] });
+  expect(result.current.entries[0]).toMatchObject({ content: '正文', supplements });
+  rerender({ stored: [] });
+  expect(result.current.entries).toEqual([]);
+});
+
+it('does not blank plaintext records on a new storage snapshot', () => {
+  const stored = [{ ...entry, isEncrypted: false, content: '原文' }];
+  const { result, rerender } = renderHook(({ rows }) => useReadableEntries(rows, true, 'key'), {
+    initialProps: { rows: stored },
+  });
+  expect(result.current.entries).toEqual(stored);
+  rerender({ rows: stored.map((row) => ({ ...row })) });
+  expect(result.current.entries).toEqual(stored);
+});
+
+it('hides cached content and supplements immediately when a record is sealed or changed', async () => {
+  vi.spyOn(SecurityService, 'decrypt')
+    .mockResolvedValueOnce('正文')
+    .mockImplementation(() => new Promise(() => {}));
+  const { result, rerender } = renderHook(({ stored }) => useReadableEntries(stored, true, 'key'), {
+    initialProps: { stored: [entry] },
+  });
+  await waitFor(() => expect(result.current.entries[0]?.content).toBe('正文'));
+  rerender({ stored: [{ ...entry, content: 'new ciphertext' }] });
+  expect(result.current.entries).toEqual([]);
+  rerender({
+    stored: [
+      { ...entry, isLocked: true, supplements: [{ id: 's', content: 'secret', createdAt: 2 }] },
+    ],
+  });
+  expect(result.current.entries[0].content).toBe('');
+  expect(result.current.entries[0].supplements).toBeUndefined();
+});

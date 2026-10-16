@@ -119,7 +119,17 @@ export function validateVaultBackup(value: unknown): asserts value is VaultBacku
       typeof e.content !== 'string' ||
       typeof e.title !== 'string' ||
       !Number.isFinite(e.createdAt) ||
-      !Array.isArray(e.tags)
+      !Array.isArray(e.tags) ||
+      (e.supplements !== undefined &&
+        (!Array.isArray(e.supplements) ||
+          e.supplements.some(
+            (item) =>
+              !item ||
+              typeof item.id !== 'string' ||
+              typeof item.content !== 'string' ||
+              !Number.isFinite(item.createdAt),
+          ) ||
+          new Set(e.supplements.map((item) => item.id)).size !== e.supplements.length))
     )
       throw new Error('记录格式无效');
   stateFrom(b.vault.future);
@@ -501,6 +511,10 @@ export async function importVaultBackup(
           current.practiceRecords ?? [],
           future.practiceRecords ?? [],
         ) as FutureState['practiceRecords'];
+        future.goalFeedbackRecords = mergeRows(
+          current.goalFeedbackRecords ?? [],
+          future.goalFeedbackRecords ?? [],
+        ) as FutureState['goalFeedbackRecords'];
         const origins = { ...current.archiveOrigins };
         for (const [key, value] of Object.entries(future.archiveOrigins ?? {})) {
           if (origins[key] && canonical(origins[key]) !== canonical(value))

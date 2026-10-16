@@ -67,6 +67,7 @@ function parseOneAvatarFact(c: unknown, messages: { role: string; content: strin
     statement: fact.statement.trim(),
     kind: fact.kind as AvatarFactKind,
     sourceIndexes: indexes as number[],
+    evidences: evidences as string[],
     ...(fact.kind === 'pattern_candidate' ? { patternKey } : {}),
     ...(replacesReferenceId ? { replacesReferenceId } : {}),
   };

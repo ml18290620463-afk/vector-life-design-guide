@@ -81,11 +81,17 @@ describe('nowRules', () => {
     expect(entry.nowMaterials).toEqual(draft.materials);
   });
 
-  it('validates material count and exclusivity', () => {
-    expect(validateMaterials([material('image'), material('audio')])).toEqual({ ok: true });
+  it('validates counts while allowing mixed materials', () => {
+    expect(
+      validateMaterials([
+        material('image'),
+        material('link', 1),
+        material('link', 2),
+        material('audio'),
+      ]),
+    ).toEqual({ ok: true });
     expect(validateMaterials([material('video'), material('audio')])).toEqual({
-      ok: false,
-      message: '视频不能与图片、链接或音频同时添加',
+      ok: true,
     });
     expect(
       validateMaterials(Array.from({ length: 9 }, (_, index) => material('image', index))),

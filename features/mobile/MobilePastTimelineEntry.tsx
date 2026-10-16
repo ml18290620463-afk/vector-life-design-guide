@@ -1,11 +1,16 @@
+import { PastSupplements } from '../../components/PastSupplements';
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import type { DiaryEntry, Language } from '../../types';
 import { PastEntryMedia } from '../../components/PastEntryMedia';
 import { PastEntryBody, PastEntryTags, PastEntryTitle } from '../../components/PastEntryText';
 import { splitEntryContent } from '../../lib/entryContent';
+import { getPastSearchMatch } from './pastSearch';
 
 interface MobilePastTimelineEntryProps {
+  onAppendSupplement?: (entryId: string, content: string, supplementId: string) => Promise<void>;
+  draftPassword?: string | null;
+  searchQuery?: string;
   entry: DiaryEntry;
   highlight?: boolean;
   language: Language;
@@ -16,6 +21,9 @@ interface MobilePastTimelineEntryProps {
 
 export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = ({
   entry,
+  onAppendSupplement,
+  draftPassword,
+  searchQuery = '',
   highlight = false,
   language,
   selectionMode = false,
@@ -33,6 +41,21 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
         minute: '2-digit',
       });
   const body = splitEntryContent(entry.content).body;
+  const searchMatch = getPastSearchMatch(entry, searchQuery);
+  const [revealedSupplement, setRevealedSupplement] = useState<string>();
+  const revealSearchMatch = () => {
+    if (!searchMatch) return;
+    if (searchMatch.target === 'supplement' && searchMatch.id) setRevealedSupplement(searchMatch.id);
+    if (searchMatch.target === 'body') setExpanded(true);
+    window.setTimeout(() => {
+      const selector = searchMatch.target === 'supplement'
+        ? `[data-supplement-id="${CSS.escape(searchMatch.id ?? '')}"]`
+        : searchMatch.target === 'material'
+          ? `[data-material-id="${CSS.escape(searchMatch.id ?? '')}"]`
+          : '.mobile-past-timeline__fold-content';
+      contentRef.current?.closest('article')?.querySelector(selector)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 0);
+  };
   const contentRef = useRef<HTMLDivElement>(null);
   const [canExpand, setCanExpand] = useState(body.length > 100 || body.split('\n').length > 3);
   useEffect(() => {
@@ -103,6 +126,7 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
           )}
         </div>
         <div ref={contentRef} id={contentId} className="mobile-past-timeline__fold-content">
+          {searchMatch && <button type="button" className="past-search-match" onClick={revealSearchMatch}>{searchMatch.source} · {searchMatch.excerpt}</button>}
           <PastEntryBody
             entry={entry}
             variant="mobile"
@@ -111,8 +135,15 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
             showToggle={false}
           />
           <PastEntryTags entry={entry} />
-          <PastEntryMedia entry={entry} variant="mobile" language={language} />
+          <PastEntryMedia entry={entry} variant="mobile" language={language} focusMaterialId={searchMatch?.target === 'material' ? searchMatch.id : undefined} />
         </div>
+        <PastSupplements
+          draftPassword={draftPassword}
+          revealedId={revealedSupplement}
+          entry={entry}
+          language={language}
+          onAppend={selectionMode ? undefined : onAppendSupplement}
+        />
       </div>
     </article>
   );

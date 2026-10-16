@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useFuture } from '../../hooks/useFuture';
 import { generateSecureId } from '../../services/idGenerator';
 import type {
@@ -81,6 +81,31 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   } = useNowDraft();
   const { toastMessage, showToast } = useToast();
   const [sending, setSending] = useState(false);
+  const editorContainer = useRef<HTMLDivElement>(null);
+  const scrollPositions = useRef<{ element: HTMLElement; top: number }[]>([]);
+  const changeRecordingRoute = (next: NowRoute) => {
+    if (next === 'tags') {
+      const positions: { element: HTMLElement; top: number }[] = [];
+      let element = editorContainer.current;
+      while (element) {
+        positions.push({ element, top: element.scrollTop });
+        element = element.parentElement as HTMLDivElement | null;
+      }
+      if (document.scrollingElement instanceof HTMLElement)
+        positions.push({
+          element: document.scrollingElement,
+          top: document.scrollingElement.scrollTop,
+        });
+      scrollPositions.current = positions;
+    }
+    onRouteChange(next);
+  };
+  useLayoutEffect(() => {
+    if (route !== 'now') return;
+    scrollPositions.current.forEach(({ element, top }) => {
+      element.scrollTop = top;
+    });
+  }, [route]);
   const inFlight = useRef(false);
   const savedSubmission = pastEntries.some((entry) => entry.id === draft.submission_id);
   const cleanupStarted = useRef(false);
@@ -156,7 +181,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       return true;
     } catch (error) {
       console.error('NowFlow: failed to persist local record', error);
-      showToast(error instanceof Error ? error.message : '发送失败，请重试');
+      showToast(error instanceof Error ? error.message : '保存失败，请重试');
       return false;
     } finally {
       setSending(false);
@@ -202,19 +227,21 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           )}
         </div>
       )}
-      {route === 'now' && (
-        <NowPage
-          draft={draft}
-          setDraft={setDraft}
-          sending={sending}
-          onSend={() => void submitRecord('manual')}
-          onSaveDraft={saveDraft}
-          onDiscardDraft={discardDraft}
-          onExit={onExit}
-          onRouteChange={onRouteChange}
-          showToast={showToast}
-          mobileShell={mobileShell}
-        />
+      {(route === 'now' || route === 'tags') && (
+        <div ref={editorContainer} hidden={route === 'tags'}>
+          <NowPage
+            draft={draft}
+            setDraft={setDraft}
+            sending={sending}
+            onSend={() => void submitRecord('manual')}
+            onSaveDraft={saveDraft}
+            onDiscardDraft={discardDraft}
+            onExit={onExit}
+            onRouteChange={changeRecordingRoute}
+            showToast={showToast}
+            mobileShell={mobileShell}
+          />
+        </div>
       )}
       {route === 'tags' && (
         <TagSelectPage

@@ -82,14 +82,8 @@ export const validateMaterials = (
 
   if (counts.image > CONFIG.MAX_IMAGES) return { ok: false, message: '图片最多 8 张' };
   if (counts.video > 1) return { ok: false, message: '视频最多 1 个' };
-  if (counts.link > 1) return { ok: false, message: '链接最多 1 个' };
+  if (counts.link > 8) return { ok: false, message: '链接最多 8 个' };
   if (counts.audio > 1) return { ok: false, message: '音频最多 1 个' };
-  if (counts.video > 0 && (counts.image > 0 || counts.link > 0 || counts.audio > 0)) {
-    return { ok: false, message: '视频不能与图片、链接或音频同时添加' };
-  }
-  if (counts.link > 0 && (counts.image > 0 || counts.video > 0)) {
-    return { ok: false, message: '链接不能与图片或视频同时添加' };
-  }
   return { ok: true };
 };
 

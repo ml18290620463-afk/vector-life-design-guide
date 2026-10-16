@@ -1,12 +1,13 @@
 import type { DiaryEntry } from '../types';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { getStoredJson, setStoredJson } from './browserStorage';
+import { getStoredString, setStoredJson } from './browserStorage';
 
 export const PAST_PROCESSING_KEY = 'vector:past:processing:v1';
 const VERSION = 1;
 interface ProcessingReceipt {
   id: string;
+  parentId?: string;
   fingerprint: string;
   version: number;
 }
@@ -20,13 +21,25 @@ export const pastRecordFingerprint = (entry: DiaryEntry) =>
           entry.tags,
           entry.createdAt,
           entry.nowMaterials,
+          entry.supplements,
         ]),
       ),
     ),
   );
+let cachedRaw: string | null = null;
+let cachedReceipts: ProcessingReceipt[] = [];
+let cachedById = new Map<string, ProcessingReceipt>();
 const readReceipts = (): ProcessingReceipt[] => {
-  const value = getStoredJson<unknown>(PAST_PROCESSING_KEY);
-  return Array.isArray(value)
+  const raw = getStoredString(PAST_PROCESSING_KEY);
+  if (raw === cachedRaw) return cachedReceipts;
+  cachedRaw = raw;
+  let value: unknown;
+  try {
+    value = raw ? JSON.parse(raw) : [];
+  } catch {
+    value = [];
+  }
+  cachedReceipts = Array.isArray(value)
     ? value.filter(
         (row): row is ProcessingReceipt =>
           row &&
@@ -35,18 +48,27 @@ const readReceipts = (): ProcessingReceipt[] => {
           typeof row.version === 'number',
       )
     : [];
+  cachedById = new Map(cachedReceipts.map((receipt) => [receipt.id, receipt]));
+  return cachedReceipts;
 };
-export const wasPastRecordProcessed = (id: string, fingerprint: string) =>
-  readReceipts().some(
-    (row) => row.id === id && row.fingerprint === fingerprint && row.version === VERSION,
-  );
-export const markPastRecordProcessed = (id: string, fingerprint: string) =>
-  setStoredJson(PAST_PROCESSING_KEY, [
+export const wasPastRecordProcessed = (id: string, fingerprint: string) => {
+  readReceipts();
+  const row = cachedById.get(id);
+  return row?.fingerprint === fingerprint && row.version === VERSION;
+};
+export const markPastRecordProcessed = (id: string, fingerprint: string, parentId?: string) => {
+  const next = [
     ...readReceipts().filter((row) => row.id !== id),
-    { id, fingerprint, version: VERSION },
-  ]);
-export const forgetPastProcessing = (ids: string[]) =>
-  setStoredJson(
+    { id, fingerprint, parentId, version: VERSION },
+  ];
+  return setStoredJson(PAST_PROCESSING_KEY, next);
+};
+export const forgetPastProcessing = (ids: string[]) => {
+  const removed = new Set(ids);
+  return setStoredJson(
     PAST_PROCESSING_KEY,
-    readReceipts().filter((row) => !ids.includes(row.id)),
+    readReceipts().filter(
+      (row) => !removed.has(row.id) && !(row.parentId && removed.has(row.parentId)),
+    ),
   );
+};

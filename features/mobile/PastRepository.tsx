@@ -16,15 +16,15 @@ import { PastActionDialog } from '../../components/PastActionDialog';
 import { ArchivePrinciplesView } from '../../components/ArchivePrinciplesView';
 import { MobilePastTimelineEntry } from './MobilePastTimelineEntry';
 import type { PastRepositorySection } from './types';
-import { useFuture } from '../../hooks/useFuture';
-import { goalProgress } from '../../services/futureRepository';
-import type { ActionDraftContext, PracticeReflectionContext } from '../../types/future';
+import type { PracticeReflectionContext } from '../../types/future';
 import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
 import { searchPastEntries } from './pastSearch';
 
 interface PastRepositoryProps {
   archiveMode?: boolean;
+  onAppendSupplement?: (entryId: string, content: string, supplementId: string) => Promise<void>;
+  draftPassword?: string | null;
   onRelatedEntriesResolved?: (entryId: string, ids: string[]) => void | Promise<void>;
   /** Allows a deliberate cross-module handoff, such as an action that is ready to be reflected on. */
   initialSection?: PastRepositorySection;
@@ -35,7 +35,6 @@ interface PastRepositoryProps {
   /** @deprecated Past no longer opens the avatar; retained for call-site compatibility. */
   onOpenAvatar?: () => void;
   onOpenFutureGoal?: (goalId: string) => void;
-  onOpenFutureAction?: (context: ActionDraftContext) => void;
   language: Language;
   theme?: Theme;
   entries: DiaryEntry[];
@@ -82,6 +81,8 @@ const TIMELINE_RENDER_BATCH_SIZE = 100;
 export const PastRepository: React.FC<PastRepositoryProps> = ({
   archiveMode = false,
   onRelatedEntriesResolved,
+  onAppendSupplement,
+  draftPassword,
   initialSection,
   initialQuery = '',
   onViewChange,
@@ -97,8 +98,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   onRevisePrinciple,
   onSelectEntry,
   onDeleteEntries,
-  onOpenFutureGoal,
-  onOpenFutureAction,
 }) => {
   const processing = usePastRecordProcessing(entries, onRelatedEntriesResolved);
   const t = TRANSLATIONS[language];
@@ -106,7 +105,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   useEffect(() => {
     if (initialSection) setSection(initialSection);
   }, [initialSection]);
-  const { state: futureState } = useFuture();
   const [deleting, setDeleting] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState(initialQuery);
   const [timelineRenderLimit, setTimelineRenderLimit] = useState(TIMELINE_RENDER_BATCH_SIZE);
@@ -137,28 +135,11 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     () => timelineEntries.map((entry) => entry.id),
     [timelineEntries],
   );
-  const timelineRows = [
-    ...timelineEntries.map((entry) => ({
-      kind: 'entry' as const,
-      entry,
-      id: entry.id,
-      createdAt: entry.createdAt,
-    })),
-    ...futureState.closures
-      .filter(
-        (closure, index, all) =>
-          !all.slice(index + 1).some((next) => next.goalId === closure.goalId) &&
-          closure.snapshot.title
-            .toLocaleLowerCase()
-            .includes(timelineQuery.trim().toLocaleLowerCase()),
-      )
-      .map((closure) => ({
-        kind: 'closure' as const,
-        closure,
-        id: closure.id,
-        createdAt: closure.createdAt,
-      })),
-  ].sort((a, b) => b.createdAt - a.createdAt);
+  const timelineRows = timelineEntries.map((entry) => ({
+    entry,
+    id: entry.id,
+    createdAt: entry.createdAt,
+  }));
   const renderedTimelineRows = timelineRows.slice(0, timelineRenderLimit);
   const hasMoreTimelineRows = timelineRows.length > renderedTimelineRows.length;
   const allVisibleSelected =
@@ -278,32 +259,11 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                   <h3>{getSourceDateLabel(row.createdAt, language)}</h3>
                 </li>
               )}
-              {row.kind === 'closure' ? (
-                <li key={row.id}>
-                  <article className="mobile-past-goal-summary">
-                    <small>
-                      {row.closure.snapshot.status === 'completed' ? '目标完成' : '目标结束'}
-                    </small>
-                    <h3>{row.closure.snapshot.title}</h3>
-                    <p>
-                      {row.closure.snapshot.measurement.kind === 'quantity'
-                        ? `${row.closure.total} / ${row.closure.snapshot.measurement.target} ${row.closure.snapshot.measurement.unit}`
-                        : '已归档文字进展'}
-                    </p>
-                    {row.closure.total !==
-                      goalProgress(futureState, row.closure.snapshot).total && (
-                      <small>当前进度已变化，以上为结束时快照</small>
-                    )}
-                    {onOpenFutureGoal && (
-                      <button type="button" onClick={() => onOpenFutureGoal(row.closure.goalId)}>
-                        查看进展与历史
-                      </button>
-                    )}
-                  </article>
-                </li>
-              ) : (
                 <li key={row.id}>
                   <MobilePastTimelineEntry
+                    searchQuery={normalizedTimelineQuery}
+                    draftPassword={draftPassword}
+                    onAppendSupplement={onAppendSupplement}
                     entry={row.entry}
                     highlight={!isManaging && !hasTimelineQuery && index === 0}
                     language={language}
@@ -312,7 +272,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     onToggleSelection={toggleEntrySelection}
                   />
                 </li>
-              )}
             </React.Fragment>
           ))}
         </ul>
@@ -531,7 +490,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               displayFirst={!archiveMode}
               practiceReflectionContext={practiceReflectionContext}
               onPracticeReflectionContextDismiss={onPracticeReflectionContextDismiss}
-              onOpenFutureAction={onOpenFutureAction}
               emptyReason={clearedDerivedKnowledge ? 'source-deletion' : undefined}
             />
           </div>

@@ -205,6 +205,7 @@ export const sanitizeMemorySourceRef = (value: unknown): AvatarMemorySourceRef |
   }
   return {
     source: value.source as AvatarMemorySourceKind,
+    ...(typeof value.supplementId === 'string' ? { supplementId: value.supplementId } : {}),
     id: value.id,
     ...(typeof value.excerpt === 'string' ? { excerpt: value.excerpt } : {}),
     ...(typeof value.createdAt === 'number' ? { createdAt: value.createdAt } : {}),

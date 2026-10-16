@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiaryEntry } from '../../types';
-import { searchPastEntries } from './pastSearch';
+import { getPastSearchMatch, searchPastEntries } from './pastSearch';
 
 const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry => ({
   id,
@@ -33,5 +33,47 @@ describe('pastSearch', () => {
     const entries = [entry('e1', 1), entry('e2', 2, ['work'])];
     expect(searchPastEntries(entries, '  ')).toEqual(entries);
     expect(searchPastEntries(entries, 'missing')).toEqual([]);
+  });
+});
+
+it('matches combined tags, supplements and link titles without changing chronology', () => {
+  const original: DiaryEntry = {
+    ...entry('e1', 10, ['工作']),
+    supplements: [{ id: 's1', content: '补充的会议结论', createdAt: 200 }],
+    nowMaterials: [
+      {
+        id: 'l',
+        type: 'link',
+        url: 'https://example.com/report',
+        meta: { title: '项目报告' },
+        sort_order: 0,
+      },
+    ],
+  };
+  expect(searchPastEntries([original], '工作 会议 报告')).toEqual([original]);
+  expect(searchPastEntries([original], 'example.com')).toEqual([original]);
+  expect(original.createdAt).toBe(10);
+  expect(getPastSearchMatch(original, '会议')).toMatchObject({ target: 'supplement', id: 's1' });
+  expect(getPastSearchMatch(original, '项目报告')).toMatchObject({ target: 'material', id: 'l' });
+});
+
+it('prioritizes exact tags and titles while preserving equal-rank chronology', () => {
+  const body = { ...entry('recent', 40), content: '旅行' };
+  const title = entry('旅行', 30);
+  const tagged = entry('older', 20, ['事件:旅行']);
+  const tied = entry('oldest', 10, ['旅行']);
+  const source = [body, title, tagged, tied];
+  expect(searchPastEntries(source, '旅行')).toEqual([tagged, tied, title, body]);
+  expect(source).toEqual([body, title, tagged, tied]);
+});
+it('shows the supplement matching most query words', () => {
+  const record = {
+    ...entry('会议', 1),
+    supplements: [{ id: 's', content: '会议 项目 结论', createdAt: 2 }],
+  };
+  expect(getPastSearchMatch(record, '会议 项目')).toMatchObject({
+    target: 'supplement',
+    id: 's',
+    excerpt: '会议 项目 结论',
   });
 });

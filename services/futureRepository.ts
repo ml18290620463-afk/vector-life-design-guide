@@ -5,6 +5,7 @@ import type {
   ActionPracticeInput,
   ActionPracticeRecord,
   FutureState,
+  GoalFeedbackInput,
   Goal,
   OutcomeInput,
   Vision,
@@ -177,44 +178,120 @@ export async function saveGoal(
 }
 export async function setGoalStatus(id: string, status: Goal['status'], expectedRevision: number) {
   const result = await command((state, values) => {
-    if (!['active', 'paused', 'completed', 'ended'].includes(status))
-      throw new Error('目标状态无效');
-    const goal = state.goals.find((g) => g.id === id);
-    if (!goal || goal.revision !== expectedRevision) throw new Error('目标已更新，请刷新后重试');
-    if (goal.status === status)
-      return { goal, vision: state.visions.find((vision) => vision.id === goal.visionId) };
-    if (
-      (status === 'completed' || status === 'ended') &&
-      (values[K.actions] as ActionItem[] | undefined)?.some(
-        (action) =>
-          action.goalId === id && (action.status === 'pending' || action.status === 'active'),
-      )
-    )
-      throw new Error('请先处理关联行动，再结束目标');
-    const before = structuredClone(goal);
-    goal.status = status;
-    goal.revision++;
-    goal.updatedAt = Date.now();
-    state.revisions.push({
-      id: generateSecureId('revision'),
-      before,
-      after: structuredClone(goal),
-      createdAt: Date.now(),
-    });
-    if (status === 'completed' || status === 'ended')
-      state.closures.push({
-        id: generateSecureId('closure'),
-        goalId: id,
-        snapshot: structuredClone(goal),
-        progressEventIds: state.events
-          .filter((e) => e.goalId === id && e.status === 'valid')
-          .map((e) => e.id),
-        total: goalProgress(state, goal).total,
-        createdAt: Date.now(),
-      });
+    const goal = updateGoalStatusInState(state, values, id, status, expectedRevision);
     return { goal, vision: state.visions.find((vision) => vision.id === goal.visionId) };
   });
   return result;
+}
+
+function updateGoalStatusInState(
+  state: FutureState,
+  values: Record<string, unknown>,
+  id: string,
+  status: Goal['status'],
+  expectedRevision: number,
+) {
+  if (!['active', 'paused', 'completed', 'ended'].includes(status)) throw new Error('目标状态无效');
+  const goal = state.goals.find((candidate) => candidate.id === id);
+  if (!goal || goal.revision !== expectedRevision) throw new Error('目标已更新，请刷新后重试');
+  if (goal.status === status) return goal;
+  if (
+    (status === 'completed' || status === 'ended') &&
+    (values[K.actions] as ActionItem[] | undefined)?.some(
+      (action) =>
+        action.goalId === id && (action.status === 'pending' || action.status === 'active'),
+    )
+  )
+    throw new Error('请先处理关联行动，再结束目标');
+  const before = structuredClone(goal);
+  goal.status = status;
+  goal.revision++;
+  goal.updatedAt = Date.now();
+  state.revisions.push({
+    id: generateSecureId('revision'),
+    before,
+    after: structuredClone(goal),
+    createdAt: Date.now(),
+  });
+  if (status === 'completed' || status === 'ended')
+    state.closures.push({
+      id: generateSecureId('closure'),
+      goalId: id,
+      snapshot: structuredClone(goal),
+      progressEventIds: state.events
+        .filter((event) => event.goalId === id && event.status === 'valid')
+        .map((event) => event.id),
+      total: goalProgress(state, goal).total,
+      createdAt: Date.now(),
+    });
+  return goal;
+}
+
+/** Save a goal-direction review without creating, editing, or linking an experience. */
+export async function recordGoalFeedback(input: GoalFeedbackInput) {
+  return command((state, values) => {
+    return recordGoalFeedbackInState(state, values, input);
+  });
+}
+function recordGoalFeedbackInState(
+  state: FutureState,
+  values: Record<string, unknown>,
+  input: GoalFeedbackInput,
+) {
+  validateDate(input.occurredOn);
+  if (!['continue', 'adjust', 'pause', 'complete', 'end'].includes(input.decision))
+    throw new Error('目标判断无效');
+  if (
+    typeof input.note !== 'string' ||
+    (typeof input.nextStep !== 'undefined' && typeof input.nextStep !== 'string')
+  )
+    throw new Error('反馈内容无效');
+  const goal = state.goals.find((candidate) => candidate.id === input.goalId);
+  if (!goal || goal.revision !== input.expectedGoalRevision)
+    throw new Error('目标已更新，请刷新后重试');
+  const goalTitle = goal.title;
+  const goalRevision = goal.revision;
+  const status = {
+    continue: 'active',
+    adjust: 'active',
+    pause: 'paused',
+    complete: 'completed',
+    end: 'ended',
+  }[input.decision] as Goal['status'];
+  const updatedGoal = updateGoalStatusInState(
+    state,
+    values,
+    input.goalId,
+    status,
+    input.expectedGoalRevision,
+  );
+  // A direction review is a meaningful state transition even when its mapped
+  // status is already active (for example, "adjust"). Advance the revision
+  // so an older page cannot append a conflicting review afterwards.
+  if (updatedGoal.revision === goalRevision) {
+    const before = structuredClone(updatedGoal);
+    updatedGoal.revision += 1;
+    updatedGoal.updatedAt = Date.now();
+    state.revisions.push({
+      id: generateSecureId('revision'),
+      before,
+      after: structuredClone(updatedGoal),
+      createdAt: Date.now(),
+    });
+  }
+  const record = {
+    id: generateSecureId('goal-feedback'),
+    goalId: input.goalId,
+    goalTitle,
+    goalRevision,
+    decision: input.decision,
+    note: input.note.trim(),
+    nextStep: input.nextStep?.trim() || undefined,
+    occurredOn: input.occurredOn,
+    createdAt: Date.now(),
+  };
+  state.goalFeedbackRecords = [record, ...(state.goalFeedbackRecords ?? [])];
+  return record;
 }
 export async function saveFutureAction(
   input: Omit<ActionItem, 'id' | 'createdAt'> & { id?: string },
@@ -255,48 +332,253 @@ export async function saveFutureAction(
   return result.action;
 }
 
-/** Remove a draft plan only when it has not produced dependent records. */
-export async function deleteVision(id: string, expectedRevision: number) {
-  return command((state) => {
-    const vision = state.visions.find((candidate) => candidate.id === id);
-    if (!vision || vision.revision !== expectedRevision)
-      throw new Error('愿景已更新，请刷新后重试');
-    if (state.goals.some((goal) => goal.visionId === id))
-      throw new Error('愿景已有关联目标，不能删除');
-    state.visions = state.visions.filter((candidate) => candidate.id !== id);
+/**
+ * Remove a user's future data together with records that exist only because of it.
+ * Past diary entries are deliberately outside this graph: a future plan may refer
+ * to an experience, but deleting the plan must never erase that experience.
+ */
+const practiceFeedbackDelta = {
+  helpful: 0.12,
+  partial: 0.04,
+  unhelpful: -0.12,
+  unrelated: 0,
+} as const;
+
+function removePracticeFeedbackFromPrinciples(
+  values: Record<string, unknown>,
+  records: ActionPracticeRecord[],
+) {
+  const removed = new Map<string, ActionPracticeRecord['principleFeedback']>();
+  for (const record of records) {
+    const feedback = record.principleFeedback;
+    if (feedback && feedback.outcome !== 'unrelated') removed.set(record.id, feedback);
+  }
+  if (!removed.size) return;
+
+  const principles = (values[K.principles] as Principle[] | undefined) ?? [];
+  values[K.principles] = principles.map((principle) => {
+    const practiceIds = new Set(principle.appliedFeedbackPracticeIds ?? []);
+    const applied = [...removed].filter(([id, feedback]) =>
+      practiceIds.has(id) && feedback?.principleId === principle.id,
+    );
+    if (!applied.length) return principle;
+
+    let confidence = principle.confidence ?? 0.5;
+    let recallCount = principle.recallCount ?? 0;
+    let helpfulCount = principle.helpfulCount ?? 0;
+    let partialCount = principle.partialCount ?? 0;
+    let unhelpfulCount = principle.unhelpfulCount ?? 0;
+    for (const [, feedback] of applied) {
+      confidence = Math.min(1, Math.max(0, Math.round((confidence - practiceFeedbackDelta[feedback!.outcome]) * 100) / 100));
+      recallCount = Math.max(0, recallCount - 1);
+      if (feedback!.outcome === 'helpful') helpfulCount = Math.max(0, helpfulCount - 1);
+      if (feedback!.outcome === 'partial') partialCount = Math.max(0, partialCount - 1);
+      if (feedback!.outcome === 'unhelpful') unhelpfulCount = Math.max(0, unhelpfulCount - 1);
+    }
+    const removedIds = new Set(applied.map(([id]) => id));
+    return {
+      ...principle,
+      confidence,
+      recallCount,
+      helpfulCount,
+      partialCount,
+      unhelpfulCount,
+      appliedFeedbackPracticeIds: (principle.appliedFeedbackPracticeIds ?? []).filter(
+        (id) => !removedIds.has(id),
+      ),
+      derivedFromPracticeIds: (principle.derivedFromPracticeIds ?? []).filter(
+        (id) => !removedIds.has(id),
+      ),
+    };
   });
 }
 
-/** Remove an unstarted goal. Goals with actions or any history remain auditable. */
+function removeEventsInState(state: FutureState, eventIds: Set<string>) {
+  if (!eventIds.size) return;
+  state.events = state.events.filter((event) => !eventIds.has(event.id));
+  state.closures = state.closures.map((closure) => ({
+    ...closure,
+    progressEventIds: closure.progressEventIds.filter((id) => !eventIds.has(id)),
+  }));
+  state.receipts = state.receipts.flatMap((receipt) => {
+    const retainedEventIds = receipt.eventIds.filter((id) => !eventIds.has(id));
+    return retainedEventIds.length ? [{ ...receipt, eventIds: retainedEventIds }] : [];
+  });
+  const referencedItemIds = new Set(
+    state.events.flatMap((event) => (event.value.kind === 'quantity' && event.value.itemId ? [event.value.itemId] : [])),
+  );
+  state.items = state.items.filter((item) => referencedItemIds.has(item.id));
+}
+
+function removeArchiveOrigins(state: FutureState, kind: 'vision' | 'goal' | 'action', ids: Set<string>) {
+  if (!state.archiveOrigins) return;
+  state.archiveOrigins = Object.fromEntries(
+    Object.entries(state.archiveOrigins).filter(([, origin]) => !(origin.kind === kind && ids.has(origin.id))),
+  );
+}
+
+function deletePracticeRecordsInState(
+  state: FutureState,
+  values: Record<string, unknown>,
+  practiceIds: Set<string>,
+) {
+  if (!practiceIds.size) return;
+  const removedPractice = (state.practiceRecords ?? []).filter((record) => practiceIds.has(record.id));
+  const removedGoalFeedbackIds = new Set(
+    removedPractice.flatMap((record) => (record.goalFeedbackId ? [record.goalFeedbackId] : [])),
+  );
+  removePracticeFeedbackFromPrinciples(values, removedPractice);
+  state.practiceRecords = (state.practiceRecords ?? []).filter((record) => !practiceIds.has(record.id));
+  state.goalFeedbackRecords = (state.goalFeedbackRecords ?? []).filter(
+    (record) => !removedGoalFeedbackIds.has(record.id),
+  );
+}
+
+function deleteActionsInState(
+  state: FutureState,
+  values: Record<string, unknown>,
+  actionIds: Set<string>,
+) {
+  if (!actionIds.size) return;
+  const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
+  const practiceIds = new Set(
+    (state.practiceRecords ?? [])
+      .filter((record) => actionIds.has(record.actionId))
+      .map((record) => record.id),
+  );
+  deletePracticeRecordsInState(state, values, practiceIds);
+  removeEventsInState(
+    state,
+    new Set(state.events.filter((event) => event.sourceActionId && actionIds.has(event.sourceActionId)).map((event) => event.id)),
+  );
+  values[K.actions] = actions.filter((action) => !actionIds.has(action.id));
+  removeArchiveOrigins(state, 'action', actionIds);
+}
+
+function deleteGoalsInState(
+  state: FutureState,
+  values: Record<string, unknown>,
+  goalIds: Set<string>,
+) {
+  if (!goalIds.size) return;
+  const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
+  deleteActionsInState(state, values, new Set(actions.filter((action) => action.goalId && goalIds.has(action.goalId)).map((action) => action.id)));
+
+  const removedGoalFeedbackIds = new Set(
+    (state.goalFeedbackRecords ?? []).filter((record) => goalIds.has(record.goalId)).map((record) => record.id),
+  );
+  state.goalFeedbackRecords = (state.goalFeedbackRecords ?? []).filter(
+    (record) => !goalIds.has(record.goalId),
+  );
+  state.practiceRecords = (state.practiceRecords ?? []).map((record) => {
+    if (goalIds.has(record.goalId ?? '')) {
+      const { goalId: _removedGoalId, ...detached } = record;
+      return {
+        ...detached,
+        goalId: null,
+        ...(record.goalFeedbackId && removedGoalFeedbackIds.has(record.goalFeedbackId)
+          ? { goalFeedbackId: undefined }
+          : {}),
+      };
+    }
+    return record.goalFeedbackId && removedGoalFeedbackIds.has(record.goalFeedbackId)
+      ? { ...record, goalFeedbackId: undefined }
+      : record;
+  });
+  removeEventsInState(
+    state,
+    new Set(state.events.filter((event) => goalIds.has(event.goalId)).map((event) => event.id)),
+  );
+  state.items = state.items.filter((item) => !goalIds.has(item.goalId));
+  state.revisions = state.revisions.filter(
+    (revision) => !goalIds.has(revision.before.id) && !goalIds.has(revision.after.id),
+  );
+  state.closures = state.closures.filter((closure) => !goalIds.has(closure.goalId));
+  state.goals = state.goals.filter((goal) => !goalIds.has(goal.id));
+  removeArchiveOrigins(state, 'goal', goalIds);
+}
+
+/** Delete a vision and every future plan, feedback, and outcome nested beneath it. */
+export async function deleteVision(id: string, expectedRevision: number) {
+  return command((state, values) => {
+    const vision = state.visions.find((candidate) => candidate.id === id);
+    if (!vision || vision.revision !== expectedRevision)
+      throw new Error('愿景已更新，请刷新后重试');
+    deleteGoalsInState(
+      state,
+      values,
+      new Set(state.goals.filter((goal) => goal.visionId === id).map((goal) => goal.id)),
+    );
+    state.visions = state.visions.filter((candidate) => candidate.id !== id);
+    removeArchiveOrigins(state, 'vision', new Set([id]));
+  });
+}
+
+/** Delete a goal and all of its future-side dependent records. */
 export async function deleteGoal(id: string, expectedRevision: number) {
   return command((state, values) => {
     const goal = state.goals.find((candidate) => candidate.id === id);
     if (!goal || goal.revision !== expectedRevision) throw new Error('目标已更新，请刷新后重试');
-    if ((values[K.actions] as ActionItem[] | undefined)?.some((action) => action.goalId === id))
-      throw new Error('目标已有关联行动，不能删除');
-    if (
-      state.events.some((event) => event.goalId === id) ||
-      state.revisions.some((revision) => revision.before.id === id || revision.after.id === id) ||
-      state.closures.some((closure) => closure.goalId === id)
-    )
-      throw new Error('目标已有历史记录，不能删除');
-    state.goals = state.goals.filter((candidate) => candidate.id !== id);
+    deleteGoalsInState(state, values, new Set([id]));
   });
 }
 
-/** Remove an action draft before any practice or measured outcome exists. */
+/** Delete an action together with its action feedback and future-side outcomes. */
 export async function deleteFutureAction(id: string, expectedRevision: number) {
   return command((state, values) => {
     const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
     const action = actions.find((candidate) => candidate.id === id);
     if (!action || (action.revision ?? 0) !== expectedRevision)
       throw new Error('行动已更新，请刷新后重试');
-    if (
-      (state.practiceRecords ?? []).some((record) => record.actionId === id) ||
-      state.events.some((event) => event.sourceActionId === id)
-    )
-      throw new Error('行动已有践行或成果记录，不能删除');
-    values[K.actions] = actions.filter((candidate) => candidate.id !== id);
+    deleteActionsInState(state, values, new Set([id]));
+  });
+}
+
+/** Delete several actions in one atomic transaction, including their dependent future records. */
+export async function deleteFutureActions(
+  candidates: Array<Pick<ActionItem, 'id' | 'revision'>>,
+) {
+  return command((state, values) => {
+    if (!candidates.length) throw new Error('请先选择行动');
+    const selected = new Map(candidates.map((candidate) => [candidate.id, candidate.revision ?? 0]));
+    if (selected.size !== candidates.length) throw new Error('行动选择重复，请重试');
+
+    const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
+    for (const [id, revision] of selected) {
+      const action = actions.find((candidate) => candidate.id === id);
+      if (!action || (action.revision ?? 0) !== revision)
+        throw new Error('行动已更新，请刷新后重试');
+    }
+    deleteActionsInState(state, values, new Set(selected.keys()));
+  });
+}
+
+/** Delete one action feedback and its coupled goal review, without deleting the action. */
+export async function deleteActionPractice(id: string) {
+  return command((state, values) => {
+    if (!(state.practiceRecords ?? []).some((record) => record.id === id))
+      throw new Error('行动反馈不存在');
+    deletePracticeRecordsInState(state, values, new Set([id]));
+  });
+}
+
+/** Delete one goal-direction review. The goal's current state is retained until changed explicitly. */
+export async function deleteGoalFeedback(id: string) {
+  return command((state) => {
+    if (!(state.goalFeedbackRecords ?? []).some((record) => record.id === id))
+      throw new Error('目标反馈不存在');
+    state.goalFeedbackRecords = (state.goalFeedbackRecords ?? []).filter((record) => record.id !== id);
+    state.practiceRecords = (state.practiceRecords ?? []).map((record) =>
+      record.goalFeedbackId === id ? { ...record, goalFeedbackId: undefined } : record,
+    );
+  });
+}
+
+/** Permanently remove one confirmed progress event and its now-unused receipt or item. */
+export async function deleteProgress(id: string) {
+  return command((state) => {
+    if (!state.events.some((event) => event.id === id)) throw new Error('成果不存在');
+    removeEventsInState(state, new Set([id]));
   });
 }
 
@@ -308,16 +590,20 @@ export async function deleteFutureAction(id: string, expectedRevision: number) {
 export async function recordActionPractice(input: ActionPracticeInput) {
   return command((state, values) => {
     validateDate(input.occurredOn);
-    if (typeof input.note !== 'string') throw new Error('实际情况无效');
+    if (typeof input.note !== 'string') throw new Error('反馈内容无效');
     if (!['completed', 'partial', 'not_completed', 'cancelled'].includes(input.status))
       throw new Error('行动状态无效');
     if (!['continue', 'adjust', 'pause', 'end'].includes(input.nextStep))
       throw new Error('下一步无效');
+    if (input.completionDestination !== undefined &&
+      (input.status !== 'completed' || !['long_term', 'past'].includes(input.completionDestination)))
+      throw new Error('完成后的保存方式无效');
     const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
     const action = actions.find((candidate) => candidate.id === input.actionId);
     if (!action || (action.revision ?? 0) !== input.expectedActionRevision)
       throw new Error('行动已更新，请刷新后重试');
-    if (!['pending', 'active'].includes(action.status)) throw new Error('该行动已经结束');
+    if (!['pending', 'active', 'completed'].includes(action.status) || action.archivedToPast)
+      throw new Error('该行动已经结束');
     if (input.status === 'completed' && input.nextStep !== 'end')
       throw new Error('已完成行动只能结束');
     if (input.status === 'cancelled' && input.nextStep !== 'end')
@@ -364,9 +650,10 @@ export async function recordActionPractice(input: ActionPracticeInput) {
         );
       }
     }
-    const record = {
+    const record: ActionPracticeRecord = {
       id: recordId,
       actionId: action.id,
+      goalId: action.goalId ?? null,
       actionTitle: action.title,
       nextAction,
       status: input.status,
@@ -376,11 +663,30 @@ export async function recordActionPractice(input: ActionPracticeInput) {
       createdAt: reviewedAt,
       principleFeedback,
     };
+    if (input.status === 'completed') {
+      record.completionDestination = input.completionDestination ?? 'long_term';
+      if (record.completionDestination === 'past') {
+        const entry: DiaryEntry = {
+          id: generateSecureId('entry'),
+          title: action.title,
+          content: `行动：${action.title}\n\n结果：${input.note.trim() || '已完成'}`,
+          createdAt: reviewedAt,
+          updatedAt: reviewedAt,
+          tags: [],
+          isLocked: false,
+        };
+        record.pastEntryId = entry.id;
+        const entries = (values[K.entries] as DiaryEntry[] | undefined) ?? [];
+        values[K.entries] = [entry, ...entries.filter((entry) => !entry.isSample)];
+      }
+    }
     state.practiceRecords = [record, ...(state.practiceRecords ?? [])];
     values[K.actions] = actions.map((candidate) =>
       candidate.id === action.id
         ? {
             ...candidate,
+            resultEntryId: record.pastEntryId ?? candidate.resultEntryId,
+            archivedToPast: record.pastEntryId ? true : candidate.archivedToPast,
             title: nextAction ?? candidate.title,
             status: nextStatus,
             reviewedAt,
@@ -390,6 +696,15 @@ export async function recordActionPractice(input: ActionPracticeInput) {
           }
         : candidate,
     );
+    if (input.goalFeedback) {
+      if (!action.goalId || input.goalFeedback.goalId !== action.goalId)
+        throw new Error('目标关联已更新，请刷新后重试');
+      const goalRecord = recordGoalFeedbackInState(state, values, {
+        ...input.goalFeedback,
+        occurredOn: input.occurredOn,
+      });
+      record.goalFeedbackId = goalRecord.id;
+    }
     return record;
   });
 }

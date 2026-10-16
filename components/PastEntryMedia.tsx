@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import { PastImage } from './PastImage';
+import React, { useRef } from 'react';
 import { FileText } from 'lucide-react';
 import type { DiaryEntry, Language, Theme } from '../types';
 import {
@@ -18,25 +19,10 @@ interface PastEntryMediaProps {
   theme?: Theme;
   language?: Language;
   compact?: boolean;
+  focusMaterialId?: string;
 }
 
 const stopPropagation = (event: React.MouseEvent) => event.stopPropagation();
-
-const LinkReferenceNotice: React.FC<{ url: string }> = ({ url }) => {
-  const [failed, setFailed] = useState(false);
-  const persistence = classifyMaterialReference(url);
-  if (persistence === 'external-link') {
-    return (
-      <span className="material-reference-notice" role={failed ? 'status' : undefined}>
-        {failed ? '链接可能已失效；备份仅保存地址。' : '原网站链接；备份仅保存地址。'}
-        <button type="button" onClick={() => setFailed(true)}>
-          {failed ? '已标记' : '无法打开？'}
-        </button>
-      </span>
-    );
-  }
-  return <span className="material-reference-notice">此引用无法随备份恢复。</span>;
-};
 
 const ArchiveLinkMaterial: React.FC<{
   title: string;
@@ -57,7 +43,6 @@ const ArchiveLinkMaterial: React.FC<{
         {title}
       </a>
       {description && <div>{description}</div>}
-      <LinkReferenceNotice url={url} />
     </div>
   );
 };
@@ -72,12 +57,12 @@ const ArchiveAttachmentPreview: React.FC<{
   if (entry.attachment.type === 'image') {
     return (
       <figure className={compact ? 'mt-3' : 'mt-4'}>
-        <img
+        <PastImage
           src={entry.attachment.data}
           alt={entry.attachment.name}
           loading="lazy"
           className={`w-full rounded-lg border object-cover ${
-            compact ? 'max-h-56' : 'max-h-80'
+            compact ? 'h-56' : 'h-80'
           } ${theme === 'light' ? 'border-slate-200 bg-slate-100' : 'border-cyan-900/30 bg-black/30'}`}
         />
       </figure>
@@ -160,7 +145,12 @@ const ArchiveInlineMedia: React.FC<{
   return (
     <div className={`archive-entry-media ${compact ? 'archive-entry-media--compact' : ''}`}>
       {imageMaterials.map((material) => (
-        <img key={material.id} src={material.url} alt={getMaterialAlt(material)} loading="lazy" />
+        <PastImage
+          key={material.id}
+          src={material.url}
+          alt={getMaterialAlt(material)}
+          loading="lazy"
+        />
       ))}
       {videoMaterials.map((material) => (
         // eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded video has no caption track
@@ -254,14 +244,14 @@ const MobileLinkMaterialCard: React.FC<{ title: string; url?: string; descriptio
         </div>
       )}
       {description && <div>{description}</div>}
-      <LinkReferenceNotice url={url ?? ''} />
     </div>
   );
 };
 
-const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
+const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language; focusMaterialId?: string }> = ({
   entry,
   language,
+  focusMaterialId,
 }) => {
   const { materials: rawMaterials } = splitEntryContent(entry.content);
   const materials = rawMaterials.filter((material) => !isLegacyMediaMaterial(material));
@@ -291,7 +281,9 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
     })),
     ...(attachmentImage ? [attachmentImage] : []),
   ];
-  const visibleImages = allImages.slice(0, 9);
+  const visibleImages = focusMaterialId && allImages.some((image) => image.id === focusMaterialId)
+    ? allImages
+    : allImages.slice(0, 9);
   const hiddenImageCount = allImages.length - visibleImages.length;
   const hasMaterials =
     imageMaterials.length > 0 ||
@@ -316,8 +308,8 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
           aria-label={language === 'zh' ? '图片素材' : 'Image materials'}
         >
           {visibleImages.map((image, index) => (
-            <figure key={image.id} className="mobile-past-image">
-              <img src={image.url} alt={image.alt} loading="lazy" />
+            <figure key={image.id} data-material-id={image.id} className="mobile-past-image">
+              <PastImage src={image.url} alt={image.alt} loading="lazy" />
               {index === visibleImages.length - 1 && hiddenImageCount > 0 && (
                 <span
                   className="mobile-past-image__overflow"
@@ -331,7 +323,7 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
         </div>
       )}
       {videoMaterials.map((material) => (
-        <figure key={material.id} className="mobile-past-video">
+        <figure key={material.id} data-material-id={material.id} className="mobile-past-video">
           {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded video has no caption track */}
           <video controls playsInline preload="metadata" src={material.url} />
         </figure>
@@ -343,7 +335,7 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
         </figure>
       ))}
       {audioMaterials.map((material) => (
-        <MobileAudioPlayback key={material.id} src={material.url} language={language} />
+        <div key={material.id} data-material-id={material.id}><MobileAudioPlayback src={material.url} language={language} /></div>
       ))}
       {legacyAudioUrls.map((url) => (
         <MobileAudioPlayback key={url} src={url} language={language} />
@@ -363,15 +355,14 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language }> = ({
         </div>
       )}
       {linkMaterials.map((material) => (
-        <MobileLinkMaterialCard
-          key={material.id}
+        <div key={material.id} data-material-id={material.id}><MobileLinkMaterialCard
           title={getMaterialTitle(material, language)}
           url={material.url}
           description={material.description}
-        />
+        /></div>
       ))}
       {otherMaterials.map((material) => (
-        <div key={material.id} className="mobile-past-material">
+        <div key={material.id} data-material-id={material.id} className="mobile-past-material">
           {getMaterialTitle(material, language)}
         </div>
       ))}
@@ -403,9 +394,10 @@ export const PastEntryMedia: React.FC<PastEntryMediaProps> = ({
   theme = 'dark',
   language = 'zh',
   compact = false,
+  focusMaterialId,
 }) => {
   if (variant === 'mobile') {
-    return <MobileEntryMedia entry={entry} language={language} />;
+    return <MobileEntryMedia entry={entry} language={language} focusMaterialId={focusMaterialId} />;
   }
 
   return (

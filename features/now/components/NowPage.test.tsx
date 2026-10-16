@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NowPage } from './NowPage';
 import type { NowDraft, NowRoute } from '../types/now';
 // jsdom does not implement the native dialog lifecycle.
@@ -34,6 +35,7 @@ describe('NowPage', () => {
 
     render(
       <NowPage
+        mobileShell
         draft={makeDraft()}
         setDraft={vi.fn()}
         sending={false}
@@ -49,6 +51,7 @@ describe('NowPage', () => {
     expect(screen.queryByLabelText('分身记录')).toBeNull();
     fireEvent.click(screen.getByLabelText('心情与事件'));
 
+    expect(screen.queryByRole('dialog', { name: '选择标签' })).toBeNull();
     expect(onRouteChange).toHaveBeenCalledWith('tags');
   });
 
@@ -111,6 +114,7 @@ describe('NowPage', () => {
 
     render(
       <NowPage
+        mobileShell
         draft={makeDraft()}
         setDraft={vi.fn()}
         sending={false}
@@ -128,7 +132,7 @@ describe('NowPage', () => {
     expect(onRouteChange).toHaveBeenCalledWith('tags');
   });
 
-  it('exposes the editor label accessibly and keeps the character count visible', () => {
+  it('exposes the editor label accessibly and hides the character count until near the limit', () => {
     render(
       <NowPage
         draft={makeDraft({ text: '刚刚散步回来' })}
@@ -144,7 +148,7 @@ describe('NowPage', () => {
     );
 
     expect(screen.getByLabelText('此刻发生了什么？')).toBeDefined();
-    expect(screen.getByText(`6/${5000}`)).toBeDefined();
+    expect(screen.queryByText(`6/${5000}`)).toBeNull();
   });
 
   it('collects upload actions behind the add button', () => {
@@ -191,9 +195,7 @@ describe('NowPage', () => {
     );
 
     expect(screen.getByLabelText('添加素材').getAttribute('aria-describedby')).toBeNull();
-    expect(screen.getByLabelText('此刻发生了什么？').getAttribute('aria-describedby')).toBe(
-      'now-record-count',
-    );
+    expect(screen.getByLabelText('此刻发生了什么？').getAttribute('aria-describedby')).toBeNull();
     expect(screen.queryByText(/素材是这次经历的证据/)).toBeNull();
     expect(screen.queryByText(/保存后可在/)).toBeNull();
   });
@@ -264,10 +266,114 @@ describe('NowPage', () => {
         showToast={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByText('清空草稿'));
+    fireEvent.click(screen.getByLabelText('清空草稿'));
     expect(discard).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText('确认清空'));
     await waitFor(() => expect(discard).toHaveBeenCalledTimes(1));
     expect(onExit).not.toHaveBeenCalled();
   });
+});
+
+it('protects pending files and saves mixed pasted, dropped and linked materials', async () => {
+  const readers: FileReader[] = [];
+  vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function () {
+    readers.push(this);
+  });
+  const onSend = vi.fn();
+  const onExit = vi.fn();
+  function Editor() {
+    const [draft, setDraft] = useState(
+      makeDraft({
+        text: '原始文字',
+        materials: [
+          { id: 'link1', type: 'link', url: 'https://example.com', sort_order: 0 },
+          { id: 'link2', type: 'link', url: 'https://example.org', sort_order: 1 },
+        ],
+      }),
+    );
+    return (
+      <NowPage
+        draft={draft}
+        setDraft={setDraft}
+        sending={false}
+        onSend={() => onSend(draft)}
+        onExit={onExit}
+        onSaveDraft={vi.fn()}
+        onDiscardDraft={vi.fn()}
+        onRouteChange={vi.fn()}
+        showToast={vi.fn()}
+      />
+    );
+  }
+  render(<Editor />);
+  fireEvent.paste(screen.getByLabelText('此刻发生了什么？'), {
+    clipboardData: { files: [new File(['a'], 'a.png', { type: 'image/png' })], getData: () => '' },
+  });
+  expect((screen.getByLabelText('保存到过去') as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByLabelText('保存到过去'));
+  fireEvent.click(screen.getByLabelText('返回'));
+  expect(onSend).not.toHaveBeenCalled();
+  expect(onExit).not.toHaveBeenCalled();
+  expect((screen.getByLabelText('此刻发生了什么？') as HTMLTextAreaElement).disabled).toBe(false);
+  fireEvent.change(screen.getByLabelText('此刻发生了什么？'), {
+    target: { value: '读取中继续写' },
+  });
+  await act(async () => {
+    Object.defineProperty(readers[0], 'result', { value: 'data:image/png;base64,YQ==' });
+    readers[0].onload?.(new ProgressEvent('load') as ProgressEvent<FileReader>);
+  });
+  fireEvent.drop(screen.getByTestId('now-page'), {
+    dataTransfer: { files: [new File(['b'], 'b.png', { type: 'image/png' })] },
+  });
+  await act(async () => {
+    Object.defineProperty(readers[1], 'result', { value: 'data:image/png;base64,Yg==' });
+    readers[1].onload?.(new ProgressEvent('load') as ProgressEvent<FileReader>);
+  });
+  fireEvent.click(screen.getByLabelText('保存到过去'));
+  expect(onSend.mock.calls[0][0].text).toBe('读取中继续写');
+  expect(onSend.mock.calls[0][0].materials.map((m: { type: string }) => m.type)).toEqual([
+    'link',
+    'link',
+    'image',
+    'image',
+  ]);
+  vi.restoreAllMocks();
+});
+
+it('blocks incomplete saving until a failed material is explicitly removed', async () => {
+  const readers: FileReader[] = [];
+  vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function () {
+    readers.push(this);
+  });
+  const onSend = vi.fn();
+  render(
+    <NowPage
+      draft={makeDraft({ text: '保留文字' })}
+      setDraft={vi.fn()}
+      sending={false}
+      onSend={onSend}
+      onSaveDraft={vi.fn()}
+      onDiscardDraft={vi.fn()}
+      onExit={vi.fn()}
+      onRouteChange={vi.fn()}
+      showToast={vi.fn()}
+    />,
+  );
+  fireEvent.paste(screen.getByLabelText('此刻发生了什么？'), {
+    clipboardData: {
+      files: [new File(['a'], 'failure.png', { type: 'image/png' })],
+      getData: () => '',
+    },
+  });
+  await act(async () => {
+    readers[0].onerror?.(new ProgressEvent('error') as ProgressEvent<FileReader>);
+  });
+  expect(screen.getByRole('alert').textContent).toContain('failure.png');
+  expect((screen.getByLabelText('保存到过去') as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByLabelText('此刻发生了什么？') as HTMLTextAreaElement).value).toBe('保留文字');
+  fireEvent.click(screen.getByText('移除'));
+  expect((screen.getByLabelText('保存到过去') as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(screen.getByLabelText('保存到过去'));
+  expect(onSend).toHaveBeenCalledOnce();
+  vi.restoreAllMocks();
 });

@@ -73,6 +73,8 @@ export interface AvatarUnderstandingVersion {
   outcome?: string;
   /** User chose to keep this pattern after deleting its source records. */
   retainedAfterSourceDeletion?: boolean;
+  /** Candidate lifetime starts when generated, independently of the experience date. */
+  proposedAt?: number;
 }
 
 export type AvatarMemoryNature = 'experience' | 'explicit' | 'inferred' | 'commitment' | 'state';
@@ -118,6 +120,7 @@ export type AvatarMemorySourceKind =
   | 'practice';
 
 export interface AvatarMemorySourceRef {
+  supplementId?: string;
   source: AvatarMemorySourceKind;
   id: string;
   excerpt?: string;
@@ -166,6 +169,8 @@ export interface AvatarAtomicMemory {
   confirmedAt?: number;
   confirmedBy?: AvatarUnderstandingConfirmedBy;
   retainedAfterSourceDeletion?: boolean;
+  /** Candidate lifetime starts when generated, independently of the experience date. */
+  proposedAt?: number;
 }
 
 export type AvatarMemoryRelationKind =

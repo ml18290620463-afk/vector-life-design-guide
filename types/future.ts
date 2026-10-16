@@ -62,6 +62,11 @@ export interface ActionDraftContext {
 /** A user-authored record of carrying out an action. It deliberately does not
  * require a goal: actions can be useful preparations in their own right. */
 export interface ActionPracticeRecord {
+  pastEntryId?: string;
+  completionDestination?: 'long_term' | 'past';
+  goalFeedbackId?: string;
+  /** Goal at the time of feedback; null preserves an unassigned action. */
+  goalId?: string | null;
   /** Original action wording, preserved when the next attempt changes. */
   actionTitle?: string;
   nextAction?: string;
@@ -76,6 +81,20 @@ export interface ActionPracticeRecord {
     principleText: string;
     outcome: ExperienceFeedbackOutcome;
   };
+  occurredOn: DateOnly;
+  createdAt: number;
+}
+/** A person's own review of a goal's direction. It never represents an experience. */
+export type GoalFeedbackDecision = 'continue' | 'adjust' | 'pause' | 'complete' | 'end';
+export interface GoalFeedbackRecord {
+  id: string;
+  goalId: string;
+  /** Preserve the wording that was reviewed, even when the plan changes later. */
+  goalTitle: string;
+  goalRevision: number;
+  decision: GoalFeedbackDecision;
+  note: string;
+  nextStep?: string;
   occurredOn: DateOnly;
   createdAt: number;
 }
@@ -134,6 +153,7 @@ export interface FutureState {
   items: GoalItem[];
   events: ProgressEvent[];
   practiceRecords?: ActionPracticeRecord[];
+  goalFeedbackRecords?: GoalFeedbackRecord[];
   revisions: GoalRevision[];
   closures: GoalClosure[];
   receipts: { operationId: string; digest: string; eventIds: string[]; revision: number }[];
@@ -158,6 +178,8 @@ export interface OutcomeInput extends OutcomeTarget {
   actionStatus?: ActionItemStatus;
 }
 export interface ActionPracticeInput {
+  completionDestination?: 'long_term' | 'past';
+  goalFeedback?: Omit<GoalFeedbackInput, 'occurredOn'>;
   nextAction?: string;
   actionId: string;
   expectedActionRevision: number;
@@ -169,6 +191,14 @@ export interface ActionPracticeInput {
     principleId: string;
     outcome: ExperienceFeedbackOutcome;
   };
+}
+export interface GoalFeedbackInput {
+  goalId: string;
+  expectedGoalRevision: number;
+  decision: GoalFeedbackDecision;
+  note: string;
+  nextStep?: string;
+  occurredOn: DateOnly;
 }
 export interface FutureSnapshot {
   state: FutureState;

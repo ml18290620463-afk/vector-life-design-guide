@@ -153,39 +153,40 @@ for (const mode of ['web', 'mobile']) {
       if (module === 'future') {
         if (mode === 'web') {
           const content = page.locator('.future-design-content');
-          const cards = page.locator('.future-design-summary-card');
-          await expect(cards).toHaveCount(3);
+          const lists = page.locator('.future-design-summary-list');
+          await expect(lists).toHaveCount(3);
           const baseline = (await content.boundingBox())!;
-          const baselineCards = await Promise.all(
-            [0, 1, 2].map(async (index) => (await cards.nth(index).boundingBox())!),
+          const baselineLists = await Promise.all(
+            [0, 1, 2].map(async (index) => (await lists.nth(index).boundingBox())!),
           );
           expect(baseline.width).toBeGreaterThanOrEqual(900);
           expect(baseline.x).toBeGreaterThanOrEqual(200);
           expect(baseline.x + baseline.width).toBeLessThanOrEqual(1441);
-          expect(baselineCards[0].x).toBeLessThan(baselineCards[1].x);
-          expect(baselineCards[1].x).toBeLessThan(baselineCards[2].x);
-          for (const card of baselineCards) {
-            expect(card.width).toBeGreaterThanOrEqual(260);
-            expect(card.x).toBeGreaterThanOrEqual(baseline.x);
-            expect(card.x + card.width).toBeLessThanOrEqual(baseline.x + baseline.width + 1);
+          expect(await content.evaluate((element) => getComputedStyle(element).flexDirection)).toBe(
+            'column',
+          );
+          expect(baselineLists[0].y).toBeLessThan(baselineLists[1].y);
+          expect(baselineLists[1].y).toBeLessThan(baselineLists[2].y);
+          for (const list of baselineLists) {
+            expect(list.width).toBeGreaterThanOrEqual(800);
+            expect(list.x).toBeGreaterThanOrEqual(baseline.x);
+            expect(list.x + list.width).toBeLessThanOrEqual(baseline.x + baseline.width + 1);
           }
 
           await page.setViewportSize({ width: 2048, height: 900 });
           await expect(content).toBeVisible();
           const wide = (await content.boundingBox())!;
-          const wideCards = await Promise.all(
-            [0, 1, 2].map(async (index) => (await cards.nth(index).boundingBox())!),
+          const wideLists = await Promise.all(
+            [0, 1, 2].map(async (index) => (await lists.nth(index).boundingBox())!),
           );
-          // Planning has three peer cards, but it should not become a
-          // wall-to-wall dashboard as the viewport grows.  The bounded
-          // workspace leaves intentional outer whitespace on wide screens.
+          // Keep planning as one readable vertical list on wide screens.
           expect(wide.width).toBeGreaterThanOrEqual(1080);
           expect(wide.width).toBeLessThanOrEqual(1200);
-          expect(wideCards[0].x).toBeLessThan(wideCards[1].x);
-          expect(wideCards[1].x).toBeLessThan(wideCards[2].x);
-          for (const card of wideCards) {
-            expect(card.width).toBeGreaterThanOrEqual(300);
-            expect(card.width).toBeLessThanOrEqual(400);
+          expect(wideLists[0].y).toBeLessThan(wideLists[1].y);
+          expect(wideLists[1].y).toBeLessThan(wideLists[2].y);
+          for (const list of wideLists) {
+            expect(list.width).toBeGreaterThanOrEqual(900);
+            expect(list.width).toBeLessThanOrEqual(1200);
           }
           expect(
             await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

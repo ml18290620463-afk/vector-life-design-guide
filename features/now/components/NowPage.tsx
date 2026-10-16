@@ -3,7 +3,7 @@ import { Anchor, ArrowLeft, Image, Link as LinkIcon, Plus, Video, Trash2 } from 
 import { CONFIG } from '../constants/config';
 import { useMaterialPicker } from '../hooks/useMaterialPicker';
 import { getCanSend, getDisabledSendReason, isDraftEmpty } from '../state/nowRules';
-import type { NowDraft, NowRoute } from '../types/now';
+import type { Material, NowDraft, NowRoute } from '../types/now';
 import { MaterialPreview } from './MaterialPreview';
 import { normalizeWebMaterialUrl } from '../../../lib/materialPersistence';
 
@@ -32,6 +32,7 @@ export const NowPage: React.FC<NowPageProps> = ({
   showToast,
   mobileShell = false,
 }) => {
+  const [pastedUrl, setPastedUrl] = useState('');
   const [linkEditing, setLinkEditing] = useState<string | null>(null);
   const [linkValue, setLinkValue] = useState('');
   const linkDialog = useRef<HTMLDialogElement>(null);
@@ -48,11 +49,15 @@ export const NowPage: React.FC<NowPageProps> = ({
     };
   }, [linkEditing]);
   const [materialMenuOpen, setMaterialMenuOpen] = useState(false);
+  const [removedMaterial, setRemovedMaterial] = useState<{
+    material: Material;
+    index: number;
+  } | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
   const [exiting, setExiting] = useState(false);
   const exitInFlight = useRef(false);
   const finishExit = async (discard: boolean) => {
-    if (exitInFlight.current || sending) return;
+    if (exitInFlight.current || sending || picker.isReading()) return;
     exitInFlight.current = true;
     setExiting(true);
     try {
@@ -61,7 +66,10 @@ export const NowPage: React.FC<NowPageProps> = ({
         return;
       }
       setExitOpen(false);
-      if (!discard) onExit();
+      if (discard) {
+        picker.clearFailures();
+        setPastedUrl('');
+      } else onExit();
     } catch {
       showToast(discard ? '草稿未能清除，请重试' : '草稿保存失败，请继续编辑并重试');
     } finally {
@@ -89,7 +97,7 @@ export const NowPage: React.FC<NowPageProps> = ({
     },
     onError: showToast,
   });
-  const canSend = getCanSend(draft);
+  const canSend = getCanSend(draft) && !picker.failures.length;
   const tagSummary = [...draft.event_tags, ...draft.mood_tags].join(' · ');
 
   const handleImageImport = () => {
@@ -109,7 +117,11 @@ export const NowPage: React.FC<NowPageProps> = ({
   };
 
   const handleBack = () => {
-    if (sending || exitInFlight.current) return;
+    if (sending || exitInFlight.current || picker.isReading()) return;
+    if (picker.hasFailures()) {
+      showToast('请重试或移除未读取的素材');
+      return;
+    }
     if (isDraftEmpty(draft)) {
       onExit();
       return;
@@ -118,14 +130,32 @@ export const NowPage: React.FC<NowPageProps> = ({
   };
 
   const removeMaterial = (id: string) => {
-    if (sending || exitInFlight.current) return;
+    if (sending || exitInFlight.current || picker.isReading()) return;
+    const index = draft.materials.findIndex((material) => material.id === id);
+    if (index < 0) return;
+    setRemovedMaterial({ material: draft.materials[index], index });
     setDraft((current) => ({
       ...current,
-      materials: current.materials.filter((material) => material.id !== id),
+      materials: current.materials
+        .filter((material) => material.id !== id)
+        .map((material, index) => ({ ...material, sort_order: index })),
     }));
   };
+  const moveMaterial = (id: string, offset: number) => {
+    setDraft((current) => {
+      const materials = [...current.materials];
+      const from = materials.findIndex((item) => item.id === id);
+      const to = from + offset;
+      if (from < 0 || to < 0 || to >= materials.length) return current;
+      [materials[from], materials[to]] = [materials[to], materials[from]];
+      return {
+        ...current,
+        materials: materials.map((item, index) => ({ ...item, sort_order: index })),
+      };
+    });
+  };
   const updateMaterialDescription = (id: string, description: string) => {
-    if (sending || exitInFlight.current) return;
+    if (sending || exitInFlight.current || picker.isReading()) return;
     setDraft((current) => ({
       ...current,
       materials: current.materials.map((material) =>
@@ -134,7 +164,7 @@ export const NowPage: React.FC<NowPageProps> = ({
     }));
   };
   const replaceMaterialLink = (id: string) => {
-    if (sending || exitInFlight.current) return;
+    if (sending || exitInFlight.current || picker.isReading()) return;
     const material = draft.materials.find((candidate) => candidate.id === id);
     if (!material) return;
     setLinkValue(material.url);
@@ -163,7 +193,35 @@ export const NowPage: React.FC<NowPageProps> = ({
   };
 
   return (
-    <main className="now-page" data-testid="now-page">
+    // File drop and paste complement the keyboard-accessible file picker.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <main
+      className="now-page"
+      data-testid="now-page"
+      onPaste={(event) => {
+        if (!event.clipboardData.files.length) {
+          const text = event.clipboardData.getData('text/plain').trim();
+          if (/^(https?:\/\/|www\.)\S+$/i.test(text) && normalizeWebMaterialUrl(text))
+            setPastedUrl(text);
+          return;
+        }
+        if (sending || exiting || picker.isReading()) {
+          event.preventDefault();
+          return;
+        }
+        void picker.addFiles(event.clipboardData.files);
+        if (!event.clipboardData.getData('text/plain')) event.preventDefault();
+      }}
+      onDragOver={(event) => {
+        if (Array.from(event.dataTransfer.types).includes('Files')) event.preventDefault();
+      }}
+      onDrop={(event) => {
+        if (!event.dataTransfer.files.length) return;
+        event.preventDefault();
+        if (!sending && !exiting && !picker.isReading())
+          void picker.addFiles(event.dataTransfer.files);
+      }}
+    >
       <dialog
         ref={linkDialog}
         className="now-exit-dialog now-link-dialog"
@@ -191,7 +249,7 @@ export const NowPage: React.FC<NowPageProps> = ({
             onChange={(event) => setLinkValue(event.target.value)}
           />
           <div className="now-exit-dialog__actions">
-            <button type="submit" disabled={sending || exiting}>
+            <button type="submit" disabled={sending || exiting || picker.reading}>
               确定
             </button>
             <button type="button" onClick={() => setLinkEditing(null)}>
@@ -205,7 +263,7 @@ export const NowPage: React.FC<NowPageProps> = ({
           type="button"
           className="now-icon-button"
           onClick={handleBack}
-          disabled={sending || exiting}
+          disabled={sending || exiting || picker.reading}
           aria-label={mobileShell ? '返回过去' : '返回'}
         >
           <ArrowLeft size={20} />
@@ -220,7 +278,7 @@ export const NowPage: React.FC<NowPageProps> = ({
             type="button"
             className="now-tool-button"
             aria-label="清空草稿"
-            disabled={sending || exiting}
+            disabled={sending || exiting || picker.reading}
             onClick={() => setExitOpen(true)}
           >
             <Trash2 size={16} aria-hidden="true" />
@@ -257,14 +315,72 @@ export const NowPage: React.FC<NowPageProps> = ({
           </div>
         </section>
 
-        {draft.materials.length > 0 && (
+        {pastedUrl && (
+          <div className="now-pasted-link">
+            <button
+              type="button"
+              disabled={sending || exiting || picker.reading}
+              onClick={() => {
+                if (picker.addLink(pastedUrl)) setPastedUrl('');
+              }}
+            >
+              添加为链接
+            </button>
+            <button type="button" aria-label="忽略链接建议" onClick={() => setPastedUrl('')}>
+              关闭
+            </button>
+          </div>
+        )}
+        {picker.failures.map((item) => (
+          <div key={item.id} className="now-material-failure" role="alert">
+            <span>{item.file.name} · 读取失败</span>
+            <button
+              type="button"
+              disabled={picker.reading}
+              onClick={() => void picker.retryFailure(item.id)}
+            >
+              重试
+            </button>
+            <button
+              type="button"
+              disabled={picker.reading}
+              onClick={() => picker.removeFailure(item.id)}
+            >
+              移除
+            </button>
+          </div>
+        ))}
+        {(draft.materials.length > 0 || removedMaterial) && (
           <div className="now-materials-row">
-            <MaterialPreview
-              materials={draft.materials}
-              onRemove={removeMaterial}
-              onUpdateDescription={updateMaterialDescription}
-              onReplaceLink={replaceMaterialLink}
-            />
+            {draft.materials.length > 0 && (
+              <MaterialPreview
+                materials={draft.materials}
+                onRemove={removeMaterial}
+                onMove={moveMaterial}
+                onUpdateDescription={updateMaterialDescription}
+                onReplaceLink={replaceMaterialLink}
+              />
+            )}
+            {removedMaterial && (
+              <button
+                type="button"
+                onClick={() => {
+                  const { material, index } = removedMaterial;
+                  setDraft((current) => {
+                    if (current.materials.some((item) => item.id === material.id)) return current;
+                    const next = [...current.materials];
+                    next.splice(Math.min(index, next.length), 0, material);
+                    return {
+                      ...current,
+                      materials: next.map((item, position) => ({ ...item, sort_order: position })),
+                    };
+                  });
+                  setRemovedMaterial(null);
+                }}
+              >
+                撤销删除素材
+              </button>
+            )}
           </div>
         )}
 
@@ -274,7 +390,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               type="button"
               className="now-anchor-point"
               onClick={() => onRouteChange('tags')}
-              disabled={sending || exiting}
+              disabled={sending || exiting || picker.reading}
               aria-label="心情与事件"
             >
               <span className="now-anchor-point__icon" aria-hidden="true">
@@ -289,7 +405,7 @@ export const NowPage: React.FC<NowPageProps> = ({
             <button
               type="button"
               className={`now-tool-button now-tool-button--add ${materialMenuOpen ? 'is-open' : ''}`}
-              disabled={sending || exiting}
+              disabled={sending || exiting || picker.reading}
               aria-label={materialMenuOpen ? '收起素材' : '添加素材'}
               aria-expanded={materialMenuOpen}
               onClick={() => setMaterialMenuOpen((open) => !open)}
@@ -302,7 +418,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               <button
                 type="button"
                 className="now-tool-button"
-                disabled={sending || exiting}
+                disabled={sending || exiting || picker.reading}
                 aria-label="图片"
                 onClick={handleImageImport}
               >
@@ -311,7 +427,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               <button
                 type="button"
                 className="now-tool-button"
-                disabled={sending || exiting}
+                disabled={sending || exiting || picker.reading}
                 aria-label="视频"
                 onClick={handleVideoImport}
               >
@@ -320,7 +436,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               <button
                 type="button"
                 className="now-tool-button"
-                disabled={sending || exiting}
+                disabled={sending || exiting || picker.reading}
                 aria-label="链接"
                 onClick={handleLinkImport}
               >
@@ -336,6 +452,11 @@ export const NowPage: React.FC<NowPageProps> = ({
             className="now-send-button"
             data-state={sending ? 'loading' : canSend ? 'enabled' : 'disabled'}
             onClick={() => {
+              if (picker.isReading() || sending || exiting) return;
+              if (picker.hasFailures()) {
+                showToast('请重试或移除未读取的素材');
+                return;
+              }
               const reason = getDisabledSendReason(draft);
               if (reason) {
                 showToast(reason);
@@ -344,10 +465,10 @@ export const NowPage: React.FC<NowPageProps> = ({
               onSend();
             }}
             aria-label="保存到过去"
-            aria-busy={sending}
-            disabled={sending || exiting}
+            aria-busy={sending || picker.reading}
+            disabled={sending || exiting || picker.reading || picker.failures.length > 0}
           >
-            <span>{sending ? '保存中…' : '保存'}</span>
+            <span>{picker.reading ? '素材读取中…' : sending ? '保存中…' : '保存'}</span>
           </button>
         </footer>
       </div>
@@ -383,14 +504,20 @@ export const NowPage: React.FC<NowPageProps> = ({
         type="file"
         accept="image/*"
         multiple
-        onChange={(event) => picker.addFiles(event.target.files, 'image')}
+        onChange={(event) => {
+          void picker.addFiles(event.target.files, 'image');
+          event.target.value = '';
+        }}
       />
       <input
         ref={picker.videoInputRef}
         hidden
         type="file"
         accept="video/*"
-        onChange={(event) => picker.addFiles(event.target.files, 'video')}
+        onChange={(event) => {
+          void picker.addFiles(event.target.files, 'video');
+          event.target.value = '';
+        }}
       />
     </main>
   );

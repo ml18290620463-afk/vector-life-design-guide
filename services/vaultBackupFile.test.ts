@@ -27,6 +27,7 @@ import {
   saveVision,
   recordOutcome,
   recordActionPractice,
+  recordGoalFeedback,
   setGoalStatus,
   saveArchiveDirection,
 } from './futureRepository';
@@ -206,6 +207,9 @@ it('round-trips every backup domain, embedded media and complete linked future h
   entries[0].nowMaterials = [
     { id: 'media-1', type: 'image', url: 'data:image/png;base64,aGVsbG8=', sort_order: 0 },
   ];
+  entries[0].supplements = [
+    { id: 'supplement-1', content: '后来补充的经历', createdAt: 123456789 },
+  ];
   await set(K.entries, entries);
   await set(K.principles, [{ id: 'p1', text: '先核对', derivedFromEntryIds: ['e1'] }]);
   await set(K.patternPrincipleLinks, [{ id: 'link1', principleId: 'p1', patternId: 'memory' }]);
@@ -254,7 +258,14 @@ it('round-trips every backup domain, embedded media and complete linked future h
     sourceEntryId: 'e1',
   });
   await set(K.entries, entries);
-  await setGoalStatus(goal.id, 'completed', revised.revision);
+  const goalFeedback = await recordGoalFeedback({
+    goalId: goal.id,
+    expectedGoalRevision: revised.revision,
+    decision: 'continue',
+    note: '继续探索并整理路线',
+    occurredOn: '2026-10-09',
+  });
+  await setGoalStatus(goal.id, 'completed', goalFeedback.goalRevision + 1);
   await saveArchiveDirection({
     proposalId: 'proposal1',
     kind: 'action',
@@ -276,6 +287,7 @@ it('round-trips every backup domain, embedded media and complete linked future h
     'closures',
     'receipts',
     'practiceRecords',
+    'goalFeedbackRecords',
   ] as const)
     expect(before.vault.future[key]?.length, key).toBeGreaterThan(0);
   expect(Object.keys(before.vault.future.archiveOrigins!)).toHaveLength(1);
@@ -292,6 +304,8 @@ it('round-trips every backup domain, embedded media and complete linked future h
     'destination-password',
   )) as VaultBackup;
   expect(after.vault.data).toEqual(before.vault.data);
+  expect(after.entries[0].createdAt).toBe(1);
+  expect(after.entries[0].supplements).toEqual(entries[0].supplements);
   expect(after.vault.caches).toEqual(before.vault.caches);
   expect(after.vault.draft).toEqual(before.vault.draft);
   expect({ ...after.vault.future, revision: 0 }).toEqual({ ...before.vault.future, revision: 0 });

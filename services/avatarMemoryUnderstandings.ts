@@ -48,6 +48,7 @@ export const sanitizeAvatarUnderstandings = (value: unknown): AvatarUnderstandin
           ? item.sourceEntryIds.filter((id): id is string => typeof id === 'string')
           : [],
         createdAt: item.createdAt,
+        ...(typeof item.proposedAt === 'number' ? { proposedAt: item.proposedAt } : {}),
         ...(typeof item.updatedAt === 'number' ? { updatedAt: item.updatedAt } : {}),
         ...(typeof item.confirmedAt === 'number' ? { confirmedAt: item.confirmedAt } : {}),
         ...(item.confirmedBy === 'user' ? { confirmedBy: item.confirmedBy } : {}),
@@ -68,10 +69,21 @@ export const sanitizeAvatarUnderstandings = (value: unknown): AvatarUnderstandin
   });
 };
 
-export const readAvatarUnderstandings = (): AvatarUnderstandingVersion[] =>
-  sanitizeAvatarUnderstandings(getStoredJson<unknown>(UNDERSTANDING_KEY)).sort(
-    (a, b) => b.createdAt - a.createdAt,
+export const readAvatarUnderstandings = (): AvatarUnderstandingVersion[] => {
+  const current = sanitizeAvatarUnderstandings(getStoredJson<unknown>(UNDERSTANDING_KEY));
+  const now = Date.now();
+  const migrated = current.map((item) =>
+    item.status === 'pending' && item.proposedAt === undefined
+      ? { ...item, proposedAt: now }
+      : item,
   );
+  const next = migrated.filter(
+    (item) => item.status !== 'pending' || now < item.proposedAt! + 24 * 60 * 60 * 1000,
+  );
+  if (next.length !== current.length || migrated.some((item, index) => item !== current[index]))
+    setStoredJson(UNDERSTANDING_KEY, next);
+  return next.sort((a, b) => b.createdAt - a.createdAt);
+};
 
 export interface PruneAvatarUnderstandingsResult {
   removedPatternIds: string[];
@@ -154,7 +166,16 @@ export const writeAvatarUnderstanding = (version: AvatarUnderstandingVersion): b
         ? { ...item, status: 'superseded' as const, updatedAt: now }
         : item,
     );
-  const saved = setStoredJson(UNDERSTANDING_KEY, [version, ...next]);
+  const saved = setStoredJson(UNDERSTANDING_KEY, [
+    version.status === 'pending'
+      ? {
+          ...version,
+          proposedAt:
+            current.find((item) => item.id === version.id)?.proposedAt ?? version.proposedAt ?? now,
+        }
+      : version,
+    ...next,
+  ]);
   return saved;
 };
 

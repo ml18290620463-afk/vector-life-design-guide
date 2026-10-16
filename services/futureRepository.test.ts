@@ -5,6 +5,10 @@ import type { Goal, OutcomeInput } from '../types/future';
 import { DiaryStorageKeys as K } from './diaryStorage';
 import {
   deleteFutureAction,
+  deleteFutureActions,
+  deleteActionPractice,
+  deleteGoalFeedback,
+  deleteProgress,
   deleteGoal,
   deleteVision,
   saveArchiveDirection,
@@ -12,6 +16,7 @@ import {
   goalProgress,
   readFutureSnapshot,
   recordActionPractice,
+  recordGoalFeedback,
   recordOutcome,
   revokeProgress,
   saveFutureAction,
@@ -545,7 +550,7 @@ describe('future planning lifecycle guards', () => {
     });
   });
 
-  it('deletes only draft plans that have no dependent records', async () => {
+  it('cascades deletion through every dependent future record', async () => {
     const vision = await saveVision({ text: '独立愿景', status: 'active' });
     await expect(deleteVision(vision.id, vision.revision)).resolves.toBeUndefined();
 
@@ -557,10 +562,10 @@ describe('future planning lifecycle guards', () => {
       tags: [],
       measurement: { kind: 'narrative' },
     });
-    await expect(deleteVision(linkedVision.id, linkedVision.revision)).rejects.toThrow(
-      '愿景已有关联目标，不能删除',
+    await expect(deleteVision(linkedVision.id, linkedVision.revision)).resolves.toBeUndefined();
+    expect((await readFutureSnapshot()).state.goals).not.toContainEqual(
+      expect.objectContaining({ id: goal.id }),
     );
-    await expect(deleteGoal(goal.id, goal.revision)).resolves.toBeUndefined();
 
     const action = await saveFutureAction({
       title: '可以删除的行动',
@@ -568,6 +573,23 @@ describe('future planning lifecycle guards', () => {
       resultIntent: 'preparation',
     });
     await expect(deleteFutureAction(action.id, action.revision!)).resolves.toBeUndefined();
+
+    const batchOne = await saveFutureAction({
+      title: '批量删除一',
+      status: 'pending',
+      resultIntent: 'preparation',
+    });
+    const batchTwo = await saveFutureAction({
+      title: '批量删除二',
+      status: 'pending',
+      resultIntent: 'preparation',
+    });
+    await expect(
+      deleteFutureActions([
+        { id: batchOne.id, revision: batchOne.revision },
+        { id: batchTwo.id, revision: batchTwo.revision },
+      ]),
+    ).resolves.toBeUndefined();
 
     const practiced = await saveFutureAction({
       title: '已践行的行动',
@@ -582,9 +604,145 @@ describe('future planning lifecycle guards', () => {
       note: '已开始处理。',
       nextStep: 'continue',
     });
-    await expect(deleteFutureAction(practiced.id, practiced.revision! + 1)).rejects.toThrow(
-      '行动已有践行或成果记录，不能删除',
+    await expect(deleteFutureAction(practiced.id, practiced.revision! + 1)).resolves.toBeUndefined();
+    expect((await readFutureSnapshot()).state.practiceRecords).toEqual([]);
+  });
+});
+
+describe('future deletion dependencies', () => {
+  it('deletes one action feedback, its coupled goal feedback, and its principle impact while retaining the action', async () => {
+    await set(K.principles, [principle()]);
+    const goal = await mountainGoal();
+    const action = await saveFutureAction({
+      title: '检查登山装备',
+      goalId: goal.id,
+      status: 'pending',
+      principleId: 'principle-1',
+      resultIntent: 'preparation',
+    });
+    const practice = await recordActionPractice({
+      actionId: action.id,
+      expectedActionRevision: action.revision ?? 0,
+      occurredOn: '2026-10-14',
+      status: 'partial',
+      note: '确认了装备清单。',
+      nextStep: 'continue',
+      principleFeedback: { principleId: 'principle-1', outcome: 'helpful' },
+      goalFeedback: {
+        goalId: goal.id,
+        expectedGoalRevision: goal.revision,
+        decision: 'continue',
+        note: '装备准备按计划推进。',
+      },
+    });
+
+    await deleteActionPractice(practice.id);
+
+    const after = await readFutureSnapshot();
+    expect(after.actions).toContainEqual(expect.objectContaining({ id: action.id }));
+    expect(after.state.practiceRecords).toEqual([]);
+    expect(after.state.goalFeedbackRecords).toEqual([]);
+    expect((await get<Principle[]>(K.principles))![0]).toMatchObject({
+      recallCount: 0,
+      helpfulCount: 0,
+      confidence: 0.5,
+      appliedFeedbackPracticeIds: [],
+      derivedFromPracticeIds: [],
+    });
+  });
+
+  it('deletes one goal feedback and clears its action-feedback reference without deleting either plan', async () => {
+    const goal = await mountainGoal();
+    const action = await saveFutureAction({
+      title: '预订登山交通',
+      goalId: goal.id,
+      status: 'pending',
+      resultIntent: 'preparation',
+    });
+    const practice = await recordActionPractice({
+      actionId: action.id,
+      expectedActionRevision: action.revision ?? 0,
+      occurredOn: '2026-10-14',
+      status: 'partial',
+      note: '已比较出行方案。',
+      nextStep: 'continue',
+      goalFeedback: {
+        goalId: goal.id,
+        expectedGoalRevision: goal.revision,
+        decision: 'continue',
+        note: '继续按当前节奏推进。',
+      },
+    });
+    const goalFeedbackId = practice.goalFeedbackId!;
+
+    await deleteGoalFeedback(goalFeedbackId);
+
+    const after = await readFutureSnapshot();
+    expect(after.state.goals).toContainEqual(expect.objectContaining({ id: goal.id }));
+    expect(after.actions).toContainEqual(expect.objectContaining({ id: action.id }));
+    expect(after.state.goalFeedbackRecords).toEqual([]);
+    expect(after.state.practiceRecords).toContainEqual(
+      expect.objectContaining({ id: practice.id, goalFeedbackId: undefined }),
     );
+  });
+
+  it('deletes one confirmed progress event and removes its unused receipt, item, and closure reference', async () => {
+    const goal = await mountainGoal();
+    const [eventId] = await recordOutcome(outcome(goal, 'delete-one-outcome'));
+    const currentGoal = (await readFutureSnapshot()).state.goals.find((item) => item.id === goal.id)!;
+    await setGoalStatus(currentGoal.id, 'completed', currentGoal.revision);
+
+    await deleteProgress(eventId);
+
+    const after = await readFutureSnapshot();
+    expect(after.state.events).toEqual([]);
+    expect(after.state.receipts).toEqual([]);
+    expect(after.state.items).toEqual([]);
+    expect(after.state.closures).toHaveLength(1);
+    expect(after.state.closures[0].progressEventIds).toEqual([]);
+  });
+
+  it('removes an action, its practice feedback, outcomes, receipt, item, and principle impact', async () => {
+    await set(K.principles, [principle()]);
+    const goal = await mountainGoal();
+    const action = await saveFutureAction({
+      title: '完成黄山路线',
+      goalId: goal.id,
+      status: 'pending',
+      principleId: 'principle-1',
+      resultIntent: 'outcome',
+    });
+    const practice = await recordActionPractice({
+      actionId: action.id,
+      expectedActionRevision: action.revision ?? 0,
+      occurredOn: '2026-10-14',
+      status: 'partial',
+      note: '已确认交通和线路。',
+      nextStep: 'continue',
+      principleFeedback: { principleId: 'principle-1', outcome: 'helpful' },
+    });
+    const currentAction = (await readFutureSnapshot()).actions.find((item) => item.id === action.id)!;
+    await recordOutcome({
+      ...outcome(goal, 'remove-action-outcome'),
+      actionId: action.id,
+      expectedActionRevision: currentAction.revision,
+      actionStatus: 'completed',
+    });
+
+    const before = await readFutureSnapshot();
+    const removable = before.actions.find((item) => item.id === action.id)!;
+    await deleteFutureAction(removable.id, removable.revision ?? 0);
+
+    const after = await readFutureSnapshot();
+    expect(after.actions).not.toContainEqual(expect.objectContaining({ id: action.id }));
+    expect(after.state.practiceRecords).not.toContainEqual(expect.objectContaining({ id: practice.id }));
+    expect(after.state.events).toEqual([]);
+    expect(after.state.receipts).toEqual([]);
+    expect(after.state.items).toEqual([]);
+    const updatedPrinciple = (await get<Principle[]>(K.principles))![0];
+    expect(updatedPrinciple).toMatchObject({ recallCount: 0, helpfulCount: 0 });
+    expect(updatedPrinciple.appliedFeedbackPracticeIds).not.toContain(practice.id);
+    expect(updatedPrinciple.derivedFromPracticeIds).not.toContain(practice.id);
   });
 });
 
@@ -889,4 +1047,243 @@ it('saves a concrete adjustment atomically and preserves previous action wording
   expect(done.state.practiceRecords).toHaveLength(2);
   expect(done.state.practiceRecords?.find((r) => r.id === first.id)).toEqual(first);
   expect(done.state.events).toEqual([]);
+});
+
+describe('Goal feedback boundaries', () => {
+  it('records a goal direction without changing past entries, action feedback, or progress events', async () => {
+    const goal = await mountainGoal();
+    const action = await saveFutureAction({
+      title: '确认登山路线',
+      goalId: goal.id,
+      status: 'pending',
+    });
+    const originalEntries = [entry('past-source')];
+    await set(K.entries, originalEntries);
+
+    const record = await recordGoalFeedback({
+      goalId: goal.id,
+      expectedGoalRevision: goal.revision,
+      decision: 'pause',
+      note: '本月需要先处理家庭安排。',
+      nextStep: '下月重新评估',
+      occurredOn: '2026-10-14',
+    });
+
+    const snapshot = await readFutureSnapshot();
+    expect(record).toMatchObject({
+      goalId: goal.id,
+      decision: 'pause',
+      goalRevision: goal.revision,
+    });
+    expect(snapshot.state.goalFeedbackRecords).toEqual([record]);
+    expect(snapshot.state.goals.find((item) => item.id === goal.id)).toMatchObject({
+      status: 'paused',
+      revision: goal.revision + 1,
+    });
+    expect(snapshot.state.events).toEqual([]);
+    expect(snapshot.state.practiceRecords ?? []).toEqual([]);
+    expect(snapshot.actions.find((item) => item.id === action.id)?.status).toBe('pending');
+    expect(await get(K.entries)).toEqual(originalEntries);
+  });
+
+  it('rejects complete or end while a goal still has active work without saving feedback', async () => {
+    const goal = await mountainGoal();
+    await saveFutureAction({ title: '完成装备检查', goalId: goal.id, status: 'active' });
+    for (const decision of ['complete', 'end'] as const)
+      await expect(
+        recordGoalFeedback({
+          goalId: goal.id,
+          expectedGoalRevision: goal.revision,
+          decision,
+          note: '',
+          occurredOn: '2026-10-14',
+        }),
+      ).rejects.toThrow('请先处理关联行动，再结束目标');
+    const snapshot = await readFutureSnapshot();
+    expect(snapshot.state.goals.find((item) => item.id === goal.id)?.status).toBe('active');
+    expect(snapshot.state.goalFeedbackRecords ?? []).toEqual([]);
+  });
+
+  it('protects a goal feedback from stale writes and retains goal history from deletion', async () => {
+    const goal = await mountainGoal();
+    await recordGoalFeedback({
+      goalId: goal.id,
+      expectedGoalRevision: goal.revision,
+      decision: 'adjust',
+      note: '缩小范围后继续。',
+      occurredOn: '2026-10-14',
+    });
+    await expect(
+      recordGoalFeedback({
+        goalId: goal.id,
+        expectedGoalRevision: goal.revision,
+        decision: 'pause',
+        note: '过期写入',
+        occurredOn: '2026-10-14',
+      }),
+    ).rejects.toThrow('目标已更新，请刷新后重试');
+    const saved = await readFutureSnapshot();
+    await expect(
+      deleteGoal(goal.id, saved.state.goals.find((item) => item.id === goal.id)!.revision),
+    ).resolves.toBeUndefined();
+    const afterDeletion = await readFutureSnapshot();
+    expect(afterDeletion.state.goals).toEqual([]);
+    expect(afterDeletion.state.goalFeedbackRecords).toEqual([]);
+  });
+
+  it('reads historical future data that has no goal-feedback field', async () => {
+    const snapshot = await readFutureSnapshot();
+    await set(K.future, { ...snapshot.state, goalFeedbackRecords: undefined });
+    expect((await readFutureSnapshot()).state.goalFeedbackRecords).toEqual([]);
+  });
+});
+
+it('removes goal feedback under the original goal while keeping an action moved to another goal', async () => {
+  const original = await mountainGoal();
+  const next = await saveGoal({
+    title: '新的方向',
+    status: 'active',
+    tags: [],
+    measurement: { kind: 'narrative' },
+  });
+  let action = await saveFutureAction({
+    title: '确认路线',
+    goalId: original.id,
+    status: 'pending',
+  });
+  const record = await recordActionPractice({
+    actionId: action.id,
+    expectedActionRevision: action.revision ?? 0,
+    occurredOn: '2026-10-14',
+    status: 'partial',
+    nextStep: 'continue',
+    note: '路线待核对',
+  });
+  expect(record.goalId).toBe(original.id);
+  action = (await readFutureSnapshot()).actions[0];
+  await saveFutureAction({ ...action, goalId: next.id });
+  expect((await readFutureSnapshot()).state.practiceRecords?.[0]).toEqual(record);
+  await expect(deleteGoal(original.id, original.revision)).resolves.toBeUndefined();
+  const afterDeletion = await readFutureSnapshot();
+  expect(afterDeletion.actions).toContainEqual(expect.objectContaining({ id: action.id, goalId: next.id }));
+  expect(afterDeletion.state.practiceRecords?.[0]).toMatchObject({ id: record.id, goalId: null });
+});
+
+it('preserves an unassigned feedback snapshot when an action later gains a goal', async () => {
+  const action = await saveFutureAction({ title: '随手练习', status: 'pending' });
+  const record = await recordActionPractice({
+    actionId: action.id,
+    expectedActionRevision: action.revision ?? 0,
+    occurredOn: '2026-10-14',
+    status: 'partial',
+    nextStep: 'continue',
+    note: '第一次练习',
+  });
+  expect(record.goalId).toBeNull();
+});
+
+describe('Joint action and goal feedback', () => {
+  const create = async () => {
+    const goal = await mountainGoal();
+    const action = await saveFutureAction({ title: '爬黄山', status: 'pending', goalId: goal.id });
+    const input = {
+      actionId: action.id,
+      expectedActionRevision: action.revision ?? 0,
+      status: 'completed' as const,
+      nextStep: 'end' as const,
+      note: '登顶',
+      occurredOn: '2026-10-14',
+    };
+    return { goal, action, input };
+  };
+  it('keeps goal completion independent by default', async () => {
+    const { goal, input } = await create();
+    await recordActionPractice(input);
+    const { state } = await readFutureSnapshot();
+    expect(state.goals.find((g) => g.id === goal.id)?.status).toBe('active');
+    expect(state.goalFeedbackRecords).toHaveLength(0);
+  });
+  it('saves explicit completion and its linked feedback together without inventing measured progress', async () => {
+    const { goal, input } = await create();
+    const record = await recordActionPractice({
+      ...input,
+      goalFeedback: {
+        goalId: goal.id,
+        expectedGoalRevision: goal.revision,
+        decision: 'complete',
+        note: '目标已达成',
+      },
+    });
+    const { state, actions } = await readFutureSnapshot();
+    expect(actions[0].status).toBe('completed');
+    expect(state.goals[0].status).toBe('completed');
+    expect(state.goalFeedbackRecords?.[0].id).toBe(record.goalFeedbackId);
+    expect(state.events).toHaveLength(0);
+  });
+  it.each(['stale', 'unlinked', 'unfinished'])(
+    'rolls back both changes when %s',
+    async (reason) => {
+      const { goal, input } = await create();
+      if (reason === 'unfinished')
+        await saveFutureAction({ title: '另一项行动', status: 'pending', goalId: goal.id });
+      const before = await readFutureSnapshot();
+      await expect(
+        recordActionPractice({
+          ...input,
+          goalFeedback: {
+            goalId: reason === 'unlinked' ? 'different-goal' : goal.id,
+            expectedGoalRevision: reason === 'stale' ? 0 : goal.revision,
+            decision: 'complete',
+            note: '',
+          },
+        }),
+      ).rejects.toThrow();
+      expect(await readFutureSnapshot()).toEqual(before);
+    },
+  );
+});
+
+
+describe('completed action destination', () => {
+  it.each(['long_term', 'past'] as const)('saves %s atomically with ordinary entries', async (destination) => {
+    const action = await saveFutureAction({ title: '完成一次访谈', status: 'pending' });
+    const record = await recordActionPractice({
+      actionId: action.id, expectedActionRevision: action.revision!,
+      occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
+      note: '明确了三个需求', completionDestination: destination,
+    });
+    const snapshot = await readFutureSnapshot();
+    expect(snapshot.actions[0].status).toBe('completed');
+    const entries = (await get<DiaryEntry[]>(K.entries)) ?? [];
+    if (destination === 'past') {
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        id: record.pastEntryId, title: action.title, isLocked: false, tags: [],
+        content: '行动：完成一次访谈\n\n结果：明确了三个需求', createdAt: record.createdAt,
+      });
+      expect(snapshot.actions[0].resultEntryId).toBe(entries[0].id);
+      expect(snapshot.actions[0].archivedToPast).toBe(true);
+      await expect(recordActionPractice({
+        actionId: action.id, expectedActionRevision: action.revision!,
+        occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
+        note: '重复提交', completionDestination: 'past',
+      })).rejects.toThrow();
+      expect(await get(K.entries)).toEqual(entries);
+      await expect(recordActionPractice({
+        actionId: action.id, expectedActionRevision: snapshot.actions[0].revision!,
+        occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
+        note: '再次转存', completionDestination: 'past',
+      })).rejects.toThrow('该行动已经结束');
+    } else {
+      expect(entries).toHaveLength(0);
+      expect(snapshot.actions[0].resultEntryId).toBeUndefined();
+      await recordActionPractice({
+        actionId: action.id, expectedActionRevision: snapshot.actions[0].revision!,
+        occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
+        note: '长期推进后的结果', completionDestination: 'past',
+      });
+      expect(await get<DiaryEntry[]>(K.entries)).toHaveLength(1);
+      expect((await readFutureSnapshot()).actions[0].archivedToPast).toBe(true);
+    }
+  });
 });

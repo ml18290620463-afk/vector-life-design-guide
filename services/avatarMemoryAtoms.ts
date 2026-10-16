@@ -116,6 +116,7 @@ export const sanitizeAvatarAtomicMemories = (value: unknown): AvatarAtomicMemory
         ...(typeof item.validFrom === 'number' ? { validFrom: item.validFrom } : {}),
         ...(typeof item.validTo === 'number' ? { validTo: item.validTo } : {}),
         createdAt: item.createdAt,
+        ...(typeof item.proposedAt === 'number' ? { proposedAt: item.proposedAt } : {}),
         ...(typeof item.updatedAt === 'number' ? { updatedAt: item.updatedAt } : {}),
         ...(typeof item.confirmedAt === 'number' ? { confirmedAt: item.confirmedAt } : {}),
         ...(item.confirmedBy === 'user' ? { confirmedBy: item.confirmedBy } : {}),
@@ -125,12 +126,33 @@ export const sanitizeAvatarAtomicMemories = (value: unknown): AvatarAtomicMemory
   });
 };
 
-export const readAvatarAtomicMemories = (): AvatarAtomicMemory[] =>
-  sanitizeAvatarAtomicMemories(getStoredJson<unknown>(ATOMIC_MEMORY_KEY)).sort((a, b) => {
+export const CANDIDATE_MEMORY_TTL = 24 * 60 * 60 * 1000;
+
+export const readAvatarAtomicMemories = (): AvatarAtomicMemory[] => {
+  const now = Date.now();
+  const stored = sanitizeAvatarAtomicMemories(getStoredJson<unknown>(ATOMIC_MEMORY_KEY));
+  // Existing candidates receive one migration window; experience dates are not generation dates.
+  const migrated = stored.map((memory) =>
+    memory.status === 'candidate' && memory.proposedAt === undefined
+      ? { ...memory, proposedAt: now }
+      : memory,
+  );
+  const active = migrated.filter(
+    (memory) => memory.status !== 'candidate' || now < memory.proposedAt! + CANDIDATE_MEMORY_TTL,
+  );
+  if (active.length !== stored.length || migrated.some((memory, index) => memory !== stored[index]))
+    setStoredJson(ATOMIC_MEMORY_KEY, active);
+  return active.sort((a, b) => {
     const rank = (memory: AvatarAtomicMemory) =>
       memory.status === 'confirmed' || memory.status === 'retained' ? 1 : 0;
     return rank(b) - rank(a) || (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt);
   });
+};
+
+const stampCandidate = (memory: AvatarAtomicMemory): AvatarAtomicMemory =>
+  memory.status === 'candidate' && memory.proposedAt === undefined
+    ? { ...memory, proposedAt: Date.now() }
+    : memory;
 
 /**
  * A conversational pattern is deliberately held to a higher evidence bar than
@@ -141,6 +163,9 @@ export const readAvatarAtomicMemories = (): AvatarAtomicMemory[] =>
  */
 export const isPatternMemoryReadyForConfirmation = (memory: AvatarAtomicMemory): boolean => {
   if (!memory.facets.includes('cognitive_pattern') || memory.status !== 'candidate') return false;
+  const entrySources = memory.sourceRefs.filter((source) => source.source === 'entry');
+  const uniqueEntries = new Set(entrySources.map((source) => source.id));
+  if (uniqueEntries.size >= 2) return true;
   const sources = memory.sourceRefs.filter((source) => source.source === 'message');
   const uniqueMessages = new Set(sources.map((source) => source.id));
   const dates = new Set(
@@ -383,6 +408,13 @@ const mergeSameStatementMemory = (
   const preferred =
     memoryStatusRank[existing.status] >= memoryStatusRank[incoming.status] ? existing : incoming;
   const other = preferred === existing ? incoming : existing;
+  // A matching sentence does not authorize new inferred facets or contexts.
+  // Preserve reviewed knowledge until the incoming candidate is reviewed too.
+  if (
+    (preferred.status === 'confirmed' || preferred.status === 'retained') &&
+    other.status === 'candidate'
+  )
+    return preferred;
   const sensitivity =
     sensitivityRank[existing.sensitivity] >= sensitivityRank[incoming.sensitivity]
       ? existing.sensitivity
@@ -471,7 +503,7 @@ const mergeAtomicMemories = (current: AvatarAtomicMemory[], incoming: AvatarAtom
 };
 
 export const writeAvatarAtomicMemory = (memory: AvatarAtomicMemory): boolean => {
-  const [sanitized] = sanitizeAvatarAtomicMemories([memory]);
+  const [sanitized] = sanitizeAvatarAtomicMemories([memory]).map(stampCandidate);
   if (!sanitized) return false;
   const saved = setStoredJson(
     ATOMIC_MEMORY_KEY,
@@ -482,7 +514,7 @@ export const writeAvatarAtomicMemory = (memory: AvatarAtomicMemory): boolean => 
 };
 
 export const upsertAvatarAtomicMemories = (memories: AvatarAtomicMemory[]): boolean => {
-  const sanitized = sanitizeAvatarAtomicMemories(memories);
+  const sanitized = sanitizeAvatarAtomicMemories(memories).map(stampCandidate);
   if (!sanitized.length) return true;
   const saved = setStoredJson(
     ATOMIC_MEMORY_KEY,

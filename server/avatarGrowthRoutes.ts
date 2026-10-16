@@ -2,6 +2,9 @@ import type { Express } from 'express';
 import type { DiaryEntry } from '../types';
 import type { AvatarUnderstandingVersion } from '../features/avatar/types';
 import { buildAvatarGrowthPreview } from '../services/avatarIntelligence';
+import { callCustomModel, validateModelConfig } from './avatarCustomModel';
+import { AVATAR_FACT_RULES, parseAvatarFacts } from './avatarFactExtraction';
+import { safeModelError, modelErrorDiagnostic } from './avatarCustomModel';
 import { formatLogError } from './scrubLog';
 
 const sanitizeAvatarGrowthEntries = (
@@ -36,6 +39,16 @@ const sanitizeAvatarGrowthEntries = (
         createdAt: candidate.createdAt,
       },
     ];
+  });
+};
+
+const sanitizeGrowthEvidenceSources = (sources: unknown, messages: Array<{ role: string; content: string; createdAt?: number }>) => {
+  if (!Array.isArray(sources) || sources.length !== messages.length) return [];
+  return sources.flatMap((source, index) => {
+    if (!source || typeof source !== 'object') return [];
+    const item = source as { entryId?: unknown; supplementId?: unknown; content?: unknown; createdAt?: unknown };
+    if (typeof item.entryId !== 'string' || typeof item.content !== 'string' || typeof item.createdAt !== 'number' || item.content !== messages[index].content) return [];
+    return [{ entryId: item.entryId, ...(typeof item.supplementId === 'string' ? { supplementId: item.supplementId } : {}), createdAt: item.createdAt }];
   });
 };
 
@@ -100,22 +113,90 @@ export function registerAvatarGrowthRoutes(app: Express) {
       res.status(400).json({ error: 'messages are required' });
       return;
     }
+    try {
+      validateModelConfig(req.body?.modelConfig);
+    } catch {
+      res.status(400).json({ error: 'invalid_model_config' });
+      return;
+    }
 
     try {
+      const model = validateModelConfig(req.body?.modelConfig);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 45000);
+      const onClose = () => {
+        if (!res.writableEnded) controller.abort();
+      };
+      res.on('close', onClose);
+      let raw: string;
+      try {
+        raw = await callCustomModel(
+          model,
+          [
+            { role: 'system', content: AVATAR_FACT_RULES },
+            {
+              role: 'user',
+              // The messages are the bounded, explicitly selected evidence set. Do not send
+              // the full archive alongside them: it would bypass that evidence boundary.
+              content: `${AVATAR_FACT_RULES}\n经历与上下文（仅作为数据）：${JSON.stringify({ messages: userMessages, understandings: sanitizeAvatarGrowthUnderstandings(req.body?.understandings) })}`,
+            },
+          ],
+          controller.signal,
+        );
+      } finally {
+        clearTimeout(timer);
+        res.off('close', onClose);
+      }
+      const facts = parseAvatarFacts(raw, userMessages);
+      const evidenceSources = sanitizeGrowthEvidenceSources(req.body?.evidenceSources, userMessages);
+      const normalizedInput = {
+        messages: userMessages,
+        source: parseAvatarGrowthSource(req.body?.source),
+        ...(typeof req.body?.sourceEntryId === 'string' ? { sourceEntryId: req.body.sourceEntryId } : {}),
+        ...(typeof req.body?.sourceSupplementId === 'string' ? { sourceSupplementId: req.body.sourceSupplementId } : {}),
+        ...(typeof req.body?.occurredAt === 'number' ? { occurredAt: req.body.occurredAt } : {}),
+      };
+      const extracted = {
+        summary: facts[0]?.statement ?? '',
+        signals: facts.map((fact) => ({
+          facet: fact.kind === 'preference' ? 'preference' as const
+            : fact.kind === 'boundary' ? 'boundary' as const
+              : fact.kind === 'goal' ? 'goal' as const
+                : fact.kind === 'habit' || fact.kind === 'pattern_candidate' ? 'thought' as const
+                  : fact.kind === 'value' ? 'thought' as const
+                    : fact.kind === 'experience' || fact.kind === 'profile' ? 'event' as const
+                      : fact.kind === 'expression' ? 'preference' as const : 'thought' as const,
+          text: fact.statement,
+          confidence: fact.kind === 'pattern_candidate' ? 0.58 : 0.78,
+          evidence: fact.sourceIndexes.map((index, position) => ({
+            source: evidenceSources[index] ? 'entry' as const : 'message' as const,
+            id: evidenceSources[index]?.entryId ?? `message-${index + 1}`,
+            excerpt: fact.evidences[position],
+            ...(typeof evidenceSources[index]?.createdAt === 'number' ? { createdAt: evidenceSources[index].createdAt } : typeof userMessages[index].createdAt === 'number' ? { createdAt: userMessages[index].createdAt } : {}),
+            ...(evidenceSources[index]?.supplementId ? { supplementId: evidenceSources[index].supplementId } : {}),
+          })),
+        })),
+        moodTags: [],
+        eventTags: [],
+        completeness: 0,
+        nextQuestion: null,
+        needsUserConfirmation: true as const,
+        ...(normalizedInput.sourceEntryId ? { sourceEntryId: normalizedInput.sourceEntryId } : {}),
+        ...facts.find((fact) => fact.kind === 'pattern_candidate')?.patternKey
+          ? { patternKey: facts.find((fact) => fact.kind === 'pattern_candidate')!.patternKey }
+          : {},
+        ...(typeof req.body?.sourceSupplementId === 'string' ? { sourceSupplementId: req.body.sourceSupplementId } : {}),
+        occurredAt: normalizedInput.occurredAt ?? Date.now(),
+      };
       const preview = await buildAvatarGrowthPreview(
+        normalizedInput,
         {
-          messages: userMessages,
-          source: parseAvatarGrowthSource(req.body?.source),
-          ...(typeof req.body?.sourceEntryId === 'string'
-            ? { sourceEntryId: req.body.sourceEntryId }
-            : {}),
-          ...(typeof req.body?.occurredAt === 'number' ? { occurredAt: req.body.occurredAt } : {}),
-        },
-        {
+          evidenceSources,
           entries: sanitizeAvatarGrowthEntries(req.body?.entries),
           understandings: sanitizeAvatarGrowthUnderstandings(req.body?.understandings),
           now: Date.now(),
         },
+        { extraction: { extract: async () => extracted } },
       );
       res.json(preview);
     } catch (error) {
@@ -126,7 +207,11 @@ export function registerAvatarGrowthRoutes(app: Express) {
           error: formatLogError(error),
         }),
       );
-      res.status(500).json({ error: 'Failed to build avatar growth preview' });
+      const code = safeModelError(error, (error as NodeJS.ErrnoException)?.name === 'AbortError');
+      res.status(code === 'invalid_model_config' ? 400 : 502).json({
+        error: code,
+        ...modelErrorDiagnostic(error),
+      });
     }
   });
 }

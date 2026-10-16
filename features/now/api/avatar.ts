@@ -113,6 +113,28 @@ export async function extractAvatarFacts(
   });
 }
 
+export async function previewAvatarGrowth(args: {
+  messages: Array<{ role: string; content: string; createdAt?: number }>;
+  source: 'past';
+  sourceEntryId: string;
+  sourceSupplementId?: string;
+  occurredAt: number;
+  evidenceSources: Array<{ entryId: string; supplementId?: string; content: string; createdAt: number }>;
+  entries: Array<{ id: string; title: string; content: string; tags: string[]; createdAt: number }>;
+  understandings: unknown[];
+}) {
+  const modelConfig = readAvatarModel();
+  if (!modelConfig) throw new Error('model_not_configured');
+  const response = await fetch('/api/v1/avatar/growth-preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...args, modelConfig }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'model_unavailable');
+  return result;
+}
+
 export async function extractAvatarFact(
   messages: ChatMessage[],
   known: AvatarMemoryExtractionReference[],

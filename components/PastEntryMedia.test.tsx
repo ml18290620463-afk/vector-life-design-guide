@@ -75,7 +75,7 @@ describe('PastEntryMedia', () => {
     expect(screen.getByAltText('图片素材')).toBeTruthy();
     expect(container.querySelectorAll('audio')).toHaveLength(2);
     expect(screen.getByText('https://example.com')).toBeTruthy();
-    expect(screen.getAllByText('原网站链接；备份仅保存地址。')).toHaveLength(1);
+    expect(screen.queryByText('原网站链接；备份仅保存地址。')).toBeNull();
   });
 
   it('renders mobile media with the mobile timeline class contract', () => {
@@ -87,7 +87,7 @@ describe('PastEntryMedia', () => {
     expect(container.querySelector('.mobile-past-image-gallery')).not.toBeNull();
     expect(container.querySelectorAll('audio')).toHaveLength(2);
     expect(screen.getByText('https://example.com')).toBeTruthy();
-    expect(screen.getAllByText('原网站链接；备份仅保存地址。')).toHaveLength(1);
+    expect(screen.queryByText('原网站链接；备份仅保存地址。')).toBeNull();
   });
 
   it('renders structured attachments in both variants', () => {

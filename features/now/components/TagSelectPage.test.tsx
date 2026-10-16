@@ -31,9 +31,10 @@ describe('TagSelectPage', () => {
 
     fireEvent.click(screen.getByText('开心'));
     fireEvent.click(screen.getByText('学习探索'));
-    fireEvent.click(screen.getByText('确定'));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
 
-    const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
+    const updater = (draft: NowDraft) =>
+      setDraft.mock.calls.reduce((current, [update]) => update(current), draft);
     expect(updater(makeDraft()).mood_tags).toEqual(['开心']);
     expect(updater(makeDraft()).event_tags).toEqual(['学习探索']);
     expect(onBack).toHaveBeenCalledTimes(1);
@@ -50,8 +51,9 @@ describe('TagSelectPage', () => {
       'true',
     );
     fireEvent.click(screen.getByRole('button', { name: '生活起居' }));
-    fireEvent.click(screen.getByText('确定'));
-    const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    const updater = (draft: NowDraft) =>
+      setDraft.mock.calls.reduce((current, [update]) => update(current), draft);
     expect(updater(draft).event_tags).toEqual(['自我实现', '生活起居']);
   });
 
@@ -72,12 +74,13 @@ describe('TagSelectPage', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: '为事件添加自定义锚点' }));
-    fireEvent.click(screen.getByText('确定'));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
 
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.customAnchors) ?? '[]')).toEqual([
       '长期主义',
     ]);
-    const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
+    const updater = (draft: NowDraft) =>
+      setDraft.mock.calls.reduce((current, [update]) => update(current), draft);
     expect(updater(makeDraft()).event_tags).toEqual(['长期主义']);
   });
 
@@ -99,11 +102,36 @@ describe('TagSelectPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '为心情添加自定义锚点' }));
     fireEvent.click(screen.getByText('学习探索'));
-    fireEvent.click(screen.getByText('确定'));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
 
-    const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
+    const updater = (draft: NowDraft) =>
+      setDraft.mock.calls.reduce((current, [update]) => update(current), draft);
     expect(updater(makeDraft()).mood_tags).toEqual(['充满希望']);
     expect(updater(makeDraft()).event_tags).toEqual(['学习探索']);
+  });
+
+  it('deletes a custom tag from storage and both draft selections without deleting built-ins', () => {
+    localStorage.setItem(STORAGE_KEYS.customAnchors, JSON.stringify(['长期主义', '开心']));
+    const draft = makeDraft({ mood_tags: ['长期主义', '开心'], event_tags: ['长期主义'] });
+    const setDraft = vi.fn();
+    const { unmount } = render(
+      <TagSelectPage draft={draft} setDraft={setDraft} onBack={vi.fn()} showToast={vi.fn()} />,
+    );
+
+    expect(screen.queryByRole('button', { name: '删除心情自定义标签 开心' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '删除事件自定义标签 长期主义' }));
+    expect(screen.queryByText('长期主义')).toBeNull();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.customAnchors) ?? '[]')).toEqual(['开心']);
+    const updated = setDraft.mock.calls.reduce((current, [update]) => update(current), draft);
+    expect(updated.mood_tags).toEqual(['开心']);
+    expect(updated.event_tags).toEqual([]);
+    expect(draft.event_tags).toEqual(['长期主义']);
+
+    unmount();
+    render(
+      <TagSelectPage draft={updated} setDraft={vi.fn()} onBack={vi.fn()} showToast={vi.fn()} />,
+    );
+    expect(screen.queryByText('长期主义')).toBeNull();
   });
 
   it('allows confirming without mood or event tags', () => {
@@ -120,9 +148,10 @@ describe('TagSelectPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('确定'));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
     expect(showToast).not.toHaveBeenCalled();
-    const updater = setDraft.mock.calls[0][0] as (draft: NowDraft) => NowDraft;
+    const updater = (draft: NowDraft) =>
+      setDraft.mock.calls.reduce((current, [update]) => update(current), draft);
     expect(updater(makeDraft()).mood_tags).toEqual([]);
     expect(updater(makeDraft()).event_tags).toEqual([]);
     expect(onBack).toHaveBeenCalledTimes(1);

@@ -127,11 +127,13 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   };
   useEffect(() => {
     const unsubscribe = subscribeVault(refreshAvatarKnowledge);
+    const expiryTimer = window.setInterval(refreshAvatarKnowledge, 30_000);
     window.addEventListener('focus', refreshAvatarKnowledge);
     window.addEventListener('storage', refreshAvatarKnowledge);
     refreshAvatarKnowledge();
     return () => {
       unsubscribe();
+      window.clearInterval(expiryTimer);
       window.removeEventListener('focus', refreshAvatarKnowledge);
       window.removeEventListener('storage', refreshAvatarKnowledge);
     };

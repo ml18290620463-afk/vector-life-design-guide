@@ -1,7 +1,6 @@
-import { useCallback, useRef } from 'react';
-import type { Material, MaterialType } from '../types/now';
-import { CONFIG } from '../constants/config';
-import { canAddMaterialType } from '../state/nowRules';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Material } from '../types/now';
+import { validateMaterials } from '../state/nowRules';
 import { generateSecureId } from '../../../services/idGenerator';
 import { normalizeWebMaterialUrl } from '../../../lib/materialPersistence';
 
@@ -10,6 +9,7 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
     reader.onerror = () => reject(reader.error);
+    reader.onabort = () => reject(new Error('读取已取消'));
     reader.readAsDataURL(file);
   });
 
@@ -21,79 +21,146 @@ export const useMaterialPicker = (args: {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const addLink = useCallback(
-    (input: string) => {
-      const check = canAddMaterialType(args.materials, 'link');
-      if (check.ok === false) {
-        args.onError(check.message);
-        return;
-      }
-      const trimmed = input.trim();
-      if (!trimmed) return;
-      const url = normalizeWebMaterialUrl(trimmed);
-      if (!url) {
-        args.onError('请输入有效的网页链接，例如 example.com');
-        return false;
-      }
-      args.onAdd([
-        {
-          id: generateSecureId('material'),
-          type: 'link',
-          url,
-          meta: { title: url },
-          sort_order: args.materials.length,
-        },
-      ]);
-      return true;
+  const [failures, setFailures] = useState<{ id: string; file: File; type?: 'image' | 'video' }[]>(
+    [],
+  );
+  const failureRef = useRef(failures);
+  failureRef.current = failures;
+  const [reading, setReading] = useState(false);
+  const busy = useRef(false);
+  const generation = useRef(0);
+  const latest = useRef(args);
+  latest.current = args;
+  useEffect(() => {
+    const protectPendingRead = (event: BeforeUnloadEvent) => {
+      if (!busy.current && !failureRef.current.length) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', protectPendingRead);
+    return () => window.removeEventListener('beforeunload', protectPendingRead);
+  }, []);
+  useEffect(
+    () => () => {
+      generation.current += 1;
+      busy.current = false;
     },
-    [args],
+    [],
   );
 
+  const addLink = useCallback((input: string) => {
+    if (busy.current) return false;
+    const url = normalizeWebMaterialUrl(input.trim());
+    if (!url) {
+      latest.current.onError('请输入有效的网页链接');
+      return false;
+    }
+    const material: Material = {
+      id: generateSecureId('material'),
+      type: 'link',
+      url,
+      meta: { title: url },
+      sort_order: latest.current.materials.length,
+    };
+    const check = validateMaterials([...latest.current.materials, material]);
+    if (check.ok === false) {
+      latest.current.onError(check.message);
+      return false;
+    }
+    latest.current.onAdd([material]);
+    return true;
+  }, []);
+
   const addFiles = useCallback(
-    async (files: FileList | null, type: Extract<MaterialType, 'image' | 'video'>) => {
-      if (!files?.length) return;
-      const check = canAddMaterialType(args.materials, type);
-      if (check.ok === false) {
-        args.onError(check.message);
-        return;
-      }
-      const maxCount =
-        type === 'image'
-          ? CONFIG.MAX_IMAGES - args.materials.filter((m) => m.type === 'image').length
-          : 1;
-      const maxBytes = type === 'image' ? 10 * 1024 * 1024 : 100 * 1024 * 1024;
-      const picked = Array.from(files).slice(0, maxCount);
-      if (picked.some((file) => !file.type.startsWith(`${type}/`))) {
-        args.onError(type === 'image' ? '请选择图片文件' : '请选择视频文件');
-        return;
-      }
-      const oversized = picked.find((file) => file.size > maxBytes);
-      if (oversized) {
-        args.onError(type === 'image' ? '单图不能超过 10MB' : '视频不能超过 100MB');
-        return;
-      }
-      let urls: string[];
-      try {
-        urls = await Promise.all(picked.map((file) => readFileAsDataUrl(file)));
-      } catch {
-        args.onError('素材读取失败，请重新选择');
-        return;
-      }
-      args.onAdd(
-        picked.map((file, index) => ({
+    async (files: FileList | File[] | null, expectedType?: 'image' | 'video', retryId?: string) => {
+      if (!files?.length || busy.current) return;
+      const picked = Array.from(files);
+      const materials: Material[] = [];
+      for (const file of picked) {
+        const type = file.type.startsWith('image/')
+          ? 'image'
+          : file.type.startsWith('video/')
+            ? 'video'
+            : null;
+        if (!type || (expectedType && type !== expectedType)) {
+          latest.current.onError('请选择图片或视频文件');
+          return;
+        }
+        if (file.size > (type === 'image' ? 10 : 100) * 1024 * 1024) {
+          latest.current.onError(type === 'image' ? '单图不能超过 10MB' : '视频不能超过 100MB');
+          return;
+        }
+        materials.push({
           id: generateSecureId('material'),
           type,
-          url: urls[index],
+          url: '',
           local_path: file.name,
           meta: { title: file.name },
-          sort_order: args.materials.length + index,
-        })),
-      );
+          sort_order: latest.current.materials.length + materials.length,
+        });
+      }
+      const check = validateMaterials([...latest.current.materials, ...materials]);
+      if (check.ok === false) {
+        latest.current.onError(check.message);
+        return;
+      }
+      const token = generation.current;
+      busy.current = true;
+      setReading(true);
+      try {
+        const results = await Promise.allSettled(picked.map(readFileAsDataUrl));
+        if (generation.current !== token) return;
+        const successful = materials.flatMap((material, index) => {
+          const result = results[index];
+          return result.status === 'fulfilled' && result.value
+            ? [
+                {
+                  ...material,
+                  url: result.value,
+                  sort_order:
+                    latest.current.materials.length +
+                    results
+                      .slice(0, index)
+                      .filter((item) => item.status === 'fulfilled' && item.value).length,
+                },
+              ]
+            : [];
+        });
+        if (successful.length) latest.current.onAdd(successful);
+        setFailures((current) => [
+          ...current.filter((item) => item.id !== retryId),
+          ...results.flatMap((result, index) =>
+            result.status === 'rejected' || !result.value
+              ? [{ id: materials[index].id, file: picked[index], type: expectedType }]
+              : [],
+          ),
+        ]);
+      } catch {
+        if (generation.current === token) latest.current.onError('素材读取失败，请重新选择');
+      } finally {
+        if (generation.current === token) {
+          busy.current = false;
+          setReading(false);
+        }
+      }
     },
-    [args],
+    [],
   );
 
   return {
+    failures,
+    clearFailures: () => setFailures([]),
+    hasFailures: () => failureRef.current.length > 0,
+    removeFailure: (id: string) =>
+      setFailures((current) => current.filter((item) => item.id !== id)),
+    retryFailure: async (id: string) => {
+      if (busy.current) return;
+      const failure = failureRef.current.find((item) => item.id === id);
+      if (!failure) return;
+      await addFiles([failure.file], failure.type, id);
+    },
+    reading,
+    isReading: () => busy.current,
     imageInputRef,
     videoInputRef,
     addLink,

@@ -1,8 +1,7 @@
 import React, { useId, useState } from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, X } from 'lucide-react';
 import { CONFIG } from '../constants/config';
-import { EVENT_TAGS, EVENT_TAG_HINTS, MOOD_TAGS, TAG_SLOGAN } from '../constants/tags';
-import { validateTags } from '../state/nowRules';
+import { EVENT_TAGS, EVENT_TAG_HINTS, MOOD_TAGS } from '../constants/tags';
 import { readCustomAnchors, writeCustomAnchors } from '../state/nowStorage';
 import type { NowDraft } from '../types/now';
 
@@ -31,15 +30,54 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
     max: number,
   ) => {
     if (values.includes(tag)) {
-      setValues(values.filter((item) => item !== tag));
+      const next = values.filter((item) => item !== tag);
+      setValues(next);
+      setDraft((current) => ({
+        ...current,
+        [setValues === setMoodTags ? 'mood_tags' : 'event_tags']: next,
+      }));
       return;
     }
     if (values.length >= max) {
       showToast('最多选择 3 个');
       return;
     }
-    setValues([...values, tag]);
+    const next = [...values, tag];
+    setValues(next);
+    setDraft((current) => ({
+      ...current,
+      [setValues === setMoodTags ? 'mood_tags' : 'event_tags']: next,
+    }));
   };
+
+  const isCustomTag = (tag: string) =>
+    customAnchors.includes(tag) && !MOOD_TAGS.includes(tag) && !EVENT_TAGS.includes(tag);
+
+  const deleteCustomTag = (tag: string) => {
+    if (!isCustomTag(tag)) return;
+    const next = customAnchors.filter((item) => item !== tag);
+    writeCustomAnchors(next);
+    setCustomAnchors(next);
+    setMoodTags((current) => current.filter((item) => item !== tag));
+    setEventTags((current) => current.filter((item) => item !== tag));
+    setDraft((current) => ({
+      ...current,
+      mood_tags: current.mood_tags.filter((item) => item !== tag),
+      event_tags: current.event_tags.filter((item) => item !== tag),
+    }));
+  };
+
+  const deleteButton = (tag: string, section: string) =>
+    isCustomTag(tag) ? (
+      <button
+        type="button"
+        className="now-custom-tag-delete"
+        aria-label={`删除${section}自定义标签 ${tag}`}
+        onClick={() => deleteCustomTag(tag)}
+      >
+        <X size={12} aria-hidden="true" />
+      </button>
+    ) : null;
 
   const addCustomAnchor = (target: 'mood' | 'event') => {
     const value = window.prompt('输入自定义锚点，2～12 字')?.trim();
@@ -59,16 +97,6 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
     }
   };
 
-  const confirm = () => {
-    const validation = validateTags(moodTags, eventTags, customAnchors);
-    if (validation.ok === false) {
-      showToast(validation.message);
-      return;
-    }
-    setDraft((current) => ({ ...current, mood_tags: moodTags, event_tags: eventTags }));
-    onBack();
-  };
-
   return (
     <main className="now-page now-tags-page">
       <header className="now-header">
@@ -76,23 +104,23 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
           <ArrowLeft size={20} />
         </button>
         <div className="now-time">选择标签</div>
-        <button type="button" className="now-text-button" onClick={confirm}>
-          确定
-        </button>
+        <span aria-hidden="true" />
       </header>
       <section className="now-tag-section">
-        <p>{TAG_SLOGAN}</p>
         <h2>心情</h2>
         <div className="now-chip-grid">
-          {Array.from(new Set([...MOOD_TAGS, ...customAnchors])).map((tag, index) => (
-            <button
-              key={tag}
-              type="button"
-              className={moodTags.includes(tag) ? 'is-selected' : ''}
-              onClick={() => toggle(tag, moodTags, setMoodTags, CONFIG.MAX_MOOD_TAGS)}
-            >
-              {tag}
-            </button>
+          {Array.from(new Set([...MOOD_TAGS, ...customAnchors])).map((tag) => (
+            <div key={tag} className={isCustomTag(tag) ? 'now-tag-item is-custom' : 'now-tag-item'}>
+              <button
+                type="button"
+                className={moodTags.includes(tag) ? 'is-selected' : ''}
+                aria-pressed={moodTags.includes(tag)}
+                onClick={() => toggle(tag, moodTags, setMoodTags, CONFIG.MAX_MOOD_TAGS)}
+              >
+                {tag}
+              </button>
+              {deleteButton(tag, '心情')}
+            </div>
           ))}
           <button
             type="button"
@@ -104,7 +132,11 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
         </div>
         <div className="now-event-tag-heading">
           <h2>事件</h2>
-          <button type="button" onClick={() => addCustomAnchor('event')} aria-label="为事件添加自定义锚点">
+          <button
+            type="button"
+            onClick={() => addCustomAnchor('event')}
+            aria-label="为事件添加自定义锚点"
+          >
             <Plus size={14} /> 自定义
           </button>
         </div>
@@ -113,25 +145,27 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
             new Set([
               ...EVENT_TAGS.filter((tag) => tag !== '自定义锚点'),
               ...customAnchors,
-              ...draft.event_tags,
+              ...eventTags,
             ]),
           ).map((tag, index) => (
-            <button
-              key={tag}
-              type="button"
-              className={eventTags.includes(tag) ? 'is-selected' : ''}
-              aria-label={tag}
-              aria-describedby={EVENT_TAG_HINTS[tag] ? `${hintId}-${index}` : undefined}
-              aria-pressed={eventTags.includes(tag)}
-              onClick={() => toggle(tag, eventTags, setEventTags, CONFIG.MAX_EVENT_TAGS)}
-            >
-              <span>{tag}</span>
-              {EVENT_TAG_HINTS[tag] && (
-                <span id={`${hintId}-${index}`} role="tooltip" className="now-event-tag-hint">
-                  {EVENT_TAG_HINTS[tag]}
-                </span>
-              )}
-            </button>
+            <div key={tag} className={isCustomTag(tag) ? 'now-tag-item is-custom' : 'now-tag-item'}>
+              <button
+                type="button"
+                className={eventTags.includes(tag) ? 'is-selected' : ''}
+                aria-label={tag}
+                aria-describedby={EVENT_TAG_HINTS[tag] ? `${hintId}-${index}` : undefined}
+                aria-pressed={eventTags.includes(tag)}
+                onClick={() => toggle(tag, eventTags, setEventTags, CONFIG.MAX_EVENT_TAGS)}
+              >
+                <span>{tag}</span>
+                {EVENT_TAG_HINTS[tag] && (
+                  <span id={`${hintId}-${index}`} role="tooltip" className="now-event-tag-hint">
+                    {EVENT_TAG_HINTS[tag]}
+                  </span>
+                )}
+              </button>
+              {deleteButton(tag, '事件')}
+            </div>
           ))}
         </div>
       </section>

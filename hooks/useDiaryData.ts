@@ -1,3 +1,4 @@
+import { appendEntrySupplement, assertEntryUnchanged } from '../services/entryIntegrity';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { get, set } from 'idb-keyval';
 import type {
@@ -38,10 +39,7 @@ import {
 } from '../services/diaryDataRead';
 import { DEFAULT_PRINCIPLE_CONFIDENCE } from '../services/experienceFeedback';
 import { updateRelatedEntryIds } from '../services/entryRelations';
-import {
-  pruneAvatarAtomicMemoriesBySourceIds,
-  invalidateAvatarEvidence,
-} from '../services/avatarMemory';
+import { pruneAvatarAtomicMemoriesBySourceIds } from '../services/avatarMemory';
 import { useActionItems } from './useActionItems';
 import { commitArrayDelta, subscribeVault, vaultTransaction } from '../services/vaultTransaction';
 import { stateFrom } from '../services/futureRepository';
@@ -156,6 +154,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
           newEntries,
           keys.backup,
           sanitizeDiaryEntry,
+          assertEntryUnchanged,
         );
         entriesRef.current = saved;
         setEntries(saved);
@@ -457,12 +456,21 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       const nextEntries = entries.map((entry) =>
         entry.id === updatedEntry.id ? { ...updatedEntry, updatedAt: now } : entry,
       );
-      const previous = entries.find((entry) => entry.id === updatedEntry.id);
-      if (previous && previous.content !== updatedEntry.content)
-        invalidateAvatarEvidence(updatedEntry.id);
       await persistEntries(nextEntries);
     },
     [entries, persistEntries],
+  );
+
+  const appendSupplement = useCallback(
+    async (entryId: string, content: string, supplementId: string, password?: string | null) => {
+      const keys = getDiaryStorageKeys(userId);
+      const saved = await appendEntrySupplement(keys, entryId, content, supplementId, password);
+      entriesRef.current = saved;
+      setEntries(saved);
+      removeDiaryMirror(keys.entries);
+      removeDiaryMirror(keys.backup);
+    },
+    [userId],
   );
 
   const updateEntryRelatedIds = useCallback(
@@ -837,6 +845,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     addEntry,
     updateEntry,
     updateEntryRelatedIds,
+    appendSupplement,
     bulkUpdateEntries,
     deleteEntry,
     deleteEntries,

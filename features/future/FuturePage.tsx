@@ -1,22 +1,28 @@
-/* eslint-disable max-lines */
-import { PracticeFeedbackFields } from './PracticeFeedbackFields';
+import { ActionFeedbackList } from './ActionFeedbackList';
+import { ActionFeedbackReading } from './ActionFeedbackReading';
+import { FeedbackEditor } from './FeedbackEditor';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import type { ActionItem, DiaryEntry, ExperienceFeedbackOutcome, Principle } from '../../types';
+import type { DiaryEntry, ExperienceFeedbackOutcome, Principle } from '../../types';
 import type {
   ActionFeedbackNextStep,
   ActionFeedbackStatus,
   ActionDraftContext,
   Goal,
+  GoalFeedbackDecision,
   PracticeReflectionContext,
   Vision,
 } from '../../types/future';
 import { useFuture } from '../../hooks/useFuture';
 import {
   deleteFutureAction,
+  deleteFutureActions,
+  deleteActionPractice,
+  deleteGoalFeedback,
   deleteGoal,
   deleteVision,
   localDate,
   recordActionPractice,
+  recordGoalFeedback,
   saveFutureAction,
   saveGoal,
   saveVision,
@@ -29,16 +35,12 @@ import {
   latestPracticesByAction,
   newestFirst,
   prioritizedActionItems,
-  readableDate,
   visionSimilarity,
 } from './futureTextRules';
-import {
-  actionExecutionStatusLabel,
-  actionNextStepLabel,
-} from '../../services/actionPracticeSemantics';
 import './future.css';
 type FutureSection = 'design' | 'practice';
 type PendingVision = Pick<Vision, 'text' | 'status'> & Partial<Pick<Vision, 'id' | 'revision'>>;
+
 interface FuturePageProps {
   archiveMode?: boolean;
   entries: DiaryEntry[];
@@ -51,31 +53,30 @@ interface FuturePageProps {
 }
 const field = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
 export function FuturePage({
-  onNavigateModule,
-  onReflectInPast,
+  onNavigateModule: _onNavigateModule,
+  onReflectInPast: _onReflectInPast,
   initialActionContext,
-  entries,
+  entries: _entries,
   principles = [],
   onSelectEntry: _onSelectEntry,
   archiveMode: _archiveMode,
   initialGoalId: _initialGoalId,
 }: FuturePageProps) {
-  const { state, actions, ready, error, refresh, protectedVault } = useFuture();
+  const { state, actions: allActions, ready, error, refresh, protectedVault } = useFuture();
   const [section, setSection] = useState<FutureSection>('design');
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [selectedFeedbackActionId, setSelectedFeedbackActionId] = useState<string | null>(null);
-  const [practiceEditorSource, setPracticeEditorSource] = useState<'pending' | 'continue'>(
-    'pending',
-  );
+  const [goalDecision, setGoalDecision] = useState<GoalFeedbackDecision | ''>('');
+  const actions = allActions.filter((action) => !action.archivedToPast);
   const [practicePanelOpen, setPracticePanelOpen] = useState(false);
+  const [practiceEditing, setPracticeEditing] = useState(false);
   const [practiceStatus, setPracticeStatus] = useState<ActionFeedbackStatus>('completed');
   const [practiceNextStep, setPracticeNextStep] = useState<ActionFeedbackNextStep>('end');
   const [practicePrincipleOutcome, setPracticePrincipleOutcome] = useState<
     ExperienceFeedbackOutcome | ''
   >('');
-  const [selectedActionDetails, setSelectedActionDetails] = useState<ActionItem | null>(null);
   const [duplicateVision, setDuplicateVision] = useState<Vision | null>(null);
   const [pendingVision, setPendingVision] = useState<PendingVision | null>(null);
   const saving = useRef(false);
@@ -166,103 +167,23 @@ export function FuturePage({
     latestPracticeByAction,
     localDate(),
   );
-  const validEvents = [...state.events]
-    .filter((event) => event.status === 'valid')
-    .sort((left, right) => right.createdAt - left.createdAt);
-
-  const feedbackCandidates = plannedActions.filter((action) => {
-    const goal = action.goalId
-      ? state.goals.find((candidate) => candidate.id === action.goalId)
-      : undefined;
-    if (action.goalId && (!goal || goal.status !== 'active')) return false;
-    const latestPractice = (state.practiceRecords ?? []).find(
-      (record) => record.actionId === action.id,
-    );
-    const latestFeedback = validEvents.find(
-      (event) => event.sourceActionId === action.id && event.actionFeedback,
-    );
-    if (
-      (latestPractice || latestFeedback) &&
-      action.reviewedAt &&
-      (action.updatedAt ?? 0) <= action.reviewedAt
-    )
-      return false;
-    return (
-      action.resultIntent === 'outcome' ||
-      !action.scheduledOn ||
-      Boolean(action.scheduledOn && action.scheduledOn <= localDate())
-    );
-  });
-
-  const legacyFeedbackResults = validEvents
-    .filter((event) => Boolean(event.sourceActionId && event.actionFeedback))
-    .map((event) => ({
-      event,
-      action: actions.find((action) => action.id === event.sourceActionId),
-      goal: state.goals.find((goal) => goal.id === event.goalId),
-    }))
-    .filter((result): result is typeof result & { action: ActionItem; goal?: Goal } =>
-      Boolean(result.action),
-    );
-  const feedbackResults = [
-    ...(state.practiceRecords ?? []).map((record) => ({
-      id: record.id,
-      action: actions.find((action) => action.id === record.actionId),
-      note: record.note,
-      actionTitle: record.actionTitle,
-      nextAction: record.nextAction,
-      feedback: record,
-      principleFeedback: record.principleFeedback,
-      practiceRecordId: record.id,
-      occurredOn: record.occurredOn,
-      createdAt: record.createdAt,
-    })),
-    ...legacyFeedbackResults.map(({ event, action }) => ({
-      id: event.id,
-      action,
-      note: event.actionFeedback!.note,
-      actionTitle: undefined,
-      nextAction: undefined,
-      feedback: event.actionFeedback!,
-      principleFeedback: undefined,
-      practiceRecordId: undefined,
-      occurredOn: event.occurredOn,
-      createdAt: event.createdAt,
-    })),
-  ]
-    .filter((result): result is typeof result & { action: ActionItem } => Boolean(result.action))
-    .sort((left, right) => right.createdAt - left.createdAt);
-
-  const latestPracticeFor = (actionId: string) => latestPracticeByAction[actionId];
-  const continuableActions = plannedActions.filter((action) => {
-    if (action.status !== 'active') return false;
-    const latest = latestPracticeFor(action.id);
-    return Boolean(latest && (latest.nextStep === 'continue' || latest.nextStep === 'adjust'));
-  });
-  const isLatestPractice = (recordId: string, actionId: string) =>
-    latestPracticeFor(actionId)?.id === recordId;
   const selectedFeedbackAction = actions.find((action) => action.id === selectedFeedbackActionId);
-  const selectedFeedbackGoal = selectedFeedbackAction?.goalId
-    ? state.goals.find((goal) => goal.id === selectedFeedbackAction.goalId)
-    : undefined;
+  const feedbackGoal = state.goals.find((goal) => goal.id === selectedFeedbackAction?.goalId);
+  const feedbackVision = state.visions.find((vision) => vision.id === feedbackGoal?.visionId);
+  const goalRecords = (state.goalFeedbackRecords ?? [])
+    .filter((record) => record.goalId === feedbackGoal?.id)
+    .sort((left, right) => right.createdAt - left.createdAt);
   const selectedFeedbackPrinciple = selectedFeedbackAction?.principleId
     ? principles.find((principle) => principle.id === selectedFeedbackAction.principleId)
     : undefined;
-  const actionDetailPractices = selectedActionDetails
-    ? (state.practiceRecords ?? [])
-        .filter((record) => record.actionId === selectedActionDetails.id)
-        .sort((left, right) => right.createdAt - left.createdAt)
-    : [];
-  const actionDetailEvidence = selectedActionDetails
-    ? Array.from(
-        new Set(
-          [
-            selectedActionDetails.sourceEntryId,
-            ...(selectedActionDetails.evidenceEntryIds ?? []),
-          ].filter((id): id is string => Boolean(id)),
-        ),
-      )
-    : [];
+  const feedbackEnded =
+    selectedFeedbackAction?.status === 'abandoned' ||
+    (selectedFeedbackAction?.status === 'completed' &&
+      latestPracticeByAction[selectedFeedbackAction.id]?.completionDestination !== 'long_term') ||
+    Boolean(selectedFeedbackAction?.archivedToPast);
+  const selectedActionRecords = practiceRecords
+    .filter((record) => record.actionId === selectedFeedbackActionId)
+    .sort((left, right) => right.createdAt - left.createdAt);
 
   const savePendingVision = () => {
     if (!pendingVision) return;
@@ -347,36 +268,69 @@ export function FuturePage({
     event.preventDefault();
     if (!selectedFeedbackAction) return;
     const data = new FormData(event.currentTarget);
+    const goalFeedback =
+      feedbackGoal && goalDecision
+        ? {
+            goalId: feedbackGoal.id,
+            expectedGoalRevision: feedbackGoal.revision,
+            decision: goalDecision,
+            note: field(data, 'goalNote'),
+          }
+        : undefined;
+    if (feedbackEnded && !goalFeedback) return;
     const feedbackStatus = practiceStatus;
     const nextStep =
       feedbackStatus === 'completed' || feedbackStatus === 'cancelled' ? 'end' : practiceNextStep;
-    const note = field(data, 'note');
     void run(
       () =>
-        recordActionPractice({
-          occurredOn: localDate(),
-          actionId: selectedFeedbackAction.id,
-          expectedActionRevision: selectedFeedbackAction.revision ?? 0,
-          status: feedbackStatus,
-          note,
-          nextStep,
-          nextAction: nextStep === 'adjust' ? field(data, 'nextAction') : undefined,
-          principleFeedback:
-            selectedFeedbackPrinciple && practicePrincipleOutcome
-              ? {
-                  principleId: selectedFeedbackPrinciple.id,
-                  outcome: practicePrincipleOutcome,
-                }
-              : undefined,
-        }),
+        feedbackEnded && goalFeedback
+          ? recordGoalFeedback({ ...goalFeedback, occurredOn: localDate() })
+          : recordActionPractice({
+              goalFeedback,
+              occurredOn: localDate(),
+              actionId: selectedFeedbackAction.id,
+              expectedActionRevision: selectedFeedbackAction.revision ?? 0,
+              status: feedbackStatus,
+              completionDestination:
+                feedbackStatus === 'completed'
+                  ? (field(data, 'completionDestination') as 'long_term' | 'past')
+                  : undefined,
+              note: field(data, 'note'),
+              nextStep,
+              nextAction: nextStep === 'adjust' ? field(data, 'nextAction') : undefined,
+              principleFeedback:
+                selectedFeedbackPrinciple && practicePrincipleOutcome
+                  ? { principleId: selectedFeedbackPrinciple.id, outcome: practicePrincipleOutcome }
+                  : undefined,
+            }),
       false,
     ).then((saved) => {
       if (saved) {
         setSelectedFeedbackActionId(null);
         setPracticePanelOpen(false);
-        setNotice('结果已保存');
+        setNotice(feedbackEnded ? '目标进展已保存' : '行动反馈已保存');
       }
     });
+  };
+
+  const closePracticePanel = () => {
+    if (busy) return;
+    setSelectedFeedbackActionId(null);
+    setPracticePanelOpen(false);
+    setNotice('');
+  };
+
+  const openActionFeedback = (actionId: string) => {
+    practiceOpener.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setNotice('');
+    setPracticeStatus('completed');
+    setPracticeNextStep('end');
+    setPracticePrincipleOutcome('');
+    setGoalDecision('');
+    setPracticeEditing(false);
+    setSelectedFeedbackActionId(actionId);
+    setPracticePanelOpen(true);
   };
 
   const content: ReactNode = protectedVault ? (
@@ -394,7 +348,7 @@ export function FuturePage({
       goals={activeGoals}
       actions={plannedActions}
       latestPracticeByAction={latestPracticeByAction}
-      onOpenEditor={() => openEditor({ kind: 'action' })}
+      onAdd={(kind) => openEditor({ kind })}
       onEditVision={(value) => openEditor({ kind: 'vision', value })}
       onEditGoal={(value) => openEditor({ kind: 'goal', value })}
       onEditAction={(value) => openEditor({ kind: 'action', value })}
@@ -404,233 +358,125 @@ export function FuturePage({
       <section className="future-practice-records" aria-labelledby="practice-records-heading">
         <header className="future-section-header future-practice-header">
           <div>
-            <h2 id="practice-records-heading">尝试结果</h2>
-            <small>{feedbackResults.length} 条</small>
+            <h2 id="practice-records-heading">反馈</h2>
           </div>
-          {feedbackCandidates.length > 0 && (
-            <button
-              type="button"
-              className="future-pending-entry"
-              onClick={() => {
-                practiceOpener.current =
-                  document.activeElement instanceof HTMLElement ? document.activeElement : null;
-                setNotice('');
-                setPracticeEditorSource('pending');
-                setSelectedFeedbackActionId(null);
-                setPracticePanelOpen(true);
-              }}
-            >
-              待检视 {feedbackCandidates.length} <span aria-hidden="true">›</span>
-            </button>
-          )}
         </header>
-        {feedbackResults.length ? (
-          <div className="future-feedback-list">
-            {feedbackResults.map(
-              ({
-                id,
-                action,
-                actionTitle,
-                nextAction,
-                note,
-                feedback,
-                principleFeedback,
-                practiceRecordId,
-                occurredOn,
-              }) => (
-                <article className="future-feedback-result" key={id}>
-                  <strong>{actionTitle ?? action.title}</strong>
-                  <span>{actionExecutionStatusLabel[feedback.status]}</span>
-                  {note && <p>{note}</p>}
-                  <small>后续：{actionNextStepLabel[feedback.nextStep]}</small>
-                  {nextAction && <p>调整后的行动：{nextAction}</p>}
-                  {principleFeedback && (
-                    <small>
-                      原则判断：{principleFeedback.principleText} ·{' '}
-                      {
-                        (
-                          {
-                            helpful: '支持',
-                            partial: '部分支持',
-                            unhelpful: '挑战',
-                            unrelated: '暂不评价',
-                          } as const
-                        )[principleFeedback.outcome]
-                      }
-                    </small>
-                  )}
-                  {feedback.status === 'completed' && (onReflectInPast || onNavigateModule) && (
-                    <button
-                      type="button"
-                      className="future-continue-practice"
-                      onClick={() => {
-                        if (onReflectInPast && practiceRecordId && occurredOn)
-                          onReflectInPast({
-                            actionId: action.id,
-                            practiceRecordId,
-                            occurredOn,
-                            actionTitle: actionTitle ?? action.title,
-                            result: note,
-                            nextStep: feedback.nextStep,
-                          });
-                        else onNavigateModule?.('past');
-                      }}
-                    >
-                      回顾这次尝试
-                    </button>
-                  )}
-                  {continuableActions.some((candidate) => candidate.id === action.id) &&
-                    isLatestPractice(id, action.id) && (
-                      <button
-                        type="button"
-                        className="future-continue-practice"
-                        onClick={() => {
-                          practiceOpener.current =
-                            document.activeElement instanceof HTMLElement
-                              ? document.activeElement
-                              : null;
-                          setNotice('');
-                          setPracticeEditorSource('continue');
-                          setPracticeStatus('completed');
-                          setPracticeNextStep('end');
-                          setSelectedFeedbackActionId(action.id);
-                          setPracticePanelOpen(true);
-                        }}
-                      >
-                        继续记录
-                      </button>
-                    )}
-                </article>
-              ),
-            )}
-          </div>
-        ) : (
-          <div className="future-empty-state future-practice-empty">
-            <p>
-              {feedbackCandidates.length
-                ? '记录一次尝试的结果后，会在这里出现。'
-                : '添加行动后，可在这里记录结果。'}
-            </p>
-            {!feedbackCandidates.length && (
-              <button
-                type="button"
-                className="future-empty-action"
-                onClick={() => setSection('design')}
-              >
-                去添加规划
-              </button>
-            )}
-          </div>
-        )}
+        <ActionFeedbackList
+          actions={actions}
+          goals={state.goals}
+          onOpen={openActionFeedback}
+          onDelete={(selected) =>
+            run(
+              () =>
+                deleteFutureActions(
+                  selected.map((action) => ({ id: action.id, revision: action.revision })),
+                ),
+              false,
+            )
+          }
+        />
       </section>
 
-      {practicePanelOpen && (
+      {practicePanelOpen && selectedFeedbackAction && (
         <dialog
           ref={practicePanel}
-          className="future-practice-panel"
-          aria-labelledby="practice-panel-heading"
+          className="future-dialog future-editor-screen future-practice-panel"
+          aria-label={selectedFeedbackAction.title}
           onCancel={(event) => {
             event.preventDefault();
-            if (busy) return;
-            setNotice('');
-            if (selectedFeedbackActionId) {
-              if (practiceEditorSource === 'continue') setPracticePanelOpen(false);
-              setSelectedFeedbackActionId(null);
-              return;
-            }
-            setPracticePanelOpen(false);
+            closePracticePanel();
           }}
         >
-          <header className="future-section-header">
-            <h2 id="practice-panel-heading">{selectedFeedbackAction ? '行动记录' : '待检视'}</h2>
+          <header>
             <button
               type="button"
-              data-practice-autofocus={!selectedFeedbackAction || undefined}
+              aria-label="返回"
+              data-practice-autofocus
+              disabled={busy}
               onClick={() => {
-                setSelectedFeedbackActionId(null);
-                setPracticePanelOpen(false);
-                setNotice('');
+                if (practiceEditing) {
+                  setPracticeEditing(false);
+                  setNotice('');
+                  setGoalDecision('');
+                  setPracticeStatus('completed');
+                  setPracticeNextStep('end');
+                  setPracticePrincipleOutcome('');
+                } else closePracticePanel();
               }}
             >
-              关闭
+              <span aria-hidden="true">←</span>
             </button>
           </header>
-
-          {!selectedFeedbackAction ? (
-            feedbackCandidates.length ? (
-              <div className="future-feedback-list">
-                {feedbackCandidates.map((action) => {
-                  const goal = state.goals.find((candidate) => candidate.id === action.goalId);
-                  return (
-                    <button
-                      type="button"
-                      data-practice-autofocus={undefined}
-                      className="future-feedback-row"
-                      key={action.id}
-                      onClick={() => {
-                        setNotice('');
-                        setPracticeEditorSource('pending');
-                        setPracticeStatus('completed');
-                        setPracticeNextStep('end');
-                        setPracticePrincipleOutcome('');
-                        setSelectedFeedbackActionId(action.id);
-                      }}
-                    >
-                      <span>
-                        <strong>{action.title}</strong>
-                        <small>{goal ? goal.title : '独立行动'}</small>
-                      </span>
-                      <time>{readableDate(action.scheduledOn)}</time>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="future-empty">暂无待检视行动</p>
-            )
-          ) : selectedFeedbackAction ? (
-            <form
-              className="future-feedback-editor"
-              onSubmit={submitFeedback}
-              key={selectedFeedbackAction.id}
-            >
-              <fieldset disabled={busy}>
-                <button
-                  type="button"
-                  className="future-back"
-                  onClick={() => {
-                    setNotice('');
-                    if (practiceEditorSource === 'continue') setPracticePanelOpen(false);
-                    setSelectedFeedbackActionId(null);
-                  }}
-                >
-                  {practiceEditorSource === 'continue' ? '‹ 返回践行' : '‹ 返回待检视'}
-                </button>
-                <div className="future-feedback-context">
-                  <span>当前行动</span>
-                  <strong>{selectedFeedbackAction.title}</strong>
-                  <small>
-                    {selectedFeedbackGoal ? `所属目标 · ${selectedFeedbackGoal.title}` : '独立行动'}
-                  </small>
-                </div>
-                <PracticeFeedbackFields
-                  status={practiceStatus}
-                  nextStep={practiceNextStep}
-                  setStatus={setPracticeStatus}
-                  setNextStep={setPracticeNextStep}
-                  principle={selectedFeedbackPrinciple}
-                  principleOutcome={practicePrincipleOutcome}
-                  setPrincipleOutcome={setPracticePrincipleOutcome}
-                />
-                {notice && <p role="alert">{notice}</p>}
-                <div className="future-feedback-submit">
-                  <button type="submit" className="future-primary">
-                    {busy ? '保存中…' : '保存记录'}
-                  </button>
-                </div>
-              </fieldset>
-            </form>
-          ) : null}
+          {!practiceEditing ? (
+            <ActionFeedbackReading
+              action={selectedFeedbackAction}
+              records={selectedActionRecords}
+              goal={feedbackGoal}
+              vision={feedbackVision}
+              goalRecords={goalRecords}
+              canUpdate={
+                !feedbackEnded ||
+                Boolean(feedbackGoal && ['active', 'paused'].includes(feedbackGoal.status))
+              }
+              onUpdate={() => setPracticeEditing(true)}
+              onDeletePractice={(id) => void run(() => deleteActionPractice(id), false)}
+              onDeleteGoalFeedback={(id) => void run(() => deleteGoalFeedback(id), false)}
+            />
+          ) : (
+            <>
+              <article className="future-editor-heading">
+                <h2>{selectedFeedbackAction.title}</h2>
+                {feedbackGoal && (
+                  <p className="future-reading-context">目标 · {feedbackGoal.title}</p>
+                )}
+              </article>
+              <FeedbackEditor
+                key={selectedFeedbackAction.id}
+                busy={busy}
+                saveDisabled={feedbackEnded && !goalDecision}
+                notice={notice}
+                onSubmit={submitFeedback}
+                actionFields={
+                  feedbackEnded
+                    ? undefined
+                    : {
+                        status: practiceStatus,
+                        nextStep: practiceNextStep,
+                        setStatus: setPracticeStatus,
+                        setNextStep: setPracticeNextStep,
+                        principle: selectedFeedbackPrinciple,
+                        principleOutcome: practicePrincipleOutcome,
+                        setPrincipleOutcome: setPracticePrincipleOutcome,
+                      }
+                }
+              >
+                {feedbackGoal && ['active', 'paused'].includes(feedbackGoal.status) && (
+                  <section className="future-goal-sync">
+                    <label>
+                      同步目标完成情况
+                      <select
+                        name="goalDecision"
+                        value={goalDecision}
+                        onChange={(event) =>
+                          setGoalDecision(event.target.value as GoalFeedbackDecision | '')
+                        }
+                      >
+                        <option value="">暂不更新</option>
+                        <option value="continue">继续推进</option>
+                        <option value="complete">已完成</option>
+                      </select>
+                    </label>
+                    {goalDecision && (
+                      <label>
+                        目标进展（可选）
+                        <textarea name="goalNote" rows={3} />
+                      </label>
+                    )}
+                  </section>
+                )}
+              </FeedbackEditor>
+            </>
+          )}
         </dialog>
       )}
     </div>
@@ -647,7 +493,7 @@ export function FuturePage({
             aria-selected={section === value}
             onClick={() => setSection(value)}
           >
-            {value === 'design' ? '设计' : '践行'}
+            {value === 'design' ? '设计' : '反馈'}
           </button>
         ))}
       </div>
@@ -655,6 +501,7 @@ export function FuturePage({
       {!practicePanelOpen && !editor && notice && <p role="status">{notice}</p>}
       {editor && !protectedVault && (
         <FutureEditor
+          actions={actions}
           key={`${editor.kind}:${editor.value?.id ?? 'new'}`}
           editor={editor}
           state={state}
@@ -669,7 +516,6 @@ export function FuturePage({
             if (duplicateVision) openEditor({ kind: 'vision', value: duplicateVision });
           }}
           onSaveDuplicate={savePendingVision}
-          onViewActionDetails={setSelectedActionDetails}
           onDelete={() => {
             if (!editor.value) return;
             if (editor.kind === 'vision')
@@ -679,78 +525,6 @@ export function FuturePage({
             else void run(() => deleteFutureAction(editor.value!.id, editor.value!.revision ?? 0));
           }}
         />
-      )}
-      {selectedActionDetails && (
-        <section
-          className="future-practice-panel"
-          role="dialog"
-          aria-modal="true"
-          aria-label="行动脉络"
-        >
-          <header className="future-section-header">
-            <h2>行动脉络</h2>
-            <button type="button" onClick={() => setSelectedActionDetails(null)}>
-              关闭
-            </button>
-          </header>
-          <section>
-            <h3>{selectedActionDetails.title}</h3>
-            {selectedActionDetails.rationale && <p>行动依据：{selectedActionDetails.rationale}</p>}
-            {selectedActionDetails.principleId && (
-              <p>
-                关联原则：
-                {principles.find((item) => item.id === selectedActionDetails.principleId)?.text ??
-                  '关联原则已删除'}
-              </p>
-            )}
-          </section>
-          <section>
-            <h3>来源经历</h3>
-            {actionDetailEvidence.length ? (
-              <ul>
-                {actionDetailEvidence.map((id) => {
-                  const entry = entries.find((item) => item.id === id);
-                  return <li key={id}>{entry ? entry.title : '来源已删除'}</li>;
-                })}
-              </ul>
-            ) : (
-              <p>未关联来源经历。</p>
-            )}
-          </section>
-          <section>
-            <h3>实践过程</h3>
-            {actionDetailPractices.length ? (
-              <ol>
-                {actionDetailPractices.map((record) => (
-                  <li key={record.id}>
-                    <strong>
-                      {record.occurredOn} · {actionExecutionStatusLabel[record.status]}
-                    </strong>
-                    {record.note && <p>{record.note}</p>}
-                    {record.nextAction && <p>调整后的行动：{record.nextAction}</p>}
-                    {record.principleFeedback && (
-                      <p>
-                        原则判断：{record.principleFeedback.principleText} ·{' '}
-                        {
-                          (
-                            {
-                              helpful: '支持',
-                              partial: '部分支持',
-                              unhelpful: '挑战',
-                              unrelated: '暂不评价',
-                            } as const
-                          )[record.principleFeedback.outcome]
-                        }
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p>尚无实践记录。</p>
-            )}
-          </section>
-        </section>
       )}
     </main>
   );

@@ -16,8 +16,7 @@ const baseProps = {
 };
 
 describe('ArchivePrinciplesView', () => {
-  it('carries a principle and its evidence into a new action', () => {
-    const onOpenFutureAction = vi.fn();
+  it('keeps a principle as material for reflection instead of an action shortcut', () => {
     const principle: Principle = {
       id: 'principle-context',
       text: '先确认事实，再作判断',
@@ -33,16 +32,11 @@ describe('ArchivePrinciplesView', () => {
         language="zh"
         displayFirst
         principles={[principle]}
-        onOpenFutureAction={onOpenFutureAction}
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '作为行动依据' }));
-    expect(onOpenFutureAction).toHaveBeenCalledWith({
-      principleId: 'principle-context',
-      evidenceEntryIds: ['entry-a', 'entry-b'],
-      rationale: '先确认事实，再作判断',
-    });
+    expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '作为行动依据' })).toBeNull();
   });
 
   it('keeps an empty principles area focused on extraction', () => {

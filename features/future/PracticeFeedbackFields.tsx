@@ -1,6 +1,5 @@
 import type { ActionFeedbackNextStep, ActionFeedbackStatus } from '../../types/future';
 import type { ExperienceFeedbackOutcome, Principle } from '../../types';
-import { actionExecutionStatusHint } from '../../services/actionPracticeSemantics';
 
 interface Props {
   status: ActionFeedbackStatus;
@@ -11,6 +10,8 @@ interface Props {
   principleOutcome?: ExperienceFeedbackOutcome | '';
   setPrincipleOutcome?: (outcome: ExperienceFeedbackOutcome | '') => void;
 }
+
+/** Feedback records an action's outcome; experiences are recorded in Past. */
 export function PracticeFeedbackFields({
   status,
   nextStep,
@@ -29,9 +30,9 @@ export function PracticeFeedbackFields({
           value={status}
           autoFocus
           onChange={(event) => {
-            const status = event.target.value as ActionFeedbackStatus;
-            setStatus(status);
-            if (status === 'completed' || status === 'cancelled') setNextStep('end');
+            const next = event.target.value as ActionFeedbackStatus;
+            setStatus(next);
+            if (next === 'completed' || next === 'cancelled') setNextStep('end');
             else setNextStep('continue');
           }}
         >
@@ -41,14 +42,22 @@ export function PracticeFeedbackFields({
           <option value="cancelled">停止这项行动</option>
         </select>
       </label>
-      <p className="future-feedback-status-hint">{actionExecutionStatusHint[status]}</p>
+      {status === 'completed' && (
+        <label>
+          完成后
+          <select name="completionDestination" defaultValue="long_term">
+            <option value="long_term">长期推进</option>
+            <option value="past">存入过去</option>
+          </select>
+        </label>
+      )}
       <label>
-        实际发生了什么（可选）
-        <textarea name="note" />
+        反馈内容（可选）
+        <textarea name="note" maxLength={2000} placeholder="记录结果、感受或遇到的情况" />
       </label>
       {principle && setPrincipleOutcome && (
-        <fieldset className="future-principle-feedback">
-          <legend>这次实践与当前理解的关系（可选）</legend>
+        <details className="future-principle-feedback">
+          <summary>评价这次行动（可选）</summary>
           <p>关联原则：{principle.text}</p>
           <label>
             我的判断
@@ -66,7 +75,7 @@ export function PracticeFeedbackFields({
               <option value="unrelated">本次不能据此评价</option>
             </select>
           </label>
-        </fieldset>
+        </details>
       )}
       {(status === 'partial' || status === 'not_completed') && (
         <details>
@@ -91,7 +100,7 @@ export function PracticeFeedbackFields({
                 name="nextAction"
                 required
                 maxLength={500}
-                placeholder="把下一步改小、改具体，例如：明天先核对一份材料"
+                placeholder="把下一步改小、改具体"
               />
             </label>
           )}

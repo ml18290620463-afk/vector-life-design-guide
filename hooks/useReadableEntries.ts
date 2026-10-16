@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DiaryEntry } from '../types';
 import { SecurityService } from '../services/securityService';
 
@@ -35,12 +35,23 @@ export function useReadableEntries(
             reflection: undefined,
             attachment: undefined,
             nowMaterials: undefined,
+            supplements: undefined,
           };
-        if (!entry.isEncrypted) return entry;
+        const supplements = (entry.supplements ?? []).some((item) => item.isEncrypted)
+          ? await Promise.all((entry.supplements ?? []).map((item) =>
+              item.isEncrypted
+                ? password
+                  ? SecurityService.decrypt(item.content, password).then((content) => ({ ...item, content, isEncrypted: false }))
+                  : Promise.reject(new Error('Missing session key'))
+                : item,
+            ))
+          : entry.supplements;
+        if (!entry.isEncrypted) return { ...entry, supplements };
         if (!password) throw new Error('Missing session key');
         return {
           ...entry,
           content: await SecurityService.decrypt(entry.content, password),
+          supplements,
           isEncrypted: false,
         };
       }),
@@ -71,8 +82,43 @@ export function useReadableEntries(
     };
   }, [stored, isUnlocked, password]);
   const current = isUnlocked && result?.source === stored && result.password === password;
+  // Storage refreshes replace the array even when the evidence is unchanged.
+  // Resolve plaintext synchronously and reuse decrypted content only for the
+  // same ciphertext and session key, so an async read never blanks the timeline.
+  const entries = useMemo(() => {
+    if (!isUnlocked) return [];
+    if (current) return result.entries;
+    const previous = result?.password === password ? result : undefined;
+    const sources = new Map(previous?.source.map((entry) => [entry.id, entry]));
+    const readable = new Map(previous?.entries.map((entry) => [entry.id, entry]));
+    return stored.flatMap((entry) => {
+      if (entry.isLocked || (entry.unlockAt && entry.unlockAt > Date.now()))
+        return [
+          {
+            ...entry,
+            content: '',
+            reflection: undefined,
+            attachment: undefined,
+            nowMaterials: undefined,
+            supplements: undefined,
+          },
+        ];
+      if (!entry.isEncrypted) return [entry];
+      const source = sources.get(entry.id);
+      const cached = readable.get(entry.id);
+      if (
+        source?.isEncrypted &&
+        source.content === entry.content &&
+        cached &&
+        !source.isLocked &&
+        !(source.unlockAt && source.unlockAt > Date.now())
+      )
+        return [{ ...entry, content: cached.content, supplements: entry.supplements?.some((item) => item.isEncrypted) ? cached.supplements : entry.supplements, isEncrypted: false }];
+      return [];
+    });
+  }, [stored, isUnlocked, password, current, result]);
   return {
-    entries: current ? result.entries : [],
+    entries,
     error: current ? result.error : null,
     unreadableEntries: current ? result.unreadableEntries : [],
   };

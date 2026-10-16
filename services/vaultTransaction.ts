@@ -206,6 +206,7 @@ export function commitArrayDelta<T extends { id: string }>(
   after: T[],
   backupKey?: string,
   normalize?: (row: T) => unknown,
+  validateUpdate?: (previous: T, next: T) => void,
 ) {
   return vaultTransaction(backupKey ? [key, backupKey] : [key], (values) => {
     const comparable = (row: T | undefined) =>
@@ -226,6 +227,10 @@ export function commitArrayDelta<T extends { id: string }>(
       ) {
         throw new Error('内容已在其他页面更新，请刷新后重试');
       }
+    }
+    for (const row of changed) {
+      const previous = latest.find((item) => item.id === row.id);
+      if (previous) validateUpdate?.(previous, row);
     }
     const updates = new Map(changed.map((row) => [row.id, row]));
     const merged = latest

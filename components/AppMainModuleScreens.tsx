@@ -63,6 +63,8 @@ type AppMainModuleScreensProps = {
   onPersistNowRecord: (
     payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
   ) => Promise<DiaryEntry>;
+  onAppendSupplement?: (entryId: string, content: string, supplementId: string) => Promise<void>;
+  draftPassword?: string | null;
   onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void | Promise<void>;
   onSelectEntry: (entry: DiaryEntry) => void;
   principles: Principle[];
@@ -100,6 +102,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   onRemovePatternPrincipleLink,
   onPersistNowRecord,
   onRelatedEntriesResolved,
+  onAppendSupplement,
+  draftPassword,
   onSelectEntry,
   principles,
   theme,
@@ -156,6 +160,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
           >
             {isPastSurfaceState(appState) && (
               <PastRepository
+                draftPassword={draftPassword}
+                onAppendSupplement={onAppendSupplement}
                 onRelatedEntriesResolved={onRelatedEntriesResolved}
                 initialSection={pastSection}
                 initialQuery={pastQuery}
@@ -163,7 +169,6 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
                 practiceReflectionContext={practiceReflectionContext}
                 onPracticeReflectionContextDismiss={() => setPracticeReflectionContext(null)}
                 onOpenFutureGoal={openFutureGoal}
-                onOpenFutureAction={openFutureAction}
                 language={language}
                 theme={theme}
                 entries={entries}
@@ -221,6 +226,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
         <Suspense fallback={<ScreenLoader language={language} />}>
           <AppPageFrame activeTab="past" language={language} onNavigate={onMainModuleNavigate}>
             <PastRepository
+              draftPassword={draftPassword}
+              onAppendSupplement={onAppendSupplement}
               onRelatedEntriesResolved={onRelatedEntriesResolved}
               initialSection={pastSection}
               initialQuery={pastQuery}
@@ -228,7 +235,6 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               practiceReflectionContext={practiceReflectionContext}
               onPracticeReflectionContextDismiss={() => setPracticeReflectionContext(null)}
               onOpenFutureGoal={openFutureGoal}
-              onOpenFutureAction={openFutureAction}
               language={language}
               theme={theme}
               entries={entries}

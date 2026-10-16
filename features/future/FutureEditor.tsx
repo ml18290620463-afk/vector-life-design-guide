@@ -1,3 +1,4 @@
+import { GoalExecutionResults, goalExecutionRecords } from './GoalExecutionResults';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ActionItem } from '../../types';
 import type { ActionDraftContext, Goal, Vision, FutureState } from '../../types/future';
@@ -61,6 +62,7 @@ function Sheet({
 }
 
 interface FutureEditorProps {
+  actions?: ActionItem[];
   editor: Editor;
   state: FutureState;
   opener: HTMLElement | null;
@@ -73,10 +75,10 @@ interface FutureEditorProps {
   onContinueExisting?: () => void;
   onSaveDuplicate?: () => void;
   onDelete?: () => void;
-  onViewActionDetails?: (action: ActionItem) => void;
 }
 
 export function FutureEditor({
+  actions = [],
   editor,
   state,
   opener,
@@ -89,15 +91,61 @@ export function FutureEditor({
   onContinueExisting,
   onSaveDuplicate,
   onDelete,
-  onViewActionDetails,
 }: FutureEditorProps) {
   const isNewDesign = !editor.value;
   // A fresh vision is the only editor made up of one writing field.  Let that
   // field take the remaining canvas instead of leaving an empty lower half.
   const isSingleWritingSurface = isNewDesign && editor.kind === 'vision';
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [editing, setEditing] = useState(!editor.value);
 
   const title = editor.kind === 'action' ? '行动规划' : editor.kind === 'goal' ? '目标' : '愿景';
+
+  if (!editing && editor.value) {
+    const content = editor.kind === 'vision' ? editor.value.text : editor.value.title;
+    const direction =
+      editor.kind === 'goal'
+        ? state.visions.find((vision) => vision.id === editor.value?.visionId)?.text
+        : editor.kind === 'action'
+          ? state.goals.find((goal) => goal.id === editor.value?.goalId)?.title
+          : undefined;
+    const date =
+      editor.kind === 'goal'
+        ? editor.value.dueDate
+        : editor.kind === 'action'
+          ? editor.value.scheduledOn
+          : undefined;
+    return (
+      <Sheet title={title} close={close} busy={busy} opener={opener}>
+        <article className="future-reading-view">
+          <h2>{title}</h2>
+          <p>{content}</p>
+          {direction && <p className="future-reading-context">{direction}</p>}
+          {date && (
+            <p className="future-reading-context">
+              {editor.kind === 'goal' ? '完成时间' : '计划日期'} · {date.replaceAll('-', '.')}
+            </p>
+          )}
+          <button type="button" className="future-reading-edit" onClick={() => setEditing(true)}>
+            编辑
+          </button>
+          {editor.kind === 'goal' && (
+            <details className="future-action-drawer">
+              <summary>执行进展</summary>
+              <GoalExecutionResults
+                records={goalExecutionRecords(
+                  editor.value.id,
+                  state.practiceRecords ?? [],
+                  actions,
+                )}
+                actions={actions.filter((action) => action.goalId === editor.value?.id)}
+              />
+            </details>
+          )}
+        </article>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet title={title} close={close} busy={busy} opener={opener}>
@@ -252,16 +300,6 @@ export function FutureEditor({
           )}
           {editor.value && onDelete && (
             <>
-              {editor.kind === 'action' && onViewActionDetails && (
-                <div className="future-delete-control">
-                  <button
-                    type="button"
-                    onClick={() => onViewActionDetails(editor.value as ActionItem)}
-                  >
-                    查看行动脉络
-                  </button>
-                </div>
-              )}
               <div className="future-delete-control">
                 {confirmingDelete ? (
                   <div className="future-delete-confirmation" role="alert">

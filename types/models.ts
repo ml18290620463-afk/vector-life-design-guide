@@ -93,6 +93,7 @@ export type ActionItemStatus = 'pending' | 'active' | 'completed' | 'abandoned';
  * intentionally deferred until the principle feedback loop has been validated.
  */
 export interface ActionItem {
+  archivedToPast?: boolean;
   goalId?: string;
   scheduledOn?: string;
   resultIntent?: 'preparation' | 'outcome';
@@ -146,7 +147,15 @@ export interface EntryMaterial {
   description?: string;
 }
 
+export interface EntrySupplement {
+  id: string;
+  content: string;
+  createdAt: number;
+  isEncrypted?: boolean;
+}
+
 export interface DiaryEntry {
+  supplements?: EntrySupplement[];
   id: string;
   title: string;
   content: string;

@@ -128,11 +128,6 @@ export function AvatarMemoryDetail({
           这条理解由你选择保留；原始经历已删除，因此不再显示经历依据。
         </p>
       )}
-      {!forgetting && (
-        <p className="avatar-memory-detail__guidance">
-          想了解这条理解的关联经历，可以在分身对话中询问。
-        </p>
-      )}
       <div className="avatar-memory-dialog__actions">
         {forgetting ? (
           <>

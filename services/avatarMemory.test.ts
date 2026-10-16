@@ -108,6 +108,23 @@ describe('avatarMemory', () => {
     ).toBe(true);
   });
 
+  it('requires at least two distinct past records before surfacing a past pattern', () => {
+    const base = {
+      id: 'past-pattern', statement: '面对压力时可能先独自梳理', nature: 'inferred' as const,
+      facets: ['cognitive_pattern'] as AvatarMemoryFacet[], tags: [], contexts: [], confidence: 0.5,
+      status: 'candidate' as const, sensitivity: 'normal' as const, createdAt: 1,
+    };
+    expect(isPatternMemoryReadyForConfirmation({
+      ...base, sourceRefs: [{ source: 'entry', id: 'entry-a' }],
+    })).toBe(false);
+    expect(isPatternMemoryReadyForConfirmation({
+      ...base, sourceRefs: [{ source: 'entry', id: 'entry-a' }, { source: 'entry', id: 'entry-a' }],
+    })).toBe(false);
+    expect(isPatternMemoryReadyForConfirmation({
+      ...base, sourceRefs: [{ source: 'entry', id: 'entry-a' }, { source: 'entry', id: 'entry-b' }],
+    })).toBe(true);
+  });
+
   it('merges unconfirmed pattern observations only when their conservative keys match', () => {
     const makePattern = (
       id: string,
@@ -155,6 +172,37 @@ describe('avatarMemory', () => {
       ),
     ).toBe(true);
     expect(readAvatarAtomicMemories()).toHaveLength(2);
+  });
+
+  it('accumulates distinct past-entry evidence across extractions without letting one entry unlock review', () => {
+    const pattern = (id: string, entryId: string, at: number) => ({
+      id,
+      statement: '面对压力时用户倾向先独自梳理',
+      nature: 'inferred' as const,
+      category: 'judgment' as const,
+      facets: ['cognitive_pattern'] as AvatarMemoryFacet[],
+      patternKey: '压力下先独自梳理',
+      tags: [],
+      contexts: ['待验证模式'],
+      sourceRefs: [{ source: 'entry' as const, id: entryId, createdAt: at, excerpt: '先自己整理思路' }],
+      confidence: 0.58,
+      status: 'candidate' as const,
+      sensitivity: 'normal' as const,
+      createdAt: at,
+    });
+    expect(writeAvatarAtomicMemory(pattern('candidate-a', 'entry-a', 100))).toBe(true);
+    expect(isPatternMemoryReadyForConfirmation(readAvatarAtomicMemories()[0])).toBe(false);
+    expect(writeAvatarAtomicMemory(pattern('candidate-b', 'entry-a', 200))).toBe(true);
+    expect(readAvatarAtomicMemories()).toHaveLength(1);
+    expect(isPatternMemoryReadyForConfirmation(readAvatarAtomicMemories()[0])).toBe(false);
+    const firstProposedAt = readAvatarAtomicMemories()[0].proposedAt;
+    expect(writeAvatarAtomicMemory(pattern('candidate-c', 'entry-b', 300))).toBe(true);
+    const [merged] = readAvatarAtomicMemories();
+    expect(merged.sourceRefs.map((source) => source.id).sort()).toEqual(['entry-a', 'entry-b']);
+    expect(isPatternMemoryReadyForConfirmation(merged)).toBe(true);
+    expect(merged.proposedAt).toBeDefined();
+    expect(merged.createdAt).toBe(100);
+    expect(merged.proposedAt).toBe(firstProposedAt);
   });
 
   it('does not merge a new pattern observation into a confirmed pattern', () => {

@@ -8,6 +8,7 @@ export const emptyFutureState = (): FutureState => ({
   items: [],
   events: [],
   practiceRecords: [],
+  goalFeedbackRecords: [],
   revisions: [],
   closures: [],
   receipts: [],
@@ -101,8 +102,11 @@ export function stateFrom(value: unknown): FutureState {
   )
     return invalid();
   const nonempty = (v: unknown) => typeof v === 'string' && v.trim().length > 0;
-  const practiceRecords = state.practiceRecords ?? [];
-  if (!Array.isArray(practiceRecords)) return invalid();
+  // These collections were introduced after the initial future-state schema.
+  // Normalize restored legacy state so all callers can rely on arrays.
+  const practiceRecords = (state.practiceRecords ??= []);
+  const goalFeedbackRecords = (state.goalFeedbackRecords ??= []);
+  if (!Array.isArray(practiceRecords) || !Array.isArray(goalFeedbackRecords)) return invalid();
   if (state.archiveOrigins !== undefined) {
     if (
       !state.archiveOrigins ||
@@ -266,6 +270,7 @@ export function stateFrom(value: unknown): FutureState {
       !nonempty(record.id) ||
       practiceIds.has(record.id) ||
       !nonempty(record.actionId) ||
+      (record.goalId !== undefined && record.goalId !== null && !nonempty(record.goalId)) ||
       !['completed', 'partial', 'not_completed', 'cancelled'].includes(record.status) ||
       !['continue', 'adjust', 'pause', 'end'].includes(record.nextStep) ||
       typeof record.note !== 'string' ||
@@ -276,6 +281,27 @@ export function stateFrom(value: unknown): FutureState {
       invalid();
     validateDate(record.occurredOn);
     practiceIds.add(record.id);
+  }
+  const feedbackIds = new Set<string>();
+  for (const record of goalFeedbackRecords) {
+    const goal = state.goals.find((candidate) => candidate.id === record?.goalId);
+    if (
+      !record ||
+      !nonempty(record.id) ||
+      feedbackIds.has(record.id) ||
+      !goal ||
+      !nonempty(record.goalTitle) ||
+      !Number.isInteger(record.goalRevision) ||
+      record.goalRevision < 1 ||
+      record.goalRevision > goal.revision ||
+      !['continue', 'adjust', 'pause', 'complete', 'end'].includes(record.decision) ||
+      typeof record.note !== 'string' ||
+      (record.nextStep !== undefined && !nonempty(record.nextStep)) ||
+      !timestamp(record.createdAt)
+    )
+      invalid();
+    validateDate(record.occurredOn);
+    feedbackIds.add(record.id);
   }
   if (new Set(state.receipts.map((r) => r.operationId)).size !== state.receipts.length) invalid();
   for (const r of state.receipts)

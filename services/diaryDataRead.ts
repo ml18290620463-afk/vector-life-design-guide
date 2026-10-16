@@ -138,6 +138,15 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
     archivedToShip: Boolean(safeEntry.archivedToShip),
     containerId: safeEntry.containerId || undefined,
     attachment: safeEntry.attachment || undefined,
+    supplements: Array.isArray(safeEntry.supplements)
+      ? safeEntry.supplements.filter(
+          (item) =>
+            item &&
+            typeof item.id === 'string' &&
+            typeof item.content === 'string' &&
+            Number.isFinite(item.createdAt),
+        )
+      : undefined,
     nowMaterials: Array.isArray(safeEntry.nowMaterials) ? safeEntry.nowMaterials : undefined,
     relatedEntryIds: sanitizeStringArray(safeEntry.relatedEntryIds),
     experienceEdges: sanitizeExperienceEdges(safeEntry.experienceEdges, safeEntry.id),
@@ -286,6 +295,7 @@ export const sanitizeActionItem = (value: unknown): ActionItem | null => {
     sourceEntryId: typeof action.sourceEntryId === 'string' ? action.sourceEntryId : undefined,
     evidenceEntryIds: sanitizeStringArray(action.evidenceEntryIds),
     resultEntryId: typeof action.resultEntryId === 'string' ? action.resultEntryId : undefined,
+    archivedToPast: action.archivedToPast === true ? true : undefined,
     updatedAt:
       typeof action.updatedAt === 'number' && Number.isFinite(action.updatedAt)
         ? action.updatedAt

@@ -36,6 +36,7 @@ export interface AvatarExtractionInput {
   messages: Array<{ role?: string; content: string; createdAt?: number }>;
   source?: 'now' | 'past' | 'future' | 'avatar';
   sourceEntryId?: string;
+  sourceSupplementId?: string;
   occurredAt?: number;
 }
 
@@ -62,6 +63,8 @@ export interface AvatarStructuredExtraction {
   nextQuestion: string | null;
   needsUserConfirmation: boolean;
   sourceEntryId?: string;
+  sourceSupplementId?: string;
+  patternKey?: string;
   occurredAt: number;
 }
 
@@ -121,8 +124,11 @@ export interface AvatarGrowthPreview {
 export interface AvatarGrowthContext {
   entries?: Array<Pick<DiaryEntry, 'id' | 'title' | 'content' | 'tags' | 'createdAt'>>;
   understandings?: AvatarUnderstandingVersion[];
+  evidenceSources?: Array<{ entryId: string; supplementId?: string; createdAt: number }>;
   now?: number;
 }
+
+/** A provider may replace only extraction; candidate/evidence policy stays local. */
 
 export interface StructuredExtractionProvider {
   extract(input: AvatarExtractionInput): Promise<AvatarStructuredExtraction>;
@@ -296,15 +302,28 @@ const domainToAtomicFacet = (domain?: PastPatternDomain): AvatarMemoryFacet => {
 export const buildAtomicMemoryCandidates = (
   extraction: AvatarStructuredExtraction,
   memoryCandidates: AvatarMemoryCandidate[],
+  evidenceSources: AvatarGrowthContext['evidenceSources'] = [],
 ): AvatarAtomicMemory[] => {
   const durable = new Set(memoryCandidates.map((candidate) => candidate.statement));
   const baseRefs = extraction.sourceEntryId
-    ? [{ source: 'entry' as const, id: extraction.sourceEntryId, createdAt: extraction.occurredAt }]
+    ? [
+        {
+          source: 'entry' as const,
+          id: extraction.sourceEntryId,
+          createdAt: extraction.occurredAt,
+          supplementId: extraction.sourceSupplementId,
+        },
+      ]
     : [];
   const candidates: AvatarAtomicMemory[] = extraction.signals
     .filter((signal) => durable.has(signal.text) && signal.facet !== 'emotion')
     .map((signal) => ({
-      id: stableId('atomic', [signal.facet, signal.text, extraction.sourceEntryId]),
+      id: stableId('atomic', [
+        signal.facet,
+        signal.text,
+        extraction.sourceEntryId,
+        extraction.sourceSupplementId,
+      ]),
       statement: signal.text,
       nature: facetToNature(signal.facet),
       facets: [facetToAtomicFacet(signal.facet)],
@@ -312,12 +331,17 @@ export const buildAtomicMemoryCandidates = (
       contexts: extraction.eventTags,
       sourceRefs: [
         ...baseRefs,
-        ...signal.evidence.map((evidence) => ({
-          source: evidence.source === 'understanding' ? ('pattern' as const) : evidence.source,
-          id: evidence.id,
-          excerpt: evidence.excerpt,
-          ...(typeof evidence.createdAt === 'number' ? { createdAt: evidence.createdAt } : {}),
-        })),
+        ...signal.evidence.map((evidence) => {
+          const sourceIndex = evidence.source === 'message' ? Number(evidence.id.replace(/^message-/, '')) - 1 : -1;
+          const mappedSource = Number.isInteger(sourceIndex) ? evidenceSources[sourceIndex] : undefined;
+          return {
+            source: mappedSource ? 'entry' as const : evidence.source === 'understanding' ? ('pattern' as const) : evidence.source,
+            id: mappedSource?.entryId ?? evidence.id,
+            excerpt: evidence.excerpt,
+            ...(typeof mappedSource?.createdAt === 'number' ? { createdAt: mappedSource.createdAt } : typeof evidence.createdAt === 'number' ? { createdAt: evidence.createdAt } : {}),
+            ...(mappedSource?.supplementId ? { supplementId: mappedSource.supplementId } : {}),
+          };
+        }),
       ],
       confidence: signal.confidence,
       status: 'candidate' as const,
@@ -458,6 +482,7 @@ export class LocalStructuredExtractionProvider implements StructuredExtractionPr
       nextQuestion: buildAdaptiveFollowup(userMessages, 0),
       needsUserConfirmation: true,
       ...(input.sourceEntryId ? { sourceEntryId: input.sourceEntryId } : {}),
+      sourceSupplementId: input.sourceSupplementId,
       occurredAt: input.occurredAt ?? Date.now(),
     };
   }
@@ -483,7 +508,12 @@ export class LocalLongTermMemoryProvider implements LongTermMemoryProvider {
             /长期|一直|每次|反复|计划|接下来|决定|边界/.test(signal.text)),
       )
       .map((signal) => ({
-        id: stableId('memory', [signal.facet, signal.text, extraction.sourceEntryId]),
+        id: stableId('memory', [
+          signal.facet,
+          signal.text,
+          extraction.sourceEntryId,
+          extraction.sourceSupplementId,
+        ]),
         statement: signal.text,
         scope: signal.confidence >= 0.72 ? 'longTerm' : 'working',
         confidence: signal.confidence,
@@ -583,7 +613,8 @@ export const buildAvatarGrowthPreview = async (
     graph?: TemporalGraphProvider;
   } = {},
 ): Promise<AvatarGrowthPreview> => {
-  const extractionProvider = providers.extraction ?? new LocalStructuredExtractionProvider();
+  const extractionProvider =
+    providers.extraction ?? new LocalStructuredExtractionProvider();
   const memoryProvider = providers.memory ?? new LocalLongTermMemoryProvider();
   const graphProvider = providers.graph ?? new LocalTemporalGraphProvider();
   const extraction = await extractionProvider.extract({
@@ -591,7 +622,11 @@ export const buildAvatarGrowthPreview = async (
     occurredAt: input.occurredAt ?? context.now ?? Date.now(),
   });
   const memoryCandidates = await memoryProvider.propose(extraction);
-  const atomicMemoryCandidates = buildAtomicMemoryCandidates(extraction, memoryCandidates);
+  const atomicMemoryCandidates = buildAtomicMemoryCandidates(extraction, memoryCandidates, context.evidenceSources);
+  for (const candidate of atomicMemoryCandidates) {
+    if (candidate.facets.includes('cognitive_pattern') && extraction.patternKey)
+      candidate.patternKey = extraction.patternKey;
+  }
   const graphPreview = await graphProvider.propose(extraction, memoryCandidates, context);
   const recallEntryIds = selectAvatarRecallMemories(
     context.entries ?? [],

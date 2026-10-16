@@ -109,14 +109,14 @@
   margin: 0 0 28px;
 }
 .desktop-workspace .future-design-content {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24px;
 }
 .desktop-workspace .future-design-entry {
-  grid-column: 1 / -1;
-  justify-self: end;
+  align-self: flex-start;
+  justify-self: start;
   width: auto;
   margin: 0;
 }
@@ -992,19 +992,28 @@ html.vector-force-web .desktop-workspace .past-record.past-record {
   box-shadow: none;
 }
 
-/* Future: retain the three planning results as a single scanning row, while
-   allowing cards to wrap before they become too narrow. */
+/* Future planning is read as one continuous vertical list on every viewport. */
 html.vector-force-web .desktop-workspace .future-design-content {
-  grid-template-columns: repeat(3, minmax(240px, 1fr));
-  gap: clamp(20px, 2vw, 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24px;
 }
 html.vector-force-web .desktop-workspace .future-design-entry {
-  margin-bottom: 4px;
+  align-self: flex-start;
+  justify-self: start;
+  margin: 0;
 }
-html.vector-force-web .desktop-workspace .future-design-summary-card {
-  min-height: 230px;
-  padding: clamp(24px, 2.3vw, 32px);
-  border-radius: 20px;
+html.vector-force-web .desktop-workspace .future-design-summary-list {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--experience-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 html.vector-force-web .desktop-workspace .future-practice-workspace {
   max-width: 980px;
@@ -1166,10 +1175,9 @@ html.vector-force-web
     --desktop-gutter: clamp(28px, 4vw, 52px);
   }
   html.vector-force-web .desktop-workspace .future-design-content {
-    grid-template-columns: repeat(2, minmax(240px, 1fr));
-  }
-  html.vector-force-web .desktop-workspace .future-design-summary-card:last-child {
-    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 
@@ -2283,6 +2291,22 @@ html.vector-force-web :is(.future-editor-screen, .principle-editor-screen, .futu
   --editor-content-width: 1120px;
 }
 
+/* Design and feedback share one reading measure from back navigation to content. */
+html:is(.vector-force-mobile, .vector-force-web) .future-editor-screen > * {
+  width: min(100%, 52rem);
+  max-width: 52rem;
+  margin-inline: auto;
+}
+html:is(.vector-force-mobile, .vector-force-web) .future-editor-screen .future-reading-view h2 {
+  margin: 0 0 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-archive-text-muted);
+}
+html:is(.vector-force-mobile, .vector-force-web) .future-practice-panel .future-feedback-reading {
+  padding-block: 1rem 0.5rem;
+}
+
 html.vector-force-web
   :is(
     .past-bulk-editor-screen__header,
@@ -2819,19 +2843,19 @@ html.vector-force-web
     margin-inline: auto;
   }
   html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-content {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 24px;
   }
   html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-content--empty {
-    gap: 20px 24px;
+    gap: 20px;
   }
   html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-empty-intro {
-    grid-column: 1 / -1;
-    grid-template-columns: auto auto;
-    align-items: center;
-    justify-content: start;
-    gap: 24px;
-    padding: 8px 2px 4px;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 8px;
+    padding: 0;
   }
   html.vector-force-web .desktop-main-module-frame:has(.future-page) .future-design-empty-intro p {
     font-size: 16px;
@@ -2840,14 +2864,13 @@ html.vector-force-web
     .desktop-main-module-frame:has(.future-page)
     .future-design-empty-intro
     .future-design-entry {
-    grid-column: auto;
     justify-self: start;
   }
   html.vector-force-web
     .desktop-main-module-frame:has(.future-page)
     .future-design-content--empty
-    .future-design-summary-card {
-    min-height: 164px;
+    .future-design-summary-list {
+    min-height: 0;
   }
 
   html.vector-force-web .desktop-main-module-frame--avatar .desktop-workspace {
@@ -3449,4 +3472,88 @@ html:is(.vector-force-mobile, .vector-force-web)
     width: 100%;
     justify-self: stretch;
   }
+}
+
+/* Future summaries: one card per planning type, stacked on every device. */
+:is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+  .future-design-content.future-planning-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+:is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+  .future-planning-stack
+  > .future-design-summary-list {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 12px 20px;
+  border: 1px solid var(--color-archive-border);
+  border-radius: 16px;
+  background: var(--color-archive-surface, var(--color-surface));
+  box-shadow: none;
+}
+:is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+  .future-planning-stack
+  .future-design-summary-header {
+  padding: 0 !important;
+  min-height: 44px;
+}
+:is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+  .future-planning-stack
+  .future-summary-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-archive-accent);
+  font-size: 24px;
+}
+:is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+  .future-planning-stack
+  .future-summary-result {
+  padding: 14px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+  .future-planning-stack
+  .future-summary-add:focus-visible {
+  outline: 2px solid var(--color-archive-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 639px) {
+  :is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+    .future-planning-stack
+    > .future-design-summary-list {
+    padding-inline: 16px;
+  }
+}
+
+:is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+  .future-planning-stack
+  .future-summary-toggle {
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-archive-accent);
+  font-size: 13px;
+}
+
+:is(.future-page, html.vector-force-web .desktop-main-module-frame .desktop-workspace .future-page)
+  .future-practice-workspace {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  box-shadow: none;
 }

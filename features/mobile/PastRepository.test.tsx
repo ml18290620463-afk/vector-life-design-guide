@@ -50,7 +50,6 @@ const renderRepository = ({
 
 describe('PastRepository', () => {
   it('keeps record cards free of action prompts and review annotations', () => {
-    const onOpenFutureAction = vi.fn();
     render(
       <PastRepository
         language="zh"
@@ -61,13 +60,11 @@ describe('PastRepository', () => {
         onUpdatePrinciple={vi.fn()}
         onSelectEntry={vi.fn()}
         onDeleteEntries={vi.fn()}
-        onOpenFutureAction={onOpenFutureAction}
       />,
     );
     expect(screen.queryByRole('button', { name: '作为行动依据' })).toBeNull();
     expect(screen.queryByText('事实回顾')).toBeNull();
     expect(screen.queryByText('显示 1 条记录')).toBeNull();
-    expect(onOpenFutureAction).not.toHaveBeenCalled();
   });
 
   it('keeps past focused on review and user-maintained principles', () => {

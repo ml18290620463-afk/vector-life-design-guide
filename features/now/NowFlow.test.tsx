@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DiaryEntry } from '../../types';
 import { NowFlow } from './NowFlow';
 
 const draftControls = vi.hoisted(() => ({
@@ -159,6 +160,64 @@ describe('NowFlow pure capture', () => {
     expect(screen.queryByText('记录已保存，草稿待清理。')).toBeNull();
     expect(onPersistRecord).toHaveBeenCalledOnce();
     finishCleanup(false);
+    await waitFor(() => expect(draftControls.reset).toHaveBeenCalledOnce());
+  });
+  it('preserves the draft after failure and retries with the same submission id', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const persist = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('disk failure'))
+      .mockImplementation(async (payload) => ({ ...payload, createdAt: 2, isLocked: false }));
+    const review = vi.fn();
+    render(
+      <NowFlow
+        route="now"
+        theme="dark"
+        language="zh"
+        onRouteChange={vi.fn()}
+        onExit={vi.fn()}
+        onPersistRecord={persist}
+        onReviewSavedRecord={review}
+      />,
+    );
+    fireEvent.click(screen.getByText('save-result'));
+    await waitFor(() => expect(persist).toHaveBeenCalledOnce());
+    expect(draftControls.reset).not.toHaveBeenCalled();
+    expect(review).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('save-result'));
+    await waitFor(() => expect(review).toHaveBeenCalledOnce());
+    expect(persist.mock.calls[0][0]).toEqual(persist.mock.calls[1][0]);
+    vi.restoreAllMocks();
+  });
+  it('ignores repeated save clicks while persistence is pending', async () => {
+    let complete!: (entry: DiaryEntry) => void;
+    const persist = vi.fn(
+      () =>
+        new Promise<DiaryEntry>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    render(
+      <NowFlow
+        route="now"
+        theme="dark"
+        language="zh"
+        onRouteChange={vi.fn()}
+        onExit={vi.fn()}
+        onPersistRecord={persist}
+      />,
+    );
+    fireEvent.click(screen.getByText('save-result'));
+    fireEvent.click(screen.getByText('save-result'));
+    await waitFor(() => expect(persist).toHaveBeenCalledOnce());
+    complete({
+      id: 'saved',
+      title: '记录',
+      content: '记录',
+      tags: [],
+      createdAt: 2,
+      isLocked: false,
+    });
     await waitFor(() => expect(draftControls.reset).toHaveBeenCalledOnce());
   });
   it('resumes cleanup of a persisted submission after remount', async () => {

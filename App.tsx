@@ -31,8 +31,24 @@ import {
 } from './lib/appShellRules';
 import { DEFAULT_AVATAR_CONTEXT } from './features/avatar/types';
 
+import { readAvatarAtomicMemories } from './services/avatarMemoryAtoms';
+import { readAvatarUnderstandings } from './services/avatarMemoryUnderstandings';
+
 const App: React.FC = () => {
   useEffect(removeObsoletePreviewQuery, []);
+  useEffect(() => {
+    const cleanCandidates = () => {
+      readAvatarAtomicMemories();
+      readAvatarUnderstandings();
+    };
+    cleanCandidates();
+    const timer = window.setInterval(cleanCandidates, 30_000);
+    window.addEventListener('focus', cleanCandidates);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', cleanCandidates);
+    };
+  }, []);
 
   // Subscribe via `useShallow` so changes to unrelated store fields (e.g.
   // a child component flipping `selectedEntry`) do not trigger an App
@@ -89,6 +105,7 @@ const App: React.FC = () => {
     patternPrincipleLinks,
     addEntry,
     updateEntryRelatedIds,
+    appendSupplement,
     deleteEntry,
     deleteEntries,
     addPrinciple,
@@ -287,6 +304,7 @@ const App: React.FC = () => {
           />
 
           <AppMainModuleScreens
+            draftPassword={masterPassword}
             addPrinciple={addPrinciple}
             appState={appState}
             deletePrinciple={deletePrinciple}
@@ -301,6 +319,9 @@ const App: React.FC = () => {
             onNowRecordComplete={handleNowRecordComplete}
             onNowRouteChange={changeNowRoute}
             onPersistNowRecord={handlePersistNowRecord}
+            onAppendSupplement={(entryId, content, supplementId) =>
+              appendSupplement(entryId, content, supplementId, masterPassword)
+            }
             onRelatedEntriesResolved={updateEntryRelatedIds}
             actions={actions}
             onAddAction={addAction}

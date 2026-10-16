@@ -6,26 +6,30 @@ export function PastActionDialog({
   children,
   onCancel,
   busy = false,
+  className = '',
 }: {
   title: string;
   children: React.ReactNode;
   onCancel: () => void;
   busy?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    ref.current?.showModal();
-    ref.current?.querySelector<HTMLButtonElement>('[data-cancel]')?.focus();
+    const dialog = ref.current;
+    dialog?.showModal();
+    dialog?.querySelector<HTMLButtonElement>('[data-cancel]')?.focus();
     return () => {
+      dialog?.close();
       opener?.focus();
     };
   }, []);
   return (
     <dialog
       ref={ref}
-      className="past-action-dialog"
+      className={`past-action-dialog ${className}`.trim()}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();

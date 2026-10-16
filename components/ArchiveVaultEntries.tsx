@@ -63,17 +63,13 @@ export const ArchiveVaultEntries: React.FC<ArchiveVaultEntriesProps> = ({
 
   return (
     <div className="archive-past-timeline space-y-8">
-      {groupKeys.map((key, keyIndex) => {
+      {groupKeys.map((key) => {
         const bucket = groupedEntries[key];
         const isExpanded = expandedGroups[key] ?? true;
         const isListView = bucket.length > LIST_VIEW_THRESHOLD;
 
         return (
-          <div
-            key={key}
-            className="archive-past-group relative animate-in slide-in-from-bottom-4 fade-in duration-700"
-            style={{ animationDelay: `${keyIndex * 150}ms` }}
-          >
+          <div key={key} className="archive-past-group relative">
             {/* Header Line */}
             <div
               className={`absolute left-[19px] top-10 bottom-0 w-[2px] z-0 ${theme === 'light' ? 'bg-slate-100' : 'bg-green-900/30'}`}
@@ -115,7 +111,7 @@ export const ArchiveVaultEntries: React.FC<ArchiveVaultEntriesProps> = ({
               </div>
             </button>
 
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
               {isExpanded && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}

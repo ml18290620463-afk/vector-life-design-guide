@@ -46,7 +46,17 @@ for (const viewport of [
     await page.getByLabel('心情与事件').click();
     await page.getByRole('button', { name: '工作事业', exact: true }).click();
     await page.getByRole('button', { name: '平静', exact: true }).click();
-    await page.getByRole('button', { name: '确定', exact: true }).click();
+    if (viewport.width >= 768) {
+      await expect(page.getByTestId('now-page')).toBeVisible();
+      await page
+        .getByRole('dialog', { name: '选择标签' })
+        .getByRole('button', { name: '返回', exact: true })
+        .click();
+    } else {
+      await expect(page.getByRole('dialog', { name: '选择标签' })).toHaveCount(0);
+      await expect(page.getByTestId('now-page')).toBeHidden();
+      await page.getByRole('button', { name: '返回', exact: true }).click();
+    }
     await expect(page.getByLabel('此刻发生了什么？')).toHaveValue(
       message + ' 再补充一条带标签的记录。',
     );
@@ -76,6 +86,8 @@ for (const viewport of [
         'base64',
       ),
     });
+    await expect(page.getByLabel('删除素材')).toHaveCount(0);
+    await page.getByRole('button', { name: /整理素材/ }).click();
     await expect(page.getByLabel('删除素材')).toBeVisible();
     await page.getByLabel('删除素材').click();
     await expect(page.getByLabel('删除素材')).toHaveCount(0);
@@ -113,6 +125,7 @@ test('链接输入支持取消、校验和替换', async ({ page }) => {
   await page.getByLabel('网页链接', { exact: true }).fill('example.com');
   await page.getByRole('button', { name: '确定', exact: true }).click();
   await expect(page.locator('.now-material')).toHaveCount(1);
+  await page.getByRole('button', { name: /整理素材/ }).click();
   await page.locator('.now-material__replace-link').click();
   await expect(page.getByLabel('网页链接', { exact: true })).toHaveValue('https://example.com/');
   await page.getByLabel('网页链接', { exact: true }).fill('https://example.org');

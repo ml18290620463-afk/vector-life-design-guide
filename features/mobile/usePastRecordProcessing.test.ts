@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { DiaryEntry } from '../../types';
 import { usePastRecordProcessing } from './usePastRecordProcessing';
 const mocks = vi.hoisted(() => ({ preview: vi.fn(), write: vi.fn(), read: vi.fn() }));
-vi.mock('../../services/avatarIntelligence', () => ({ buildAvatarGrowthPreview: mocks.preview }));
+vi.mock('../now/api/avatar', () => ({ previewAvatarGrowth: mocks.preview }));
 vi.mock('../../services/avatarMemory', () => ({
   readAvatarUnderstandings: () => [],
   readAvatarAtomicMemories: mocks.read,
@@ -35,6 +35,12 @@ it('processes saved records in Past with source references, excluding locked and
   await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
   expect(mocks.preview).toHaveBeenCalledOnce();
   expect(mocks.preview.mock.calls[0][0]).toMatchObject({ source: 'past', sourceEntryId: 'saved' });
+  expect(mocks.preview.mock.calls[0][0].messages).toEqual([
+    { role: 'user', content: '会议先确认目标', createdAt: 1 },
+  ]);
+  expect(mocks.preview.mock.calls[0][0].evidenceSources).toEqual([
+    { entryId: 'saved', content: '会议先确认目标', createdAt: 1 },
+  ]);
   expect(mocks.write).toHaveBeenCalledWith([{ id: 'candidate', status: 'candidate' }]);
 });
 it('does not replace existing confirmed or rejected candidates on re-entry', async () => {
@@ -100,4 +106,46 @@ it('refreshes relations when the archive grows without extracting unchanged reco
   rerender({ entries: [entry, other] });
   await waitFor(() => expect(resolve).toHaveBeenCalledWith(entry.id, ['other']));
   await waitFor(() => expect(mocks.preview).toHaveBeenCalledTimes(2));
+});
+
+it('extracts supplements separately at their recording time without reprocessing the original', async () => {
+  const { rerender } = renderHook(({ entries }) => usePastRecordProcessing(entries), {
+    initialProps: { entries: [entry] },
+  });
+  await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
+  rerender({
+    entries: [
+      { ...entry, supplements: [{ id: 'later', content: '后来补充的理解', createdAt: 200 }] },
+    ],
+  });
+  await waitFor(() => expect(mocks.preview).toHaveBeenCalledTimes(2));
+  expect(mocks.preview.mock.calls[1][0]).toMatchObject({
+    messages: [{ role: 'user', content: '后来补充的理解', createdAt: 200 }],
+    sourceEntryId: entry.id,
+    sourceSupplementId: 'later',
+    occurredAt: 200,
+  });
+  expect(mocks.preview.mock.calls[1][0].evidenceSources[0]).toMatchObject({
+    entryId: entry.id,
+    supplementId: 'later',
+    content: '后来补充的理解',
+  });
+});
+
+it('uses related evidence instead of simply the most recent records', async () => {
+  const related = { ...entry, id: 'related', createdAt: 2 };
+  const unrelated = {
+    ...entry,
+    id: 'unrelated',
+    content: '烤箱预热，蛋糕烘焙完成',
+    createdAt: 100,
+  };
+  const entries = [entry, unrelated, related];
+  renderHook(() => usePastRecordProcessing(entries));
+  await waitFor(() => expect(mocks.preview).toHaveBeenCalled());
+  expect(
+    mocks.preview.mock.calls[0][0].evidenceSources.map(
+      (source: { entryId: string }) => source.entryId,
+    ),
+  ).toEqual(['saved', 'related']);
 });

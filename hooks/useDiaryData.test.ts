@@ -146,7 +146,7 @@ describe('useDiaryData', () => {
     expect(await idb.get(getDiaryStorageKeys(userId).actions)).toEqual(result.current.actions);
   });
 
-  it('should update an entry', async () => {
+  it('rejects changing recorded content', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -155,13 +155,15 @@ describe('useDiaryData', () => {
     const updatedTitle = 'Updated Title';
 
     await act(async () => {
-      await result.current.updateEntry({
-        ...entryToUpdate,
-        title: updatedTitle,
-      });
+      await expect(
+        result.current.updateEntry({
+          ...entryToUpdate,
+          title: updatedTitle,
+        }),
+      ).rejects.toThrow('历史记录不可修改');
     });
 
-    expect(result.current.entries[0].title).toBe(updatedTitle);
+    expect(result.current.entries[0].title).toBe(entryToUpdate.title);
   });
 
   it('should delete an entry', async () => {

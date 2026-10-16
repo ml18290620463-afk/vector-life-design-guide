@@ -23,6 +23,8 @@ import type { Material, NowRoute } from './types/now';
 
 // jsdom does not implement the native dialog lifecycle.
 beforeEach(() => {
+  const media = window.matchMedia('(max-width: 767px)');
+  vi.spyOn(window, 'matchMedia').mockReturnValue({ ...media, matches: true });
   vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function () {
     this.setAttribute('open', '');
   });
@@ -58,6 +60,7 @@ function Flow({ persist, exit = vi.fn() }: { persist: Persist; exit?: () => void
   return (
     <NowFlow
       route={route}
+      mobileShell
       theme="dark"
       language="zh"
       onRouteChange={setRoute}
@@ -71,7 +74,7 @@ function fillRecord() {
   fireEvent.change(input(), { target: { value: '今天主动澄清会议目标，讨论更聚焦。' } });
   fireEvent.click(screen.getByLabelText('心情与事件'));
   fireEvent.click(screen.getByRole('button', { name: '工作事业' }));
-  fireEvent.click(screen.getByRole('button', { name: '确定' }));
+  fireEvent.click(screen.getByRole('button', { name: '返回' }));
 }
 const saved: Persist = async (payload) => ({
   ...payload,
@@ -146,7 +149,7 @@ describe('Now simulated input integration', () => {
     const view = render(<Flow persist={vi.fn(saved)} exit={exit} />);
     await screen.findByLabelText('此刻发生了什么？');
     fillRecord();
-    fireEvent.click(screen.getByLabelText('返回'));
+    fireEvent.click(screen.getByLabelText('返回过去'));
     await waitFor(() => expect(exit).toHaveBeenCalledOnce());
     expect(screen.queryByRole('dialog')).toBeNull();
     view.unmount();
@@ -174,13 +177,13 @@ describe('Now simulated input integration', () => {
       expect(hook.result.current.draft.text).toBe(expected);
     },
   );
-  it('cancels unconfirmed tag changes', async () => {
+  it('preserves tag changes immediately on return', async () => {
     render(<Flow persist={vi.fn(saved)} />);
     await screen.findByLabelText('此刻发生了什么？');
     fireEvent.click(screen.getByLabelText('心情与事件'));
     fireEvent.click(screen.getByText('平静'));
     fireEvent.click(screen.getByLabelText('返回'));
-    expect(screen.getByText('标签')).toBeDefined();
+    expect(screen.getByLabelText('心情与事件')).toHaveTextContent('平静');
   });
   it.each([' ', '短', '这是超过十二个字符的自定义标签内容'])(
     'rejects invalid custom tag %s',
@@ -219,7 +222,7 @@ describe('Now simulated input integration', () => {
       exit = vi.fn();
     render(<Flow persist={persist} exit={exit} />);
     await screen.findByLabelText('此刻发生了什么？');
-    fireEvent.click(screen.getByLabelText('返回'));
+    fireEvent.click(screen.getByLabelText('返回过去'));
     expect(exit).toHaveBeenCalledOnce();
     expect(window.prompt).not.toHaveBeenCalled();
     fireEvent.change(input(), { target: { value: '   ' } });
@@ -242,8 +245,8 @@ describe('Now simulated input integration', () => {
       fireEvent.click(screen.getByText(label));
     expect(toast).toHaveBeenCalledWith('最多选择 3 个');
     fireEvent.click(screen.getByText('工作事业'));
-    fireEvent.click(screen.getByText('确定'));
-    expect(setDraft.mock.calls[0][0](createEmptyDraft()).event_tags).toEqual([
+    fireEvent.click(screen.getByLabelText('返回'));
+    expect(setDraft.mock.calls.at(-1)![0](createEmptyDraft()).event_tags).toEqual([
       '财务收支',
       '身心健康',
     ]);
@@ -317,20 +320,24 @@ describe('Now material input', () => {
       expect(h.onAdd).toHaveBeenCalledTimes(1);
     },
   );
-  it('caps a nine-image selection at eight', async () => {
+  it('rejects an oversized batch without silently dropping the ninth image', async () => {
     const h = setup();
     const files = Array.from(
       { length: 9 },
       (_, i) => new File(['x'], `${i}.png`, { type: 'image/png' }),
     );
     await act(async () => h.result.current.addFiles(files as unknown as FileList, 'image'));
-    expect(h.onAdd.mock.calls[0][0]).toHaveLength(8);
+    expect(h.onAdd).not.toHaveBeenCalled();
+    expect(h.onError).toHaveBeenCalled();
   });
-  it('rejects link when an image exists', () => {
+  it('allows a link alongside an existing image', () => {
     const h = setup([{ id: 'i', type: 'image', url: '', sort_order: 0 }]);
     act(() => h.result.current.addLink('https://example.com'));
-    expect(h.onError).toHaveBeenCalled();
-    expect(h.onAdd).not.toHaveBeenCalled();
+    expect(h.onError).not.toHaveBeenCalled();
+    expect(h.onAdd.mock.calls[0][0][0]).toMatchObject({
+      type: 'link',
+      url: 'https://example.com/',
+    });
   });
   it('rejects non-image contents selected for image import', async () => {
     const h = setup();

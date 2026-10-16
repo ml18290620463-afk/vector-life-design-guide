@@ -103,6 +103,32 @@ describe('avatarIntelligence', () => {
 });
 
 describe('avatar evidence boundaries', () => {
+  it('keeps original and supplemental evidence distinct with their recording times', async () => {
+    const extract = (sourceSupplementId: string | undefined, occurredAt: number) =>
+      buildAvatarGrowthPreview({
+        messages: [{ role: 'user', content: '我一直喜欢简洁的表达。', createdAt: occurredAt }],
+        source: 'past',
+        sourceEntryId: 'original',
+        sourceSupplementId,
+        occurredAt,
+      });
+    const original = await extract(undefined, 100);
+    const supplement = await extract('supplement', 200);
+    expect(original.atomicMemoryCandidates.length).toBeGreaterThan(0);
+    expect(supplement.atomicMemoryCandidates.length).toBeGreaterThan(0);
+    const originalIds = new Set(original.atomicMemoryCandidates.map((item) => item.id));
+    for (const memory of supplement.atomicMemoryCandidates) {
+      expect(originalIds.has(memory.id)).toBe(false);
+      expect(memory.createdAt).toBe(200);
+      expect(memory.sourceRefs).toContainEqual(
+        expect.objectContaining({
+          id: 'original',
+          supplementId: 'supplement',
+          createdAt: 200,
+        }),
+      );
+    }
+  });
   it('never derives personal memories from assistant or system messages', async () => {
     const preview = await buildAvatarGrowthPreview({
       messages: [
