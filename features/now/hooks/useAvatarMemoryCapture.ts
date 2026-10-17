@@ -1,3 +1,4 @@
+import { memoryStatementKey } from '../../../services/avatarMemoryShared';
 import { useEffect, useRef, useState } from 'react';
 import { saveArchiveDirection } from '../../../services/futureRepository';
 import {
@@ -211,9 +212,9 @@ export const useAvatarMemoryCapture = ({
       const uniqueCandidates = candidates.filter(
         (candidate, index) =>
           !avatarMemoryReferences.some(
-            (memory) => memory.text.trim() === candidate.statement.trim(),
+            (memory) => memoryStatementKey(memory.text) === memoryStatementKey(candidate.statement),
           ) &&
-          candidates.findIndex((item) => item.statement.trim() === candidate.statement.trim()) ===
+          candidates.findIndex((item) => memoryStatementKey(item.statement) === memoryStatementKey(candidate.statement)) ===
             index,
       );
       if (!uniqueCandidates.length) {

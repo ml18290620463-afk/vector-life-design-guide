@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../../avatar/types';
 import {
+  isDirectionCandidate,
   selfCategoriesForMemory,
   type SelfCategory,
   archiveScopeForMemory,
@@ -12,6 +13,7 @@ import {
   supersedeArchiveMemory,
 } from '../../../services/avatarMemoryArchive';
 import { isCanonicalAvatarProjection } from '../../../services/avatarKnowledgeProjection';
+import { CANDIDATE_MEMORY_TTL } from '../../../services/avatarMemoryAtoms';
 import { AvatarMemoryDetail } from './AvatarMemoryDetail';
 
 type ArchiveScope = 'self' | 'pattern' | 'changes';
@@ -70,7 +72,6 @@ export function AvatarMemoryLibrary({
   onRefresh,
   showToast,
   onAdd,
-  view,
 }: {
   memories: AvatarAtomicMemory[];
   pendingMemories?: AvatarAtomicMemory[];
@@ -79,7 +80,6 @@ export function AvatarMemoryLibrary({
   onRefresh: () => void;
   showToast: (message: string) => void;
   onAdd: () => void;
-  view?: 'confirmed' | 'pending';
 }) {
   const [saving, setSaving] = useState(false);
   const [converted, setConverted] = useState<string[]>([]);
@@ -98,6 +98,7 @@ export function AvatarMemoryLibrary({
   const pending = allMemories.filter(
     (memory) =>
       memory.status === 'candidate' &&
+      (memory.proposedAt === undefined || memory.proposedAt + CANDIDATE_MEMORY_TTL > Date.now()) &&
       (!memory.facets.includes('cognitive_pattern') || isPatternMemoryReadyForConfirmation(memory)),
   );
   const showingPending = pendingOpen && pending.length > 0;
@@ -110,7 +111,7 @@ export function AvatarMemoryLibrary({
   const visible = allMemories
     .filter((memory) => {
       if (!matchesQuery(`${memory.statement} ${memory.tags.join(' ')}`)) return false;
-      if (showingPending) return memory.status === 'candidate';
+      if (showingPending) return pending.some((item) => item.id === memory.id);
       if (memory.status === 'candidate') return false;
       if (archiveScopeForMemory(memory) !== archiveScope) return false;
       if (archiveScope === 'self')
@@ -162,32 +163,31 @@ export function AvatarMemoryLibrary({
     setPendingOpen(false);
     setQuery('');
   };
-  const save = async (
+  const saveMemory = async (
+    memory: AvatarAtomicMemory,
     statement: string,
     status: 'confirmed' | 'rejected',
     kind?: 'vision' | 'goal' | 'action',
   ) => {
-    if (!selected || saving) return;
+    if (saving) return;
+    setSaving(true);
     try {
       if (status === 'confirmed' && kind) {
         setSaving(true);
         await saveArchiveDirection({
-          proposalId: selected.id,
+          proposalId: memory.id,
           kind,
           text: statement,
-          tags: selected.tags,
-          sourceRefs: selected.sourceRefs,
+          tags: memory.tags,
+          sourceRefs: memory.sourceRefs,
         });
-        setConverted((ids) => [...ids, selected.id]);
-      } else if (!saveArchiveMemory(selected, statement, status)) throw new Error('save failed');
+        setConverted((ids) => [...ids, memory.id]);
+      } else if (!saveArchiveMemory(memory, statement, status)) throw new Error('save failed');
+      if (memory.status === 'candidate') setConverted((ids) => [...ids, memory.id]);
       setSelected(null);
       onRefresh();
       showToast(
-        status === 'confirmed'
-          ? '记忆已更新'
-          : selected.status === 'candidate'
-            ? '已忽略'
-            : '已忘记',
+        status === 'confirmed' ? '记忆已更新' : memory.status === 'candidate' ? '已忽略' : '已忘记',
       );
     } catch {
       showToast('保存失败，请重试');
@@ -219,72 +219,14 @@ export function AvatarMemoryLibrary({
       : archiveScope === 'self'
         ? SELF_DIMENSIONS.find((item) => item.id === selectedDimension)?.label
         : PATTERN_DIMENSIONS.find((item) => item.id === selectedDimension)?.label;
-  const compactMemories = allMemories
-    .filter((memory) => {
-      const isPending = memory.status === 'candidate';
-      return view === 'pending' ? isPending && pending.some((item) => item.id === memory.id) : !isPending;
-    })
-    .filter((memory) => matchesQuery(`${memory.statement} ${memory.tags.join(' ')}`))
-    .sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt));
-  if (view) {
-    const title = view === 'pending' ? '待确认' : '我的认识';
-    const empty = view === 'pending' ? '暂时没有待确认的认识' : '暂时没有已确认的认识';
-    return (
-      <section className="avatar-library avatar-library--compact" aria-label={title}>
-        <div className="avatar-library__toolbar">
-          <input
-            type="search"
-            aria-label={`搜索${title}`}
-            placeholder="搜索"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          {view === 'confirmed' && (
-            <button type="button" onClick={onAdd}>新增</button>
-          )}
-        </div>
-        <div className="avatar-library__memories" aria-label={title}>
-          {compactMemories.length === 0 ? (
-            <p className="avatar-library__empty">{query ? '没有匹配的认识' : empty}</p>
-          ) : compactMemories.map((memory) => (
-            <button
-              key={memory.id}
-              type="button"
-              className="avatar-library__row"
-              onClick={() => setSelected(memory)}
-            >
-              <span className="avatar-library__row-content">
-                <span>{memory.statement}</span>
-                {memory.retainedAfterSourceDeletion ? (
-                  <small className="avatar-library__retained">已保留 · 原始经历已删除</small>
-                ) : null}
-              </span>
-              <ChevronRight size={16} aria-hidden="true" />
-            </button>
-          ))}
-        </div>
-        {selected && (
-          <AvatarMemoryDetail
-            busy={saving}
-            memory={selected}
-            sources={memories}
-            readOnly={isCanonicalAvatarProjection(selected) && !selected.id.startsWith('atomic_pattern_')}
-            onClose={() => setSelected(null)}
-            onSave={save}
-            onSupersede={supersede}
-          />
-        )}
-      </section>
-    );
-  }
   return (
-    <section className="avatar-library" aria-label="记忆档案">
+    <section className="avatar-library" aria-label="记忆库">
       {!showingPending && (
-        <nav className="avatar-self-categories avatar-library__scopes" aria-label="记忆档案范围">
+        <nav className="avatar-self-categories avatar-library__scopes" aria-label="记忆库范围">
           {(
             [
               { id: 'self', label: '关于我' },
-              { id: 'pattern', label: '我的模式' },
+              { id: 'pattern', label: '我的认识' },
               { id: 'changes', label: '我的变化' },
             ] as const
           ).map((item) => (
@@ -323,7 +265,7 @@ export function AvatarMemoryLibrary({
             setSelectedDimension(null);
           }}
         >
-          {showingPending ? '返回档案' : `待确认 · ${pending.length}`}
+          {showingPending ? '返回记忆库' : `待确认 · ${pending.length}`}
           <ChevronRight size={16} aria-hidden="true" />
         </button>
       )}
@@ -349,7 +291,7 @@ export function AvatarMemoryLibrary({
         </div>
       )}
       {!showingPending && !isDetail && !searching && archiveScope === 'pattern' && (
-        <div className="avatar-library__dimension-grid" aria-label="我的模式的内部维度">
+        <div className="avatar-library__dimension-grid" aria-label="我的认识的内部维度">
           {PATTERN_DIMENSIONS.map((item) => (
             <button
               key={item.id}
@@ -441,22 +383,60 @@ export function AvatarMemoryLibrary({
                       : '暂无已确认记忆'}
               </p>
             )}
-          {visible.map((memory) => (
-            <button
-              key={memory.id}
-              type="button"
-              className="avatar-library__row"
-              onClick={() => setSelected(memory)}
-            >
-              <span className="avatar-library__row-content">
-                <span>{memory.statement}</span>
-                {memory.retainedAfterSourceDeletion ? (
-                  <small className="avatar-library__retained">已保留 · 原始经历已删除</small>
-                ) : null}
-              </span>
-              <ChevronRight size={16} aria-hidden="true" />
-            </button>
-          ))}
+          {visible.map((memory) =>
+            memory.status === 'candidate' ? (
+              <article className="avatar-library__candidate" key={memory.id}>
+                <small className="avatar-library__candidate-expiry">
+                  待确认 ·{' '}
+                  {memory.proposedAt === undefined
+                    ? '24 小时内有效'
+                    : `${Math.max(1, Math.ceil((memory.proposedAt + CANDIDATE_MEMORY_TTL - Date.now()) / 3600000))} 小时后清除`}
+                </small>
+                <button
+                  type="button"
+                  className="avatar-library__candidate-statement"
+                  onClick={() => setSelected(memory)}
+                >
+                  {memory.statement}
+                </button>
+                <div className="avatar-library__candidate-actions" hidden={selected !== null}>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void saveMemory(memory, memory.statement, 'rejected')}
+                  >
+                    忽略
+                  </button>
+                  <button
+                    type="button"
+                    className="avatar-library__candidate-confirm"
+                    disabled={saving}
+                    onClick={() => {
+                      if (isDirectionCandidate(memory)) setSelected(memory);
+                      else void saveMemory(memory, memory.statement, 'confirmed');
+                    }}
+                  >
+                    {isDirectionCandidate(memory) ? '选择保存位置' : '确认记住'}
+                  </button>
+                </div>
+              </article>
+            ) : (
+              <button
+                key={memory.id}
+                type="button"
+                className="avatar-library__row"
+                onClick={() => setSelected(memory)}
+              >
+                <span className="avatar-library__row-content">
+                  <span>{memory.statement}</span>
+                  {memory.retainedAfterSourceDeletion ? (
+                    <small className="avatar-library__retained">已保留 · 原始经历已删除</small>
+                  ) : null}
+                </span>
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            ),
+          )}
         </div>
       )}
       {selected && (
@@ -468,7 +448,7 @@ export function AvatarMemoryLibrary({
             isCanonicalAvatarProjection(selected) && !selected.id.startsWith('atomic_pattern_')
           }
           onClose={() => setSelected(null)}
-          onSave={save}
+          onSave={(statement, status, kind) => saveMemory(selected, statement, status, kind)}
           onSupersede={supersede}
         />
       )}

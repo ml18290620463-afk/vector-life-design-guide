@@ -35,6 +35,20 @@ describe('avatar evidence metrics', () => {
     expect(metric?.matches.map((match) => match.entryId)).toEqual(['actual']);
   });
 
+  it('excludes hypothetical, quoted, other-person and negated claims and counts each record once', () => {
+    const actual = entry('actual', '我感到痛苦。晚上仍然痛苦');
+    const metric = findAvatarEvidenceMetric('今年痛苦多少次', [
+      entry('other', '朋友很痛苦'),
+      entry('quote', '书里写着“我很痛苦”'),
+      entry('hypothetical', '如果失败了我会痛苦'),
+      entry('negative', '我没有感到痛苦', { tags: ['不痛苦'] }),
+      entry('resolved', '我不再觉得痛苦'),
+      actual, actual,
+    ], now)!;
+    expect(metric.matches.map((match) => match.entryId)).toEqual(['actual']);
+    expect(buildAvatarEvidenceMetricReply(metric)).toContain('不代表实际发生次数');
+  });
+
   it('does not turn open-ended questions into a count', () => {
     expect(findAvatarEvidenceMetric('为什么我今年这么痛苦', [entry('one', '痛苦')], now)).toBeNull();
   });

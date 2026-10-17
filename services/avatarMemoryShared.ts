@@ -291,3 +291,12 @@ export const atomicMemoryFromUnderstanding = (
     : {}),
   ...(understanding.retainedAfterSourceDeletion ? { retainedAfterSourceDeletion: true } : {}),
 });
+
+
+/** Typography-only equality; never infer semantic agreement from a topic key. */
+export const memoryStatementKey = (statement: string) =>
+  statement
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[，。！？；：、“”‘’,.!?;:"'()（）]/g, '')
+    .toLocaleLowerCase();

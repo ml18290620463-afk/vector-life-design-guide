@@ -1,3 +1,4 @@
+import { isAccessibleDiaryEntry } from './avatarQueryPlan';
 import type { DiaryEntry } from '../types';
 import {
   buildLocalSemanticIndex,
@@ -21,6 +22,7 @@ export async function proposeExperienceMemories(
     entries.map((item) => ({ ...item, title: '', tags: [], supplements: undefined })),
   ),
 ): Promise<boolean> {
+  if (!isAccessibleDiaryEntry(entry) || cancelled()) return false;
   const evidenceSources = [
     {
       entryId: entry.id,
@@ -30,7 +32,7 @@ export async function proposeExperienceMemories(
     },
     ...searchLocalSemanticIndex(
       { title: '', content: unit.content, tags: [] },
-      index.filter(({ entry: candidate }) => candidate.id !== entry.id && !candidate.isLocked),
+      index.filter(({ entry: candidate }) => candidate.id !== entry.id && isAccessibleDiaryEntry(candidate)),
       3,
       0.45,
     )

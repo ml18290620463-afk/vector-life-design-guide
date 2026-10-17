@@ -101,6 +101,48 @@ describe('AvatarChatPage', () => {
     );
   });
 
+  it.each([false, true])('routes choices through the model and preserves follow-ups (history: %s)', async (withHistory) => {
+    const onSend = vi.fn();
+    render(
+      <AvatarChatPage
+        draft={draft()}
+        setDraft={vi.fn()}
+        pastEntries={withHistory ? [entry()] : []}
+        sending={false}
+        onBack={vi.fn()}
+        onRouteChange={vi.fn()}
+        onSend={onSend}
+        showToast={vi.fn()}
+        launchContext={{ mode: 'general', source: 'global' }}
+      />,
+    );
+    const question = withHistory
+      ? '结合过去的模式和依据，客户方案被否定，我该不该换工作？'
+      : '客户方案被否定，我要不要换工作？';
+    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+      target: { value: question },
+    });
+    fireEvent.click(screen.getByText('发送'));
+    await screen.findByText('模型返回的回复');
+    const followup = '我有房贷，没有存款，先想想。';
+    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+      target: { value: followup },
+    });
+    fireEvent.click(screen.getByText('发送'));
+    await waitFor(() => expect(screen.getAllByText('模型返回的回复')).toHaveLength(2));
+    const requests = vi.mocked(fetch).mock.calls
+      .filter(([url]) => String(url).endsWith('/avatar/chat'))
+      .map(([, init]) => JSON.parse(init!.body as string));
+    expect(requests).toHaveLength(2);
+    expect(requests[1].messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({ role: 'user', content: question }),
+      expect.objectContaining({ role: 'assistant', content: '模型返回的回复' }),
+      expect.objectContaining({ role: 'user', content: followup }),
+    ]));
+    expect(onSend).not.toHaveBeenCalled();
+    expect(readAvatarAtomicMemories()).toHaveLength(0);
+  });
+
   it('uses compact mobile header label', () => {
     render(
       <AvatarChatPage
@@ -426,10 +468,10 @@ describe('AvatarChatPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
+    fireEvent.click(screen.getByRole('button', { name: '记忆库' }));
     expect(screen.queryByText('管理标签')).toBeNull();
     expect(screen.queryByText('工具与记录')).toBeNull();
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索我的认识' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
       target: { value: '职业发展' },
     });
     expect(screen.queryByText('用户正在优化分身记忆标签系统')).toBeNull();
@@ -600,7 +642,7 @@ describe('AvatarChatPage', () => {
         launchContext={{ mode: 'general', source: 'global' }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
+    fireEvent.click(screen.getByRole('button', { name: '记忆库' }));
     for (const label of [
       '基础事实',
       '事件经历',
@@ -613,7 +655,7 @@ describe('AvatarChatPage', () => {
     ]) {
       expect(screen.queryByRole('button', { name: new RegExp(label) })).toBeNull();
     }
-    fireEvent.click(screen.getByRole('button', { name: '新增' }));
+    fireEvent.click(screen.getByRole('button', { name: '新增记忆' }));
     expect((screen.getByRole('button', { name: '确认记住' }) as HTMLButtonElement).disabled).toBe(
       true,
     );
@@ -623,7 +665,7 @@ describe('AvatarChatPage', () => {
     expect(readAvatarAtomicMemories()).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: '暂不记住' }));
     expect(readAvatarAtomicMemories()).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: '新增' }));
+    fireEvent.click(screen.getByRole('button', { name: '新增记忆' }));
     fireEvent.change(screen.getByRole('textbox', { name: '提炼的信息' }), {
       target: { value: '我倾向使用简短直接的语句' },
     });
@@ -636,11 +678,11 @@ describe('AvatarChatPage', () => {
       confirmedBy: 'user',
     });
     expect(screen.queryByRole('dialog')).toBeNull();
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索我的认识' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
       target: { value: '不存在的记忆' },
     });
     expect(screen.queryByText('我倾向使用简短直接的语句')).toBeNull();
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索我的认识' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
       target: { value: '简短' },
     });
     expect(screen.getByText('我倾向使用简短直接的语句')).toBeTruthy();

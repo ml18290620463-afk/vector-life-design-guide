@@ -19,7 +19,7 @@ type AvatarRetrievalIntent =
 export function detectAvatarRetrievalIntent(question: string): AvatarRetrievalIntent {
   if (/(多少次|几次|统计|一共|总共|分别有多少|出现了几次)/.test(question)) return 'metric';
   if (/(类似经历|相似经历|以前.*(?:怎么|如何)|过去.*(?:怎么|如何)|回看.*经历)/.test(question)) return 'similar_experiences';
-  if (/(选择|决策|要不要|应不应该|利弊|取舍|怎么办|怎么选)/.test(question)) return 'decision_support';
+  if (/(选择|决策|要不要|应不应该|利弊|取舍|怎么办|怎么选|该不该)/.test(question)) return 'decision_support';
   if (/(我.*(?:是怎样|有什么(?:模式|偏好|特点|边界)|了解我|认识我)|我的.*(?:模式|特点|偏好|边界))/.test(question)) return 'self_knowledge';
   if (/(愿景|目标|行动|计划|规划)/.test(question)) return 'future_context';
   return 'general';

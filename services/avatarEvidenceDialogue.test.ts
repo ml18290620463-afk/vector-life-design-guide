@@ -64,6 +64,8 @@ describe('Avatar evidence answers', () => {
     for (const entries of [
       [],
       [{ ...entry, isSample: true }],
+      [{ ...entry, isLocked: true }],
+      [{ ...entry, isEncrypted: true }],
       [{ ...entry, unlockAt: Date.now() + 100000 }],
     ]) {
       const answer = answerAvatarEvidence('模式的证据是什么？', [pattern], [], entries);

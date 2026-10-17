@@ -1,3 +1,4 @@
+import { isAccessibleDiaryEntry } from './avatarQueryPlan';
 import type { DiaryEntry, Principle } from '../types';
 import type { AvatarUnderstandingVersion } from '../features/avatar/types';
 
@@ -25,7 +26,7 @@ export function answerAvatarEvidence(
   )
     return null;
   const active = patterns.filter((p) => p.status === 'confirmed');
-  const available = entries.filter((e) => !e.isSample && (!e.unlockAt || e.unlockAt <= Date.now()));
+  const available = entries.filter((e) => isAccessibleDiaryEntry(e));
   const evidence = (ids: string[]) => {
     const linked = [...new Set(ids)].flatMap((id) => available.find((e) => e.id === id) ?? []);
     return linked.length

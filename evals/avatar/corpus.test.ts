@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 import { avatarEvaluationCases as cases } from './corpus';
 it('keeps a versionable synthetic corpus with single, multi-session and reserved cases', () => {
-  expect(cases.filter((c) => c.steps.length === 1)).toHaveLength(60);
-  expect(cases.filter((c) => c.steps.length > 1)).toHaveLength(20);
+  expect(cases.filter((c) => c.steps.length === 1)).toHaveLength(64);
+  expect(cases.filter((c) => c.steps.length > 1)).toHaveLength(22);
   expect(cases.filter((c) => c.split === 'holdout').length).toBeGreaterThanOrEqual(
     Math.ceil(cases.length / 3),
   );

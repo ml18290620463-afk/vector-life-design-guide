@@ -1,6 +1,7 @@
 /* eslint-disable max-lines -- This page composes the complete chat flow; focused logic lives in state and hooks. */
 import {
   selectAvatarGuidanceContext,
+  detectAvatarRetrievalIntent,
   getFocusText,
   resolveAvatarQueryScope,
 } from '../state/avatarGuidanceContext';
@@ -20,7 +21,6 @@ import {
   buildAvatarEvidenceMetricReply,
   findAvatarEvidenceMetric,
 } from '../../../services/avatarEvidenceMetrics';
-import { buildAvatarDecisionSupport } from '../../../services/avatarDecisionSupport';
 import { searchNeuralRelatedEntryIds } from '../../../services/neuralSemanticRecall';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionItem, DiaryEntry, Principle } from '../../../types';
@@ -115,7 +115,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const [input, setInput] = useState('');
   const [chatPending, setChatPending] = useState(false);
   const [modelSettingsOpen, setModelSettingsOpen] = useState(false);
-  const [libraryView, setLibraryView] = useState<'chat' | 'confirmed' | 'pending'>('chat');
+  const [libraryView, setLibraryView] = useState<'chat' | 'library'>('chat');
   const [chatError, setChatError] = useState('');
   const [reliabilityTask, setReliabilityTask] = useState<
     import('../state/avatarReliabilityTasks').AvatarReliabilityTask | null
@@ -516,31 +516,14 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         }];
       });
     }
-    const decisionSupport = buildAvatarDecisionSupport(
-      content,
-      pastEntries,
-      readAvatarUnderstandings(),
-    );
-    if (!localAnswer && decisionSupport) {
-      localAnswer = decisionSupport.text;
-      localReferences = decisionSupport.entryIds.flatMap((entryId) => {
-        const entry = pastEntries.find((candidate) => candidate.id === entryId);
-        if (!entry) return [];
-        return [{
-          entryId: entry.id,
-          title: entry.title || '未命名记录',
-          date: entry.createdAt,
-          excerpt: entry.content.replace(/\s+/g, ' ').trim().slice(0, 120),
-          reason: '相关经历',
-        }];
-      });
+    if (detectAvatarRetrievalIntent(content) !== 'decision_support') {
+      localAnswer ??= answerAvatarEvidence(
+        content,
+        readAvatarUnderstandings(),
+        principles,
+        pastEntries,
+      );
     }
-    localAnswer ??= answerAvatarEvidence(
-      content,
-      readAvatarUnderstandings(),
-      principles,
-      pastEntries,
-    );
     localAnswer ??= buildDeterministicEntryCountReply(content, pastEntries);
     if (localAnswer) {
       setMessages((current) => [

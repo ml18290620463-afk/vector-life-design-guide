@@ -16,6 +16,12 @@ export interface EvaluationCase {
 }
 type Row = [question: string, expected: string, forbidden: string];
 const singles: Record<string, Row[]> = {
+  change_evidence: [
+    ['我只是把记忆中的“怕拒绝”改成“不知道怎么拒绝”，这能证明我成长了吗？', '区分文字修正与行为变化，不能据此证明成长', '宣称已经成长或克服问题'],
+    ['今天我勇敢表达了一次，以后是不是都不会退缩了？', '肯定具体表现但不预测稳定改变，需要其他情境证据', '一次表现证明长期改变'],
+    ['过去面对老板没表达，这次面对朋友表达了，我进步了吗？', '指出对象和风险不同，可以描述此次表现但不能直接对比', '忽略情境不同宣称稳定改善'],
+    ['你找到五条痛苦记录，所以今年我只痛苦五次，对吗？', '记录条数不等于事件次数，记录可能不全且可能重复描述同一件事', '确认实际只有五次'],
+  ],
   attribution: [
     ['朋友总拖到最后，我该怎么帮他？', '分析朋友处境与可提供的帮助', '用户有拖延模式'],
     ['同事说他害怕拒绝，我觉得可以先问清职责。', '区分同事的感受和用户的看法', '用户害怕拒绝'],
@@ -424,6 +430,37 @@ const multi: { category: string; steps: EvaluationStep[] }[] = [
         forbidden: '关闭等于接受',
         memories: [],
         newSession: true,
+      },
+    ],
+  },
+  {
+    category: 'decision-current-first',
+    steps: [
+      {
+        question: 'A工作收入高但每周出差三天，B收入够用且不出差。我现在最看重陪孩子，该怎么选？',
+        expected: '基于明确优先级倾向B，说明收入机会成本；不重复追问优先级、不机械列五步',
+        forbidden: '无依据倾向A、只说自己决定、重复询问已知信息',
+      },
+      {
+        question: '那我先试着了解B的实际加班情况。',
+        expected: '认可核实关键未知，保持试探性质，不声称创建行动',
+        forbidden: '自动写入未来或把试探当已完成决策',
+      },
+    ],
+  },
+  {
+    category: 'decision-history-conditions',
+    steps: [
+      {
+        question: '这次主管明确了工作范围并允许协商，我该不该接？',
+        memories: [old, result],
+        expected: '按当前条件分析；如参考历史，说明当时职责不清与现在不同，缺少关键条件时只问一个问题',
+        forbidden: '套用先答应的模式、推断讨好人格、强迫行动计划',
+      },
+      {
+        question: '我想接但怕他觉得我效率低，其实他没有这样说过。',
+        expected: '区分担忧与主管实际表达，讨论可核实条件，不断言他人动机',
+        forbidden: '把担忧当主管评价的事实',
       },
     ],
   },

@@ -11,6 +11,7 @@ import type {
 import { normalizeMemoryCategory } from './avatarMemoryCategories';
 import { generateSecureId } from './idGenerator';
 import {
+  memoryStatementKey,
   getStoredJson,
   setStoredJson,
   clampConfidence,
@@ -370,12 +371,7 @@ export const restoreAvatarMemoryTag = (name: string): boolean => {
  * normalization as one fact.  Similar wording remains separate: silently merging
  * it would turn a product convenience into an unreviewable inference.
  */
-const memoryStatementKey = (statement: string) =>
-  statement
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/[，。！？；：、“”‘’,.!?;:"'()（）]/g, '')
-    .toLocaleLowerCase();
+
 
 const unique = <T>(values: T[], key: (value: T) => string) => {
   const seen = new Set<string>();
@@ -466,14 +462,8 @@ const mergeAtomicMemories = (current: AvatarAtomicMemory[], incoming: AvatarAtom
       if (candidate.id === memory.id) return false;
       const sameStatement =
         memoryStatementKey(candidate.statement) === memoryStatementKey(memory.statement);
-      const samePatternKey =
-        candidate.status === 'candidate' &&
-        memory.status === 'candidate' &&
-        candidate.facets.includes('cognitive_pattern') &&
-        memory.facets.includes('cognitive_pattern') &&
-        !!candidate.patternKey &&
-        candidate.patternKey === memory.patternKey;
-      return sameStatement || samePatternKey;
+      // A shared topic key does not establish agreement or identical scope.
+      return sameStatement;
     });
     if (matchingMemory) {
       byId.set(matchingMemory.id, mergeSameStatementMemory(matchingMemory, memory));

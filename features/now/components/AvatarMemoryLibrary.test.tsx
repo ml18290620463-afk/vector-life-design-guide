@@ -35,10 +35,17 @@ it('keeps pending interpretations out of confirmed results and retains the dialo
   );
   const refresh = vi.fn();
   const toast = vi.fn();
+  const unready: AvatarAtomicMemory = {
+    ...memory,
+    id: 'unready-observation',
+    statement: '一次观察不能成为稳定模式',
+    facets: ['cognitive_pattern'],
+    sourceRefs: [],
+  };
   render(
     <AvatarMemoryLibrary
       memories={[]}
-      pendingMemories={[memory]}
+      pendingMemories={[memory, unready]}
       onRefresh={refresh}
       showToast={toast}
       onAdd={vi.fn()}
@@ -46,6 +53,7 @@ it('keeps pending interpretations out of confirmed results and retains the dialo
   );
   expect(screen.queryByText(pattern.statement)).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
+  expect(screen.queryByText(unready.statement)).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: pattern.statement }));
   expect(screen.queryByText(/不可展示的旧原文/)).toBeNull();
   fireEvent.change(screen.getByRole('textbox', { name: '记忆内容' }), {
@@ -189,7 +197,7 @@ it('shows editable patterns without mirroring principles or future plans', () =>
       onAdd={vi.fn()}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: '我的模式' }));
+  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
   expect(screen.getByRole('button', { name: pattern.statement })).toBeTruthy();
   expect(screen.queryByText(principle.statement)).toBeNull();
@@ -254,7 +262,7 @@ it('searches confirmed facts across drawers, excludes candidates and clears sear
   expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
   expect(screen.getByRole('button', { name: /偏好与边界/ })).toBeTruthy();
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: '工作' } });
-  fireEvent.click(screen.getByRole('button', { name: '我的模式' }));
+  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
   expect(screen.queryByRole('button', { name: preference.statement })).toBeNull();
 });
@@ -287,7 +295,7 @@ it('shows concise evidence counts and lets a person confirm or set aside an inte
       onAdd={vi.fn()}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: '我的模式' }));
+  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
   expect(screen.queryByText('基于 2 条依据')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: memory.statement }));
@@ -326,7 +334,7 @@ it('sets aside an interpretation without deleting the original evidence', () => 
       onAdd={vi.fn()}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: '我的模式' }));
+  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
   fireEvent.click(screen.getByRole('button', { name: memory.statement }));
   fireEvent.click(screen.getByRole('button', { name: '暂不采用' }));
@@ -426,7 +434,7 @@ it('revises a confirmed pattern cautiously and exposes its prior wording in my c
     />,
   );
 
-  fireEvent.click(screen.getByRole('button', { name: '我的模式' }));
+  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
   fireEvent.click(screen.getByRole('button', { name: pattern.statement }));
   fireEvent.click(screen.getByRole('button', { name: '调整表述' }));
@@ -475,7 +483,7 @@ it('explains a retained pattern after its original experience was deleted withou
       onAdd={vi.fn()}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: '我的模式' }));
+  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
   expect(screen.getByText('已保留 · 原始经历已删除')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: new RegExp(retainedPattern.statement) }));
@@ -485,4 +493,79 @@ it('explains a retained pattern after its original experience was deleted withou
   expect(screen.queryByText(/基于 \d+ 条依据/)).toBeNull();
   expect(screen.queryByText('查看依据')).toBeNull();
   expect(screen.getByRole('button', { name: '调整表述' })).toBeTruthy();
+});
+
+it.each(['confirmed', 'rejected'] as const)(
+  'reviews a candidate inline as %s without opening a form',
+  (status) => {
+    const memory: AvatarAtomicMemory = {
+      id: 'inline-candidate',
+      statement: '我偏好安静的工作环境',
+      nature: 'explicit',
+      facets: ['preference'],
+      tags: [],
+      contexts: [],
+      sourceRefs: [],
+      confidence: 0.8,
+      status: 'candidate',
+      sensitivity: 'normal',
+      createdAt: Date.now(),
+      proposedAt: Date.now(),
+    };
+    writeAvatarAtomicMemory(memory);
+    const refresh = vi.fn();
+    render(
+      <AvatarMemoryLibrary
+        memories={[]}
+        pendingMemories={[memory]}
+        onRefresh={refresh}
+        showToast={vi.fn()}
+        onAdd={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
+    expect(screen.getByText('待确认 · 24 小时后清除')).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', { name: status === 'confirmed' ? '确认记住' : '忽略' }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(readAvatarAtomicMemories().find((item) => item.id === memory.id)?.status).toBe(status);
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: '待确认 · 1' })).toBeNull();
+  },
+);
+
+it('keeps a failed inline review available and excludes expired candidates', () => {
+  const memory: AvatarAtomicMemory = {
+    id: 'retry-candidate',
+    statement: '我偏好安静的工作环境',
+    nature: 'explicit',
+    facets: ['preference'],
+    tags: [],
+    contexts: [],
+    sourceRefs: [],
+    confidence: 0.8,
+    status: 'candidate',
+    sensitivity: 'normal',
+    createdAt: Date.now(),
+    proposedAt: Date.now(),
+  };
+  writeAvatarAtomicMemory(memory);
+  const refresh = vi.fn();
+  const toast = vi.fn();
+  render(
+    <AvatarMemoryLibrary
+      memories={[]}
+      pendingMemories={[memory, { ...memory, id: 'expired', proposedAt: Date.now() - 86400001 }]}
+      onRefresh={refresh}
+      showToast={toast}
+      onAdd={vi.fn()}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
+  vi.spyOn(storage, 'setStoredJson').mockReturnValue(false);
+  fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
+  expect(toast).toHaveBeenCalledWith('保存失败，请重试');
+  expect(refresh).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: '确认记住' })).toBeTruthy();
 });

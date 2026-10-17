@@ -1310,3 +1310,57 @@
 .avatar-library--compact {
   min-height: 0;
 }
+
+/* Candidate memory review: statement first, one primary decision. */
+.avatar-library__candidate {
+  min-width: 0;
+  margin-bottom: 12px;
+  padding: 20px;
+  border: 1px solid var(--mobile-line);
+  border-radius: 18px;
+  background: var(--mobile-surface);
+}
+.avatar-library__candidate-expiry {
+  color: var(--mobile-muted);
+  font-size: 12px;
+}
+.avatar-library .avatar-library__candidate-statement {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 8px 0 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mobile-ink);
+  font-size: 16px;
+  line-height: 1.75;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.avatar-library__candidate-actions:not([hidden]) {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.avatar-library .avatar-library__candidate-actions button {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid var(--mobile-line);
+  border-radius: 12px;
+  background: var(--mobile-surface-muted);
+  color: var(--mobile-ink);
+}
+.avatar-library .avatar-library__candidate-actions .avatar-library__candidate-confirm {
+  background: var(--mobile-ink);
+  color: var(--mobile-surface);
+}
+.avatar-library__candidate button:focus-visible {
+  outline: 2px solid var(--mobile-ink);
+  outline-offset: 3px;
+}
+.avatar-library__candidate button:disabled {
+  opacity: 0.5;
+}

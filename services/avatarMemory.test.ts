@@ -125,7 +125,7 @@ describe('avatarMemory', () => {
     })).toBe(true);
   });
 
-  it('merges unconfirmed pattern observations only when their conservative keys match', () => {
+  it('keeps scoped or conflicting statements separate even when their pattern keys match', () => {
     const makePattern = (
       id: string,
       statement: string,
@@ -154,24 +154,21 @@ describe('avatarMemory', () => {
     ).toBe(true);
     expect(
       writeAvatarAtomicMemory(
-        makePattern('two', '面对复杂压力时用户通常先一个人想清楚', '压力下先独处梳理', 'm2', 2),
+        makePattern('two', '面对工作压力时用户不再独处，而是找同事讨论', '压力下先独处梳理', 'm2', 2),
       ),
     ).toBe(true);
-    expect(readAvatarAtomicMemories()).toHaveLength(1);
-    expect(readAvatarAtomicMemories()[0]).toMatchObject({
+    expect(readAvatarAtomicMemories()).toHaveLength(2);
+    expect(readAvatarAtomicMemories().find((memory) => memory.id === 'one')).toMatchObject({
       id: 'one',
       patternKey: '压力下先独处梳理',
     });
-    expect(readAvatarAtomicMemories()[0].sourceRefs.map((source) => source.id)).toEqual([
-      'm1',
-      'm2',
-    ]);
+    expect(readAvatarAtomicMemories().find((memory) => memory.id === 'one')?.sourceRefs.map((source) => source.id)).toEqual(['m1']);
     expect(
       writeAvatarAtomicMemory(
         makePattern('three', '用户在冲突时会先延后表达', '冲突中延后表达', 'm3', 3),
       ),
     ).toBe(true);
-    expect(readAvatarAtomicMemories()).toHaveLength(2);
+    expect(readAvatarAtomicMemories()).toHaveLength(3);
   });
 
   it('accumulates distinct past-entry evidence across extractions without letting one entry unlock review', () => {

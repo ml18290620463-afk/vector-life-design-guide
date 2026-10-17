@@ -1,3 +1,4 @@
+import { formatAvatarReply } from '../state/avatarReplyFormat';
 import React, { type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { ArrowLeft, Settings2, X } from 'lucide-react';
 import type {
@@ -49,7 +50,7 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
   }
   return (
     <div className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}>
-      {message.content}
+      {message.role === 'assistant' ? formatAvatarReply(message.content) : message.content}
       {message.role === 'assistant' && message.references?.length ? (
         <button
           type="button"
@@ -79,7 +80,7 @@ interface AvatarChatSurfaceProps {
   input: string;
   inputRef: RefObject<HTMLInputElement | null>;
   launchContext: AvatarLaunchContext;
-  libraryView: 'chat' | 'confirmed' | 'pending';
+  libraryView: 'chat' | 'library';
   memoryFacets: AvatarMemoryFacet[] | null;
   memoryNature: AvatarMemoryNature;
   candidateKind?: React.ComponentProps<typeof AvatarMemoryConfirm>['candidateKind'];
@@ -105,7 +106,7 @@ interface AvatarChatSurfaceProps {
   onEditTags: () => void;
   onGenerateMemory: () => void;
   onMemoryTextChange: (text: string) => void;
-  onSetLibraryView: (view: 'chat' | 'confirmed' | 'pending') => void;
+  onSetLibraryView: (view: 'chat' | 'library') => void;
   onOpenModelSettings: () => void;
   onShowEarlierMessages: () => void;
   onJumpToLatest: () => void;
@@ -206,7 +207,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
               type="button"
               className="now-icon-button"
               onClick={() => (libraryView !== 'chat' ? onSetLibraryView('chat') : onBack())}
-              aria-label={libraryView !== 'chat' ? '返回对话' : '返回'}
+              aria-label={libraryView !== 'chat' ? '返回聊天' : '返回'}
             >
               <ArrowLeft size={20} />
             </button>
@@ -217,23 +218,15 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
                 aria-pressed={libraryView === 'chat'}
                 onClick={() => onSetLibraryView('chat')}
               >
-                对话
+                聊天
               </button>
               <button
                 type="button"
-                className={libraryView === 'confirmed' ? 'is-active' : ''}
-                aria-pressed={libraryView === 'confirmed'}
-                onClick={() => onSetLibraryView('confirmed')}
+                className={libraryView === 'library' ? 'is-active' : ''}
+                aria-pressed={libraryView === 'library'}
+                onClick={() => onSetLibraryView('library')}
               >
-                我的认识
-              </button>
-              <button
-                type="button"
-                className={libraryView === 'pending' ? 'is-active' : ''}
-                aria-pressed={libraryView === 'pending'}
-                onClick={() => onSetLibraryView('pending')}
-              >
-                待确认
+                记忆库
               </button>
             </nav>
           </div>
@@ -290,7 +283,6 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           onRefresh={onRefreshKnowledge}
           showToast={showToast}
           onAdd={onAddMemory}
-          view={libraryView}
         />
       )}
       <div className="avatar-chat-content" hidden={libraryView !== 'chat'}>
