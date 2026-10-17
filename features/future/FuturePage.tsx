@@ -347,7 +347,6 @@ export function FuturePage({
       visions={activeVisions}
       goals={activeGoals}
       actions={plannedActions}
-      latestPracticeByAction={latestPracticeByAction}
       onAdd={(kind) => openEditor({ kind })}
       onEditVision={(value) => openEditor({ kind: 'vision', value })}
       onEditGoal={(value) => openEditor({ kind: 'goal', value })}

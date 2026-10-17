@@ -110,9 +110,9 @@ export function ActionFeedbackReading({
         </details>
       )}
       {latest && (
-        <section className="future-action-latest future-action-surface" aria-label="最近结果">
-          <h3>最近进展</h3>
-          <time dateTime={latest.occurredOn}>{feedbackDate(latest.occurredOn)}</time>
+        <section className="future-action-latest future-action-surface" aria-label="最新结果">
+          <h3>最新结果</h3>
+          <p className="future-action-result-status">{executionStatusLabel[latest.status]}</p>
           {latest.note ? (
             <p>{latest.note}</p>
           ) : (

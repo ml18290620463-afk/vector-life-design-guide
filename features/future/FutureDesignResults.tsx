@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import type { ActionItem } from '../../types';
-import type { ActionPracticeRecord, Goal, Vision } from '../../types/future';
-import { actionExecutionStatusLabel } from '../../services/actionPracticeSemantics';
+import type { Goal, Vision } from '../../types/future';
 
 type Summary = {
   primary: string;
-  context?: string;
   /** Kept as the accessible sentence for people navigating by controls. */
   accessibilityText: string;
 };
@@ -18,28 +16,10 @@ const goalSummary = (goal: Goal): Summary => ({
   primary: goal.title,
   accessibilityText: goal.title,
 });
-const actionStateLabel: Record<ActionItem['status'], string> = {
-  pending: '待开始',
-  active: '进行中',
-  completed: '已完成',
-  abandoned: '已结束',
-};
-const actionSummary = (action: ActionItem, goals: Goal[], latestPractice?: ActionPracticeRecord): Summary => {
-  const goal = goals.find((candidate) => candidate.id === action.goalId);
-  const practice = latestPractice
-    ? `${actionExecutionStatusLabel[latestPractice.status]} · ${latestPractice.occurredOn.replaceAll('-', '.')}`
-    : '';
-  return {
-    primary: action.title,
-    context: [
-      goal?.title,
-      `${actionStateLabel[action.status]}${practice ? ` · 最近反馈 ${practice}` : ''}`,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-    accessibilityText: `行动「${action.title}」，${goal ? `所属目标「${goal.title}」` : '独立行动'}，当前${actionStateLabel[action.status]}${practice ? `，最近反馈${practice}` : ''}`,
-  };
-};
+const actionSummary = (action: ActionItem): Summary => ({
+  primary: action.title,
+  accessibilityText: `行动「${action.title}」`,
+});
 
 function DesignSummary<T>({
   title,
@@ -85,9 +65,6 @@ function DesignSummary<T>({
           >
             <span className="future-summary-result__content">
               <p className="future-summary-result__primary">{summary(item).primary}</p>
-              {summary(item).context && (
-                <span className="future-summary-result__context">{summary(item).context}</span>
-              )}
             </span>
             <span className="future-summary-result__chevron" aria-hidden="true">›</span>
           </button>
@@ -114,7 +91,6 @@ export function FutureDesignResults({
   onEditGoal,
   onEditAction,
   onAdd,
-  latestPracticeByAction,
 }: {
   visions: Vision[];
   goals: Goal[];
@@ -123,7 +99,6 @@ export function FutureDesignResults({
   onEditGoal: (value: Goal) => void;
   onEditAction: (value: ActionItem) => void;
   onAdd: (kind: 'vision' | 'goal' | 'action') => void;
-  latestPracticeByAction: Record<string, ActionPracticeRecord | undefined>;
 }) {
   return (
     <div className="future-design-content future-planning-stack">
@@ -144,7 +119,7 @@ export function FutureDesignResults({
       <DesignSummary
         title="行动"
         items={actions}
-        summary={(action) => actionSummary(action, goals, latestPracticeByAction[action.id])}
+        summary={actionSummary}
         onEdit={onEditAction}
         onAdd={() => onAdd('action')}
       />

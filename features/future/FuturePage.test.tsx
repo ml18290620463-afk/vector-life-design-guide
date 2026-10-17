@@ -80,7 +80,7 @@ describe('Future page', () => {
     await mount();
     const dialog = openActionFeedback(action.title);
     expect(within(dialog).queryByLabelText('反馈内容（可选）')).toBeNull();
-    expect(within(dialog).getByRole('region', { name: '最近结果' })).toBeTruthy();
+    expect(within(dialog).getByRole('region', { name: '最新结果' })).toBeTruthy();
     const history = within(dialog).getByText('历史反馈（3）').closest('details')!;
     expect(history.open).toBe(false);
     fireEvent.click(within(dialog).getByText('历史反馈（3）'));

@@ -1960,15 +1960,13 @@ html .future-dialog textarea {
   margin: 0;
   padding: 1rem 1.125rem;
 }
-.future-action-latest time {
-  position: absolute;
-  top: 1rem;
-  right: 3.5rem;
-  color: var(--color-archive-text-muted);
-  font-size: 0.75rem;
-}
 .future-action-latest h3 {
   margin: 0 0 0.5rem;
+}
+.future-action-result-status {
+  margin: 0;
+  color: var(--color-archive-text-muted);
+  font-size: 0.8125rem;
 }
 .future-action-latest p,
 .future-action-drawer-body p {

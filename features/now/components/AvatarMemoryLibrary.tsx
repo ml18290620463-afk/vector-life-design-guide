@@ -8,7 +8,6 @@ import {
   selfCategoriesForMemory,
   type SelfCategory,
   archiveScopeForMemory,
-  archiveChanges,
   saveArchiveMemory,
   supersedeArchiveMemory,
 } from '../../../services/avatarMemoryArchive';
@@ -67,8 +66,6 @@ function matchesPatternDimension(memory: AvatarAtomicMemory, dimension: PatternD
 export function AvatarMemoryLibrary({
   memories,
   pendingMemories = [],
-  historyMemories = [],
-  patterns = [],
   onRefresh,
   showToast,
   onAdd,
@@ -103,9 +100,6 @@ export function AvatarMemoryLibrary({
   );
   const showingPending = pendingOpen && pending.length > 0;
   const matchesQuery = (text: string) => text.toLowerCase().includes(query.trim().toLowerCase());
-  const changes = archiveChanges(historyMemories, patterns).filter((change) =>
-    matchesQuery(`${change.before} ${change.after}`),
-  );
   const isDetail = selectedDimension !== null;
   const searching = query.trim().length > 0;
   const visible = allMemories
@@ -204,8 +198,8 @@ export function AvatarMemoryLibrary({
       onRefresh();
       showToast(
         selected.id.startsWith('atomic_pattern_')
-          ? '已更新模式，旧表述已归入我的变化'
-          : '已更新记忆，旧表述已归入我的变化',
+          ? '已更新模式'
+          : '已更新记忆',
       );
     } catch {
       showToast('保存失败，请重试');
@@ -214,9 +208,7 @@ export function AvatarMemoryLibrary({
     }
   };
   const detailTitle =
-    archiveScope === 'changes'
-      ? '认识更新'
-      : archiveScope === 'self'
+    archiveScope === 'self'
         ? SELF_DIMENSIONS.find((item) => item.id === selectedDimension)?.label
         : PATTERN_DIMENSIONS.find((item) => item.id === selectedDimension)?.label;
   return (
@@ -312,24 +304,9 @@ export function AvatarMemoryLibrary({
         </div>
       )}
       {!showingPending && !isDetail && !searching && archiveScope === 'changes' && (
-        <div
-          className="avatar-library__dimension-grid avatar-library__dimension-grid--single"
-          aria-label="我的变化的内部维度"
-        >
-          <button
-            type="button"
-            className="avatar-library__dimension-card"
-            onClick={() => openDimension('updates')}
-          >
-            <span className="avatar-library__dimension-card-title">
-              认识更新<small>{changes.length} 条</small>
-            </span>
-            <span className="avatar-library__dimension-card-description">
-              已确认认识在时间中的修正与更新
-            </span>
-            <ChevronRight size={18} aria-hidden="true" />
-          </button>
-        </div>
+        <p className="avatar-library__empty" role="status">
+          尚无足够的前后经历可确认变化。
+        </p>
       )}
       {(showingPending || isDetail || searching) && (
         <div className="avatar-library__detail-heading">
@@ -353,32 +330,15 @@ export function AvatarMemoryLibrary({
         <div
           className="avatar-library__memories"
           aria-label={
-            showingPending ? '待确认记忆' : archiveScope === 'changes' ? '认识更新' : '已确认记忆'
+            showingPending ? '待确认记忆' : '已确认记忆'
           }
         >
-          {!showingPending &&
-            archiveScope === 'changes' &&
-            changes.map((change) => (
-              <article className="avatar-library__change" key={change.id}>
-                <small>调整于 {new Date(change.at).toLocaleDateString('zh-CN')}</small>
-                <p>
-                  <span>此前</span>
-                  {change.before}
-                </p>
-                <p>
-                  <span>现在</span>
-                  {change.after}
-                </p>
-              </article>
-            ))}
           {visible.length === 0 &&
-            (archiveScope !== 'changes' || showingPending || changes.length === 0) && (
+            archiveScope !== 'changes' && (
               <p className="avatar-library__empty">
                 {query
                   ? '没有匹配的记忆'
-                  : archiveScope === 'changes' && !showingPending
-                    ? '暂无可对比的认识更新'
-                    : archiveScope === 'pattern' && !showingPending
+                  : archiveScope === 'pattern' && !showingPending
                       ? '暂无已确认模式'
                       : '暂无已确认记忆'}
               </p>

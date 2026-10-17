@@ -207,8 +207,7 @@ it('shows editable patterns without mirroring principles or future plans', () =>
   expect(screen.getByRole('button', { name: '调整表述' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '关闭' }));
   fireEvent.click(screen.getByRole('button', { name: '我的变化' }));
-  fireEvent.click(screen.getByRole('button', { name: /认识更新/ }));
-  expect(screen.getByText('暂无可对比的认识更新')).toBeTruthy();
+  expect(screen.getByText('尚无足够的前后经历可确认变化。')).toBeTruthy();
   expect(screen.queryByText(pattern.statement)).toBeNull();
 });
 
@@ -386,7 +385,7 @@ it('lets a person update a current state and then compare the dated prior wordin
     target: { value: '我目前在上海从事产品策略' },
   });
   fireEvent.click(screen.getByRole('button', { name: '确认更新' }));
-  expect(toast).toHaveBeenCalledWith('已更新记忆，旧表述已归入我的变化');
+  expect(toast).toHaveBeenCalledWith('已更新记忆');
 
   const history = readAvatarAtomicMemories();
   rerender(
@@ -399,14 +398,11 @@ it('lets a person update a current state and then compare the dated prior wordin
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: '我的变化' }));
-  fireEvent.click(screen.getByRole('button', { name: /认识更新/ }));
-  expect(screen.getByText('此前')).toBeTruthy();
-  expect(screen.getByText(state.statement)).toBeTruthy();
-  expect(screen.getByText('现在')).toBeTruthy();
-  expect(screen.getByText('我目前在上海从事产品策略')).toBeTruthy();
+  expect(screen.getByText('尚无足够的前后经历可确认变化。')).toBeTruthy();
+  expect(screen.queryByText('我目前在上海从事产品策略')).toBeNull();
 });
 
-it('revises a confirmed pattern cautiously and exposes its prior wording in my changes', () => {
+it('revises a confirmed pattern cautiously without presenting the revision as a change', () => {
   const pattern = {
     id: 'pattern-version-ui',
     statement: '面对压力时我会先独自整理',
@@ -445,7 +441,7 @@ it('revises a confirmed pattern cautiously and exposes its prior wording in my c
     target: { value: '面对持续压力时我会先判断是否需要支持' },
   });
   fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
-  expect(toast).toHaveBeenCalledWith('已更新模式，旧表述已归入我的变化');
+  expect(toast).toHaveBeenCalledWith('已更新模式');
   expect(refresh).toHaveBeenCalledOnce();
 
   rerender(
@@ -458,11 +454,8 @@ it('revises a confirmed pattern cautiously and exposes its prior wording in my c
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: '我的变化' }));
-  fireEvent.click(screen.getByRole('button', { name: /认识更新/ }));
-  expect(screen.getByText('此前')).toBeTruthy();
-  expect(screen.getByText(pattern.statement)).toBeTruthy();
-  expect(screen.getByText('现在')).toBeTruthy();
-  expect(screen.getByText('面对持续压力时我会先判断是否需要支持')).toBeTruthy();
+  expect(screen.getByText('尚无足够的前后经历可确认变化。')).toBeTruthy();
+  expect(screen.queryByText('面对持续压力时我会先判断是否需要支持')).toBeNull();
 });
 
 it('explains a retained pattern after its original experience was deleted without exposing unavailable evidence', () => {

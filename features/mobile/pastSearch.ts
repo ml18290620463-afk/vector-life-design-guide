@@ -1,10 +1,11 @@
 import type { DiaryEntry } from '../../types';
+import { semanticConceptsForText } from '../../services/localSemanticIndex';
 
 /** A single search accepts content, tags, links and later supplements. */
 export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEntry[] => {
   const tokens = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   if (!tokens.length) return entries;
-  return entries
+  const exact = entries
     .filter((entry) => {
       const text = [
         entry.title,
@@ -23,6 +24,30 @@ export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEn
       return tokens.every((token) => text.includes(token));
     })
     .sort((left, right) => relevance(right, tokens) - relevance(left, tokens));
+  // Keep the single search field precise. Only a one-word query with too few literal
+  // matches gets a bounded thematic recall appended after exact results.
+  if (tokens.length !== 1 || exact.length >= 3) return exact;
+  const queryConcepts = semanticConceptsForText(tokens[0]!);
+  if (!queryConcepts.length) return exact;
+  const exactIds = new Set(exact.map((entry) => entry.id));
+  const related = entries.filter((entry) => {
+    if (exactIds.has(entry.id)) return false;
+    const entryText = [
+      entry.title,
+      entry.content,
+      ...(entry.tags ?? []),
+      ...(entry.supplements ?? []).map((item) => item.content),
+      ...(entry.nowMaterials ?? []).flatMap((material) => [
+        material.description,
+        material.meta?.title,
+        material.type === 'link' ? material.url : '',
+      ]),
+    ]
+      .filter((value) => typeof value === 'string')
+      .join(' ');
+    return semanticConceptsForText(entryText).some((concept) => queryConcepts.includes(concept));
+  });
+  return [...exact, ...related];
 };
 
 // Stable sorting keeps the caller's chronology when relevance is tied.

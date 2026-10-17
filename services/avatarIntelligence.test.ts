@@ -168,4 +168,131 @@ describe('avatar evidence boundaries', () => {
       ]),
     );
   });
+
+  it('requires two independent experiences before proposing a recurring pattern', async () => {
+    const extraction = {
+      summary: '我会先反复预演',
+      signals: [
+        {
+          facet: 'thought' as const,
+          text: '我会先反复预演',
+          confidence: 0.76,
+          evidence: [{ source: 'message' as const, id: 'message-2', excerpt: '我会先反复预演' }],
+        },
+      ],
+      moodTags: [],
+      eventTags: ['工作事业'],
+      completeness: 60,
+      nextQuestion: null,
+      needsUserConfirmation: true as const,
+      sourceEntryId: 'entry-current',
+      occurredAt: 200,
+    };
+    const providers = {
+      extraction: { extract: async () => extraction },
+      memory: {
+        propose: async () => [
+          {
+            id: 'memory-pattern',
+            statement: '我会先反复预演',
+            scope: 'longTerm' as const,
+            confidence: 0.76,
+            reason: 'test',
+            sourceEntryIds: ['entry-current'],
+            evidence: extraction.signals[0]!.evidence,
+          },
+        ],
+      },
+      graph: { propose: async () => ({ facts: [], edges: [], conflicts: [] }) },
+    };
+
+    const oneSource = await buildAvatarGrowthPreview({ messages: [] }, {}, providers);
+    expect(oneSource.atomicMemoryCandidates).toEqual([]);
+
+    const twoSources = await buildAvatarGrowthPreview(
+      { messages: [] },
+      {
+        evidenceSources: [
+          { entryId: 'unused', createdAt: 10 },
+          { entryId: 'entry-earlier', createdAt: 100 },
+        ],
+      },
+      providers,
+    );
+    expect(twoSources.atomicMemoryCandidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          facets: ['cognitive_pattern'],
+          status: 'candidate',
+          sourceRefs: expect.arrayContaining([
+            expect.objectContaining({ source: 'entry', id: 'entry-current' }),
+            expect.objectContaining({ source: 'entry', id: 'entry-earlier' }),
+          ]),
+        }),
+      ]),
+    );
+  });
+
+  it('withholds a recurring pattern when it conflicts with confirmed understanding', async () => {
+    const extraction = {
+      summary: '我会先反复预演',
+      signals: [
+        {
+          facet: 'thought' as const,
+          text: '我会先反复预演',
+          confidence: 0.76,
+          evidence: [{ source: 'message' as const, id: 'message-2', excerpt: '我会先反复预演' }],
+        },
+      ],
+      moodTags: [],
+      eventTags: ['工作事业'],
+      completeness: 60,
+      nextQuestion: null,
+      needsUserConfirmation: true as const,
+      sourceEntryId: 'entry-current',
+      occurredAt: 200,
+    };
+    const preview = await buildAvatarGrowthPreview(
+      { messages: [] },
+      {
+        evidenceSources: [
+          { entryId: 'unused', createdAt: 10 },
+          { entryId: 'entry-earlier', createdAt: 100 },
+        ],
+      },
+      {
+        extraction: { extract: async () => extraction },
+        memory: {
+          propose: async () => [
+            {
+              id: 'memory-pattern',
+              statement: '我会先反复预演',
+              scope: 'longTerm' as const,
+              confidence: 0.76,
+              reason: 'test',
+              sourceEntryIds: ['entry-current'],
+              evidence: extraction.signals[0]!.evidence,
+            },
+          ],
+        },
+        graph: {
+          propose: async () => ({
+            facts: [],
+            edges: [],
+            conflicts: [
+              {
+                currentFactId: 'fact-current',
+                previousUnderstandingId: 'understanding-old',
+                previousStatement: '旧认识',
+                reason: 'test',
+                confidence: 0.62,
+              },
+            ],
+          }),
+        },
+      },
+    );
+    expect(preview.conflicts).toHaveLength(1);
+    expect(preview.atomicMemoryCandidates).toEqual([]);
+  });
 });

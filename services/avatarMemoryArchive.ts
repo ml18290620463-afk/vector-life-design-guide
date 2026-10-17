@@ -48,7 +48,7 @@ export function saveArchiveMemory(
   });
 }
 
-/** Keep the previous user-confirmed statement visible in “我的变化” when it changes. */
+/** Supersede a user-confirmed statement while retaining its revision history for audit. */
 export function supersedeArchiveMemory(memory: AvatarAtomicMemory, statement: string): boolean {
   if (memory.id.startsWith('atomic_pattern_')) {
     const owner = memory.sourceRefs.find((ref) => ref.source === 'pattern');

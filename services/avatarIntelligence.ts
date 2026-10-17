@@ -2,11 +2,7 @@ import { eventTagForLookup } from '../features/now/constants/tags';
 import type { DiaryEntry } from '../types';
 import type {
   AvatarAtomicMemory,
-  AvatarMemoryFacet,
-  AvatarMemoryNature,
-  AvatarMemorySensitivity,
   AvatarUnderstandingVersion,
-  PastPatternDomain,
 } from '../features/avatar/types';
 import {
   analyzeAvatarInformation,
@@ -244,170 +240,13 @@ const hasLikelyConflict = (current: string, previous: string): boolean =>
       current.includes(currentSignal) && previous.includes(previousSignal),
   );
 
-const facetToAtomicFacet = (facet: AvatarExtractionFacet): AvatarMemoryFacet => {
-  switch (facet) {
-    case 'preference':
-      return 'preference';
-    case 'boundary':
-      return 'boundary';
-    case 'goal':
-      return 'aspirational_self';
-    case 'commitment':
-      return 'motivation';
-    case 'thought':
-      return 'cognitive_pattern';
-    case 'emotion':
-      return 'emotional_trigger';
-    case 'action':
-      return 'behavioral_pattern';
-    case 'person':
-      return 'relationship_view';
-    case 'result':
-      return 'constraint';
-    case 'event':
-    default:
-      return 'domain_background';
-  }
-};
+import {
+  atomicMemoryFromPattern,
+  buildAtomicMemoryCandidates,
+  withoutRecurringPatternFacets,
+} from './avatarMemoryCandidates';
 
-const facetToNature = (facet: AvatarExtractionFacet): AvatarMemoryNature => {
-  if (facet === 'commitment') return 'commitment';
-  if (facet === 'emotion') return 'state';
-  if (facet === 'event' || facet === 'result' || facet === 'action') return 'experience';
-  if (facet === 'preference' || facet === 'boundary' || facet === 'goal') return 'explicit';
-  return 'inferred';
-};
-
-const facetToSensitivity = (facet: AvatarExtractionFacet): AvatarMemorySensitivity =>
-  facet === 'boundary' || facet === 'emotion' || facet === 'person' ? 'sensitive' : 'normal';
-
-const domainToAtomicFacet = (domain?: PastPatternDomain): AvatarMemoryFacet => {
-  switch (domain) {
-    case 'behavioral':
-      return 'behavioral_pattern';
-    case 'emotional':
-      return 'emotional_pattern';
-    case 'relational':
-      return 'relational_pattern';
-    case 'motivational':
-      return 'motivation';
-    case 'coping':
-      return 'recovery_resource';
-    case 'cognitive':
-    default:
-      return 'cognitive_pattern';
-  }
-};
-
-export const buildAtomicMemoryCandidates = (
-  extraction: AvatarStructuredExtraction,
-  memoryCandidates: AvatarMemoryCandidate[],
-  evidenceSources: AvatarGrowthContext['evidenceSources'] = [],
-): AvatarAtomicMemory[] => {
-  const durable = new Set(memoryCandidates.map((candidate) => candidate.statement));
-  const baseRefs = extraction.sourceEntryId
-    ? [
-        {
-          source: 'entry' as const,
-          id: extraction.sourceEntryId,
-          createdAt: extraction.occurredAt,
-          supplementId: extraction.sourceSupplementId,
-        },
-      ]
-    : [];
-  const candidates: AvatarAtomicMemory[] = extraction.signals
-    .filter((signal) => durable.has(signal.text) && signal.facet !== 'emotion')
-    .map((signal) => ({
-      id: stableId('atomic', [
-        signal.facet,
-        signal.text,
-        extraction.sourceEntryId,
-        extraction.sourceSupplementId,
-      ]),
-      statement: signal.text,
-      nature: facetToNature(signal.facet),
-      facets: [facetToAtomicFacet(signal.facet)],
-      tags: extraction.eventTags,
-      contexts: extraction.eventTags,
-      sourceRefs: [
-        ...baseRefs,
-        ...signal.evidence.map((evidence) => {
-          const sourceIndex = evidence.source === 'message' ? Number(evidence.id.replace(/^message-/, '')) - 1 : -1;
-          const mappedSource = Number.isInteger(sourceIndex) ? evidenceSources[sourceIndex] : undefined;
-          return {
-            source: mappedSource ? 'entry' as const : evidence.source === 'understanding' ? ('pattern' as const) : evidence.source,
-            id: mappedSource?.entryId ?? evidence.id,
-            excerpt: evidence.excerpt,
-            ...(typeof mappedSource?.createdAt === 'number' ? { createdAt: mappedSource.createdAt } : typeof evidence.createdAt === 'number' ? { createdAt: evidence.createdAt } : {}),
-            ...(mappedSource?.supplementId ? { supplementId: mappedSource.supplementId } : {}),
-          };
-        }),
-      ],
-      confidence: signal.confidence,
-      status: 'candidate' as const,
-      sensitivity: facetToSensitivity(signal.facet),
-      validFrom: extraction.occurredAt,
-      createdAt: extraction.occurredAt,
-    }));
-  // Multiple facets describe one statement from the same extraction, not separate memories.
-  // Never deduplicate historical records or similar statements from independent sources.
-  const grouped = new Map<string, AvatarAtomicMemory>();
-  for (const candidate of candidates) {
-    const existing = grouped.get(candidate.statement);
-    if (!existing) {
-      grouped.set(candidate.statement, candidate);
-      continue;
-    }
-    existing.facets = [...new Set([...existing.facets, ...candidate.facets])];
-    existing.sourceRefs.push(
-      ...candidate.sourceRefs.filter(
-        (ref) =>
-          !existing.sourceRefs.some(
-            (saved) =>
-              saved.source === ref.source && saved.id === ref.id && saved.excerpt === ref.excerpt,
-          ),
-      ),
-    );
-    if (existing.nature !== candidate.nature) existing.nature = 'inferred';
-    existing.confidence = Math.min(existing.confidence, candidate.confidence);
-    if (candidate.sensitivity === 'sensitive') existing.sensitivity = 'sensitive';
-  }
-  return [...grouped.values()];
-};
-
-export const atomicMemoryFromPattern = (
-  pattern: AvatarUnderstandingVersion,
-): AvatarAtomicMemory => ({
-  id: stableId('atomic_pattern', [pattern.id, pattern.statement]),
-  statement: pattern.statement,
-  nature: 'inferred',
-  facets: [domainToAtomicFacet(pattern.patternDomain)],
-  tags: [pattern.patternLabel, pattern.patternDomain]
-    .filter((item): item is string => Boolean(item))
-    .slice(0, 4),
-  contexts: [pattern.patternLabel, pattern.trigger].filter((item): item is string => Boolean(item)),
-  sourceRefs: [
-    { source: 'pattern', id: pattern.id, excerpt: pattern.patternLabel ?? pattern.statement },
-    ...pattern.sourceEntryIds.map((id) => ({ source: 'entry' as const, id })),
-  ],
-  confidence: pattern.status === 'confirmed' ? 0.82 : 0.58,
-  status:
-    pattern.status === 'confirmed'
-      ? 'confirmed'
-      : pattern.status === 'rejected'
-        ? 'rejected'
-        : 'candidate',
-  sensitivity:
-    pattern.patternDomain === 'relational' || pattern.patternDomain === 'emotional'
-      ? 'sensitive'
-      : 'normal',
-  createdAt: pattern.confirmedAt ?? pattern.createdAt,
-  ...(pattern.updatedAt ? { updatedAt: pattern.updatedAt } : {}),
-  ...(pattern.confirmedAt
-    ? { confirmedAt: pattern.confirmedAt, confirmedBy: 'user' as const }
-    : {}),
-  ...(pattern.retainedAfterSourceDeletion ? { retainedAfterSourceDeletion: true } : {}),
-});
+export { atomicMemoryFromPattern, buildAtomicMemoryCandidates };
 
 export class LocalStructuredExtractionProvider implements StructuredExtractionProvider {
   async extract(input: AvatarExtractionInput): Promise<AvatarStructuredExtraction> {
@@ -622,12 +461,22 @@ export const buildAvatarGrowthPreview = async (
     occurredAt: input.occurredAt ?? context.now ?? Date.now(),
   });
   const memoryCandidates = await memoryProvider.propose(extraction);
-  const atomicMemoryCandidates = buildAtomicMemoryCandidates(extraction, memoryCandidates, context.evidenceSources);
-  for (const candidate of atomicMemoryCandidates) {
+  const atomicMemoryCandidates = buildAtomicMemoryCandidates(
+    extraction,
+    memoryCandidates,
+    context.evidenceSources,
+  );
+  const graphPreview = await graphProvider.propose(extraction, memoryCandidates, context);
+  const safeAtomicMemoryCandidates = graphPreview.conflicts.length
+    ? atomicMemoryCandidates.flatMap((candidate) => {
+        const factualCandidate = withoutRecurringPatternFacets(candidate);
+        return factualCandidate ? [factualCandidate] : [];
+      })
+    : atomicMemoryCandidates;
+  for (const candidate of safeAtomicMemoryCandidates) {
     if (candidate.facets.includes('cognitive_pattern') && extraction.patternKey)
       candidate.patternKey = extraction.patternKey;
   }
-  const graphPreview = await graphProvider.propose(extraction, memoryCandidates, context);
   const recallEntryIds = selectAvatarRecallMemories(
     context.entries ?? [],
     [extraction.summary, ...extraction.moodTags, ...extraction.eventTags].join(' '),
@@ -637,7 +486,7 @@ export const buildAvatarGrowthPreview = async (
   return {
     extraction,
     memoryCandidates,
-    atomicMemoryCandidates,
+    atomicMemoryCandidates: safeAtomicMemoryCandidates,
     temporalFacts: graphPreview.facts,
     temporalEdges: graphPreview.edges,
     conflicts: graphPreview.conflicts,

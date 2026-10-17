@@ -76,7 +76,7 @@ it('keeps canonical past and future projections out of the archive while allowin
   expect(isDirectionCandidate({ nature: 'explicit', facets: ['preference'] })).toBe(false);
 });
 
-it('compares reviewed pattern versions and hides the comparison after forgetting', () => {
+it('keeps reviewed pattern revision history for audit and removes it after forgetting', () => {
   const memory = seed();
   saveArchiveMemory(memory, '过去我习惯独自完成', 'confirmed');
   saveArchiveMemory(memory, '现在我会先判断是否需要协作', 'confirmed');
@@ -109,7 +109,7 @@ it('classifies identity before evidence and only compares explicitly linked revi
   expect(archiveChanges([{ ...base, statement: '孤立的编辑记录' }], [])).toEqual([]);
 });
 
-it('keeps formatting-only edits out of my changes', () => {
+it('keeps formatting-only edits out of revision history', () => {
   expect(
     hasMeaningfulStatementChange('我会先留出空间，再做决定。', '我会先留出空间，再做决定'),
   ).toBe(false);

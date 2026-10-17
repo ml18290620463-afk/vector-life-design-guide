@@ -34,6 +34,17 @@ describe('pastSearch', () => {
     expect(searchPastEntries(entries, '  ')).toEqual(entries);
     expect(searchPastEntries(entries, 'missing')).toEqual([]);
   });
+
+  it('appends a small same-theme recall after literal matches without changing multi-word search', () => {
+    const exact = { ...entry('exact', 30), content: '今天感到焦虑' };
+    const related = { ...entry('related', 20), content: '项目压力很大' };
+    const unrelated = { ...entry('unrelated', 10), content: '今天散步了' };
+    const entries = [exact, related, unrelated];
+
+    expect(searchPastEntries(entries, '焦虑')).toEqual([exact, related]);
+    expect(searchPastEntries(entries, '焦虑 项目')).toEqual([]);
+    expect(entries).toEqual([exact, related, unrelated]);
+  });
 });
 
 it('matches combined tags, supplements and link titles without changing chronology', () => {

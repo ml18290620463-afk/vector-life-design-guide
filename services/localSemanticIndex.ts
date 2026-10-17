@@ -50,10 +50,21 @@ const CONCEPT_TERMS: Record<string, string[]> = {
   ],
   family: ['家庭', '家人', '父母', '孩子', '妈妈', '爸爸', 'family', 'parent', 'child'],
   health: ['健康', '身体', '睡眠', '运动', '疼痛', '医院', 'health', 'sleep', 'exercise'],
-  emotion: ['焦虑', '开心', '愤怒', '疲惫', '难过', '平静', '压力', 'emotion', 'anxious', 'stress'],
+  emotion: ['焦虑', '紧张', '开心', '愤怒', '疲惫', '难过', '平静', '压力', 'emotion', 'anxious', 'stress'],
   growth: ['成长', '学习', '复盘', '意识', '改变', '突破', '经验', 'growth', 'learn', 'reflect'],
   finance: ['财务', '收入', '预算', '投资', '花费', '工资', 'finance', 'budget', 'income'],
   rest: ['休息', '放松', '旅行', '散步', '娱乐', '休假', 'rest', 'relax', 'travel'],
+};
+
+/**
+ * Small, inspectable concept groups for limited recall when an exact search has too few results.
+ * This does not claim that related wording is an exact match.
+ */
+export const semanticConceptsForText = (text: string): string[] => {
+  const normalized = text.toLocaleLowerCase();
+  return Object.entries(CONCEPT_TERMS)
+    .filter(([, terms]) => terms.some((term) => normalized.includes(term)))
+    .map(([concept]) => concept);
 };
 
 const normalizeTag = (tag: string): string =>
