@@ -14,8 +14,16 @@ export const shouldShowGlobalBackground = (appState: AppState) =>
     AppState.NOW_AVATAR_CHAT,
   ].includes(appState);
 
-export const shouldShowLoadingOverlay = (loading: boolean, appState: AppState) =>
-  loading && ![AppState.COVER, AppState.ONBOARDING, AppState.LOGIN].includes(appState);
+/**
+ * Main modules remain available while IndexedDB refreshes in the background.
+ *
+ * A vault read can legitimately outlive navigation and used to place a fixed,
+ * full-screen loader above Past, Now, Future, and Avatar. That made a ready
+ * screen feel stalled even though it could already render its last known (or
+ * empty) state. Entry-gate screens own their own initial loading fallbacks, so
+ * there is no main-shell case that should block the entire interface here.
+ */
+export const shouldShowLoadingOverlay = (_loading: boolean, _appState: AppState) => false;
 
 export const isPastSurfaceState = (appState: AppState) => [AppState.PAST].includes(appState);
 

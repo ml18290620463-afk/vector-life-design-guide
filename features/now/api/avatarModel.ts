@@ -5,14 +5,31 @@ export interface AvatarModelConfig {
   model: string;
   endpoint?: AvatarModelEndpoint;
 }
+export type AvatarModelPreference = Omit<AvatarModelConfig, 'apiKey'>;
+type StoredAvatarModelPreference = AvatarModelPreference & { rememberKey?: boolean };
 const SESSION_KEY = 'vector.avatar.model.session.v1';
 const REMEMBERED_KEY = 'vector.avatar.model.remembered.v1';
+const PREFERENCE_KEY = 'vector.avatar.model.preference.v1';
 
 const parseAvatarModel = (raw: string | null): AvatarModelConfig | null => {
   try {
     const value = JSON.parse(raw || 'null');
     return value &&
       ['baseUrl', 'apiKey', 'model'].every((k) => typeof value[k] === 'string') &&
+      (value.endpoint === undefined || value.endpoint === 'chat' || value.endpoint === 'responses')
+      ? value
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const parseAvatarModelPreference = (raw: string | null): StoredAvatarModelPreference | null => {
+  try {
+    const value = JSON.parse(raw || 'null');
+    return value &&
+      ['baseUrl', 'model'].every((key) => typeof value[key] === 'string') &&
+      (value.rememberKey === undefined || typeof value.rememberKey === 'boolean') &&
       (value.endpoint === undefined || value.endpoint === 'chat' || value.endpoint === 'responses')
       ? value
       : null;
@@ -30,15 +47,50 @@ export function readAvatarModel(): AvatarModelConfig | null {
 export function hasRememberedAvatarModel(): boolean {
   return parseAvatarModel(localStorage.getItem(REMEMBERED_KEY)) !== null;
 }
-export function saveAvatarModel(value: AvatarModelConfig | null, remember = false) {
+export function readAvatarModelPreference(): AvatarModelPreference | null {
+  const config = parseAvatarModel(sessionStorage.getItem(SESSION_KEY)) ||
+    parseAvatarModel(localStorage.getItem(REMEMBERED_KEY));
+  return config
+    ? { baseUrl: config.baseUrl, model: config.model, endpoint: config.endpoint }
+    : (() => {
+        const preference = parseAvatarModelPreference(localStorage.getItem(PREFERENCE_KEY));
+        return preference
+          ? {
+              baseUrl: preference.baseUrl,
+              model: preference.model,
+              endpoint: preference.endpoint,
+            }
+          : null;
+      })();
+}
+/**
+ * The remembered-key choice is a device preference too. Keep the historical
+ * default of remembering a successfully verified connection, while preserving
+ * an explicit opt-out across a fresh browser session.
+ */
+export function readAvatarModelRememberPreference(): boolean {
+  const preference = parseAvatarModelPreference(localStorage.getItem(PREFERENCE_KEY));
+  return preference?.rememberKey ?? true;
+}
+export function saveAvatarModel(value: AvatarModelConfig | null, remember = true) {
   if (value) {
     const payload = JSON.stringify(value);
     sessionStorage.setItem(SESSION_KEY, payload);
+    localStorage.setItem(
+      PREFERENCE_KEY,
+      JSON.stringify({
+        baseUrl: value.baseUrl,
+        model: value.model,
+        endpoint: value.endpoint,
+        rememberKey: remember,
+      }),
+    );
     if (remember) localStorage.setItem(REMEMBERED_KEY, payload);
     else localStorage.removeItem(REMEMBERED_KEY);
   } else {
     sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(REMEMBERED_KEY);
+    localStorage.removeItem(PREFERENCE_KEY);
   }
 }
 export const modelError = (code: string) =>

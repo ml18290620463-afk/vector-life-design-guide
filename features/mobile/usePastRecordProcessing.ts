@@ -12,6 +12,11 @@ import {
   searchLocalSemanticIndex,
 } from '../../services/localSemanticIndex';
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
 /** Past schedules evidence delivery; avatar owns interpretation. Leaving cancels remaining work. */
 export function usePastRecordProcessing(
   entries: DiaryEntry[],
@@ -22,15 +27,22 @@ export function usePastRecordProcessing(
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    const accessible = entries.filter((entry) => !entry.isSample && isAccessibleDiaryEntry(entry));
-    const index = buildLocalSemanticIndex(accessible);
-    const evidenceIndex = buildLocalSemanticIndex(
-      accessible.map((item) => ({ ...item, title: '', tags: [], supplements: undefined })),
-    );
-    const corpusFingerprint = accessible
-      .map((entry) => `${entry.id}:${pastRecordFingerprint(entry)}`)
-      .join('|');
-    void (async () => {
+    const idleWindow = window as IdleWindow;
+    const run = () => {
+      if (cancelled) return;
+      // Building the semantic indexes can be expensive for a long archive. It starts only after
+      // the timeline has had an opportunity to paint, so opening Past always prioritises review.
+      const accessible = entries.filter(
+        (entry) => !entry.isSample && isAccessibleDiaryEntry(entry),
+      );
+      const index = buildLocalSemanticIndex(accessible);
+      const evidenceIndex = buildLocalSemanticIndex(
+        accessible.map((item) => ({ ...item, title: '', tags: [], supplements: undefined })),
+      );
+      const corpusFingerprint = accessible
+        .map((entry) => `${entry.id}:${pastRecordFingerprint(entry)}`)
+        .join('|');
+      void (async () => {
       setError('');
       for (const entry of accessible) {
         const fingerprint = pastRecordFingerprint(entry);
@@ -91,9 +103,14 @@ export function usePastRecordProcessing(
         await new Promise((resolve) => setTimeout(resolve, 0));
         if (cancelled) return;
       }
-    })();
+      })();
+    };
+    const idleHandle = idleWindow.requestIdleCallback?.(run, { timeout: 1200 });
+    const timeoutHandle = idleHandle === undefined ? window.setTimeout(run, 180) : undefined;
     return () => {
       cancelled = true;
+      if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (timeoutHandle !== undefined) window.clearTimeout(timeoutHandle);
     };
   }, [entries, onRelatedEntriesResolved, attempt]);
   return { error, retry: () => setAttempt((value) => value + 1) };

@@ -28,6 +28,7 @@ type DesktopNowFrameProps = {
   avatarLaunchContext?: AvatarLaunchContext;
   onSelectEntry?: (entryId: string) => void;
   onNavigate: (tab: MobileMainTab) => void;
+  onNavigateIntent?: (tab: MobileMainTab) => void;
 };
 
 export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
@@ -49,12 +50,14 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
   avatarLaunchContext,
   onSelectEntry,
   onNavigate,
+  onNavigateIntent,
 }) => (
   <AppPageFrame
     variant={nowRoute === 'avatar-chat' ? 'avatar' : 'now'}
     activeTab={nowRoute === 'avatar-chat' ? 'avatar' : 'now'}
     language={language}
     onNavigate={onNavigate}
+    onNavigateIntent={onNavigateIntent}
   >
     <NowFlow
       onNavigateModule={onNavigate}

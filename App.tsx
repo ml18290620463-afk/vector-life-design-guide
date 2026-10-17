@@ -7,7 +7,6 @@ import { useAppBilling } from './hooks/useAppBilling';
 import { useAppStore } from './stores/appStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppMotionConfig } from './components/AppMotionConfig';
-import { ScreenLoader } from './components/ScreenLoader';
 import { AppOverlayLayer } from './components/AppOverlayLayer';
 import { AppCommandPaletteLayer } from './components/AppCommandPaletteLayer';
 import { AppEntryGateScreens } from './components/AppEntryGateScreens';
@@ -26,7 +25,6 @@ import { useVaultAuthActions } from './hooks/useVaultAuthActions';
 import { getHomePrinciples } from './lib/homePrinciples';
 import {
   shouldShowGlobalBackground,
-  shouldShowLoadingOverlay,
   shouldUseMobileShell,
 } from './lib/appShellRules';
 import { DEFAULT_AVATAR_CONTEXT } from './features/avatar/types';
@@ -154,7 +152,30 @@ const App: React.FC = () => {
     handleNowRouteChange,
     handleOpenArchive,
     handleOpenNow,
+    preloadMainModule,
   } = useAppMainNavigation({ setAppState, setNowRoute });
+
+  // Main modules share a persistent navigation bar, so waiting until a click
+  // to start their first chunk request makes the product feel unresponsive.
+  // Warm them once the entry surface has settled; individual navigation still
+  // retains its race protection if the user clicks before this work finishes.
+  useEffect(() => {
+    let cancelled = false;
+    const warmMainModules = () => {
+      if (cancelled) return;
+      void Promise.allSettled([
+        preloadMainModule('past'),
+        preloadMainModule('future'),
+        preloadMainModule('now'),
+        preloadMainModule('avatar'),
+      ]);
+    };
+    const timer = window.setTimeout(warmMainModules, 450);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [preloadMainModule]);
 
   // Phase 5 (5.1 + 5.2) — license + Stripe Checkout composite hook.
   const billing = useAppBilling();
@@ -217,7 +238,6 @@ const App: React.FC = () => {
   };
   const useMobileShell = shouldUseMobileShell(isMobileExperience(), mobileMainTab);
   const showGlobalBackground = shouldShowGlobalBackground(appState);
-  const showLoadingOverlay = shouldShowLoadingOverlay(loading, appState);
 
   if (loadError)
     return (
@@ -259,8 +279,6 @@ const App: React.FC = () => {
             onLockVault={passwordHash ? () => setIsUnlocked(false) : undefined}
             onWipeData={passwordHash ? handleWipeData : undefined}
           />
-
-          {showLoadingOverlay && <ScreenLoader language={language} />}
 
           {entryReadError && (
             <aside
@@ -315,6 +333,7 @@ const App: React.FC = () => {
             nowRoute={nowRoute}
             onExitNow={handleExitNow}
             onMainModuleNavigate={navigateMainModule}
+            onMainModuleIntent={preloadMainModule}
             onMobileTabChange={navigateMobileTabWithAvatarContext}
             onNowRecordComplete={handleNowRecordComplete}
             onNowRouteChange={changeNowRoute}

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { startTransition, useCallback, useRef } from 'react';
 import { AppState } from '../types';
 import { getMainTabPathname, isNowSurfacePathname } from '../lib/appPathRules';
 import { pushNowPath, rememberMainRoute } from '../lib/appEntryRoutes';
@@ -10,6 +10,9 @@ import {
 } from '../features/mobile/mobileRoutes';
 import type { MobileMainTab } from '../features/mobile/types';
 import type { NowRoute } from '../features/now/types/now';
+import { preloadFuturePage, preloadPastRepository } from '../features/mobile/mobileLazyComponents';
+import { preloadNowFlow } from '../features/now/nowLazyComponents';
+import { preloadAvatarChatPage } from '../features/now/avatarChatLazy';
 
 type UseAppMainNavigationOptions = {
   setAppState: (state: AppState) => void;
@@ -17,35 +20,75 @@ type UseAppMainNavigationOptions = {
 };
 
 export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNavigationOptions) => {
+  const navigationRequestRef = useRef(0);
+  const preloadMainModule = useCallback((tab: MobileMainTab) => {
+    if (tab === 'past') return preloadPastRepository();
+    if (tab === 'future') return preloadFuturePage();
+    if (tab === 'now') return preloadNowFlow();
+    if (tab === 'avatar') {
+      return Promise.all([preloadNowFlow(), preloadAvatarChatPage()]);
+    }
+    return Promise.resolve();
+  }, []);
+
+  /**
+   * A route is committed only after its lazy chunk is ready. This retains the current,
+   * usable screen instead of replacing it with a full-screen loading mask. The request
+   * id also ensures a quick second tap always wins over an earlier navigation.
+   */
+  const commitWhenReady = useCallback(
+    (tab: MobileMainTab, commit: () => void) => {
+      const requestId = ++navigationRequestRef.current;
+      void preloadMainModule(tab)
+        .catch(() => undefined)
+        .then(() => {
+          if (requestId !== navigationRequestRef.current) return;
+          startTransition(commit);
+        });
+    },
+    [preloadMainModule],
+  );
+
   const handleMobileTabChange = useCallback(
     (tab: MobileMainTab) => {
-      navigateMobileTab(tab);
-      rememberMainRoute(getMainTabPathname(tab));
-      if (tab === 'avatar') {
-        setNowRoute('avatar-chat');
-      } else {
-        setNowRoute('now');
-      }
-      setAppState(getMobileTabAppState(tab));
+      commitWhenReady(tab, () => {
+        navigateMobileTab(tab);
+        rememberMainRoute(getMainTabPathname(tab));
+        if (tab === 'avatar') {
+          setNowRoute('avatar-chat');
+        } else {
+          setNowRoute('now');
+        }
+        setAppState(getMobileTabAppState(tab));
+      });
     },
-    [setAppState, setNowRoute],
+    [commitWhenReady, setAppState, setNowRoute],
   );
 
   const handleNowRouteChange = useCallback(
     (route: NowRoute) => {
-      setNowRoute(route);
-      rememberMainRoute(
-        route === 'avatar-chat' ? '/avatar' : route === 'tags' ? '/now/tags' : '/now',
-      );
-      if (isMobileExperience() && route === 'avatar-chat') {
-        navigateMobileTab('avatar');
-        setAppState(getNowRouteAppState(route));
-        return;
-      }
-      pushNowPath(route);
-      setAppState(getNowRouteAppState(route));
+      const tab: MobileMainTab = route === 'avatar-chat' ? 'avatar' : 'now';
+      const prepare = route === 'avatar-chat' ? preloadMainModule('avatar') : preloadMainModule('now');
+      const requestId = ++navigationRequestRef.current;
+      void prepare
+        .catch(() => undefined)
+        .then(() => {
+          if (requestId !== navigationRequestRef.current) return;
+          startTransition(() => {
+            rememberMainRoute(
+              route === 'avatar-chat' ? '/avatar' : route === 'tags' ? '/now/tags' : '/now',
+            );
+            if (isMobileExperience() && route === 'avatar-chat') {
+              navigateMobileTab(tab);
+            } else {
+              pushNowPath(route);
+            }
+            setNowRoute(route);
+            setAppState(getNowRouteAppState(route));
+          });
+        });
     },
-    [setAppState, setNowRoute],
+    [preloadMainModule, setAppState, setNowRoute],
   );
 
   const handleOpenNow = useCallback(
@@ -60,9 +103,11 @@ export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNav
       handleMobileTabChange('past');
       return;
     }
-    rememberMainRoute('/past');
-    setAppState(AppState.PAST);
-  }, [handleMobileTabChange, setAppState]);
+    commitWhenReady('past', () => {
+      rememberMainRoute('/past');
+      setAppState(AppState.PAST);
+    });
+  }, [commitWhenReady, handleMobileTabChange, setAppState]);
 
   const handleMainModuleNavigate = useCallback(
     (tab: MobileMainTab) => {
@@ -71,34 +116,42 @@ export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNav
         return;
       }
       if (tab === 'past') {
-        pushAppPath(getMainTabPathname('past'), {});
-        rememberMainRoute('/past');
-        setNowRoute('now');
-        setAppState(AppState.PAST);
+        commitWhenReady(tab, () => {
+          pushAppPath(getMainTabPathname('past'), {});
+          rememberMainRoute('/past');
+          setNowRoute('now');
+          setAppState(AppState.PAST);
+        });
         return;
       }
       if (tab === 'future') {
-        pushAppPath(getMainTabPathname('future'), {});
-        rememberMainRoute('/future');
-        setNowRoute('now');
-        setAppState(AppState.FUTURE);
+        commitWhenReady(tab, () => {
+          pushAppPath(getMainTabPathname('future'), {});
+          rememberMainRoute('/future');
+          setNowRoute('now');
+          setAppState(AppState.FUTURE);
+        });
         return;
       }
       if (tab === 'avatar') {
-        pushAppPath(getMainTabPathname('avatar'), { nowRoute: 'avatar-chat' });
-        rememberMainRoute('/avatar');
-        setNowRoute('avatar-chat');
-        setAppState(getMobileTabAppState(tab));
+        commitWhenReady(tab, () => {
+          pushAppPath(getMainTabPathname('avatar'), { nowRoute: 'avatar-chat' });
+          rememberMainRoute('/avatar');
+          setNowRoute('avatar-chat');
+          setAppState(getMobileTabAppState(tab));
+        });
         return;
       }
       if (tab === 'now') {
-        pushAppPath(getMainTabPathname('now'), { nowRoute: 'now' });
-        rememberMainRoute('/now');
-        setNowRoute('now');
-        setAppState(getMobileTabAppState(tab));
+        commitWhenReady(tab, () => {
+          pushAppPath(getMainTabPathname('now'), { nowRoute: 'now' });
+          rememberMainRoute('/now');
+          setNowRoute('now');
+          setAppState(getMobileTabAppState(tab));
+        });
       }
     },
-    [handleMobileTabChange, setAppState, setNowRoute],
+    [commitWhenReady, handleMobileTabChange, setAppState, setNowRoute],
   );
 
   const returnToPast = useCallback(() => {
@@ -106,13 +159,15 @@ export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNav
       handleMobileTabChange('past');
       return;
     }
-    if (typeof window !== 'undefined' && isNowSurfacePathname(window.location.pathname)) {
-      pushAppPath(getMainTabPathname('past'), {});
-    }
-    rememberMainRoute('/past');
-    setNowRoute('now');
-    setAppState(AppState.PAST);
-  }, [handleMobileTabChange, setAppState, setNowRoute]);
+    commitWhenReady('past', () => {
+      if (typeof window !== 'undefined' && isNowSurfacePathname(window.location.pathname)) {
+        pushAppPath(getMainTabPathname('past'), {});
+      }
+      rememberMainRoute('/past');
+      setNowRoute('now');
+      setAppState(AppState.PAST);
+    });
+  }, [commitWhenReady, handleMobileTabChange, setAppState, setNowRoute]);
 
   return {
     handleExitNow: returnToPast,
@@ -122,5 +177,6 @@ export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNav
     handleNowRouteChange,
     handleOpenArchive,
     handleOpenNow,
+    preloadMainModule,
   };
 };

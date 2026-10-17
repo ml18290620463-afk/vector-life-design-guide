@@ -22,8 +22,10 @@ describe('appShellRules', () => {
     expect(shouldShowGlobalBackground(AppState.ONBOARDING)).toBe(false);
   });
 
-  it('hides loading overlay on entry gate surfaces', () => {
-    expect(shouldShowLoadingOverlay(true, AppState.PAST)).toBe(true);
+  it('keeps every surface usable while background data loading completes', () => {
+    expect(shouldShowLoadingOverlay(true, AppState.PAST)).toBe(false);
+    expect(shouldShowLoadingOverlay(true, AppState.NOW)).toBe(false);
+    expect(shouldShowLoadingOverlay(true, AppState.FUTURE)).toBe(false);
     expect(shouldShowLoadingOverlay(true, AppState.COVER)).toBe(false);
     expect(shouldShowLoadingOverlay(false, AppState.PAST)).toBe(false);
   });

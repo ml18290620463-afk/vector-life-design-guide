@@ -57,6 +57,7 @@ type AppMainModuleScreensProps = {
   nowRoute: NowRoute;
   onExitNow: () => void;
   onMainModuleNavigate: (tab: MobileMainTab) => void;
+  onMainModuleIntent?: (tab: MobileMainTab) => void;
   onMobileTabChange: (tab: MobileMainTab) => void;
   onNowRecordComplete: () => void;
   onNowRouteChange: (route: NowRoute) => void;
@@ -92,6 +93,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   nowRoute,
   onExitNow,
   onMainModuleNavigate,
+  onMainModuleIntent,
   onMobileTabChange,
   onNowRecordComplete,
   onNowRouteChange,
@@ -157,6 +159,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             activeTab={mobileMainTab}
             language={language}
             onTabChange={onMobileTabChange}
+            onTabIntent={onMainModuleIntent}
           >
             {isPastSurfaceState(appState) && (
               <PastRepository
@@ -224,7 +227,12 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
 
       {!useMobileShell && isPastSurfaceState(appState) && (
         <Suspense fallback={<ScreenLoader language={language} />}>
-          <AppPageFrame activeTab="past" language={language} onNavigate={onMainModuleNavigate}>
+          <AppPageFrame
+            activeTab="past"
+            language={language}
+            onNavigate={onMainModuleNavigate}
+            onNavigateIntent={onMainModuleIntent}
+          >
             <PastRepository
               draftPassword={draftPassword}
               onAppendSupplement={onAppendSupplement}
@@ -274,13 +282,19 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               if (entry) onSelectEntry(entry);
             }}
             onNavigate={onMainModuleNavigate}
+            onNavigateIntent={onMainModuleIntent}
           />
         </Suspense>
       )}
 
       {!useMobileShell && appState === AppState.FUTURE && (
         <Suspense fallback={<ScreenLoader language={language} />}>
-          <AppPageFrame activeTab="future" language={language} onNavigate={onMainModuleNavigate}>
+          <AppPageFrame
+            activeTab="future"
+            language={language}
+            onNavigate={onMainModuleNavigate}
+            onNavigateIntent={onMainModuleIntent}
+          >
             <FuturePage
               initialGoalId={futureGoalId}
               initialActionContext={futureActionContext}

@@ -42,7 +42,9 @@ test('分身模型设置会校验、保留服务商草稿并在解锁后恢复�
   await expect(page.getByLabel('API Key', { exact: true })).toHaveAttribute('aria-invalid', 'true');
 
   await page.getByLabel('API Key', { exact: true }).fill('test-openai-key');
-  await page.getByLabel('记住 API Key，下次自动使用').check();
+  // Keeping a verified key is the default, so users do not need to opt in
+  // again after each browser session.
+  await expect(page.getByLabel('记住 API Key，下次自动使用')).toBeChecked();
   await page.getByLabel('服务商', { exact: true }).selectOption('1');
   await page.getByLabel('API Key', { exact: true }).fill('test-deepseek-key');
   await page.getByRole('button', { name: '手动输入', exact: true }).click();

@@ -8,6 +8,7 @@ interface MobileShellProps {
   activeTab: MobileMainTab;
   language: Language;
   onTabChange: (tab: MobileMainTab) => void;
+  onTabIntent?: (tab: MobileMainTab) => void;
   children: React.ReactNode;
 }
 
@@ -17,6 +18,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   activeTab,
   language,
   onTabChange,
+  onTabIntent,
   children,
 }) => {
   const previousTabRef = useRef(activeTab);
@@ -51,13 +53,17 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         {getMainModules(language).find((item) => item.id === activeTab)?.title}
       </h1>
       <div
-        key={activeTab}
         className={`mobile-shell__content mobile-shell__content--${transitionDirection}`}
         data-transition-direction={transitionDirection}
       >
         {children}
       </div>
-      <MobileMainNav activeTab={activeTab} language={language} onTabChange={onTabChange} />
+      <MobileMainNav
+        activeTab={activeTab}
+        language={language}
+        onTabChange={onTabChange}
+        onTabIntent={onTabIntent}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useFuture } from '../../hooks/useFuture';
 import { generateSecureId } from '../../services/idGenerator';
 import type {
@@ -12,7 +12,7 @@ import type {
 import { useNowDraft } from './hooks/useNowDraft';
 import { useToast } from './hooks/useToast';
 import { TagSelectPage } from './components/TagSelectPage';
-import { AvatarChatPage } from './components/AvatarChatPage';
+import { AvatarChatPage } from './avatarChatLazy';
 import { NowPage } from './components/NowPage';
 import {
   buildRecordFromDraft,
@@ -252,32 +252,36 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         />
       )}
       {route === 'avatar-chat' && (
-        <AvatarChatPage
-          principles={principles}
-          actions={actions}
-          future={future}
-          onNavigateModule={onNavigateModule}
-          draft={draft}
-          setDraft={setDraft}
-          pastEntries={pastEntries}
-          sending={sending}
-          mobileShell={mobileShell}
-          onBack={() => onRouteChange('now')}
-          onRouteChange={onRouteChange}
-          onSend={(preview, sessionId) => {
-            const next = {
-              ...draft,
-              text: preview.text,
-              mood_tags: preview.mood_tags,
-              event_tags: preview.event_tags,
-              updated_at: new Date().toISOString(),
-            };
-            return submitRecord('avatar_assisted', next, sessionId, preview.principle_outcome);
-          }}
-          showToast={showToast}
-          launchContext={avatarLaunchContext}
-          onSelectEntry={onSelectEntry}
-        />
+        <Suspense
+          fallback={<div className="now-shell" aria-busy="true" aria-label="正在打开分身" />}
+        >
+          <AvatarChatPage
+            principles={principles}
+            actions={actions}
+            future={future}
+            onNavigateModule={onNavigateModule}
+            draft={draft}
+            setDraft={setDraft}
+            pastEntries={pastEntries}
+            sending={sending}
+            mobileShell={mobileShell}
+            onBack={() => onRouteChange('now')}
+            onRouteChange={onRouteChange}
+            onSend={(preview, sessionId) => {
+              const next = {
+                ...draft,
+                text: preview.text,
+                mood_tags: preview.mood_tags,
+                event_tags: preview.event_tags,
+                updated_at: new Date().toISOString(),
+              };
+              return submitRecord('avatar_assisted', next, sessionId, preview.principle_outcome);
+            }}
+            showToast={showToast}
+            launchContext={avatarLaunchContext}
+            onSelectEntry={onSelectEntry}
+          />
+        </Suspense>
       )}
       {toastMessage && <div className="now-toast">{toastMessage}</div>}
     </div>

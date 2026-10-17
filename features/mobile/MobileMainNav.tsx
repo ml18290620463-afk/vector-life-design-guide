@@ -7,12 +7,14 @@ interface MobileMainNavProps {
   activeTab: MobileMainTab;
   language: Language;
   onTabChange: (tab: MobileMainTab) => void;
+  onTabIntent?: (tab: MobileMainTab) => void;
 }
 
 export const MobileMainNav: React.FC<MobileMainNavProps> = ({
   activeTab,
   language,
   onTabChange,
+  onTabIntent,
 }) => (
   <nav
     className="mobile-main-nav"
@@ -28,6 +30,8 @@ export const MobileMainNav: React.FC<MobileMainNavProps> = ({
           aria-label={title}
           aria-current={isActive ? 'page' : undefined}
           onClick={() => onTabChange(id)}
+          onTouchStart={() => onTabIntent?.(id)}
+          onFocus={() => onTabIntent?.(id)}
         >
           <Icon className="mobile-main-nav__icon" aria-hidden="true" />
           <span className="mobile-main-nav__label">{title}</span>

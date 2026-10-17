@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import {
-  hasRememberedAvatarModel,
   readAvatarModel,
+  readAvatarModelPreference,
+  readAvatarModelRememberPreference,
   saveAvatarModel,
   modelError,
   type AvatarModelConfig,
@@ -47,8 +48,9 @@ export function AvatarModelSettings({
   const modelRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
   const advancedToggleRef = useRef<HTMLButtonElement>(null);
   const savedConfig = readAvatarModel();
+  const savedPreference = readAvatarModelPreference();
   const [config, setConfig] = useState<AvatarModelConfig>(
-    () => savedConfig || { ...presets[0], apiKey: '' },
+    () => savedConfig || { ...(savedPreference || presets[0]), apiKey: '' },
   );
   // A saved, unfamiliar model must not hide the provider's model picker. Keep
   // it as one selectable option until account discovery can replace it.
@@ -58,7 +60,7 @@ export function AvatarModelSettings({
   const providerDrafts = useRef(new Map<string, AvatarModelConfig>());
   const [models, setModels] = useState<string[]>([]);
   const [showKey, setShowKey] = useState(false);
-  const [rememberKey, setRememberKey] = useState(() => hasRememberedAvatarModel());
+  const [rememberKey, setRememberKey] = useState(readAvatarModelRememberPreference);
   const [showAdvanced, setShowAdvanced] = useState(
     savedConfig ? !presets.slice(0, -1).some((p) => p.baseUrl === savedConfig.baseUrl) : false,
   );
@@ -403,8 +405,7 @@ export function AvatarModelSettings({
             <span>在此设备浏览器中记住 API Key，下次自动使用</span>
           </label>
           <small className="avatar-model-hint">
-            仅在你的个人设备上启用。该 Key
-            会保存在浏览器本地存储中；关闭此选项后仅保留到本次浏览器会话结束。
+            默认在此设备保存已验证的连接。关闭后仍会保留服务商和模型，Key 仅保留到本次浏览器会话结束。
           </small>
           {fieldErrors.apiKey && (
             <small id="avatar-api-key-error" className="avatar-model-error">

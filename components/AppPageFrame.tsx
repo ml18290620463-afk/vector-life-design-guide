@@ -11,6 +11,7 @@ type AppPageFrameProps = {
   activeTab: MobileMainTab;
   language: Language;
   onNavigate: (tab: MobileMainTab) => void;
+  onNavigateIntent?: (tab: MobileMainTab) => void;
 };
 
 export const AppPageFrame: FC<AppPageFrameProps> = ({
@@ -20,6 +21,7 @@ export const AppPageFrame: FC<AppPageFrameProps> = ({
   activeTab,
   language,
   onNavigate,
+  onNavigateIntent,
 }) => (
   <div
     className={[
@@ -32,7 +34,12 @@ export const AppPageFrame: FC<AppPageFrameProps> = ({
       .filter(Boolean)
       .join(' ')}
   >
-    <DesktopMainNav activeTab={activeTab} language={language} onNavigate={onNavigate} />
+    <DesktopMainNav
+      activeTab={activeTab}
+      language={language}
+      onNavigate={onNavigate}
+      onNavigateIntent={onNavigateIntent}
+    />
     <div className="desktop-workspace" data-workspace={activeTab}>
       <h1 className="desktop-workspace__accessible-title">
         {getMainModules(language).find((item) => item.id === activeTab)?.title}
