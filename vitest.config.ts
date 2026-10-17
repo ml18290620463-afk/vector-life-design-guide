@@ -1,14 +1,20 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // `node_modules` is shared by the managed worktree and is not always
+  // writable. Keep Vitest's transformed-module cache inside this checkout.
+  cacheDir: path.resolve(rootDir, '.vitest-cache'),
   resolve: {
     alias: {
       // The vite-plugin-pwa virtual module is only available when the
       // pwa plugin is loaded in vite.config.ts; vitest doesn't load
       // that plugin, so we stub it here so `import('virtual:pwa-register')`
       // resolves to a deterministic no-op `registerSW`.
-      'virtual:pwa-register': path.resolve(__dirname, 'lib/__mocks__/virtual-pwa-register.ts'),
+      'virtual:pwa-register': path.resolve(rootDir, 'lib/__mocks__/virtual-pwa-register.ts'),
     },
   },
   test: {

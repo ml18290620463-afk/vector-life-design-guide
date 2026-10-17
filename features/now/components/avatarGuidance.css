@@ -44,7 +44,7 @@
 .avatar-section-tabs {
   grid-area: tabs;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   width: 100%;
   min-width: 0;
@@ -1292,4 +1292,21 @@
 }
 .avatar-data-tools .avatar-reliability-card button {
   min-height: 44px;
+}
+
+.avatar-message-references {
+  display: block;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mobile-muted);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.avatar-library--compact {
+  min-height: 0;
 }

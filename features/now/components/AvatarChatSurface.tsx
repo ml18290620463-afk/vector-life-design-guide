@@ -50,34 +50,15 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
   return (
     <div className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}>
       {message.content}
-      {message.role === 'assistant' && message.modelAssistance && (
-        <details className="avatar-message-evidence">
-          <summary>本次依据与推断边界</summary>
-          <p>
-            此回复由模型辅助生成。
-            {message.modelAssistance.sourceCount > 0 && message.modelAssistance.earliestSourceDate
-              ? `它收到 ${message.modelAssistance.sourceCount} 条可核对的过去记录，时间范围为 ${new Date(message.modelAssistance.earliestSourceDate).toLocaleDateString('zh-CN')} 至 ${new Date(message.modelAssistance.latestSourceDate ?? message.modelAssistance.earliestSourceDate).toLocaleDateString('zh-CN')}。`
-              : '它没有收到可核对的过去记录。'}
-          </p>
-          {message.references?.length ? (
-            <ul>
-              {message.references.map((reference) => (
-                <li key={reference.entryId}>
-                  <button type="button" onClick={() => onSelectEntry?.(reference.entryId)}>
-                    {reference.title}（{new Date(reference.date).toLocaleDateString('zh-CN')}）
-                  </button>
-                  <span>：{reference.excerpt}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>本次没有从资料库检索到可引用资料。回答仅是模型的通用推断，请以你的实际情况判断。</p>
-          )}
-          {message.references?.length ? (
-            <p>以上是可打开核对的资料；其余表述属于模型推断，并非已确认事实。</p>
-          ) : null}
-        </details>
-      )}
+      {message.role === 'assistant' && message.references?.length ? (
+        <button
+          type="button"
+          className="avatar-message-references"
+          onClick={() => onSelectEntry?.(message.references![0].entryId)}
+        >
+          查看 {message.references.length} 条经历
+        </button>
+      ) : null}
     </div>
   );
 });
@@ -98,7 +79,7 @@ interface AvatarChatSurfaceProps {
   input: string;
   inputRef: RefObject<HTMLInputElement | null>;
   launchContext: AvatarLaunchContext;
-  libraryOpen: boolean;
+  libraryView: 'chat' | 'confirmed' | 'pending';
   memoryFacets: AvatarMemoryFacet[] | null;
   memoryNature: AvatarMemoryNature;
   candidateKind?: React.ComponentProps<typeof AvatarMemoryConfirm>['candidateKind'];
@@ -124,7 +105,7 @@ interface AvatarChatSurfaceProps {
   onEditTags: () => void;
   onGenerateMemory: () => void;
   onMemoryTextChange: (text: string) => void;
-  onOpenLibrary: (open: boolean) => void;
+  onSetLibraryView: (view: 'chat' | 'confirmed' | 'pending') => void;
   onOpenModelSettings: () => void;
   onShowEarlierMessages: () => void;
   onJumpToLatest: () => void;
@@ -165,7 +146,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   input,
   inputRef,
   launchContext,
-  libraryOpen,
+  libraryView,
   memoryFacets,
   memoryNature,
   candidateKind,
@@ -186,7 +167,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   onEditTags,
   onGenerateMemory,
   onMemoryTextChange,
-  onOpenLibrary,
+  onSetLibraryView,
   onOpenModelSettings,
   onShowEarlierMessages,
   onJumpToLatest,
@@ -224,27 +205,35 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             <button
               type="button"
               className="now-icon-button"
-              onClick={() => (libraryOpen ? onOpenLibrary(false) : onBack())}
-              aria-label={libraryOpen ? '返回对话' : '返回'}
+              onClick={() => (libraryView !== 'chat' ? onSetLibraryView('chat') : onBack())}
+              aria-label={libraryView !== 'chat' ? '返回对话' : '返回'}
             >
               <ArrowLeft size={20} />
             </button>
             <nav className="avatar-section-tabs" aria-label="记忆分身导航">
               <button
                 type="button"
-                className={!libraryOpen ? 'is-active' : ''}
-                aria-pressed={!libraryOpen}
-                onClick={() => onOpenLibrary(false)}
+                className={libraryView === 'chat' ? 'is-active' : ''}
+                aria-pressed={libraryView === 'chat'}
+                onClick={() => onSetLibraryView('chat')}
               >
-                聊天
+                对话
               </button>
               <button
                 type="button"
-                className={libraryOpen ? 'is-active' : ''}
-                aria-pressed={libraryOpen}
-                onClick={() => onOpenLibrary(true)}
+                className={libraryView === 'confirmed' ? 'is-active' : ''}
+                aria-pressed={libraryView === 'confirmed'}
+                onClick={() => onSetLibraryView('confirmed')}
               >
-                记忆档案
+                我的认识
+              </button>
+              <button
+                type="button"
+                className={libraryView === 'pending' ? 'is-active' : ''}
+                aria-pressed={libraryView === 'pending'}
+                onClick={() => onSetLibraryView('pending')}
+              >
+                待确认
               </button>
             </nav>
           </div>
@@ -284,17 +273,6 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           }
         />
       )}
-      {general && (
-        <details className="avatar-data-tools" open={reliabilityTask === 'backup' || undefined}>
-          <summary>数据与备份</summary>
-          <AvatarReliabilityAssistant
-            task="backup"
-            draft={draft}
-            onOpenDraft={onOpenDraft}
-            showToast={showToast}
-          />
-        </details>
-      )}
       {!general && (
         <section className="now-avatar-mode-intro">
           <div>
@@ -303,7 +281,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           </div>
         </section>
       )}
-      {general && libraryOpen && (
+      {general && libraryView !== 'chat' && (
         <AvatarMemoryLibrary
           memories={avatarMemories}
           historyMemories={storedAvatarMemories}
@@ -312,9 +290,10 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           onRefresh={onRefreshKnowledge}
           showToast={showToast}
           onAdd={onAddMemory}
+          view={libraryView}
         />
       )}
-      <div className="avatar-chat-content" hidden={libraryOpen}>
+      <div className="avatar-chat-content" hidden={libraryView !== 'chat'}>
         <section
           ref={chatListRef}
           className="now-chat-list"

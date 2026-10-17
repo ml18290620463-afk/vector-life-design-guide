@@ -280,9 +280,7 @@ describe('AvatarChatPage', () => {
     fireEvent.click(screen.getByText('发送'));
 
     expect(await screen.findByText('你好，今天过得怎么样？')).toBeTruthy();
-    fireEvent.click(screen.getByText('本次依据与推断边界'));
-    expect(screen.getByText(/此回复由模型辅助生成/)).toBeTruthy();
-    expect(screen.getByText(/模型的通用推断/)).toBeTruthy();
+    expect(screen.queryByText('本次依据与推断边界')).toBeNull();
     expect(fetch).toHaveBeenCalledWith(
       '/api/v1/avatar/chat',
       expect.objectContaining({ method: 'POST' }),
@@ -428,11 +426,10 @@ describe('AvatarChatPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '记忆档案' }));
+    fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
     expect(screen.queryByText('管理标签')).toBeNull();
     expect(screen.queryByText('工具与记录')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /基础与处境/ }));
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索我的认识' }), {
       target: { value: '职业发展' },
     });
     expect(screen.queryByText('用户正在优化分身记忆标签系统')).toBeNull();
@@ -603,7 +600,7 @@ describe('AvatarChatPage', () => {
         launchContext={{ mode: 'general', source: 'global' }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '记忆档案' }));
+    fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
     for (const label of [
       '基础事实',
       '事件经历',
@@ -616,7 +613,7 @@ describe('AvatarChatPage', () => {
     ]) {
       expect(screen.queryByRole('button', { name: new RegExp(label) })).toBeNull();
     }
-    fireEvent.click(screen.getByRole('button', { name: '新增记忆' }));
+    fireEvent.click(screen.getByRole('button', { name: '新增' }));
     expect((screen.getByRole('button', { name: '确认记住' }) as HTMLButtonElement).disabled).toBe(
       true,
     );
@@ -626,7 +623,7 @@ describe('AvatarChatPage', () => {
     expect(readAvatarAtomicMemories()).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: '暂不记住' }));
     expect(readAvatarAtomicMemories()).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: '新增记忆' }));
+    fireEvent.click(screen.getByRole('button', { name: '新增' }));
     fireEvent.change(screen.getByRole('textbox', { name: '提炼的信息' }), {
       target: { value: '我倾向使用简短直接的语句' },
     });
@@ -639,12 +636,11 @@ describe('AvatarChatPage', () => {
       confirmedBy: 'user',
     });
     expect(screen.queryByRole('dialog')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /偏好与边界/ }));
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索我的认识' }), {
       target: { value: '不存在的记忆' },
     });
     expect(screen.queryByText('我倾向使用简短直接的语句')).toBeNull();
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索我的认识' }), {
       target: { value: '简短' },
     });
     expect(screen.getByText('我倾向使用简短直接的语句')).toBeTruthy();
@@ -699,9 +695,8 @@ describe('AvatarChatPage', () => {
     });
     fireEvent.click(screen.getByText('发送'));
 
-    expect(screen.getByRole('complementary', { name: '备份与恢复' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '生成备份' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '选择备份文件' })).toBeTruthy();
+    expect(screen.getByText(/生成一份加密备份/)).toBeTruthy();
+    expect(screen.queryByRole('complementary', { name: '备份与恢复' })).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 

@@ -1,10 +1,13 @@
 import path from 'path';
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const git = (args: string[]) => {

@@ -49,3 +49,4 @@ backups/
 versions/V0-original/
 
 .vite/
+.vitest-cache/

@@ -16,6 +16,11 @@ import {
   isAccessibleDiaryEntry,
   parseAvatarQueryPlan,
 } from '../../../services/avatarQueryPlan';
+import {
+  buildAvatarEvidenceMetricReply,
+  findAvatarEvidenceMetric,
+} from '../../../services/avatarEvidenceMetrics';
+import { buildAvatarDecisionSupport } from '../../../services/avatarDecisionSupport';
 import { searchNeuralRelatedEntryIds } from '../../../services/neuralSemanticRecall';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionItem, DiaryEntry, Principle } from '../../../types';
@@ -110,7 +115,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const [input, setInput] = useState('');
   const [chatPending, setChatPending] = useState(false);
   const [modelSettingsOpen, setModelSettingsOpen] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryView, setLibraryView] = useState<'chat' | 'confirmed' | 'pending'>('chat');
   const [chatError, setChatError] = useState('');
   const [reliabilityTask, setReliabilityTask] = useState<
     import('../state/avatarReliabilityTasks').AvatarReliabilityTask | null
@@ -470,6 +475,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         content,
       );
     let localAnswer: string | null = null;
+    let localReferences: ChatMessage['references'];
     if (requestedReliabilityTask) {
       setReliabilityTask(requestedReliabilityTask);
       localAnswer = reliabilityReply(requestedReliabilityTask);
@@ -495,6 +501,40 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
           activePatterns.map((item, i) => `${i + 1}. ${item.statement}`).join('\n');
       } else setChoosingCorrection(false);
     }
+    const metric = findAvatarEvidenceMetric(content, pastEntries);
+    if (metric) {
+      localAnswer = buildAvatarEvidenceMetricReply(metric);
+      localReferences = metric.matches.flatMap((match) => {
+        const entry = pastEntries.find((candidate) => candidate.id === match.entryId);
+        if (!entry) return [];
+        return [{
+          entryId: entry.id,
+          title: entry.title || '未命名记录',
+          date: entry.createdAt,
+          excerpt: entry.content.replace(/\s+/g, ' ').trim().slice(0, 120),
+          reason: match.reason === 'tag' ? '明确标签' : '原文明确表达',
+        }];
+      });
+    }
+    const decisionSupport = buildAvatarDecisionSupport(
+      content,
+      pastEntries,
+      readAvatarUnderstandings(),
+    );
+    if (!localAnswer && decisionSupport) {
+      localAnswer = decisionSupport.text;
+      localReferences = decisionSupport.entryIds.flatMap((entryId) => {
+        const entry = pastEntries.find((candidate) => candidate.id === entryId);
+        if (!entry) return [];
+        return [{
+          entryId: entry.id,
+          title: entry.title || '未命名记录',
+          date: entry.createdAt,
+          excerpt: entry.content.replace(/\s+/g, ' ').trim().slice(0, 120),
+          reason: '相关经历',
+        }];
+      });
+    }
     localAnswer ??= answerAvatarEvidence(
       content,
       readAvatarUnderstandings(),
@@ -509,6 +549,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         buildAssistantTextMessage(localAnswer, {
           id: generateSecureId('msg'),
           createdAt: new Date().toISOString(),
+          ...(localReferences?.length ? { references: localReferences } : {}),
         }),
       ]);
       setInput('');
@@ -578,7 +619,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         inputRef={inputRef}
         launchContext={launchContext}
         focusedObjectText={getFocusText(guidanceSources, launchContext)}
-        libraryOpen={libraryOpen}
+        libraryView={libraryView}
         memoryFacets={
           memoryCapture.extractedFacets ??
           memoryCapture.inferMemoryFacets(
@@ -623,7 +664,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
           memoryCapture.companionSummary &&
           memoryCapture.setCompanionSummary({ ...memoryCapture.companionSummary, text })
         }
-        onOpenLibrary={setLibraryOpen}
+        onSetLibraryView={setLibraryView}
         onOpenModelSettings={() => setModelSettingsOpen(true)}
         onShowEarlierMessages={chatViewport.showEarlier}
         onJumpToLatest={chatViewport.jumpToLatest}

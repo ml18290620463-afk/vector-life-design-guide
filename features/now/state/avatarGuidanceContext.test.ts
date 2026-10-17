@@ -120,3 +120,26 @@ describe('time scope across conversation turns', () => {
     expect(ids('比较去年和今年工作压力', '继续')).toEqual(['entry:2025', 'entry:2026']);
   });
 });
+
+
+describe('intent-scoped retrieval', () => {
+  const mixed: GuidanceSource[] = [
+    { id: 'past', kind: '背景', module: 'past', text: '去年换工作时压力很大', evidence: [{ text: '去年换工作时压力很大', occurredAt: Date.now() }] },
+    { id: 'goal', kind: '目标', module: 'future', text: '完成职业转型' },
+    { id: 'action', kind: '行动', module: 'future', text: '更新简历' },
+    { id: 'candidate', kind: '偏好', module: 'past', status: 'candidate', text: '可能喜欢独处' },
+    { id: 'confirmed', kind: '偏好', module: 'past', status: 'confirmed', text: '更喜欢独处恢复精力' },
+  ];
+  it('does not inject future plans into an ordinary past question', () => {
+    expect(selectAvatarGuidanceContext(messages('换工作时我为什么压力大'), mixed).map((item) => item.id)).toEqual(['past']);
+  });
+  it('uses future context only when the user asks about direction', () => {
+    const ids = selectAvatarGuidanceContext(messages('我的目标和行动该怎么规划'), mixed).map((item) => item.id);
+    expect(ids).toEqual(expect.arrayContaining(['goal', 'action']));
+  });
+  it('keeps only confirmed knowledge for a self-understanding question', () => {
+    const ids = selectAvatarGuidanceContext(messages('我有什么偏好'), mixed).map((item) => item.id);
+    expect(ids).toContain('confirmed');
+    expect(ids).not.toContain('candidate');
+  });
+});
