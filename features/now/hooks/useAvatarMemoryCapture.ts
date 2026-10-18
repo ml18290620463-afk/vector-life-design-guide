@@ -1,4 +1,7 @@
-import { memoryStatementKey } from '../../../services/avatarMemoryShared';
+import {
+  isSameDurableMemoryAssertion,
+  memoryStatementKey,
+} from '../../../services/avatarMemoryShared';
 import { useEffect, useRef, useState } from 'react';
 import { saveArchiveDirection } from '../../../services/futureRepository';
 import {
@@ -209,13 +212,34 @@ export const useAvatarMemoryCapture = ({
     try {
       const candidates = await extractAvatarFacts(sourceMessages, avatarMemoryReferences);
       if (!extractionMounted.current || summaryOpen.current) return;
+      const storedMemories = readAvatarAtomicMemories().filter(
+        (memory) => memory.status === 'candidate' || memory.status === 'confirmed' || memory.status === 'retained',
+      );
       const uniqueCandidates = candidates.filter(
         (candidate, index) =>
           !avatarMemoryReferences.some(
             (memory) => memoryStatementKey(memory.text) === memoryStatementKey(candidate.statement),
           ) &&
-          candidates.findIndex((item) => memoryStatementKey(item.statement) === memoryStatementKey(candidate.statement)) ===
-            index,
+          !storedMemories.some((memory) =>
+            isSameDurableMemoryAssertion(memory, {
+              statement: candidate.statement,
+              facets: factMemoryMetadata(candidate.kind).facets,
+            }),
+          ) &&
+          candidates.findIndex(
+            (item) =>
+              memoryStatementKey(item.statement) === memoryStatementKey(candidate.statement) ||
+              isSameDurableMemoryAssertion(
+                {
+                  statement: item.statement,
+                  facets: factMemoryMetadata(item.kind).facets,
+                },
+                {
+                  statement: candidate.statement,
+                  facets: factMemoryMetadata(candidate.kind).facets,
+                },
+              ),
+          ) === index,
       );
       if (!uniqueCandidates.length) {
         if (!automatic) showToast('这段对话更适合留在聊天记录中，暂未发现需要写入档案的长期信息');

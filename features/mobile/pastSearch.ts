@@ -1,10 +1,19 @@
 import type { DiaryEntry } from '../../types';
 import { semanticConceptsForText } from '../../services/localSemanticIndex';
 
+export type PastSearchResult = {
+  entry: DiaryEntry;
+  /** Literal text/tag match, or a bounded single-word thematic recall. */
+  match: 'exact' | 'related';
+};
+
 /** A single search accepts content, tags, links and later supplements. */
-export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEntry[] => {
+export const searchPastEntriesWithMatchKind = (
+  entries: DiaryEntry[],
+  query: string,
+): PastSearchResult[] => {
   const tokens = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  if (!tokens.length) return entries;
+  if (!tokens.length) return entries.map((entry) => ({ entry, match: 'exact' }));
   const exact = entries
     .filter((entry) => {
       const text = [
@@ -26,9 +35,9 @@ export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEn
     .sort((left, right) => relevance(right, tokens) - relevance(left, tokens));
   // Keep the single search field precise. Only a one-word query with too few literal
   // matches gets a bounded thematic recall appended after exact results.
-  if (tokens.length !== 1 || exact.length >= 3) return exact;
+  if (tokens.length !== 1 || exact.length >= 3) return exact.map((entry) => ({ entry, match: 'exact' }));
   const queryConcepts = semanticConceptsForText(tokens[0]!);
-  if (!queryConcepts.length) return exact;
+  if (!queryConcepts.length) return exact.map((entry) => ({ entry, match: 'exact' }));
   const exactIds = new Set(exact.map((entry) => entry.id));
   const related = entries.filter((entry) => {
     if (exactIds.has(entry.id)) return false;
@@ -47,8 +56,15 @@ export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEn
       .join(' ');
     return semanticConceptsForText(entryText).some((concept) => queryConcepts.includes(concept));
   });
-  return [...exact, ...related];
+  return [
+    ...exact.map((entry) => ({ entry, match: 'exact' as const })),
+    ...related.map((entry) => ({ entry, match: 'related' as const })),
+  ];
 };
+
+/** Backwards-compatible entry-only search for callers that do not render match provenance. */
+export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEntry[] =>
+  searchPastEntriesWithMatchKind(entries, query).map(({ entry }) => entry);
 
 // Stable sorting keeps the caller's chronology when relevance is tied.
 const relevance = (entry: DiaryEntry, tokens: string[]) => {

@@ -150,6 +150,28 @@ describe('Future page', () => {
     expect(within(navigation).getByRole('tab', { name: '反馈' })).toBeTruthy();
   });
 
+  it('restores the reading position for each primary section', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    Object.defineProperty(window, 'scrollY', { value: 260, configurable: true });
+    await mount();
+    scrollTo.mockClear();
+
+    switchToPractice();
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+
+    Object.defineProperty(window, 'scrollY', { value: 480, configurable: true });
+    fireEvent.click(
+      within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', { name: '设计' }),
+    );
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 260));
+
+    fireEvent.click(
+      within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', { name: '反馈' }),
+    );
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 480));
+    scrollTo.mockRestore();
+  });
+
   it('uses one editor entry for all future planning types', async () => {
     await mount();
     const planningEntry = screen.getByRole('button', {
@@ -273,7 +295,7 @@ describe('Future page', () => {
     expect(within(row).queryByLabelText('关联经历（可选）')).toBeNull();
     fireEvent.change(note, { target: { value: '路线已经确认，可以按计划出发' } });
     fireEvent.click(within(row).getByRole('button', { name: '保存' }));
-    await screen.findByText('行动反馈已保存');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     const snapshot = await readFutureSnapshot();
     expect(snapshot.actions.find((item) => item.id === action.id)?.status).toBe('completed');
@@ -283,7 +305,9 @@ describe('Future page', () => {
     expect(snapshot.state.events).toEqual([]);
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: action.title }));
-    expect(screen.getByText('路线已经确认，可以按计划出发')).toBeTruthy();
+    expect(
+      within(screen.getByRole('dialog', { name: action.title })).getByText('路线已经确认，可以按计划出发'),
+    ).toBeTruthy();
     expect(screen.queryByLabelText('本次执行状态')).toBeNull();
   });
 
@@ -311,7 +335,7 @@ describe('Future page', () => {
     fireEvent.click(within(dialog).getByText('评价这次行动（可选）'));
     fireEvent.change(within(dialog).getByLabelText('我的判断'), { target: { value: 'unhelpful' } });
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
-    await screen.findByRole('status');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const snapshot = await readFutureSnapshot();
     expect(snapshot.state.practiceRecords?.[0].principleFeedback).toEqual({
       principleId: linkedPrinciple.id,
@@ -337,7 +361,7 @@ describe('Future page', () => {
     fireEvent.click(within(row).getByText('下一步（默认继续完成）'));
     fireEvent.change(within(row).getByLabelText('下一步'), { target: { value: 'continue' } });
     fireEvent.click(within(row).getByRole('button', { name: '保存' }));
-    await screen.findByText('行动反馈已保存');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('button', { name: action.title })).toBeTruthy();
     expect((await readFutureSnapshot()).actions.find((item) => item.id === action.id)?.status).toBe(
       'active',

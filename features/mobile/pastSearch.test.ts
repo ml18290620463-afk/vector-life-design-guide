@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiaryEntry } from '../../types';
-import { getPastSearchMatch, searchPastEntries } from './pastSearch';
+import { getPastSearchMatch, searchPastEntries, searchPastEntriesWithMatchKind } from './pastSearch';
 
 const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry => ({
   id,
@@ -87,4 +87,17 @@ it('shows the supplement matching most query words', () => {
     id: 's',
     excerpt: '会议 项目 结论',
   });
+});
+
+
+it('marks literal and thematic results separately without changing the old search API', () => {
+  const exact = { ...entry('exact', 30), content: '今天感到焦虑' };
+  const related = { ...entry('related', 20), content: '项目压力很大' };
+  const results = searchPastEntriesWithMatchKind([exact, related], '焦虑');
+  expect(results).toEqual([
+    { entry: exact, match: 'exact' },
+    { entry: related, match: 'related' },
+  ]);
+  expect(searchPastEntries([exact, related], '焦虑')).toEqual([exact, related]);
+  expect(searchPastEntriesWithMatchKind([exact, related], '焦虑 项目')).toEqual([]);
 });

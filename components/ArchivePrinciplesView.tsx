@@ -233,7 +233,11 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   return (
     <PrincipleEditorSurface open={displayFirst && managementOpen} onClose={requestCloseManagement}>
       <div
-        className={`mobile-principles-view animate-in fade-in slide-in-from-bottom-4 duration-700 ${displayFirst ? 'mobile-principles-view--result-first' : ''}`}
+        className={
+          displayFirst && managementOpen
+            ? 'principle-editor-canvas animate-in fade-in duration-300'
+            : `mobile-principles-view animate-in fade-in slide-in-from-bottom-4 duration-700 ${displayFirst ? 'mobile-principles-view--result-first' : ''}`
+        }
       >
         {saveError && <p role="alert">{saveError}</p>}
         {confirmExit && (
@@ -299,12 +303,12 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
             </div>
           </PastActionDialog>
         )}
-        <h2 className="sr-only">{t.principlesLibrary}</h2>
+        {!managementOpen && <h2 className="sr-only">{t.principlesLibrary}</h2>}
 
-        {displayFirst && (
+        {displayFirst && !managementOpen && (
           <div className="mobile-principles-view__result-header">
             <div>
-              <strong>{language === 'zh' ? '我的原则' : 'My principles'}</strong>
+              <strong>{language === 'zh' ? '我的沉淀' : 'My insights'}</strong>
               <small>
                 {language === 'zh'
                   ? `${currentPrinciples(principles).length} 条原则`
@@ -410,7 +414,11 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
         {/* Extraction is deliberately isolated from the principle library. */}
         {managementOpen && (displayFirst || selectedSection === 'extract') && (
           <div
-            className={`mobile-principles-view__composer border p-6 rounded-sm mb-12 relative overflow-hidden group ${theme === 'light' ? 'bg-white/60 border-vector-cyan-brand/5 shadow-sm' : 'bg-green-950/10 border-green-900/50'}`}
+            className={
+              displayFirst
+                ? 'principle-editor-composer'
+                : `mobile-principles-view__composer border p-6 rounded-sm mb-12 relative overflow-hidden group ${theme === 'light' ? 'bg-white/60 border-vector-cyan-brand/5 shadow-sm' : 'bg-green-950/10 border-green-900/50'}`
+            }
           >
             <div className="principle-editor-layout">
               {displayFirst && (
@@ -425,9 +433,6 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                     <ArrowLeft aria-hidden="true" />
                   </button>
                   <div className="principle-editor__heading">
-                    <p className="principle-editor__eyebrow">
-                      {language === 'zh' ? '过去 · 沉淀' : 'Past · Distillation'}
-                    </p>
                     <h2>
                       {editingPrinciple
                         ? language === 'zh'
@@ -439,8 +444,8 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                     </h2>
                     <p>
                       {language === 'zh'
-                        ? '写下你愿意在下一次继续采用的判断或行动。'
-                        : 'Write a judgment or action you want to keep using next time.'}
+                        ? '给下一次的自己，留一句笃定的话。'
+                        : 'Leave your future self one steady sentence.'}
                     </p>
                   </div>
                 </header>
@@ -457,7 +462,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                 >
                   {displayFirst
                     ? language === 'zh'
-                      ? '原则内容'
+                      ? '这一条'
                       : 'Principle'
                     : language === 'zh'
                       ? '让经历成为理解，让理解照亮下一次选择。'
@@ -483,54 +488,41 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                   }
                   placeholder={
                     language === 'zh'
-                      ? '例如：重要会议前，先写下一个要确认的问题。'
+                      ? '例如：在重要的决定之前，先回到事实。'
                       : 'For example: Verify the facts before making a judgment.'
                   }
                   className={`mobile-principles-view__textarea w-full border p-3 text-sm focus:border-vector-cyan-brand outline-none min-h-[80px] resize-none font-mono ${theme === 'light' ? 'bg-vector-cyan-brand/2 border-vector-cyan-brand/5 text-vector-ink-strong placeholder:text-vector-slate-soft/30' : 'bg-black border-white/5 text-cyan-400 placeholder:text-cyan-900'} ${editorOverLimit ? 'border-vector-magenta/50' : ''}`}
                 />
-                <div className="principle-editor__counter">
-                  <span className={editorOverLimit ? 'is-warning' : ''}>
-                    {t.charLimit.replace('{count}', editorText.length.toString())}
-                  </span>
+                {(editorOverLimit || editorText.length >= 100) && (
+                  <div className="principle-editor__counter">
+                    <span className={editorOverLimit ? 'is-warning' : ''}>
+                      {t.charLimit.replace('{count}', editorText.length.toString())}
+                    </span>
                   {editorOverLimit && <span role="alert">{t.charLimitWarning}</span>}
-                </div>
+                  </div>
+                )}
                 {editingPrinciple && editorText.trim() !== editingPrinciple.text.trim() && (
-                  <fieldset className="mt-5 space-y-3 border-t border-current/10 pt-4">
-                    <legend className="text-sm font-semibold">
-                      {language === 'zh' ? '这次修改代表什么？' : 'What does this change mean?'}
+                  <fieldset className="principle-editor__revision-choice">
+                    <legend className="sr-only">
+                      {language === 'zh' ? '修改类型' : 'Revision type'}
                     </legend>
-                    <p className="text-xs opacity-70">
-                      {language === 'zh'
-                        ? '分开记录，分身才不会把过去的说法误当成现在的事实。'
-                        : 'Separate records keep the avatar from treating a past view as a current fact.'}
-                    </p>
-                    <label className="block cursor-pointer text-sm">
+                    <label>
                       <input
                         type="radio"
                         name="principle-revision-kind"
                         checked={revisionKind === 'correction'}
                         onChange={() => setRevisionKind('correction')}
                       />{' '}
-                      <strong>{language === 'zh' ? '纠正原记录' : 'Correct the record'}</strong>
-                      <span className="block pl-5 text-xs opacity-70">
-                        {language === 'zh'
-                          ? '原来的说法不准确。新内容会替代它，分身不再把旧说法作为当前依据。'
-                          : 'The earlier wording was inaccurate. The new one replaces it as current guidance.'}
-                      </span>
+                      <span>{language === 'zh' ? '修正原话' : 'Correct the original'}</span>
                     </label>
-                    <label className="block cursor-pointer text-sm">
+                    <label>
                       <input
                         type="radio"
                         name="principle-revision-kind"
                         checked={revisionKind === 'evolution'}
                         onChange={() => setRevisionKind('evolution')}
                       />{' '}
-                      <strong>{language === 'zh' ? '记录新的变化' : 'Record a real change'}</strong>
-                      <span className="block pl-5 text-xs opacity-70">
-                        {language === 'zh'
-                          ? '原来的判断在当时成立，后来发生了变化。分身会保留它作为过去背景，并优先使用新内容。'
-                          : 'The earlier judgment was true then. The avatar keeps it as background and prioritizes the new one.'}
-                      </span>
+                      <span>{language === 'zh' ? '记录新的变化' : 'Record a change'}</span>
                     </label>
                   </fieldset>
                 )}
@@ -587,8 +579,8 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                         ? '保存修改'
                         : 'Save changes'
                       : language === 'zh'
-                        ? '保存原则'
-                        : 'Save principle'
+                        ? '留下这句话'
+                        : 'Keep this sentence'
                     : t.addPrinciple}
                 </CyberButton>
                 {displayFirst && editingPrinciple && (
@@ -615,13 +607,13 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
           (displayFirst || selectedSection !== 'extract') &&
           (visiblePrinciples.length === 0 ? (
             <div
-              className={`flex flex-col items-center justify-center py-12 border border-dashed rounded-lg ${theme === 'light' ? 'border-vector-cyan-brand/10 bg-white/40' : 'border-green-900/30'}`}
+              className={`principles-library__empty flex flex-col items-center justify-center py-12 border border-dashed rounded-lg ${theme === 'light' ? 'border-vector-cyan-brand/10 bg-white/40' : 'border-green-900/30'}`}
             >
               <Shield
-                className={`w-12 h-12 mb-4 opacity-30 ${theme === 'light' ? 'text-vector-slate-soft/20' : 'text-green-900'}`}
+                className={`principles-library__empty-icon w-12 h-12 mb-4 ${theme === 'light' ? 'text-vector-slate-soft/20' : 'text-green-900'}`}
               />
               <p
-                className={`text-sm ${theme === 'light' ? 'text-vector-slate-soft' : 'text-green-800'}`}
+                className={`principles-library__empty-copy text-sm ${theme === 'light' ? 'text-vector-slate-soft' : 'text-green-800'}`}
               >
                 {emptyReason === 'source-deletion'
                   ? language === 'zh'
@@ -756,6 +748,23 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                     <Star
                                       className={`w-3 h-3 ${principle.showOnHome ? (theme === 'light' ? 'fill-vector-cyan-brand/20' : 'fill-green-400/20') : ''}`}
                                     />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => {
+                                      setSaveError('');
+                                      setDeletingId(principle.id);
+                                    }}
+                                    aria-label={
+                                      language === 'zh'
+                                        ? `删除原则：${principle.text}`
+                                        : `Delete principle: ${principle.text}`
+                                    }
+                                    title={language === 'zh' ? '删除原则' : 'Delete principle'}
+                                    className="mobile-principle-card__delete-button"
+                                  >
+                                    <Trash2 className="w-4 h-4" aria-hidden="true" />
                                   </button>
                                 </div>
                               )}

@@ -11,6 +11,7 @@ interface MobilePastTimelineEntryProps {
   onAppendSupplement?: (entryId: string, content: string, supplementId: string) => Promise<void>;
   draftPassword?: string | null;
   searchQuery?: string;
+  searchMatchKind?: 'exact' | 'related';
   entry: DiaryEntry;
   highlight?: boolean;
   language: Language;
@@ -24,6 +25,7 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
   onAppendSupplement,
   draftPassword,
   searchQuery = '',
+  searchMatchKind = 'exact',
   highlight = false,
   language,
   selectionMode = false,
@@ -126,6 +128,9 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
           )}
         </div>
         <div ref={contentRef} id={contentId} className="mobile-past-timeline__fold-content">
+          {searchMatchKind === 'related' && (
+            <span className="past-search-related">{language === 'zh' ? '主题相近' : 'Related theme'}</span>
+          )}
           {searchMatch && <button type="button" className="past-search-match" onClick={revealSearchMatch}>{searchMatch.source} · {searchMatch.excerpt}</button>}
           <PastEntryBody
             entry={entry}

@@ -321,12 +321,13 @@ describe('useDiaryData', () => {
   });
 
   it('should handle principles', async () => {
+    const keys = getDiaryStorageKeys(userId);
     const { result } = renderHook(() => useDiaryData(userId));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
-      await result.current.addPrinciple('Test Principle', 2024);
+      await result.current.addPrinciple('Test Principle', 2024, true, [], undefined, ['pattern-1']);
     });
 
     expect(result.current.principles.length).toBe(1);
@@ -337,6 +338,10 @@ describe('useDiaryData', () => {
       await result.current.deletePrinciple(p.id);
     });
     expect(result.current.principles.length).toBe(0);
+    expect(await idb.get(keys.principles)).toEqual([]);
+    expect(await idb.get(keys.patternPrincipleLinks)).toEqual([
+      expect.objectContaining({ principleId: p.id, status: 'inactive' }),
+    ]);
   });
 
   it('creates an independent pattern-principle link while keeping legacy sourcePatternIds', async () => {

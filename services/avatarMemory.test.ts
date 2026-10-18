@@ -903,6 +903,122 @@ describe('avatar memory revision boundaries', () => {
   });
 });
 
+describe('durable preference and boundary deduplication', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('adds later evidence to a confirmed preference instead of creating another candidate', () => {
+    const base = {
+      id: 'preference-concise',
+      statement: '用户偏好简洁表达',
+      nature: 'explicit' as const,
+      category: 'recent_state' as const,
+      facets: ['preference'] as AvatarMemoryFacet[],
+      tags: [],
+      contexts: [],
+      confidence: 0.7,
+      status: 'confirmed' as const,
+      sensitivity: 'normal' as const,
+      createdAt: 1,
+      confirmedAt: 1,
+      confirmedBy: 'user' as const,
+      sourceRefs: [{ source: 'entry' as const, id: 'entry-1' }],
+    };
+    writeAvatarAtomicMemory(base);
+    upsertAvatarAtomicMemories([
+      {
+        ...base,
+        id: 'preference-repeat',
+        statement: '我喜欢少一些解释',
+        status: 'candidate',
+        createdAt: 2,
+        sourceRefs: [{ source: 'entry' as const, id: 'entry-2' }],
+      },
+    ]);
+
+    expect(readAvatarAtomicMemories()).toEqual([
+      expect.objectContaining({
+        id: 'preference-concise',
+        status: 'confirmed',
+        sourceRefs: expect.arrayContaining([
+          expect.objectContaining({ id: 'entry-1' }),
+          expect.objectContaining({ id: 'entry-2' }),
+        ]),
+      }),
+    ]);
+  });
+
+  it('adds later evidence to an equivalent boundary without changing its confirmed wording', () => {
+    const base = {
+      id: 'boundary-emotion',
+      statement: '用户不想一直承担别人的情绪',
+      nature: 'explicit' as const,
+      category: 'judgment' as const,
+      facets: ['boundary'] as AvatarMemoryFacet[],
+      tags: [],
+      contexts: [],
+      confidence: 0.7,
+      status: 'confirmed' as const,
+      sensitivity: 'normal' as const,
+      createdAt: 1,
+      confirmedAt: 1,
+      confirmedBy: 'user' as const,
+      sourceRefs: [{ source: 'entry' as const, id: 'entry-1' }],
+    };
+    writeAvatarAtomicMemory(base);
+    upsertAvatarAtomicMemories([
+      {
+        ...base,
+        id: 'boundary-repeat',
+        statement: '我不再承担他人的情绪',
+        status: 'candidate',
+        createdAt: 2,
+        sourceRefs: [{ source: 'entry' as const, id: 'entry-2' }],
+      },
+    ]);
+
+    expect(readAvatarAtomicMemories()).toEqual([
+      expect.objectContaining({
+        id: 'boundary-emotion',
+        statement: '用户不想一直承担别人的情绪',
+        status: 'confirmed',
+        sourceRefs: expect.arrayContaining([
+          expect.objectContaining({ id: 'entry-1' }),
+          expect.objectContaining({ id: 'entry-2' }),
+        ]),
+      }),
+    ]);
+  });
+
+  it('keeps different preference contexts separate', () => {
+    const base = {
+      id: 'preference-expression',
+      statement: '用户偏好简洁表达',
+      nature: 'explicit' as const,
+      facets: ['preference'] as AvatarMemoryFacet[],
+      tags: [],
+      contexts: [],
+      confidence: 0.7,
+      status: 'confirmed' as const,
+      sensitivity: 'normal' as const,
+      createdAt: 1,
+      confirmedAt: 1,
+      confirmedBy: 'user' as const,
+      sourceRefs: [],
+    };
+    writeAvatarAtomicMemory(base);
+    upsertAvatarAtomicMemories([
+      {
+        ...base,
+        id: 'preference-interface',
+        statement: '用户希望界面提示更短',
+        status: 'candidate',
+        createdAt: 2,
+      },
+    ]);
+    expect(readAvatarAtomicMemories()).toHaveLength(2);
+  });
+});
+
 it('does not resurrect rejected or superseded memories through fresh extraction, new ids or matching pattern keys', () => {
   for (const status of ['rejected', 'superseded'] as const) {
     localStorage.clear();

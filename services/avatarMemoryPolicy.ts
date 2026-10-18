@@ -10,7 +10,7 @@ export const MEMORY_NATURE_LABELS: Record<AvatarMemoryNature, string> = {
 
 /** Only the complete, reviewed naming statement may establish avatar identity. */
 export const readAvatarNameStatement = (text: string): string | null =>
-  text.trim().match(/^用户为分身取名为「([^「」\n]{1,12})」[。]?$/)?.[1] ?? null;
+  text.trim().match(/^(?:用户|我)为分身取名为「([^「」\n]{1,12})」[。]?$/)?.[1] ?? null;
 
 /** Suggestions only: the user can correct this before saving. Ambiguity stays inferred. */
 export function suggestMemoryNature(text: string): AvatarMemoryNature {

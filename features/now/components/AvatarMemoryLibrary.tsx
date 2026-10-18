@@ -1,3 +1,4 @@
+import { selfMemoryVoice } from '../../../services/avatarMemoryVoice';
 import { saveArchiveDirection } from '../../../services/futureRepository';
 import { isPatternMemoryReadyForConfirmation } from '../../../services/avatarMemory';
 import React, { useState } from 'react';
@@ -104,7 +105,7 @@ export function AvatarMemoryLibrary({
   const searching = query.trim().length > 0;
   const visible = allMemories
     .filter((memory) => {
-      if (!matchesQuery(`${memory.statement} ${memory.tags.join(' ')}`)) return false;
+      if (!matchesQuery(`${selfMemoryVoice(memory.statement)} ${memory.tags.join(' ')}`)) return false;
       if (showingPending) return pending.some((item) => item.id === memory.id);
       if (memory.status === 'candidate') return false;
       if (archiveScopeForMemory(memory) !== archiveScope) return false;
@@ -130,7 +131,7 @@ export function AvatarMemoryLibrary({
             : matchesPatternDimension(item, dimension as PatternDimension)),
       )
       .sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt))[0];
-    return memory?.statement ?? fallback;
+    return memory ? selfMemoryVoice(memory.statement) : fallback;
   };
   const countSelf = (category: SelfCategory) =>
     allMemories.filter(
@@ -357,7 +358,7 @@ export function AvatarMemoryLibrary({
                   className="avatar-library__candidate-statement"
                   onClick={() => setSelected(memory)}
                 >
-                  {memory.statement}
+                  {selfMemoryVoice(memory.statement)}
                 </button>
                 <div className="avatar-library__candidate-actions" hidden={selected !== null}>
                   <button
@@ -388,7 +389,7 @@ export function AvatarMemoryLibrary({
                 onClick={() => setSelected(memory)}
               >
                 <span className="avatar-library__row-content">
-                  <span>{memory.statement}</span>
+                  <span>{selfMemoryVoice(memory.statement)}</span>
                   {memory.retainedAfterSourceDeletion ? (
                     <small className="avatar-library__retained">已保留 · 原始经历已删除</small>
                   ) : null}

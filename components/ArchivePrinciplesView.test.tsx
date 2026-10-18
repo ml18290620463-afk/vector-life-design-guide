@@ -75,7 +75,7 @@ describe('ArchivePrinciplesView', () => {
       />,
     );
 
-    expect(screen.getByText('我的原则')).toBeTruthy();
+    expect(screen.getByText('我的沉淀')).toBeTruthy();
     expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
     expect(screen.getByText('形成于 2026')).toBeTruthy();
     expect(screen.getByRole('button', { name: '编辑原则：先确认事实，再作判断' })).toBeTruthy();
@@ -93,7 +93,7 @@ describe('ArchivePrinciplesView', () => {
       target: { value: '先核对事实，再作判断' },
     });
     expect(screen.getByRole('heading', { name: '编辑原则' })).toBeTruthy();
-    expect(screen.getByText('原则内容')).toBeTruthy();
+    expect(screen.getByText('这一条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
     expect(onUpdatePrinciple).toHaveBeenCalledWith({
       ...principle,
@@ -127,8 +127,8 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.change(screen.getByLabelText('编辑原则：先确认事实，再作判断'), {
       target: { value: '先核对事实，再作判断' },
     });
-    expect(screen.getByText('这次修改代表什么？')).toBeTruthy();
-    expect(screen.getByText('纠正原记录')).toBeTruthy();
+    expect(screen.getByRole('group', { name: '修改类型' })).toBeTruthy();
+    expect(screen.getByLabelText('修正原话')).toBeTruthy();
     fireEvent.click(screen.getByText('记录新的变化'));
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
 
@@ -181,12 +181,12 @@ describe('ArchivePrinciplesView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
     expect(screen.getByRole('heading', { name: '写下原则' })).toBeTruthy();
-    expect(screen.getByText('原则内容')).toBeTruthy();
-    expect(screen.getByPlaceholderText('例如：重要会议前，先写下一个要确认的问题。')).toBeTruthy();
+    expect(screen.getByText('这一条')).toBeTruthy();
+    expect(screen.getByPlaceholderText('例如：在重要的决定之前，先回到事实。')).toBeTruthy();
     fireEvent.change(screen.getByLabelText(t.addPrinciple), {
       target: { value: '先确认事实，再作判断' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '保存原则' }));
+    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
 
     expect(onAddPrinciple).toHaveBeenCalledWith(
       '先确认事实，再作判断',
@@ -243,8 +243,8 @@ describe('ArchivePrinciplesView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
 
-    expect(screen.getByText('原则内容')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '保存原则' })).toBeTruthy();
+    expect(screen.getByText('这一条')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '留下这句话' })).toBeTruthy();
     for (const hiddenControl of [
       '记录于',
       '更多设置',
@@ -620,12 +620,12 @@ describe('Past principle failure and exit protection', () => {
     render(<ArchivePrinciplesView {...baseProps} displayFirst onAddPrinciple={save} />);
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
     fireEvent.change(screen.getByLabelText(t.addPrinciple), { target: { value: '先验证再判断' } });
-    fireEvent.click(screen.getByRole('button', { name: '保存原则' }));
+    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('操作失败'));
     expect((screen.getByLabelText(t.addPrinciple) as HTMLTextAreaElement).value).toBe(
       '先验证再判断',
     );
-    fireEvent.click(screen.getByRole('button', { name: '保存原则' }));
+    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
     await waitFor(() => expect(screen.queryByLabelText(t.addPrinciple)).toBeNull());
     expect(save).toHaveBeenCalledTimes(2);
   });
@@ -633,10 +633,10 @@ describe('Past principle failure and exit protection', () => {
     render(<ArchivePrinciplesView {...baseProps} displayFirst />);
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
     fireEvent.change(screen.getByLabelText(t.addPrinciple), { target: { value: '未保存内容' } });
-    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
     fireEvent.click(screen.getByRole('button', { name: '继续编辑' }));
     expect((screen.getByLabelText(t.addPrinciple) as HTMLTextAreaElement).value).toBe('未保存内容');
-    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
     fireEvent.click(screen.getByRole('button', { name: '放弃修改' }));
     expect(screen.queryByLabelText(t.addPrinciple)).toBeNull();
   });
@@ -662,6 +662,28 @@ it('cancels principle deletion without mutation and retains dialog after a faile
   await waitFor(() => expect(remove).toHaveBeenCalledWith('p1'));
   await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0));
   expect(screen.getByRole('dialog', { name: '删除这条原则？' })).toBeTruthy();
+});
+
+it('offers an explicit delete action from the principle list and only deletes after confirmation', async () => {
+  const remove = vi.fn();
+  render(
+    <ArchivePrinciplesView
+      {...baseProps}
+      displayFirst
+      onDeletePrinciple={remove}
+      principles={[{ id: 'p1', text: '保留原则', year: 2026, createdAt: 1, showOnHome: true }]}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: '删除原则：保留原则' }));
+  expect(screen.getByRole('dialog', { name: '删除这条原则？' })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', { name: '取消' }));
+  expect(remove).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole('button', { name: '删除原则：保留原则' }));
+  fireEvent.click(screen.getByRole('button', { name: '确认删除' }));
+  await waitFor(() => expect(remove).toHaveBeenCalledWith('p1'));
 });
 
 it('does not expose any avatar-pattern linkage in the principle editor', () => {

@@ -113,11 +113,7 @@ export function ActionFeedbackReading({
         <section className="future-action-latest future-action-surface" aria-label="最新结果">
           <h3>最新结果</h3>
           <p className="future-action-result-status">{executionStatusLabel[latest.status]}</p>
-          {latest.note ? (
-            <p>{latest.note}</p>
-          ) : (
-            <p className="future-reading-context">{executionStatusLabel[latest.status]}</p>
-          )}
+          {latest.note && <p>{latest.note}</p>}
           {latest.nextAction && (
             <p className="future-reading-context">下一步 · {latest.nextAction}</p>
           )}

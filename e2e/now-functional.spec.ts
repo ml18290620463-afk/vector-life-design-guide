@@ -46,17 +46,10 @@ for (const viewport of [
     await page.getByLabel('心情与事件').click();
     await page.getByRole('button', { name: '工作事业', exact: true }).click();
     await page.getByRole('button', { name: '平静', exact: true }).click();
-    if (viewport.width >= 768) {
-      await expect(page.getByTestId('now-page')).toBeVisible();
-      await page
-        .getByRole('dialog', { name: '选择标签' })
-        .getByRole('button', { name: '返回', exact: true })
-        .click();
-    } else {
-      await expect(page.getByRole('dialog', { name: '选择标签' })).toHaveCount(0);
-      await expect(page.getByTestId('now-page')).toBeHidden();
-      await page.getByRole('button', { name: '返回', exact: true }).click();
-    }
+    await expect(page).toHaveURL(/\/now\/tags$/);
+    await expect(page.getByRole('dialog', { name: '选择标签' })).toHaveCount(0);
+    await expect(page.getByTestId('now-page')).toBeHidden();
+    await page.getByRole('button', { name: '返回', exact: true }).click();
     await expect(page.getByLabel('此刻发生了什么？')).toHaveValue(
       message + ' 再补充一条带标签的记录。',
     );

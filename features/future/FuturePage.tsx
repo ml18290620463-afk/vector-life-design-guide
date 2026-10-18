@@ -84,6 +84,8 @@ export function FuturePage({
   const practiceOpener = useRef<HTMLElement | null>(null);
   const practicePanel = useRef<HTMLDialogElement | null>(null);
   const practiceWasOpen = useRef(false);
+  const practiceScrollY = useRef(0);
+  const sectionScrollY = useRef<Record<FutureSection, number>>({ design: 0, practice: 0 });
   const openedActionContext = useRef<ActionDraftContext | null>(null);
   // `openEditor` intentionally changes identity on render; the context is a
   // one-shot cross-module handoff and must not reopen after it has been closed.
@@ -113,10 +115,22 @@ export function FuturePage({
     practiceWasOpen.current = false;
     const opener = practiceOpener.current;
     const frame = requestAnimationFrame(() => {
+      window.scrollTo(0, practiceScrollY.current);
       if (opener?.isConnected) opener.focus();
     });
     return () => cancelAnimationFrame(frame);
   }, [practicePanelOpen]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo(0, sectionScrollY.current[section]);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [section]);
+  const switchSection = (next: FutureSection) => {
+    if (next === section) return;
+    sectionScrollY.current[section] = window.scrollY;
+    setSection(next);
+  };
   const openEditor = (next: Editor) => {
     // Switching type or following a duplicate-warning link happens inside the
     // same sheet. Keep the original trigger so Close always returns people to
@@ -308,7 +322,6 @@ export function FuturePage({
       if (saved) {
         setSelectedFeedbackActionId(null);
         setPracticePanelOpen(false);
-        setNotice(feedbackEnded ? '目标进展已保存' : '行动反馈已保存');
       }
     });
   };
@@ -323,6 +336,7 @@ export function FuturePage({
   const openActionFeedback = (actionId: string) => {
     practiceOpener.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    practiceScrollY.current = window.scrollY;
     setNotice('');
     setPracticeStatus('completed');
     setPracticeNextStep('end');
@@ -363,6 +377,7 @@ export function FuturePage({
         <ActionFeedbackList
           actions={actions}
           goals={state.goals}
+          latestRecordsByAction={latestPracticeByAction}
           onOpen={openActionFeedback}
           onDelete={(selected) =>
             run(
@@ -490,7 +505,7 @@ export function FuturePage({
             role="tab"
             key={value}
             aria-selected={section === value}
-            onClick={() => setSection(value)}
+            onClick={() => switchSection(value)}
           >
             {value === 'design' ? '设计' : '反馈'}
           </button>

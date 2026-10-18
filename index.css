@@ -11080,6 +11080,13 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
   color: var(--mobile-accent);
 }
 
+/* Deletion stays available as a quiet icon until a deliberate pointer or keyboard action. */
+.mobile-shell .mobile-principle-card__actions .mobile-principle-card__delete-button:hover,
+.mobile-shell .mobile-principle-card__actions .mobile-principle-card__delete-button:focus-visible {
+  background: color-mix(in srgb, #c65b5b 12%, transparent);
+  color: #b64b4b;
+}
+
 .mobile-shell .principle-tag-editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -11276,6 +11283,209 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
 /* A writing surface is a page, not a layer over the product shell. */
 .mobile-shell:has(.principle-editor-screen[open]) .mobile-main-nav {
   display: none;
+}
+
+/* The principle editor is a single thought, not a form. Its structure stays
+   deliberately spare so the sentence is the page's visual centre. */
+.principle-editor-screen {
+  width: min(100%, 42rem);
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--experience-bg, #142124);
+  color: var(--experience-ink, #e6edf0);
+}
+
+.principle-editor-screen::backdrop {
+  background: var(--experience-bg, #142124);
+}
+
+.principle-editor-screen .mobile-principles-view {
+  min-height: 100dvh;
+  padding: clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 7vw, 4.5rem) 2rem;
+  background: var(--experience-bg, #142124);
+}
+
+.principle-editor-screen .mobile-principles-view__composer {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.principle-editor-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 3.5rem);
+}
+
+.principle-editor__header {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.principle-editor-screen__back {
+  display: grid;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--experience-muted, #a9c8d0);
+}
+
+.principle-editor-screen__back:hover,
+.principle-editor-screen__back:focus-visible {
+  background: color-mix(in srgb, var(--experience-ink, #e6edf0) 8%, transparent);
+  color: var(--experience-ink, #e6edf0);
+}
+
+.principle-editor-screen__back svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.principle-editor__heading {
+  padding-top: 0.35rem;
+}
+
+.principle-editor__heading h2 {
+  margin: 0;
+  color: var(--experience-ink, #e6edf0);
+  font-size: clamp(1.5rem, 4vw, 1.9rem);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.principle-editor__heading p {
+  margin: 0.55rem 0 0;
+  color: var(--experience-muted, #a9c8d0);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.principle-editor__writing {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: clamp(2.75rem, 7vh, 4.5rem);
+  padding: 0;
+}
+
+.principle-editor__field-label {
+  color: var(--experience-muted, #a9c8d0) !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.08em;
+}
+
+.principle-editor-screen .mobile-principles-view__textarea {
+  min-height: clamp(8rem, 16dvh, 11rem);
+  max-height: 14rem;
+  padding: 0.9rem 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  border-color: color-mix(in srgb, var(--experience-line, #49616c) 72%, transparent);
+  background: transparent;
+  color: var(--experience-ink, #e6edf0);
+  font-size: 1.08rem;
+  line-height: 1.85;
+}
+
+.principle-editor-screen .mobile-principles-view__textarea:focus {
+  border-color: var(--experience-accent, #79cfc7);
+  box-shadow: none;
+}
+
+.principle-editor-screen .mobile-principles-view__textarea::placeholder {
+  color: color-mix(in srgb, var(--experience-muted, #a9c8d0) 65%, transparent);
+}
+
+.principle-editor__counter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  color: var(--experience-muted, #a9c8d0);
+  font-size: 0.75rem;
+}
+
+.principle-editor__counter .is-warning {
+  color: #ef9c9c;
+}
+
+.principle-editor__revision-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.principle-editor__revision-choice label {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--experience-muted, #a9c8d0) !important;
+  font-size: 0.8rem !important;
+}
+
+.principle-editor__revision-choice input {
+  width: 1rem;
+  min-height: auto !important;
+  accent-color: var(--experience-accent, #79cfc7);
+}
+
+.principle-editor__footer {
+  max-width: 34rem;
+  padding-top: 1.5rem;
+}
+
+.principle-editor__save-button {
+  min-height: 3.15rem;
+  border-radius: 0.9rem;
+}
+
+@media (min-width: 680px) {
+  .principle-editor-screen {
+    width: min(100vw, 48rem);
+    margin-left: calc((100vw - min(100vw, 48rem)) / 2);
+  }
+
+  .principle-editor-screen .mobile-principles-view {
+    padding-top: 2.25rem;
+  }
+
+  .principle-editor__writing {
+    margin-top: clamp(3rem, 8vh, 5rem);
+  }
+
+  .principle-editor-screen .mobile-principles-view__textarea {
+    min-height: 10rem;
+  }
+}
+
+/* Empty states still need to read as content in the low-contrast archive shell. */
+.mobile-past-page .principles-library__empty-copy {
+  color: var(--experience-muted, #a9c8d0) !important;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.mobile-past-page .principles-library__empty-icon {
+  color: color-mix(in srgb, var(--experience-accent, #79cfc7) 58%, var(--experience-muted, #a9c8d0)) !important;
+  opacity: 0.72;
 }
 
 /* Every editor is a destination of its own. Do not leave the app navigation
@@ -11484,6 +11694,14 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
   min-width: 44px;
   min-height: 44px;
 }
+.past-search-related {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  color: var(--color-archive-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .past-search-match {
   opacity: 0.8;
   font-size: 0.85rem;

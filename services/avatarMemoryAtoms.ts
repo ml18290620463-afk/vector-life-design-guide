@@ -12,6 +12,7 @@ import { normalizeMemoryCategory } from './avatarMemoryCategories';
 import { generateSecureId } from './idGenerator';
 import {
   memoryStatementKey,
+  isSameDurableMemoryAssertion,
   getStoredJson,
   setStoredJson,
   clampConfidence,
@@ -410,7 +411,19 @@ const mergeSameStatementMemory = (
     (preferred.status === 'confirmed' || preferred.status === 'retained') &&
     other.status === 'candidate'
   )
-    return preferred;
+    // A fresh source can corroborate a reviewed preference/boundary, but must
+    // never turn it back into a visible candidate or alter its reviewed wording.
+    return {
+      ...preferred,
+      sourceRefs: unique(
+        [...preferred.sourceRefs, ...other.sourceRefs],
+        (source) => `${source.source}:${source.id}:${source.excerpt ?? ''}`,
+      ),
+      updatedAt: Math.max(
+        preferred.updatedAt ?? preferred.createdAt,
+        other.updatedAt ?? other.createdAt,
+      ),
+    };
   const sensitivity =
     sensitivityRank[existing.sensitivity] >= sensitivityRank[incoming.sensitivity]
       ? existing.sensitivity
@@ -459,11 +472,11 @@ const mergeAtomicMemories = (current: AvatarAtomicMemory[], incoming: AvatarAtom
     );
     if (withdrawn) continue;
     const matchingMemory = Array.from(byId.values()).find((candidate) => {
-      if (candidate.id === memory.id) return false;
       const sameStatement =
         memoryStatementKey(candidate.statement) === memoryStatementKey(memory.statement);
-      // A shared topic key does not establish agreement or identical scope.
-      return sameStatement;
+      // This is intentionally limited to explicit preferences/boundaries.  A
+      // topic or broad semantic similarity never establishes equal scope.
+      return sameStatement || isSameDurableMemoryAssertion(candidate, memory);
     });
     if (matchingMemory) {
       byId.set(matchingMemory.id, mergeSameStatementMemory(matchingMemory, memory));

@@ -6,7 +6,7 @@ vi.mock('./avatarCustomModel', async (original) => ({
 import express from 'express';
 import request from 'supertest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerAvatarChatRoutes } from './avatarChatRoutes';
+import { AVATAR_DIALOGUE_RULES, registerAvatarChatRoutes } from './avatarChatRoutes';
 import { callOpenRouter, type ProviderConfig } from './aiProviders';
 vi.mock('./aiProviders', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./aiProviders')>()),
@@ -149,7 +149,7 @@ describe('personal fact extraction', () => {
       .post('/api/v1/avatar/memory/extract')
       .send({ messages: [{ role: 'user', content: '我喜欢安静的工作环境，昨天办公室太吵了' }] });
     expect(res.status).toBe(200);
-    expect(res.body.candidate.statement).toBe('用户喜欢安静的工作环境');
+    expect(res.body.candidate.statement).toBe('我喜欢安静的工作环境');
     expect(res.body.candidate.statement).not.toContain('昨天');
   });
   it('returns up to three separately evidenced candidates from one dialogue', async () => {
@@ -181,7 +181,7 @@ describe('personal fact extraction', () => {
       });
     expect(res.status).toBe(200);
     expect(res.body.candidates).toHaveLength(2);
-    expect(res.body.candidate.statement).toBe('用户偏好简短清晰的提示语');
+    expect(res.body.candidate.statement).toBe('我偏好简短清晰的提示语');
   });
   it('uses minimal status-aware references to prevent duplicate or silent overwrites', async () => {
     vi.mocked(callOpenRouter).mockResolvedValue('{"candidates":[]}');
@@ -462,6 +462,9 @@ describe('shared reference transport', () => {
       expect(prompt).toContain('周一会议范围不清');
       expect(prompt).toContain('预算有限，沟通部分有效');
       expect(prompt).toContain('当前信息优先');
+      expect(prompt).toContain('思维局限的识别');
+      expect(prompt).toContain('不凭关键词触发');
+      expect(prompt).toContain('提醒只服务当前对话，不自动写入记忆');
       expect(prompt).toContain('至多追问一个关键问题');
       expect(prompt).not.toContain('secret');
     }
@@ -484,4 +487,12 @@ describe('shared reference transport', () => {
     expect(callOpenRouter).not.toHaveBeenCalled();
     expect(callCustomModel).not.toHaveBeenCalled();
   });
+});
+
+
+it('defines explicit boundaries for evidence, statistics, thematic recall and internal implementation', () => {
+  expect(AVATAR_DIALOGUE_RULES).toContain('记录中匹配到的条数');
+  expect(AVATAR_DIALOGUE_RULES).toContain('可能相关的资料');
+  expect(AVATAR_DIALOGUE_RULES).toContain('资料不足，暂不能下结论');
+  expect(AVATAR_DIALOGUE_RULES).toContain('无法完整披露');
 });

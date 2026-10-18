@@ -6,11 +6,7 @@ import {
   type LocalSemanticIndexItem,
 } from './localSemanticIndex';
 import { previewAvatarGrowth } from '../features/now/api/avatar';
-import {
-  readAvatarAtomicMemories,
-  readAvatarUnderstandings,
-  upsertAvatarAtomicMemories,
-} from './avatarMemory';
+import { readAvatarUnderstandings, upsertAvatarAtomicMemories } from './avatarMemory';
 
 /** Avatar owns interpretation and candidate persistence; Past only supplies evidence. */
 export async function proposeExperienceMemories(
@@ -32,7 +28,9 @@ export async function proposeExperienceMemories(
     },
     ...searchLocalSemanticIndex(
       { title: '', content: unit.content, tags: [] },
-      index.filter(({ entry: candidate }) => candidate.id !== entry.id && isAccessibleDiaryEntry(candidate)),
+      index.filter(
+        ({ entry: candidate }) => candidate.id !== entry.id && isAccessibleDiaryEntry(candidate),
+      ),
       3,
       0.45,
     )
@@ -66,11 +64,23 @@ export async function proposeExperienceMemories(
     understandings: readAvatarUnderstandings().filter((item) => item.status === 'confirmed'),
   });
   if (cancelled()) return false;
-  const existing = new Set(readAvatarAtomicMemories().map((memory) => memory.id));
+  const hasIndependentEntryEvidence = (memory: (typeof preview.atomicMemoryCandidates)[number]) =>
+    new Set(
+      memory.sourceRefs
+        .filter((reference) => reference.source === 'entry')
+        .map((reference) => reference.id),
+    ).size >= 2;
+  const isLongLivedSelfStatement = (memory: (typeof preview.atomicMemoryCandidates)[number]) =>
+    memory.facets.includes('preference') || memory.facets.includes('boundary');
   if (
     !upsertAvatarAtomicMemories(
       preview.atomicMemoryCandidates.filter(
-        (memory) => memory.status === 'candidate' && !existing.has(memory.id),
+        (memory) =>
+          memory.status === 'candidate' &&
+          // A past entry remains a fact even when it contains “I like…” or
+          // “I will not…”.  One occurrence must not become a long-lived self
+          // conclusion.  A second independent experience can propose it.
+          (!isLongLivedSelfStatement(memory) || hasIndependentEntryEvidence(memory)),
       ),
     )
   )

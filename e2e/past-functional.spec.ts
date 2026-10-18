@@ -16,7 +16,7 @@ for (const width of [1440, 390]) {
     await page.getByLabel('此刻发生了什么？').fill(content);
     await page.getByLabel('心情与事件').click();
     await page.getByRole('button', { name: '工作事业', exact: true }).click();
-    await page.getByRole('button', { name: '确定', exact: true }).click();
+    await page.getByRole('button', { name: '返回', exact: true }).click();
     await page.getByLabel('保存到过去').click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(content, { exact: false }).first()).toBeVisible();
@@ -61,14 +61,20 @@ for (const width of [1440, 390]) {
     const bounds = await principleDialog.boundingBox();
     expect(bounds).not.toBeNull();
     expect(bounds!.width).toBeGreaterThanOrEqual(width - 2);
-    if (width >= 1000) expect(bounds!.height).toBeGreaterThanOrEqual(898);
+    expect(bounds!.height).toBeGreaterThanOrEqual(898);
+    await expect(principleDialog.locator('.principle-editor-canvas')).toHaveCount(1);
+    await expect(principleDialog.locator('.mobile-principles-view')).toHaveCount(0);
+    await expect(principleDialog.getByText('我的原则', { exact: true })).toHaveCount(0);
+    await expect(principleDialog.getByText('0 条原则', { exact: true })).toHaveCount(0);
+    await expect(principleDialog.getByText('公理圣殿 // 存在之锚')).toHaveCount(0);
+    await expect(principleDialog.getByRole('button', { name: '完成', exact: true })).toHaveCount(0);
     await page.screenshot({ path: info.outputPath('principle-editor.png'), fullPage: true });
 
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: '放弃未保存的修改？' })).toBeVisible();
     await page.getByRole('button', { name: '继续编辑', exact: true }).click();
     await expect(input).toHaveValue('先澄清目标再行动');
-    await page.getByRole('button', { name: '保存原则', exact: true }).click();
+    await page.getByRole('button', { name: '留下这句话', exact: true }).click();
     await expect(page.getByText('先澄清目标再行动', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '写原则', exact: true })).toBeFocused();
 
@@ -118,7 +124,7 @@ for (const width of [1440, 390]) {
       await page.getByLabel('此刻发生了什么？').fill(content);
       await page.getByLabel('心情与事件').click();
       await page.getByRole('button', { name: '工作事业', exact: true }).click();
-      await page.getByRole('button', { name: '确定', exact: true }).click();
+      await page.getByRole('button', { name: '返回', exact: true }).click();
       await page.getByLabel('保存到过去').click();
       await expect(page.getByTestId('past-page')).toBeVisible();
     }

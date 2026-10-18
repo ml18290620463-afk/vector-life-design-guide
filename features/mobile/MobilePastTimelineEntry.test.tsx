@@ -103,3 +103,15 @@ describe('MobilePastTimelineEntry', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });
+
+
+it('labels a thematic recall without presenting it as a literal match', () => {
+  render(<MobilePastTimelineEntry entry={makeEntry('一次情绪起伏的记录。')} language="zh" searchQuery="焦虑" searchMatchKind="related" />);
+  expect(screen.getByText('主题相近')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /正文|标题|标签/ })).toBeNull();
+});
+
+it('does not show a related label for an exact result', () => {
+  render(<MobilePastTimelineEntry entry={makeEntry('一次内容匹配的记录。')} language="zh" searchQuery="content" searchMatchKind="exact" />);
+  expect(screen.queryByText('主题相近')).toBeNull();
+});

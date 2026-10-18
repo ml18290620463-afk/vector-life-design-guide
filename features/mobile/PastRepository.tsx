@@ -19,7 +19,7 @@ import type { PastRepositorySection } from './types';
 import type { PracticeReflectionContext } from '../../types/future';
 import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
-import { searchPastEntries } from './pastSearch';
+import { searchPastEntriesWithMatchKind } from './pastSearch';
 
 interface PastRepositoryProps {
   archiveMode?: boolean;
@@ -125,18 +125,19 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const safeEntries = useMemo(() => (Array.isArray(entries) ? entries : []), [entries]);
   const safePrinciples = useMemo(() => (Array.isArray(principles) ? principles : []), [principles]);
   const activePrinciples = useMemo(() => currentPrinciples(safePrinciples), [safePrinciples]);
-  const timelineEntries = useMemo(() => {
+  const timelineResults = useMemo(() => {
     const active = [...safeEntries].sort(
       (a, b) => getSafeTimestamp(b.createdAt) - getSafeTimestamp(a.createdAt),
     );
-    return searchPastEntries(active, normalizedTimelineQuery);
+    return searchPastEntriesWithMatchKind(active, normalizedTimelineQuery);
   }, [safeEntries, normalizedTimelineQuery]);
   const visibleEntryIds = useMemo(
-    () => timelineEntries.map((entry) => entry.id),
-    [timelineEntries],
+    () => timelineResults.map(({ entry }) => entry.id),
+    [timelineResults],
   );
-  const timelineRows = timelineEntries.map((entry) => ({
+  const timelineRows = timelineResults.map(({ entry, match }) => ({
     entry,
+    match,
     id: entry.id,
     createdAt: entry.createdAt,
   }));
@@ -179,8 +180,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       setDeleteStatus(
         language === 'zh'
           ? retainDerivedKnowledge
-            ? `已删除 ${ids.length} 条记录；分身已形成的理解与我的原则已保留。`
-            : `已删除 ${ids.length} 条记录；分身已形成的理解与我的原则已同步清理。`
+            ? `已删除 ${ids.length} 条记录；分身已形成的理解与已确认沉淀已保留。`
+            : `已删除 ${ids.length} 条记录；分身已形成的理解与已确认沉淀已同步清理。`
           : retainDerivedKnowledge
             ? `Deleted ${ids.length} records; avatar understandings and my principles were kept.`
             : `Deleted ${ids.length} records; avatar understandings and my principles were removed.`,
@@ -223,11 +224,11 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     {
       id: 'timeline' as const,
       label: language === 'zh' ? '回看' : 'Review',
-      detail: timelineEntries.length,
+      detail: timelineResults.length,
     },
     {
       id: 'principle' as const,
-      label: language === 'zh' ? '我的原则' : 'My principles',
+      label: language === 'zh' ? '沉淀' : 'Insights',
       detail: activePrinciples.length,
     },
   ];
@@ -265,6 +266,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                     draftPassword={draftPassword}
                     onAppendSupplement={onAppendSupplement}
                     entry={row.entry}
+                    searchMatchKind={row.match}
                     highlight={!isManaging && !hasTimelineQuery && index === 0}
                     language={language}
                     selectionMode={isManaging}
@@ -454,14 +456,14 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 onChange={(event) => setRetainDerivedKnowledge(event.target.checked)}
               />
               {language === 'zh'
-                ? '保留分身已形成的理解与我的原则'
-                : 'Keep avatar understandings and my principles'}
+                ? '保留分身已形成的理解与已确认沉淀'
+                : 'Keep avatar understandings and confirmed insights'}
             </label>
             {!retainDerivedKnowledge && (
               <p>
                 {language === 'zh'
-                  ? '分身已形成的理解与我的原则也将同步清理。'
-                  : 'Avatar understandings and my principles will also be removed.'}
+                  ? '分身已形成的理解与已确认沉淀也将同步清理。'
+                  : 'Avatar understandings and confirmed insights will also be removed.'}
               </p>
             )}
             {deleteStatus && <p role="alert">{deleteStatus}</p>}

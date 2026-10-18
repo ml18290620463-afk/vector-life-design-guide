@@ -1,3 +1,4 @@
+import { selfMemoryVoice } from '../../../services/avatarMemoryVoice';
 import React, { useMemo, useState } from 'react';
 import type { AvatarAtomicMemory } from '../../avatar/types';
 import {
@@ -211,7 +212,7 @@ export const AvatarMemoryTagManager: React.FC<AvatarMemoryTagManagerProps> = ({
               <div className="avatar-memory-tags__memories" aria-label="标签下的记忆">
                 {taggedMemories.map((memory) => (
                   <article key={memory.id} className="avatar-memory-tags__memory">
-                    <p>{memory.statement}</p>
+                    <p>{selfMemoryVoice(memory.statement)}</p>
                     <small>
                       {natureLabel[memory.nature]} · {statusLabel[memory.status]} · 来源{' '}
                       {memory.sourceRefs.length} ·{' '}

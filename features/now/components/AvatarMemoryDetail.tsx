@@ -1,3 +1,4 @@
+import { selfMemoryVoice } from '../../../services/avatarMemoryVoice';
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { isDirectionCandidate, isTimeSensitiveMemory } from '../../../services/avatarMemoryArchive';
@@ -38,7 +39,7 @@ export function AvatarMemoryDetail({
   const updateLabel = timeSensitive ? '确认更新' : '保存修改';
   const [editing, setEditing] = useState(pending);
   const [forgetting, setForgetting] = useState(false);
-  const [text, setText] = useState(memory.statement);
+  const [text, setText] = useState(selfMemoryVoice(memory.statement));
   useEffect(() => {
     const previous = document.activeElement;
     const element = dialog.current;
@@ -115,7 +116,7 @@ export function AvatarMemoryDetail({
           />
         </>
       ) : (
-        <p className="avatar-memory-detail__statement">{memory.statement}</p>
+        <p className="avatar-memory-detail__statement">{selfMemoryVoice(memory.statement)}</p>
       )}
       {!forgetting && !pending && (
         <p className="avatar-memory-detail__status">

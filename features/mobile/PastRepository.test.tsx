@@ -71,7 +71,7 @@ describe('PastRepository', () => {
     renderRepository();
 
     expect(screen.getByRole('tab', { name: '回看' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: '我的原则' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: '沉淀' })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: '模式' })).toBeNull();
     expect(screen.queryByText('提炼模式')).toBeNull();
     expect(screen.queryByText('萃取原则')).toBeNull();
@@ -149,6 +149,7 @@ describe('PastRepository', () => {
         makeEntry({ id: 'linked', title: '周一记录', relatedActionIds: ['action-1'] }),
         makeEntry({ id: 'direct', title: '周五复盘', content: '项目复盘' }),
         makeEntry({ id: 'tagged', title: '生活随笔', tags: ['项目复盘'] }),
+        makeEntry({ id: 'third-direct', title: '周六整理', content: '项目复盘记录' }),
       ],
     });
     fireEvent.change(screen.getByRole('searchbox', { name: '搜索记录' }), {
@@ -158,6 +159,7 @@ describe('PastRepository', () => {
     expect(screen.queryByText('周一记录')).toBeNull();
     expect(screen.getByText('周五复盘')).toBeTruthy();
     expect(screen.getByText('生活随笔')).toBeTruthy();
+    expect(screen.getByText('周六整理')).toBeTruthy();
   });
 
   it('counts only current principles in the tab', () => {
@@ -177,7 +179,7 @@ describe('PastRepository', () => {
       ],
     });
 
-    expect(screen.getByRole('tab', { name: '我的原则' }).textContent).toContain('1');
+    expect(screen.getByRole('tab', { name: '沉淀' }).textContent).toContain('1');
   });
 
   it('supports bulk deleting the current search result and explains retained understanding', async () => {
@@ -196,12 +198,12 @@ describe('PastRepository', () => {
     fireEvent.click(screen.getByRole('button', { name: '选择' }));
     fireEvent.click(screen.getByRole('button', { name: '全选' }));
     fireEvent.click(screen.getByRole('button', { name: '删除 1 条' }));
-    expect(screen.getByLabelText('保留分身已形成的理解与我的原则')).toBeTruthy();
+    expect(screen.getByLabelText('保留分身已形成的理解与已确认沉淀')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '确认删除' }));
 
     await waitFor(() => expect(onDeleteEntries).toHaveBeenCalledWith(['match'], true));
     expect(
-      await screen.findByText('已删除 1 条记录；分身已形成的理解与我的原则已保留。'),
+      await screen.findByText('已删除 1 条记录；分身已形成的理解与已确认沉淀已保留。'),
     ).toBeTruthy();
   });
 
@@ -209,7 +211,7 @@ describe('PastRepository', () => {
     const onAddPrinciple = vi.fn();
     renderRepository({ onAddPrinciple });
 
-    fireEvent.click(screen.getByRole('tab', { name: '我的原则' }));
+    fireEvent.click(screen.getByRole('tab', { name: '沉淀' }));
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
     expect(screen.getByRole('dialog', { name: '书写原则' })).toBeTruthy();
     expect(screen.queryByText('关联模式（可选）')).toBeNull();
@@ -219,7 +221,7 @@ describe('PastRepository', () => {
     fireEvent.change(screen.getByLabelText('刻录新原则'), {
       target: { value: '先确认事实，再作判断' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '保存原则' }));
+    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
     expect(onAddPrinciple).toHaveBeenCalledWith(
       '先确认事实，再作判断',
       expect.any(Number),
@@ -243,7 +245,7 @@ describe('PastRepository', () => {
     };
     renderRepository({ principles: [principle], onUpdatePrinciple });
 
-    fireEvent.click(screen.getByRole('tab', { name: '我的原则' }));
+    fireEvent.click(screen.getByRole('tab', { name: '沉淀' }));
     expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '编辑原则：先确认事实，再作判断' }));
     fireEvent.change(screen.getByLabelText('编辑原则：先确认事实，再作判断'), {
