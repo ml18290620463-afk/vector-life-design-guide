@@ -32,7 +32,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: `PORT=${port} HOST=127.0.0.1 VITE_DEV_PORT=${port} VITE_DEV_HOST=127.0.0.1 VITE_HMR_PORT=${port + 1} npm run dev`,
+    // Run TypeScript through Node's loader rather than the `tsx` CLI. In a
+    // linked worktree the CLI tries to allocate its IPC socket beside the
+    // dependency tree, which can belong to another checkout and make E2E
+    // startup fail before the app is even served.
+    command: `PORT=${port} HOST=127.0.0.1 VITE_DEV_PORT=${port} VITE_DEV_HOST=127.0.0.1 VITE_HMR_PORT=${port + 1} node --import tsx server.ts`,
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
     timeout: 30_000,

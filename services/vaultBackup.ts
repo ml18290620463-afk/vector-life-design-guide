@@ -23,10 +23,8 @@ import { encryptVaultBackupFile } from './vaultBackupFile';
 import { recoverSourceDeletion } from './sourceDeletion';
 import { storedArray, withLegacyValue } from './vaultLegacyRead';
 import { decodeEntries, type UnreadableEntry } from './readableEntries';
-import {
-  summarizeMaterialReferences,
-  type MaterialReferenceSummary,
-} from '../lib/materialPersistence';
+import { materialReferencesForBackup, summarizeVaultBackupContent } from './vaultBackupSummary';
+import type { MaterialReferenceSummary } from '../lib/materialPersistence';
 
 const domainsFor = (userId?: string) => ({
   entries: K.entries,
@@ -311,27 +309,6 @@ export interface VaultRecoveryDrill {
   externalReferenceLimitations: string;
 }
 
-const summarizeBackupMaterialReferences = (backup: VaultBackup): MaterialReferenceSummary => {
-  const references: Array<string | null | undefined> = [];
-  for (const entry of backup.entries) {
-    if (entry.attachment) references.push(entry.attachment.data);
-    for (const material of entry.nowMaterials ?? []) references.push(material.url);
-  }
-  for (const material of backup.vault.draft?.materials ?? []) references.push(material.url);
-  for (const row of backup.vault.data.materials) {
-    if (!row || typeof row !== 'object') continue;
-    const candidate = row as { data?: unknown; url?: unknown };
-    references.push(
-      typeof candidate.data === 'string'
-        ? candidate.data
-        : typeof candidate.url === 'string'
-          ? candidate.url
-          : undefined,
-    );
-  }
-  return summarizeMaterialReferences(references);
-};
-
 /** Computes a restore result in memory only. It does not create restore jobs or write any vault key. */
 export async function drillVaultBackupRestore(
   backup: VaultBackup,
@@ -379,7 +356,7 @@ export async function drillVaultBackupRestore(
         dataCounts: Object.fromEntries(
           Object.entries(backup.vault.data).map(([key, rows]) => [key, rows.length]),
         ),
-        materialReferences: summarizeBackupMaterialReferences(backup),
+        materialReferences: materialReferencesForBackup(backup),
         externalReferenceLimitations:
           '演练不会访问外部链接、本机媒体或网络资源，也不会写入当前资料库。内嵌素材可随备份恢复；网页链接仅保存地址。',
       };
@@ -393,12 +370,24 @@ async function plaintextEntries(
 ): Promise<DiaryEntry[]> {
   return Promise.all(
     entries.map(async (entry) => {
-      if (!entry.isEncrypted) return { ...entry, isEncrypted: false };
-      if (!password) throw new VaultLockedError();
+      const decryptContent = async (content: string, encrypted?: boolean) => {
+        if (!encrypted) return content;
+        if (!password) throw new VaultLockedError();
+        return SecurityService.decrypt(content, password);
+      };
       return {
         ...entry,
-        content: await SecurityService.decrypt(entry.content, password),
+        content: await decryptContent(entry.content, entry.isEncrypted),
         isEncrypted: false,
+        supplements: entry.supplements
+          ? await Promise.all(
+              entry.supplements.map(async (supplement) => ({
+                ...supplement,
+                content: await decryptContent(supplement.content, supplement.isEncrypted),
+                isEncrypted: false,
+              })),
+            )
+          : undefined,
       };
     }),
   );
@@ -548,6 +537,15 @@ export async function importVaultBackup(
             ...entry,
             content: await SecurityService.encrypt(entry.content, targetPassword),
             isEncrypted: true,
+            supplements: entry.supplements
+              ? await Promise.all(
+                  entry.supplements.map(async (supplement) => ({
+                    ...supplement,
+                    content: await SecurityService.encrypt(supplement.content, targetPassword),
+                    isEncrypted: true,
+                  })),
+                )
+              : undefined,
           })),
         );
       for (const [name, key] of Object.entries(domains))
@@ -558,7 +556,16 @@ export async function importVaultBackup(
       v[K.initializedFlag] = true;
       v[K.semanticEmbeddings] = undefined;
       v[RESTORE_JOB] = { caches, mirrorKeys: Object.values(domains) };
-      return { importedCount: backup.entries.length, totalAfter: data.entries.length, mode };
+      const restored = summarizeVaultBackupContent({
+        entries: data.entries as DiaryEntry[],
+        vault: { data, future, draft: nextDraft, caches },
+      });
+      return {
+        importedCount: backup.entries.length,
+        totalAfter: data.entries.length,
+        mode,
+        restored,
+      };
     },
     false,
     protection,

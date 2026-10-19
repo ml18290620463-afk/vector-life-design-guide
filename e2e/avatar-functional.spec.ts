@@ -19,6 +19,26 @@ async function unlockAfterRefresh(page: import('@playwright/test').Page) {
   await expect(page.getByRole('navigation', { name: '主页面导航' })).toBeVisible();
 }
 
+/**
+ * Extraction is intentionally unavailable until the person has selected a
+ * provider, model, and key. Seed a harmless in-session configuration for the
+ * tests that exercise the confirmed-memory flow; network calls are still
+ * intercepted below, so this never contacts an external service.
+ */
+async function seedAvatarModel(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    sessionStorage.setItem(
+      'vector.avatar.model.session.v1',
+      JSON.stringify({
+        baseUrl: 'https://api.example.test/v1',
+        apiKey: 'test-key',
+        model: 'test-model',
+        endpoint: 'chat',
+      }),
+    );
+  });
+}
+
 test('分身模型设置会校验、保留服务商草稿并在解锁后恢复已记住配置', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -53,7 +73,7 @@ test('分身模型设置会校验、保留服务商草稿并在解锁后恢复�
   await expect(page.getByLabel('API Key', { exact: true })).toHaveValue('test-openai-key');
   await page.getByLabel('服务商', { exact: true }).selectOption('1');
   await expect(page.getByLabel('API Key', { exact: true })).toHaveValue('test-deepseek-key');
-  await expect(page.getByLabel('模型名称', { exact: true })).toHaveValue('my-account-model');
+  await expect(page.getByLabel('模型', { exact: true })).toHaveValue('my-account-model');
   await page.screenshot({ path: testInfo.outputPath('model-settings-mobile.png'), fullPage: true });
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
@@ -68,7 +88,7 @@ test('分身模型设置会校验、保留服务商草稿并在解锁后恢复�
   await page.getByLabel('API Key', { exact: true }).fill('invalid-replacement-key');
   await page.getByRole('button', { name: '验证并保存', exact: true }).click();
   await expect(page.locator('.avatar-model-alert')).toHaveText(
-    'API Key 无效、已过期，或没有调用这个模型的权限。',
+    'API Key 无效、已过期，或未被该服务商接受。请在服务商控制台重新创建或检查该 Key。',
   );
   await expect(page.getByRole('dialog', { name: '分身设置', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '返回分身', exact: true }).click();
@@ -78,7 +98,7 @@ test('分身模型设置会校验、保留服务商草稿并在解锁后恢复�
   await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
   await expect(page.getByLabel('服务商', { exact: true })).toHaveValue('1');
   await expect(page.getByLabel('API Key', { exact: true })).toHaveValue('test-deepseek-key');
-  await expect(page.getByLabel('模型名称', { exact: true })).toHaveValue('my-account-model');
+  await expect(page.getByLabel('模型', { exact: true })).toHaveValue('my-account-model');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
@@ -91,23 +111,28 @@ test('分身只在确认后保存提炼信息，档案支持修改、撤销删�
   await page.route('**/api/v1/avatar/chat', (route) =>
     route.fulfill({ json: { reply: '安静的环境似乎能帮助你进入更专注的思考状态。' } }),
   );
-  await page.route('**/api/v1/avatar/memory/extract', (route) =>
-    route.fulfill({
+  let extractionRequests = 0;
+  await page.route(/\/api\/v1\/avatar\/memory\/extract(?:\?.*)?$/, (route) => {
+    extractionRequests += 1;
+    return route.fulfill({
       json: {
         candidate: {
           statement: '我更喜欢在安静的环境中思考。',
           kind: 'preference',
-          sourceIndex: 0,
+          sourceIndexes: [0],
         },
       },
-    }),
-  );
+    });
+  });
   await seedOnboardedApp(page);
+  await seedAvatarModel(page);
   await openAvatar(page);
   const chat = '我更喜欢在安静的地方思考，嘈杂环境会让我很难集中。';
   await page.getByLabel('对话内容', { exact: true }).fill(chat);
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByText('安静的环境似乎能帮助你进入更专注的思考状态。')).toBeVisible();
+  await page.getByRole('button', { name: '提炼记忆', exact: true }).click();
+  await expect.poll(() => extractionRequests).toBeGreaterThan(0);
   await expect(page.getByRole('dialog', { name: '记住这条关于你的信息？' })).toBeVisible();
   await expect(page.getByRole('dialog').getByLabel('提炼的信息', { exact: true })).toHaveValue(
     '我更喜欢在安静的环境中思考。',
@@ -164,22 +189,24 @@ test('分身取消提炼和各层返回不会写入记忆，窄屏仍可继续�
   await page.route('**/api/v1/avatar/chat', (route) =>
     route.fulfill({ json: { reply: '我记住了这段交流。' } }),
   );
-  await page.route('**/api/v1/avatar/memory/extract', (route) =>
+  await page.route(/\/api\/v1\/avatar\/memory\/extract(?:\?.*)?$/, (route) =>
     route.fulfill({
       json: {
         candidate: {
           statement: '我偏好在清晨处理需要专注的工作。',
           kind: 'preference',
-          sourceIndex: 0,
+          sourceIndexes: [0],
         },
       },
     }),
   );
   await seedOnboardedApp(page);
+  await seedAvatarModel(page);
   await openAvatar(page);
 
   await page.getByLabel('对话内容', { exact: true }).fill('我喜欢清晨安静地完成重要工作。');
   await page.getByRole('button', { name: '发送', exact: true }).click();
+  await page.getByRole('button', { name: '提炼记忆', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '记住这条关于你的信息？' })).toBeVisible();
   await page.getByRole('button', { name: '暂不记住', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -209,17 +236,19 @@ test('记忆删除确认按 Escape 会返回详情而非关闭整个窗口', asy
   await page.route('**/api/v1/avatar/chat', (route) =>
     route.fulfill({ json: { reply: '好的。' } }),
   );
-  await page.route('**/api/v1/avatar/memory/extract', (route) =>
+  await page.route(/\/api\/v1\/avatar\/memory\/extract(?:\?.*)?$/, (route) =>
     route.fulfill({
       json: {
-        candidate: { statement: '我喜欢先写下想法再讨论。', kind: 'habit', sourceIndex: 0 },
+        candidate: { statement: '我喜欢先写下想法再讨论。', kind: 'habit', sourceIndexes: [0] },
       },
     }),
   );
   await seedOnboardedApp(page);
+  await seedAvatarModel(page);
   await openAvatar(page);
   await page.getByLabel('对话内容', { exact: true }).fill('我习惯先写下想法再讨论。');
   await page.getByRole('button', { name: '发送', exact: true }).click();
+  await page.getByRole('button', { name: '提炼记忆', exact: true }).click();
   await page.getByRole('button', { name: '确认记住', exact: true }).click();
   await page.getByRole('button', { name: '记忆档案', exact: true }).click();
   await page.getByRole('button', { name: '我的模式', exact: true }).click();
@@ -252,7 +281,7 @@ test('分身对话失败后重试只补充回复，不重复写入用户消息',
   const message = '请帮我看看这一步该怎么安排。';
   await page.getByLabel('对话内容', { exact: true }).fill(message);
   await page.getByRole('button', { name: '发送', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('模型服务额度不足或请求过于频繁');
+  await expect(page.getByRole('alert')).toContainText('服务商拒绝了请求：额度不足、配额已用尽或请求过于频繁');
   await expect(page.getByText(message, { exact: true })).toHaveCount(1);
   await page.getByRole('button', { name: '重试回复', exact: true }).click();
   await expect(page.getByText('这次回复已经顺利抵达。', { exact: true })).toBeVisible();

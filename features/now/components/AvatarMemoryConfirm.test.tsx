@@ -32,7 +32,8 @@ it('makes a proposed change explicit before the user confirms it', () => {
 
   expect(screen.getByRole('heading', { name: '更新这条关于你的理解？' })).toBeTruthy();
   expect(screen.getByText('「我偏好绝对安静的工作环境」')).toBeTruthy();
-  expect(screen.getByText(/模型从当前对话的 2 条用户表述中提炼/)).toBeTruthy();
+  expect(screen.getByText(/来源：聊天中的 2 条自述。确认后才会加入记忆库。/)).toBeTruthy();
+  expect(screen.getByText('提炼说明').closest('details')?.open).toBe(false);
   fireEvent.click(screen.getByRole('button', { name: '确认更新' }));
   expect(confirm).toHaveBeenCalledWith([], 'recent_state', 'explicit', undefined);
 });

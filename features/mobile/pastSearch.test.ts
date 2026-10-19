@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { DiaryEntry } from '../../types';
-import { getPastSearchMatch, searchPastEntries, searchPastEntriesWithMatchKind } from './pastSearch';
+import {
+  getPastSearchMatch,
+  searchPastEntries,
+  searchPastEntriesWithMatchKind,
+} from './pastSearch';
 
 const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry => ({
   id,
@@ -12,6 +16,22 @@ const entry = (id: string, createdAt: number, tags: string[] = []): DiaryEntry =
 });
 
 describe('pastSearch', () => {
+  it('finds every expected record across 100 queries in a 1000-record archive', () => {
+    const entries = Array.from({ length: 1000 }, (_, index) =>
+      entry(`record-${index}`, index, [`topic-${String(index % 100).padStart(3, '0')}`]),
+    );
+    const before = JSON.stringify(entries);
+    for (let query = 0; query < 100; query++) {
+      const result = searchPastEntries(entries, `topic-${String(query).padStart(3, '0')}`);
+      expect(result.map((item) => item.id).sort()).toEqual(
+        entries
+          .filter((_, index) => index % 100 === query)
+          .map((item) => item.id)
+          .sort(),
+      );
+    }
+    expect(JSON.stringify(entries)).toBe(before);
+  });
   it('matches labels and content case-insensitively with one query', () => {
     const entries = [entry('meeting', 1, ['工作事业']), entry('rest', 2, ['生活'])];
     expect(searchPastEntries(entries, ' 工作 ')).toEqual([entries[0]]);
@@ -88,7 +108,6 @@ it('shows the supplement matching most query words', () => {
     excerpt: '会议 项目 结论',
   });
 });
-
 
 it('marks literal and thematic results separately without changing the old search API', () => {
   const exact = { ...entry('exact', 30), content: '今天感到焦虑' };

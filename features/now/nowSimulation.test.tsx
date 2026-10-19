@@ -115,6 +115,43 @@ describe('Now simulated input integration', () => {
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist.mock.calls[0][0].id).toBe(persist.mock.calls[1][0].id);
   });
+  it('keeps image material after a failed save and writes one record when retried', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const persisted = new Map<string, Parameters<NonNullable<Persist>>[0]>();
+    let attempts = 0;
+    const persist = vi.fn(async (payload: Parameters<NonNullable<Persist>>[0]) => {
+      attempts += 1;
+      if (attempts === 1) throw new Error('模拟存储失败');
+      persisted.set(payload.id!, payload);
+      return { ...payload, id: payload.id!, createdAt: Date.now(), isLocked: false };
+    });
+    render(<Flow persist={persist} />);
+    await screen.findByLabelText('此刻发生了什么？');
+    fillRecord();
+    const picker = document.querySelector('input[type=file][accept="image/*"]') as HTMLInputElement;
+    fireEvent.change(picker, {
+      target: { files: [new File(['tiny image'], 'recovery.png', { type: 'image/png' })] },
+    });
+    await waitFor(() => expect(document.querySelector('.now-material')).not.toBeNull());
+
+    fireEvent.click(screen.getByLabelText('保存到过去'));
+    await screen.findByText('模拟存储失败');
+    expect(input()).toHaveValue('今天主动澄清会议目标，讨论更聚焦。');
+    expect(document.querySelector('.now-material')).not.toBeNull();
+    await waitFor(async () => {
+      const draft = (await loadNowDraft()).draft;
+      expect(draft?.text).toBe('今天主动澄清会议目标，讨论更聚焦。');
+      expect(draft?.materials).toHaveLength(1);
+      expect(draft?.materials[0]).toMatchObject({ type: 'image', local_path: 'recovery.png' });
+    });
+
+    fireEvent.click(screen.getByLabelText('保存到过去'));
+    await waitFor(() => expect(input()).toHaveValue(''));
+    expect(persist).toHaveBeenCalledTimes(2);
+    expect(persist.mock.calls[0][0].id).toBe(persist.mock.calls[1][0].id);
+    expect(persisted.size).toBe(1);
+    expect([...persisted.values()][0].nowMaterials).toHaveLength(1);
+  });
   it('blocks repeated save while persistence is pending', async () => {
     let resolve!: (v: Awaited<ReturnType<Persist>>) => void;
     const persist = vi.fn<Persist>(

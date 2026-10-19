@@ -59,4 +59,10 @@ describe('avatar model persistence', () => {
     expect(readAvatarModel()).toBeNull();
     expect(readAvatarModelPreference()).toBeNull();
   });
+
+  it('does not treat a missing or blank API key as a configured model', () => {
+    saveAvatarModel({ ...config, apiKey: '   ' });
+    expect(readAvatarModel()).toBeNull();
+    expect(readAvatarModelPreference()?.model).toBe(config.model);
+  });
 });

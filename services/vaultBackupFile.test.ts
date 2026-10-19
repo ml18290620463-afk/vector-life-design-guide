@@ -73,6 +73,16 @@ async function fixture() {
       })),
     ),
   );
+  const stored = await get(K.entries);
+  stored[0].supplements = [
+    {
+      id: 's1',
+      content: await SecurityService.encrypt('补充事实', password),
+      isEncrypted: true,
+      createdAt: 2,
+    },
+  ];
+  await set(K.entries, stored);
   const file = await exportVaultBackupFile('test');
   if (!isEncryptedVaultBackup(file)) throw new Error('Expected encrypted file');
   return file;
@@ -84,7 +94,15 @@ it('restores all protected domains in an empty browser storage and repeated merg
   await clear();
   localStorage.clear();
   useAppStore.setState({ masterPassword: null, isUnlocked: true });
-  await importVaultBackup(backup, 'merge', undefined, password);
+  const firstRestore = await importVaultBackup(backup, 'merge', undefined, password);
+  expect(firstRestore.restored).toMatchObject({
+    entries: 1,
+    supplements: 1,
+    hasDraft: true,
+    goals: 1,
+    actions: 1,
+    confirmedMemories: 1,
+  });
   await importVaultBackup(backup, 'merge', undefined, password);
   expect(await get(K.entries)).toHaveLength(1);
   expect((await get(K.entries))[0].isEncrypted).toBe(true);
@@ -109,6 +127,11 @@ it('preserves a protected destination password while importing a differently enc
   const hash = await get(K.passwordHash);
   await importVaultBackup(backup, 'merge', undefined, password);
   expect(await get(K.passwordHash)).toBe(hash);
+  expect(
+    await SecurityService.decrypt((await get(K.entries))[0].supplements[0].content, '本机密码-456'),
+  ).toBe('补充事实');
+  await importVaultBackup(backup, 'merge', undefined, password);
+  expect((await get(K.entries))[0].supplements).toHaveLength(1);
   expect(await SecurityService.decrypt((await get(K.entries))[0].content, '本机密码-456')).toBe(
     '私人经历',
   );
@@ -305,7 +328,9 @@ it('round-trips every backup domain, embedded media and complete linked future h
   )) as VaultBackup;
   expect(after.vault.data).toEqual(before.vault.data);
   expect(after.entries[0].createdAt).toBe(1);
-  expect(after.entries[0].supplements).toEqual(entries[0].supplements);
+  expect(after.entries[0].supplements).toEqual(
+    entries[0].supplements.map((s) => ({ ...s, isEncrypted: false })),
+  );
   expect(after.vault.caches).toEqual(before.vault.caches);
   expect(after.vault.draft).toEqual(before.vault.draft);
   expect({ ...after.vault.future, revision: 0 }).toEqual({ ...before.vault.future, revision: 0 });

@@ -152,6 +152,41 @@ describe('personal fact extraction', () => {
     expect(res.body.candidate.statement).toBe('我喜欢安静的工作环境');
     expect(res.body.candidate.statement).not.toContain('昨天');
   });
+  it('uses chat-only instructions that never present experience as an allowed kind', async () => {
+    vi.mocked(callOpenRouter).mockResolvedValue('{"candidates":[]}');
+    const res = await request(app())
+      .post('/api/v1/avatar/memory/extract')
+      .send({ messages: [{ role: 'user', content: '我偏好在安静的地方工作。' }] });
+
+    expect(res.status).toBe(200);
+    const prompt = vi.mocked(callOpenRouter).mock.calls[0][0];
+    expect(prompt).toContain(
+      'kind 只能是 profile/preference/boundary/value/habit/goal/expression/pattern_candidate',
+    );
+    expect(prompt).toContain('绝不输出 experience');
+    expect(prompt).not.toContain('重要经历(experience)');
+    expect(prompt).not.toContain(
+      'kind 只能是 profile/preference/boundary/value/habit/goal/experience/',
+    );
+  });
+  it('rejects a chat extraction that tries to turn a mentioned event into a past experience', async () => {
+    vi.mocked(callOpenRouter).mockResolvedValue(
+      JSON.stringify({
+        candidate: {
+          statement: '用户去年项目失败并很痛苦',
+          kind: 'experience',
+          sourceIndexes: [0],
+          evidences: ['去年项目失败让我很痛苦'],
+        },
+      }),
+    );
+    const res = await request(app())
+      .post('/api/v1/avatar/memory/extract')
+      .send({ messages: [{ role: 'user', content: '去年项目失败让我很痛苦。' }] });
+
+    expect(res.status).toBe(502);
+    expect(res.body.candidate).toBeUndefined();
+  });
   it('returns up to three separately evidenced candidates from one dialogue', async () => {
     vi.mocked(callOpenRouter).mockResolvedValue(
       JSON.stringify({

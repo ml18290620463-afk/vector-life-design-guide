@@ -1,3 +1,4 @@
+import type { DiaryEntry } from '../../../types';
 import { formatAvatarReply } from '../state/avatarReplyFormat';
 import React, { type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { ArrowLeft, Settings2, X } from 'lucide-react';
@@ -5,6 +6,7 @@ import type {
   AvatarLaunchContext,
   AvatarMemoryFacet,
   AvatarMemoryNature,
+  AvatarMemorySourceRef,
 } from '../../avatar/types';
 import type { AvatarRecallMemory, AvatarStructuredInsight } from '../state/nowRules';
 import type { ChatMessage, NowDraft, RecordPreviewPayload } from '../types/now';
@@ -65,6 +67,7 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
 });
 
 interface AvatarChatSurfaceProps {
+  pastEntries?: DiaryEntry[];
   focusedObjectText?: string;
   avatarMemories: ReturnType<
     typeof import('../../../services/avatarKnowledgeProjection').resolveAvatarKnowledge
@@ -86,6 +89,7 @@ interface AvatarChatSurfaceProps {
   candidateKind?: React.ComponentProps<typeof AvatarMemoryConfirm>['candidateKind'];
   candidateCategory?: React.ComponentProps<typeof AvatarMemoryConfirm>['categoryOverride'];
   candidateSourceCount?: number;
+  candidateSourceRefs?: AvatarMemorySourceRef[];
   candidatePosition?: number;
   candidateTotal?: number;
   replacementStatement?: string | null;
@@ -134,6 +138,7 @@ interface AvatarChatSurfaceProps {
 }
 
 export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
+  pastEntries,
   focusedObjectText,
   avatarMemories,
   candidateSummary,
@@ -153,6 +158,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   candidateKind,
   candidateCategory,
   candidateSourceCount,
+  candidateSourceRefs,
   candidatePosition,
   candidateTotal,
   replacementStatement,
@@ -194,6 +200,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   onOpenDraft,
   draft,
 }) => {
+  const [backupWorkspaceOpen, setBackupWorkspaceOpen] = React.useState(false);
   const modeCopy = MODE_COPY[launchContext.mode];
   return (
     <main
@@ -206,27 +213,47 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             <button
               type="button"
               className="now-icon-button"
-              onClick={() => (libraryView !== 'chat' ? onSetLibraryView('chat') : onBack())}
-              aria-label={libraryView !== 'chat' ? '返回聊天' : '返回'}
+              onClick={() =>
+                backupWorkspaceOpen
+                  ? setBackupWorkspaceOpen(false)
+                  : libraryView !== 'chat'
+                    ? onSetLibraryView('chat')
+                    : onBack()
+              }
+              aria-label={backupWorkspaceOpen || libraryView !== 'chat' ? '返回聊天' : '返回'}
             >
               <ArrowLeft size={20} />
             </button>
             <nav className="avatar-section-tabs" aria-label="记忆分身导航">
               <button
                 type="button"
-                className={libraryView === 'chat' ? 'is-active' : ''}
-                aria-pressed={libraryView === 'chat'}
-                onClick={() => onSetLibraryView('chat')}
+                className={!backupWorkspaceOpen && libraryView === 'chat' ? 'is-active' : ''}
+                aria-pressed={!backupWorkspaceOpen && libraryView === 'chat'}
+                onClick={() => {
+                  setBackupWorkspaceOpen(false);
+                  onSetLibraryView('chat');
+                }}
               >
                 聊天
               </button>
               <button
                 type="button"
-                className={libraryView === 'library' ? 'is-active' : ''}
-                aria-pressed={libraryView === 'library'}
-                onClick={() => onSetLibraryView('library')}
+                className={!backupWorkspaceOpen && libraryView === 'library' ? 'is-active' : ''}
+                aria-pressed={!backupWorkspaceOpen && libraryView === 'library'}
+                onClick={() => {
+                  setBackupWorkspaceOpen(false);
+                  onSetLibraryView('library');
+                }}
               >
                 记忆库
+              </button>
+              <button
+                type="button"
+                className={backupWorkspaceOpen ? 'is-active' : ''}
+                aria-pressed={backupWorkspaceOpen}
+                onClick={() => setBackupWorkspaceOpen(true)}
+              >
+                备份
               </button>
             </nav>
           </div>
@@ -274,9 +301,10 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           </div>
         </section>
       )}
-      {general && libraryView !== 'chat' && (
+      {general && !backupWorkspaceOpen && libraryView !== 'chat' && (
         <AvatarMemoryLibrary
           memories={avatarMemories}
+          entries={pastEntries}
           historyMemories={storedAvatarMemories}
           patterns={patterns}
           pendingMemories={pendingMemories}
@@ -285,7 +313,22 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           onAdd={onAddMemory}
         />
       )}
-      <div className="avatar-chat-content" hidden={libraryView !== 'chat'}>
+      {general && backupWorkspaceOpen && (
+        <section className="avatar-backup-workspace" aria-labelledby="avatar-backup-title">
+          <header className="avatar-backup-workspace__header">
+            <p>资料管理</p>
+            <h1 id="avatar-backup-title">备份与恢复</h1>
+            <span>带走完整资料，回到任何一台设备后继续使用。</span>
+          </header>
+          <AvatarReliabilityAssistant
+            task="backup"
+            draft={draft}
+            onOpenDraft={onOpenDraft}
+            showToast={showToast}
+          />
+        </section>
+      )}
+      <div className="avatar-chat-content" hidden={backupWorkspaceOpen || libraryView !== 'chat'}>
         <section
           ref={chatListRef}
           className="now-chat-list"
@@ -380,6 +423,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           candidateKind={candidateKind}
           categoryOverride={candidateCategory}
           sourceCount={candidateSourceCount}
+          sourceRefs={candidateSourceRefs}
           candidatePosition={candidatePosition}
           candidateTotal={candidateTotal}
           replacementStatement={replacementStatement}

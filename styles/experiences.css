@@ -2118,6 +2118,44 @@ html.vector-force-mobile .avatar-model-dialog footer {
   }
 }
 
+/* A memory decision must remain finishable when a phone rotates.  The editor
+   used to reserve its portrait-sized writing area in a 375px-high landscape
+   viewport, which left the only save action below the fold. */
+@media (max-height: 480px) and (orientation: landscape) {
+  html:is(.vector-force-mobile, .vector-force-web)
+    :is(.avatar-memory-dialog, .avatar-model-dialog) {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog__header,
+  html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog > form > header {
+    min-height: 40px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+  html:is(.vector-force-mobile, .vector-force-web)
+    :is(.avatar-memory-dialog__back, .avatar-model-dialog__back) {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+  html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog label {
+    margin-top: 10px;
+    margin-bottom: 6px;
+  }
+  html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog textarea {
+    min-height: 112px;
+    padding: 10px 12px;
+    line-height: 1.55;
+  }
+  html:is(.vector-force-mobile, .vector-force-web) .avatar-memory-dialog__actions {
+    bottom: calc(-1 * max(10px, env(safe-area-inset-bottom)));
+    flex-shrink: 0;
+    padding-top: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}
+
 /* Future planning has one clear route back.  The editor stays contained on
    the canvas and its final action remains anchored in the lower-right corner. */
 html:is(.vector-force-mobile, .vector-force-web) .future-editor-screen {
@@ -3612,7 +3650,7 @@ dialog.principle-editor-screen::backdrop {
   display: grid;
   grid-template-columns: 2.75rem minmax(0, 1fr);
   width: 100%;
-  gap: .75rem;
+  gap: 0.75rem;
   align-items: start;
 }
 
@@ -3634,7 +3672,7 @@ dialog.principle-editor-screen::backdrop {
 .principle-editor-canvas .principle-editor__heading {
   width: auto;
   min-width: 0;
-  margin: .35rem 0 0;
+  margin: 0.35rem 0 0;
   padding: 0;
 }
 
@@ -3643,36 +3681,36 @@ dialog.principle-editor-screen::backdrop {
   color: var(--experience-ink, #e6edf0);
   font-size: clamp(1.5rem, 4vw, 1.9rem);
   font-weight: 620;
-  letter-spacing: -.035em;
+  letter-spacing: -0.035em;
   line-height: 1.2;
 }
 
 .principle-editor-canvas .principle-editor__heading > p:last-child {
-  margin: .55rem 0 0;
+  margin: 0.55rem 0 0;
   color: var(--experience-muted, #a9c8d0);
-  font-size: .92rem;
+  font-size: 0.92rem;
   line-height: 1.65;
 }
 
 .principle-editor-canvas .principle-editor__writing {
   display: grid;
   width: 100%;
-  gap: .75rem;
+  gap: 0.75rem;
   margin-top: clamp(2.75rem, 7vh, 4.5rem);
   padding: 0;
 }
 
 .principle-editor-canvas .principle-editor__field-label {
   color: var(--experience-muted, #a9c8d0) !important;
-  font-size: .78rem !important;
-  letter-spacing: .08em;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.08em;
 }
 
 .principle-editor-canvas .mobile-principles-view__textarea {
   box-sizing: border-box;
   min-height: clamp(8rem, 16dvh, 11rem);
   max-height: 14rem;
-  padding: .9rem 0;
+  padding: 0.9rem 0;
   border-width: 0 0 1px;
   border-radius: 0;
   border-color: color-mix(in srgb, var(--experience-line, #49616c) 72%, transparent);
@@ -3695,19 +3733,23 @@ dialog.principle-editor-screen::backdrop {
   width: 100%;
   min-height: 3.15rem;
   margin: 0;
-  border-radius: .9rem;
+  border-radius: 0.9rem;
   justify-self: stretch;
 }
 
 .principles-library__empty-copy {
   color: var(--experience-muted, #a9c8d0) !important;
   font-weight: 500;
-  letter-spacing: .01em;
+  letter-spacing: 0.01em;
 }
 
 .principles-library__empty-icon {
-  color: color-mix(in srgb, var(--experience-accent, #79cfc7) 58%, var(--experience-muted, #a9c8d0)) !important;
-  opacity: .72;
+  color: color-mix(
+    in srgb,
+    var(--experience-accent, #79cfc7) 58%,
+    var(--experience-muted, #a9c8d0)
+  ) !important;
+  opacity: 0.72;
 }
 
 @media (max-width: 600px) {
@@ -3723,6 +3765,13 @@ dialog.principle-editor-screen::backdrop {
 /* Keep the principle page close to a sheet of writing.  The earlier full-height
    flex layout pushed the confirmation to the bottom of tall desktop windows,
    making one short sentence look like a long form. */
+.mobile-past-search-result-count {
+  margin: 0.45rem 0 0;
+  color: var(--experience-muted, #a9c8d0);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 @media (min-width: 601px) {
   .principle-editor-canvas {
     padding: clamp(2rem, 5vh, 4rem) clamp(2rem, 9vw, 9rem);
@@ -3749,7 +3798,7 @@ dialog.principle-editor-screen::backdrop {
   }
 
   .principle-editor-canvas .principle-editor__field-label {
-    font-size: .9rem !important;
+    font-size: 0.9rem !important;
   }
 
   .principle-editor-canvas .mobile-principles-view__textarea {

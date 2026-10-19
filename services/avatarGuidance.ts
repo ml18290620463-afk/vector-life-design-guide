@@ -1,6 +1,12 @@
 import type { AvatarAtomicMemory } from '../features/avatar/types';
 export { buildGuidanceSources } from './avatarGuidanceSources';
 
+export type GuidanceTemporalStatus =
+  | 'current_understanding'
+  | 'historical_fact'
+  | 'historical_understanding'
+  | 'time_limited';
+
 export interface GuidanceSource {
   id: string;
   kind: '模式' | '原则' | '行动' | '愿景' | '目标' | '偏好' | '边界' | '驱动' | '触点' | '背景';
@@ -13,13 +19,21 @@ export interface GuidanceSource {
   detail?: string;
   status?: string;
   /** `searchText` stays inside local retrieval and is removed before a source reaches the avatar. */
-  evidence?: { text: string; occurredAt: number; searchText?: string }[];
+  evidence?: {
+    text: string;
+    occurredAt: number;
+    searchText?: string;
+    /** Keep dialogue self-reports distinct from recorded experiences. */
+    source?: 'entry' | 'message';
+  }[];
   results?: { text: string; occurredOn: string; status: string }[];
   nature?: AvatarAtomicMemory['nature'];
   validFrom?: number;
   validTo?: number;
   avatarName?: string;
   confirmedAt?: number;
+  /** Whether this is a current understanding, a bounded item, or historical material. */
+  temporalStatus?: GuidanceTemporalStatus;
 }
 
 export interface GuidanceRetrievalOptions {
@@ -28,6 +42,22 @@ export interface GuidanceRetrievalOptions {
 }
 
 export const GUIDANCE_STARTERS = ['回看我的惯性', '想清眼前的选择', '让今天靠近我的愿景'];
+
+/** Historical material is available when the user explicitly asks to look back. */
+export const isHistoricalAvatarQuestion = (question: string) =>
+  /(以前|过去|当时|曾经|之前|从前|去年|上月|上周|变化|相比|回看|类似经历|相似经历|那段时间|当年)/.test(
+    question,
+  );
+
+/** Do not let a past event silently become a claim about the user's current state. */
+export const sourceMatchesTemporalScope = (source: GuidanceSource, question: string) => {
+  const temporalStatus = source.temporalStatus ?? 'current_understanding';
+  return (
+    temporalStatus === 'current_understanding' ||
+    temporalStatus === 'time_limited' ||
+    isHistoricalAvatarQuestion(question)
+  );
+};
 const keyOf = (source: GuidanceSource) => source.sourceKey ?? `${source.kind}:${source.id}`;
 
 const normalizeForRetrieval = (text: string) => text.replace(/\s+/g, '').toLowerCase();
@@ -83,6 +113,9 @@ const naturalSourceLine = (source: GuidanceSource) => {
   const text = compactSourceText(source.text);
   if (source.nature === 'inferred')
     return `这是一条经你确认、仍需验证的理解，不一定适用于这次：${text}`;
+  const isDialogueOnly =
+    (source.evidence?.length ?? 0) > 0 && source.evidence!.every((item) => item.source === 'message');
+  if (isDialogueOnly) return `你在一次对话中提到过：${text}`;
   if (source.nature === 'state') return `你曾记录过这样的状态，不能据此判断你现在的感受：${text}`;
   if (source.nature === 'commitment') return `你曾表达过这个计划，是否完成还需要核实：${text}`;
   switch (source.kind) {
@@ -346,6 +379,19 @@ export function buildGroundedGuidance(
   options: GuidanceRetrievalOptions = {},
 ) {
   const now = Date.now();
+  const retrievalQuestion =
+    previousQuestion && isAvatarContextContinuation(question) ? previousQuestion : question;
+  const historicalMaterialWasExcluded =
+    !options.range &&
+    !isHistoricalAvatarQuestion(retrievalQuestion) &&
+    sources.some((source) => {
+      const temporalStatus = source.temporalStatus ?? 'current_understanding';
+      return temporalStatus === 'historical_fact' || temporalStatus === 'historical_understanding';
+    });
+  const asksAboutCurrentSelf =
+    /(?:现在|目前|当下|最近|今天|这阵子).*(?:我|自己|状态|感受|情况|想法|适合|应该)|(?:我|自己).*(?:现在|目前|当下|最近).*(?:是|有|会|想|该|适合)|(?:我|自己).*(?:感到|觉得|更|变得|让我)/.test(
+      retrievalQuestion,
+    );
   sources = sources.filter((source) =>
     options.range
       ? Boolean(
@@ -361,10 +407,9 @@ export function buildGroundedGuidance(
             (source.validTo === undefined || source.validTo > options.range!.start)),
         )
       : (source.validFrom === undefined || source.validFrom <= now) &&
-        (source.validTo === undefined || now < source.validTo),
+        (source.validTo === undefined || now < source.validTo) &&
+        (sourceMatchesTemporalScope(source, retrievalQuestion) || source.nature === 'commitment'),
   );
-  const retrievalQuestion =
-    previousQuestion && isAvatarContextContinuation(question) ? previousQuestion : question;
   const tokens = queryBigrams(retrievalQuestion);
   const starterKinds: Record<string, GuidanceSource['kind'][]> = {
     [GUIDANCE_STARTERS[0]]: ['模式', '原则'],
@@ -398,9 +443,16 @@ export function buildGroundedGuidance(
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
   const selected: GuidanceSource[] = [];
+  const isChangeComparison = /(?:变化|相比|对比|前后)/.test(retrievalQuestion);
   for (const { source } of ranked) {
     if (!kinds && selected.length) {
-      if (selected[0].kind === '背景' && source.kind === '背景') selected.push(source);
+      if (
+        (selected[0].kind === '背景' && source.kind === '背景') ||
+        (isChangeComparison &&
+          selected[0].kind === source.kind &&
+          selected[0].temporalStatus !== source.temporalStatus)
+      )
+        selected.push(source);
       break;
     }
     const duplicateKind = selected.some((item) => item.kind === source.kind);
@@ -414,6 +466,12 @@ export function buildGroundedGuidance(
     if (selected.length === 2) break;
   }
   expandGuidanceAssociations(selected, sources);
+  if (!selected.length && historicalMaterialWasExcluded && asksAboutCurrentSelf) {
+    return {
+      sources: [],
+      text: '这只是过去记录，不能据此判断你现在的感受。你可以补一句现在的情况；如果想回看当时经历，也可以直接这样说。',
+    };
+  }
   if (!selected.length && previousQuestion && isAvatarContextContinuation(question)) {
     const previous = buildGroundedGuidance(previousQuestion, sources);
     if (previous.sources.length)

@@ -13,12 +13,24 @@ export async function decodeEntries(
 ): Promise<{ entries: DiaryEntry[]; unreadableEntries: UnreadableEntry[] }> {
   const settled = await Promise.allSettled(
     entries.map(async (entry) => {
-      if (!entry.isEncrypted) return { ...entry, isEncrypted: false };
-      if (!password) throw new Error('Missing session key');
+      const decode = async (content: string, encrypted?: boolean) => {
+        if (!encrypted) return content;
+        if (!password) throw new Error('Missing session key');
+        return SecurityService.decrypt(content, password);
+      };
       return {
         ...entry,
-        content: await SecurityService.decrypt(entry.content, password),
+        content: await decode(entry.content, entry.isEncrypted),
         isEncrypted: false,
+        supplements: entry.supplements
+          ? await Promise.all(
+              entry.supplements.map(async (supplement) => ({
+                ...supplement,
+                content: await decode(supplement.content, supplement.isEncrypted),
+                isEncrypted: false,
+              })),
+            )
+          : undefined,
       };
     }),
   );

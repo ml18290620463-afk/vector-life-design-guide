@@ -16,6 +16,7 @@ import {
   inspectVaultBackup,
   type VaultBackupInspection,
 } from '../../../services/vaultBackupInspection';
+import type { VaultBackupContentSummary } from '../../../services/vaultBackupSummary';
 
 interface Props {
   task: AvatarReliabilityTask;
@@ -43,6 +44,10 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
   const [error, setError] = useState('');
   const [inspection, setInspection] = useState<VaultBackupInspection | null>(null);
   const [drill, setDrill] = useState<VaultRecoveryDrill | null>(null);
+  const [restoreResult, setRestoreResult] = useState<{
+    mode: 'merge' | 'replace';
+    restored: VaultBackupContentSummary;
+  } | null>(null);
 
   const exportBackup = async () => {
     setBusy(true);
@@ -90,8 +95,12 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
 
   const restoreBackup = async () => {
     if (!restoreFile || busy) return;
+    if (!inspection || inspection.needsPassword) {
+      setError('请先检查备份内容后再恢复。');
+      return;
+    }
     if (restoreMode === 'replace' && !replaceConfirmed) {
-      setError('请确认替换会覆盖本机资料后再继续。');
+      setError('请确认替换会使资料回到备份创建时刻。');
       return;
     }
     setBusy(true);
@@ -110,6 +119,9 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       setRestoreFile(null);
       setRestorePassword('');
       setReplaceConfirmed(false);
+      setInspection(null);
+      setDrill(null);
+      setRestoreResult({ mode: summary.mode, restored: summary.restored });
       showToast(`已${restoreMode === 'merge' ? '合并' : '恢复'} ${summary.importedCount} 条记录`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '恢复失败，请检查备份文件后重试');
@@ -191,19 +203,37 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       aria-label="备份与恢复"
     >
       <span className="avatar-reliability-card__eyebrow">备份与恢复</span>
-      <p>备份会包含记录、目标、分身档案和未完成草稿。已启用本地加密时，导出的文件也会加密。</p>
-      <p>恢复凭证用于找回访问权限，不包含日记资料。请另存数据备份，并保管好备份时使用的密令。</p>
+      <p>将记录、规划、已确认记忆和草稿留在一份可带走的文件里。</p>
       <div className="avatar-reliability-card__actions">
-        <button type="button" onClick={() => void exportBackup()} disabled={busy}>
+        <button
+          type="button"
+          className="avatar-reliability-card__primary-action"
+          onClick={() => void exportBackup()}
+          disabled={busy}
+        >
           生成备份
         </button>
-        <button type="button" onClick={() => void exportRecoverableBackup()} disabled={busy}>
-          生成可抢救备份
-        </button>
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}>
-          选择备份文件
+        <button
+          type="button"
+          className="avatar-reliability-card__secondary-action"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy}
+        >
+          恢复备份
         </button>
       </div>
+      <details className="avatar-reliability-card__recovery">
+        <summary>遇到无法读取的记录？</summary>
+        <p>仅在普通备份失败时，生成一份跳过无法读取记录的可抢救备份。</p>
+        <button
+          type="button"
+          className="avatar-reliability-card__text-action"
+          onClick={() => void exportRecoverableBackup()}
+          disabled={busy}
+        >
+          生成可抢救备份
+        </button>
+      </details>
       <input
         ref={inputRef}
         hidden
@@ -212,32 +242,55 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
         onChange={(event) => {
           setRestoreFile(event.target.files?.[0] ?? null);
           setInspection(null);
+          setDrill(null);
+          setRestoreResult(null);
+          setReplaceConfirmed(false);
+          setRestoreMode('merge');
           setError('');
           event.currentTarget.value = '';
         }}
       />
       {restoreFile && (
         <div className="avatar-reliability-restore">
-          <p>已选择：{restoreFile.name}</p>
-          <label>
+          <div className="avatar-reliability-restore__heading">
+            <span>恢复备份</span>
+            <p>已选择：{restoreFile.name}</p>
+          </div>
+          <div className="avatar-reliability-restore__option">
             <input
+              id="restore-mode-merge"
               type="radio"
+              name="restore-mode"
               checked={restoreMode === 'merge'}
               onChange={() => setRestoreMode('merge')}
             />
-            合并到本机（保留现有资料）
-          </label>
-          <label>
+            <label htmlFor="restore-mode-merge">
+              <strong>合并恢复（推荐）</strong>
+              <small>保留本机现有资料，并带回备份中的资料；同一编号但内容不同会停止恢复。</small>
+            </label>
+          </div>
+          <div className="avatar-reliability-restore__option">
             <input
+              id="restore-mode-replace"
               type="radio"
+              name="restore-mode"
               checked={restoreMode === 'replace'}
               onChange={() => setRestoreMode('replace')}
             />
-            用备份替换本机资料
-          </label>
+            <label htmlFor="restore-mode-replace">
+              <strong>替换恢复</strong>
+              <small>
+                用备份替换当前资料。经历、规划、草稿和分身的已确认理解都会回到备份创建时刻。
+              </small>
+            </label>
+          </div>
           <input
             value={restorePassword}
-            onChange={(event) => setRestorePassword(event.target.value)}
+            onChange={(event) => {
+              setRestorePassword(event.target.value);
+              setInspection(null);
+              setDrill(null);
+            }}
             type="password"
             autoComplete="off"
             placeholder="若备份已加密，请输入备份密令"
@@ -251,48 +304,27 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
           </button>
           {inspection && (
             <section className="avatar-reliability-inspection" aria-label="备份检查结果">
-              <p>
-                {inspection.encrypted ? '加密备份' : '明文备份'} · 格式版本{' '}
-                {inspection.schemaVersion}
-              </p>
-              {inspection.encryption && (
-                <p>
-                  加密：{inspection.encryption.cipher}；{inspection.encryption.kdf}；
-                  {inspection.encryption.iterations} 次
-                </p>
-              )}
+              <p className="avatar-reliability-inspection__title">备份资料范围</p>
               {inspection.needsPassword ? (
-                <p>需要备份密令才能验证内容。</p>
+                <p>此备份已加密。输入备份密令后可查看资料范围。</p>
               ) : (
                 <>
                   <p>
-                    应用版本：{inspection.version}；导出时间：{inspection.exportedAt}；记录：
-                    {inspection.entryCount}
+                    备份创建于：
+                    {inspection.exportedAt
+                      ? new Date(inspection.exportedAt).toLocaleString()
+                      : '未知时间'}
                   </p>
-                  <p>
-                    数据域：
-                    {Object.entries(inspection.dataCounts ?? {})
-                      .map(([key, count]) => `${key} ${count}`)
-                      .join('；')}
-                  </p>
-                  <p>
-                    缓存域：
-                    {Object.entries(inspection.cacheCounts ?? {})
-                      .map(([key, count]) => `${key} ${count}`)
-                      .join('；')}
-                  </p>
-                  {inspection.materialReferences && (
-                    <p>
-                      素材引用：内嵌可恢复 {inspection.materialReferences.embedded}
-                      ；网页链接仅保存地址 {inspection.materialReferences.externalLink}
-                      ；无法保证恢复 {inspection.materialReferences.unstableReference}。
-                    </p>
+                  {inspection.contentSummary && (
+                    <BackupSummary summary={inspection.contentSummary} />
                   )}
+                  <p>资料与分身的已确认理解已包含。模型密钥和设备密码不会写入备份。</p>
                 </>
               )}
-              <p>
-                检查不会验证网页链接或本机引用仍可访问。网页失效后，请在新记录中重新链接并保留说明。
-              </p>
+              {!inspection.needsPassword &&
+              inspection.contentSummary?.materialReferences.externalLink ? (
+                <p>网页链接只保留地址；链接失效后无法由备份恢复网页内容。</p>
+              ) : null}
             </section>
           )}
           {drill && (
@@ -304,12 +336,7 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
                 将导入记录：{drill.importedCount}；演练后记录：{drill.totalAfter}
               </p>
               {drill.conflicts.length > 0 && <p>冲突：{drill.conflicts.join('；')}</p>}
-              <p>
-                素材：内嵌可恢复 {drill.materialReferences.embedded}；仅保存地址{' '}
-                {drill.materialReferences.externalLink}；无法保证恢复{' '}
-                {drill.materialReferences.unstableReference}。
-              </p>
-              <p>{drill.externalReferenceLimitations}</p>
+              <p>演练不会写入当前资料库，也不会访问网页链接或网络资源。</p>
             </section>
           )}
           {restoreMode === 'replace' && (
@@ -319,17 +346,31 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
                 checked={replaceConfirmed}
                 onChange={(event) => setReplaceConfirmed(event.target.checked)}
               />
-              我确认替换会覆盖这台设备上的资料
+              我确认用备份替换当前资料与分身的已确认理解
             </label>
           )}
           <button
             type="button"
             onClick={() => void restoreBackup()}
-            disabled={busy || (restoreMode === 'replace' && !replaceConfirmed)}
+            disabled={
+              busy ||
+              !inspection ||
+              inspection.needsPassword ||
+              (restoreMode === 'replace' && !replaceConfirmed)
+            }
           >
             {busy ? '处理中…' : restoreMode === 'merge' ? '合并恢复' : '替换恢复'}
           </button>
         </div>
+      )}
+      {restoreResult && (
+        <section className="avatar-reliability-inspection" aria-label="恢复结果">
+          <p className="avatar-reliability-inspection__title">
+            已完成{restoreResult.mode === 'merge' ? '合并' : '替换'}恢复
+          </p>
+          <p>现在共有：</p>
+          <BackupSummary summary={restoreResult.restored} includeMaterials={false} />
+        </section>
       )}
       {error && (
         <p className="avatar-reliability-card__error" role="alert">
@@ -337,5 +378,31 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
         </p>
       )}
     </aside>
+  );
+}
+
+function BackupSummary({
+  summary,
+  includeMaterials = true,
+}: {
+  summary: VaultBackupContentSummary;
+  includeMaterials?: boolean;
+}) {
+  return (
+    <>
+      <p>
+        经历 {summary.entries} · 补充 {summary.supplements}
+        {includeMaterials
+          ? ` · 素材 ${summary.materials}（其中 ${summary.portableMaterials} 项已随备份保存）`
+          : ''}
+      </p>
+      <p>
+        愿景 {summary.visions} · 目标 {summary.goals} · 行动 {summary.actions}
+      </p>
+      <p>
+        已确认记忆 {summary.confirmedMemories} · 对话 {summary.conversations}
+      </p>
+      <p>未完成草稿：{summary.hasDraft ? '包含' : '未包含'}</p>
+    </>
   );
 }

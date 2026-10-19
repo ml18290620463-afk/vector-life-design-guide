@@ -58,7 +58,7 @@ describe('inspectVaultBackup', () => {
       },
     ]);
     const inspection = await inspectVaultBackup(await exportVaultBackup('inspection-test'));
-    expect(inspection.materialReferences).toEqual({
+    expect(inspection.contentSummary?.materialReferences).toEqual({
       embedded: 1,
       externalLink: 1,
       unstableReference: 1,

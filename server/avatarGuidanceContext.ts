@@ -12,6 +12,12 @@ const kinds = new Set([
   '背景',
 ]);
 const natures = new Set(['experience', 'explicit', 'inferred', 'commitment', 'state']);
+const temporalStatuses = new Set([
+  'current_understanding',
+  'historical_fact',
+  'historical_understanding',
+  'time_limited',
+]);
 const boundedText = (v: unknown, max: number) => typeof v === 'string' && v.length <= max;
 const optionalText = (v: unknown, max: number) => v === undefined || boundedText(v, max);
 const optionalTime = (v: unknown) =>
@@ -26,6 +32,7 @@ export function isGuidanceContext(value: unknown): boolean {
     optionalText(m.status, 40) &&
     (m.kind === undefined || kinds.has(m.kind as string)) &&
     (m.nature === undefined || natures.has(m.nature as string)) &&
+    (m.temporalStatus === undefined || temporalStatuses.has(m.temporalStatus as string)) &&
     optionalTime(m.validFrom) &&
     optionalTime(m.validTo) &&
     (m.evidence === undefined ||
@@ -36,7 +43,8 @@ export function isGuidanceContext(value: unknown): boolean {
             e &&
             boundedText(e.text, 700) &&
             typeof e.occurredAt === 'number' &&
-            optionalTime(e.occurredAt),
+            optionalTime(e.occurredAt) &&
+            (e.source === undefined || e.source === 'entry' || e.source === 'message'),
         ))) &&
     (m.results === undefined ||
       (Array.isArray(m.results) &&
@@ -58,10 +66,11 @@ export function serializeGuidanceContext(memories: Record<string, unknown>[]) {
     kind: m.kind,
     detail: m.detail,
     status: m.status,
+    temporalStatus: m.temporalStatus,
     validFrom: m.validFrom,
     validTo: m.validTo,
     evidence: Array.isArray(m.evidence)
-      ? m.evidence.map((e) => ({ text: e.text, occurredAt: e.occurredAt }))
+      ? m.evidence.map((e) => ({ text: e.text, occurredAt: e.occurredAt, source: e.source }))
       : undefined,
     results: Array.isArray(m.results)
       ? m.results.map((r) => ({ text: r.text, occurredOn: r.occurredOn, status: r.status }))

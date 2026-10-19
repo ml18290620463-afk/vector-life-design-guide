@@ -19,7 +19,12 @@ export async function proposeExperienceMemories(
   ),
 ): Promise<boolean> {
   if (!isAccessibleDiaryEntry(entry) || cancelled()) return false;
-  const evidenceSources = [
+  const evidenceSources: {
+    entryId: string;
+    supplementId?: string;
+    content: string;
+    createdAt: number;
+  }[] = [
     {
       entryId: entry.id,
       supplementId: unit.supplementId,
@@ -64,6 +69,20 @@ export async function proposeExperienceMemories(
     understandings: readAvatarUnderstandings().filter((item) => item.status === 'confirmed'),
   });
   if (cancelled()) return false;
+  // Only evidence actually supplied in this request can support a proposal.
+  // Reject the whole proposal on an invalid ref rather than laundering it by
+  // silently discarding the unsupported part of its evidence.
+  const hasVerifiedEvidence = (memory: (typeof preview.atomicMemoryCandidates)[number]) =>
+    memory.sourceRefs.length > 0 &&
+    memory.sourceRefs.every((reference) => {
+      const source = evidenceSources.find(
+        (candidate) =>
+          reference.source === 'entry' &&
+          candidate.entryId === reference.id &&
+          candidate.supplementId === reference.supplementId,
+      );
+      return !!source && (!reference.excerpt || source.content.includes(reference.excerpt));
+    });
   const hasIndependentEntryEvidence = (memory: (typeof preview.atomicMemoryCandidates)[number]) =>
     new Set(
       memory.sourceRefs
@@ -77,6 +96,7 @@ export async function proposeExperienceMemories(
       preview.atomicMemoryCandidates.filter(
         (memory) =>
           memory.status === 'candidate' &&
+          hasVerifiedEvidence(memory) &&
           // A past entry remains a fact even when it contains “I like…” or
           // “I will not…”.  One occurrence must not become a long-lived self
           // conclusion.  A second independent experience can propose it.

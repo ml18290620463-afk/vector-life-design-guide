@@ -4,6 +4,7 @@ import type {
   AvatarMemoryNature,
   AvatarMemoryCategory,
   AvatarMemoryFacet,
+  AvatarMemorySourceRef,
 } from '../../avatar/types';
 import { categoryForMemory } from '../../../services/avatarMemoryCategories';
 import { isDirectionCandidate } from '../../../services/avatarMemoryArchive';
@@ -16,6 +17,7 @@ export function AvatarMemoryConfirm({
   candidateKind,
   categoryOverride,
   sourceCount = 0,
+  sourceRefs = [],
   candidatePosition = 0,
   candidateTotal = 0,
   replacementStatement = null,
@@ -41,6 +43,7 @@ export function AvatarMemoryConfirm({
     | null;
   categoryOverride?: AvatarMemoryCategory | null;
   sourceCount?: number;
+  sourceRefs?: AvatarMemorySourceRef[];
   candidatePosition?: number;
   candidateTotal?: number;
   replacementStatement?: string | null;
@@ -60,6 +63,16 @@ export function AvatarMemoryConfirm({
   const category =
     categoryOverride ?? categoryForMemory({ nature: resolvedNature, statement: text, facets });
   const isDirection = isDirectionCandidate({ nature: resolvedNature, category, facets });
+  const sourceSummary = (() => {
+    const entryCount = sourceRefs.filter((source) => source.source === 'entry').length;
+    const messageCount = sourceRefs.filter((source) => source.source === 'message').length;
+    if (entryCount && messageCount)
+      return `依据 ${entryCount} 条过往记录与 ${messageCount} 条聊天自述。确认后保存为分身记忆。`;
+    if (entryCount) return `依据 ${entryCount} 条过往记录。确认后保存为分身记忆。`;
+    if (messageCount)
+      return `依据本次对话中的 ${messageCount} 条自述。确认后保存为分身记忆，不会写入过去经历。`;
+    return `来源：聊天中的 ${sourceCount} 条自述。确认后才会加入记忆库。`;
+  })();
   useEffect(() => {
     const previous = document.activeElement;
     const element = dialog.current;
@@ -108,12 +121,13 @@ export function AvatarMemoryConfirm({
           本段对话中的第 {candidatePosition + 1} / {candidateTotal} 条
         </p>
       )}
-      <div className="avatar-memory-dialog__context">
+      <details className="avatar-memory-dialog__context">
+        <summary>提炼说明</summary>
         <p className="avatar-memory-dialog__hint">
-          此内容由模型从当前对话的 {sourceCount}{' '}
-          条用户表述中提炼，属于候选理解，不是已确认事实。请修改或确认后再保存。
+          {sourceSummary}
+          {candidateKind === 'pattern_candidate' && ' 这是暂定观察，确认前不会影响分身记忆。'}
         </p>
-      </div>
+      </details>
       <label htmlFor="avatar-memory-candidate">
         {facets.includes('preference')
           ? '你的喜好'
@@ -133,11 +147,6 @@ export function AvatarMemoryConfirm({
                         ? '基于多次表达的观察'
                         : '关于你'}
       </label>
-      {candidateKind === 'pattern_candidate' && (
-        <div className="avatar-memory-dialog__context">
-          <p className="avatar-memory-dialog__hint">这是一个待验证的理解，不会把它当作既定事实。</p>
-        </div>
-      )}
       <textarea
         id="avatar-memory-candidate"
         aria-label="提炼的信息"
@@ -171,7 +180,11 @@ export function AvatarMemoryConfirm({
             onConfirm(tags, category, resolvedNature, isDirection ? directionKind : undefined)
           }
         >
-          {replacementStatement ? '确认更新' : '确认记住'}
+          {replacementStatement
+            ? '确认更新'
+            : candidateKind === 'pattern_candidate'
+              ? '保留观察'
+              : '确认记住'}
         </button>
       </div>
     </dialog>

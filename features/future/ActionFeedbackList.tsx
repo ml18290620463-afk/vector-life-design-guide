@@ -39,10 +39,15 @@ export function actionProgressSummary(
   latestRecord?: ActionPracticeRecord,
 ): string {
   const note = latestRecord?.note.trim();
-  return (
-    note ||
-    { pending: '未开始', active: '进行中', completed: '已完成', abandoned: '已结束' }[action.status]
-  );
+  if (note) return note;
+  const nextAction = latestRecord?.nextAction?.trim();
+  if (nextAction) return `下一步 · ${nextAction}`;
+  return {
+    pending: '等待推进',
+    active: '记录进展',
+    completed: '查看结果',
+    abandoned: '查看结果',
+  }[action.status];
 }
 
 export function ActionFeedbackList({

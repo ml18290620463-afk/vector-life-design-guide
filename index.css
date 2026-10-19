@@ -6629,6 +6629,7 @@ html.vector-force-mobile .archive-past-record {
 }
 
 .mobile-past-image-gallery[data-count='1'] {
+  width: min(100%, 12rem);
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -11484,7 +11485,11 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
 }
 
 .mobile-past-page .principles-library__empty-icon {
-  color: color-mix(in srgb, var(--experience-accent, #79cfc7) 58%, var(--experience-muted, #a9c8d0)) !important;
+  color: color-mix(
+    in srgb,
+    var(--experience-accent, #79cfc7) 58%,
+    var(--experience-muted, #a9c8d0)
+  ) !important;
   opacity: 0.72;
 }
 

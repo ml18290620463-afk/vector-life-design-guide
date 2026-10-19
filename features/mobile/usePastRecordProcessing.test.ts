@@ -1,9 +1,19 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { DiaryEntry } from '../../types';
 import { usePastRecordProcessing } from './usePastRecordProcessing';
-const mocks = vi.hoisted(() => ({ preview: vi.fn(), write: vi.fn(), read: vi.fn() }));
+import { saveAvatarModel } from '../now/api/avatarModel';
+const mocks = vi.hoisted(() => ({
+  preview: vi.fn(),
+  write: vi.fn(),
+  read: vi.fn(),
+  model: vi.fn(),
+}));
 vi.mock('../now/api/avatar', () => ({ previewAvatarGrowth: mocks.preview }));
+vi.mock('../now/api/avatarModel', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../now/api/avatarModel')>()),
+  readAvatarModel: mocks.model,
+}));
 vi.mock('../../services/avatarMemory', () => ({
   readAvatarUnderstandings: () => [],
   readAvatarAtomicMemories: mocks.read,
@@ -19,12 +29,57 @@ const entry: DiaryEntry = {
 };
 beforeEach(() => {
   localStorage.clear();
-  mocks.preview
-    .mockReset()
-    .mockResolvedValue({ atomicMemoryCandidates: [{ id: 'candidate', status: 'candidate' }] });
+  mocks.preview.mockReset().mockResolvedValue({
+    atomicMemoryCandidates: [
+      {
+        id: 'candidate',
+        status: 'candidate',
+        facets: [],
+        sourceRefs: [{ source: 'entry', id: 'saved' }],
+      },
+    ],
+  });
   mocks.read.mockReset().mockReturnValue([]);
   mocks.write.mockReset().mockReturnValue(true);
+  mocks.model.mockReset().mockReturnValue({ provider: 'openrouter', model: 'test' });
 });
+it('keeps records usable without a model and extracts after one is configured', async () => {
+  mocks.model.mockReturnValue(null);
+  const resolveRelations = vi.fn();
+  const first = renderHook(() => usePastRecordProcessing([entry], resolveRelations));
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  expect(first.result.current.error).toBe('');
+  expect(mocks.preview).not.toHaveBeenCalled();
+  expect(mocks.write).not.toHaveBeenCalled();
+  expect(localStorage.getItem('vector:past:processing:v1')).toBeNull();
+  first.unmount();
+
+  mocks.model.mockReturnValue({ provider: 'openrouter', model: 'test' });
+  renderHook(() => usePastRecordProcessing([entry], resolveRelations));
+  await waitFor(() => expect(mocks.preview).toHaveBeenCalledOnce());
+  await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
+  expect(localStorage.getItem('vector:past:processing:v1')).toContain('fingerprint');
+});
+it('resumes skipped records when model settings are saved without reopening Past', async () => {
+  mocks.model.mockReturnValue(null);
+  const entries = [{ ...entry, relatedEntryIds: ['stale'] }];
+  const resolveRelations = vi.fn();
+  renderHook(() => usePastRecordProcessing(entries, resolveRelations));
+  await waitFor(() => expect(resolveRelations).toHaveBeenCalled());
+  expect(mocks.preview).not.toHaveBeenCalled();
+  expect(localStorage.getItem('vector:past:processing:v1')).toBeNull();
+
+  const config = { baseUrl: 'https://example.com/v1', apiKey: 'test-key', model: 'test' };
+  mocks.model.mockReturnValue(config);
+  act(() => saveAvatarModel(config));
+  await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
+  expect(localStorage.getItem('vector:past:processing:v1')).toContain('fingerprint');
+
+  act(() => saveAvatarModel({ ...config, model: 'another-model' }));
+  await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
+  expect(mocks.preview).toHaveBeenCalledOnce();
+});
+
 it('processes saved records in Past with source references, excluding locked and sample records', async () => {
   const entries = [
     entry,
@@ -41,12 +96,22 @@ it('processes saved records in Past with source references, excluding locked and
   expect(mocks.preview.mock.calls[0][0].evidenceSources).toEqual([
     { entryId: 'saved', content: '会议先确认目标', createdAt: 1 },
   ]);
-  expect(mocks.write).toHaveBeenCalledWith([{ id: 'candidate', status: 'candidate' }]);
+  expect(mocks.write).toHaveBeenCalledWith([
+    {
+      id: 'candidate',
+      status: 'candidate',
+      facets: [],
+      sourceRefs: [{ source: 'entry', id: 'saved' }],
+    },
+  ]);
 });
-it('does not replace existing confirmed or rejected candidates on re-entry', async () => {
+it('submits only candidate status to the memory merge on re-entry', async () => {
   mocks.read.mockReturnValue([{ id: 'candidate', status: 'rejected' }]);
   renderHook(() => usePastRecordProcessing([entry]));
-  await waitFor(() => expect(mocks.write).toHaveBeenCalledWith([]));
+  await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
+  expect(mocks.write.mock.calls[0][0]).toEqual([
+    expect.objectContaining({ id: 'candidate', status: 'candidate' }),
+  ]);
 });
 it('cancels writes if the page closes while extraction is pending', async () => {
   let complete: (value: object) => void = () => {};

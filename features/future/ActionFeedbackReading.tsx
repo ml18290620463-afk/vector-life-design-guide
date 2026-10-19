@@ -74,7 +74,6 @@ export function ActionFeedbackReading({
               <span role="heading" aria-level={3}>
                 目标 · {goal.title}
               </span>
-              {vision && <span className="future-feedback-vision">愿景 · {vision.text}</span>}
             </span>
             <span className="future-action-drawer-chevron" aria-hidden="true">
               ⌄
@@ -82,6 +81,7 @@ export function ActionFeedbackReading({
           </summary>
           <div className="future-action-drawer-body" role="region" aria-label="关联目标">
             <p className="future-reading-context">目标状态 · {goalStatus[goal.status]}</p>
+            {vision && <p className="future-reading-context">愿景 · {vision.text}</p>}
 
             {goalRecords.length > 0 && (
               <details className="future-action-history">

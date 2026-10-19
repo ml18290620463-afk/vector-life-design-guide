@@ -1229,12 +1229,26 @@
   color: var(--mobile-muted);
   font-size: 13px;
 }
-.avatar-reliability-restore label {
-  display: flex;
-  align-items: center;
+.avatar-reliability-restore__option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
+}
+.avatar-reliability-restore__option label {
   color: var(--mobile-ink);
   font-size: 14px;
+  cursor: pointer;
+}
+.avatar-reliability-restore__option label strong,
+.avatar-reliability-restore__option label small {
+  display: block;
+}
+.avatar-reliability-restore__option label small {
+  margin-top: 3px;
+  color: var(--mobile-muted);
+  font-size: 12px;
+  line-height: 1.55;
 }
 .avatar-reliability-restore input[type='password'] {
   width: 100%;
@@ -1250,6 +1264,26 @@
 .avatar-reliability-restore__confirm {
   color: var(--mobile-muted) !important;
   font-size: 13px !important;
+}
+.avatar-reliability-inspection {
+  display: grid;
+  gap: 5px;
+  margin-top: 2px;
+  padding: 12px;
+  border: 1px solid var(--mobile-line);
+  border-radius: 12px;
+  background: var(--mobile-surface-muted);
+}
+.avatar-reliability-inspection p {
+  margin: 0;
+  color: var(--mobile-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.avatar-reliability-inspection__title {
+  margin-bottom: 2px !important;
+  color: var(--mobile-ink) !important;
+  font-weight: 700;
 }
 .avatar-reliability-card__error {
   margin-top: 12px !important;
@@ -1269,29 +1303,6 @@
     width: 100%;
     padding-inline: 8px;
   }
-}
-
-.avatar-data-tools {
-  flex: 0 0 auto;
-  width: min(100%, 720px);
-  margin: 0 auto;
-  padding: 0 16px;
-  max-height: 45dvh;
-  overflow: auto;
-  color: var(--mobile-ink);
-}
-.avatar-data-tools > summary {
-  min-height: 44px;
-  padding: 12px 0;
-  cursor: pointer;
-  font-size: 14px;
-}
-.avatar-data-tools > summary:focus-visible {
-  outline: 2px solid var(--mobile-accent);
-  outline-offset: -2px;
-}
-.avatar-data-tools .avatar-reliability-card button {
-  min-height: 44px;
 }
 
 .avatar-message-references {
@@ -1363,4 +1374,137 @@
 }
 .avatar-library__candidate button:disabled {
   opacity: 0.5;
+}
+
+/* Backup has its own workspace so it never competes with the conversation. */
+.avatar-backup-workspace {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 16px;
+  padding: clamp(24px, 5vw, 56px) 16px;
+  overflow: auto;
+}
+.avatar-backup-workspace__header,
+.avatar-backup-workspace .avatar-reliability-card--backup {
+  width: min(100%, 760px);
+  margin-inline: auto;
+}
+.avatar-backup-workspace__header {
+  margin-bottom: 28px;
+}
+.avatar-backup-workspace__header p {
+  margin: 0 0 10px;
+  color: var(--mobile-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.avatar-backup-workspace__header h1 {
+  margin: 0;
+  color: var(--mobile-ink);
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+.avatar-backup-workspace__header span {
+  display: block;
+  margin-top: 12px;
+  color: var(--mobile-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+@media (min-width: 960px) {
+  .avatar-guide-page > .avatar-backup-workspace {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    padding: clamp(28px, 5vw, 64px) clamp(16px, 4vw, 72px);
+  }
+}
+@media (max-width: 640px) {
+  .avatar-backup-workspace {
+    margin: 0 12px;
+    padding: 24px 4px 32px;
+  }
+}
+/* Backup is a focused workspace, not a narrow item in the desktop navigation. */
+.avatar-reliability-card--backup {
+  max-width: 760px;
+  padding: 28px;
+}
+.avatar-reliability-card--backup > p {
+  max-width: 38rem;
+}
+.avatar-reliability-card--backup .avatar-reliability-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.avatar-reliability-card--backup .avatar-reliability-card__actions button {
+  margin-top: 0;
+  white-space: nowrap;
+}
+.avatar-reliability-card__primary-action {
+  background: var(--mobile-accent) !important;
+  border-color: var(--mobile-accent) !important;
+  color: var(--mobile-paper) !important;
+}
+.avatar-reliability-card__secondary-action {
+  background: transparent !important;
+  border-color: var(--mobile-line) !important;
+}
+.avatar-reliability-card__recovery {
+  margin-top: 18px;
+  color: var(--mobile-muted);
+  font-size: 13px;
+}
+.avatar-reliability-card__recovery summary {
+  width: fit-content;
+  cursor: pointer;
+}
+.avatar-reliability-card__recovery p {
+  margin-top: 10px;
+  color: var(--mobile-muted);
+  font-size: 13px;
+}
+.avatar-reliability-card--backup .avatar-reliability-card__text-action {
+  min-height: 36px;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--mobile-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.avatar-reliability-restore__heading {
+  display: grid;
+  gap: 4px;
+}
+.avatar-reliability-restore__heading > span {
+  color: var(--mobile-ink);
+  font-size: 16px;
+  font-weight: 750;
+}
+.avatar-reliability-restore__heading p {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .avatar-reliability-card--backup {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 20px 16px;
+  }
+  .avatar-reliability-card--backup .avatar-reliability-card__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .avatar-reliability-card--backup .avatar-reliability-card__actions button {
+    width: 100%;
+    min-height: 46px;
+  }
 }

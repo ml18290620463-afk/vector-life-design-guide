@@ -4,10 +4,7 @@ import {
   isEncryptedVaultBackup,
   type EncryptedVaultBackup,
 } from './vaultBackupFile';
-import {
-  summarizeMaterialReferences,
-  type MaterialReferenceSummary,
-} from '../lib/materialPersistence';
+import { summarizeVaultBackupContent, type VaultBackupContentSummary } from './vaultBackupSummary';
 
 export interface VaultBackupInspection {
   encrypted: boolean;
@@ -18,8 +15,8 @@ export interface VaultBackupInspection {
   entryCount?: number;
   dataCounts?: Record<string, number>;
   cacheCounts?: Record<string, number>;
-  /** Bytes embedded as data URLs are portable; web links retain only their address. */
-  materialReferences?: MaterialReferenceSummary;
+  /** A concise, user-facing inventory of recoverable personal material. */
+  contentSummary?: VaultBackupContentSummary;
   encryption?: Pick<EncryptedVaultBackup, 'schemaVersion' | 'cipher' | 'kdf' | 'iterations'>;
 }
 
@@ -32,28 +29,6 @@ const countDomains = (backup: VaultBackup) => ({
   ),
 });
 
-const materialReferencesFor = (backup: VaultBackup): MaterialReferenceSummary => {
-  const references: Array<string | null | undefined> = [];
-  const addEntry = (entry: (typeof backup.entries)[number]) => {
-    if (entry.attachment) references.push(entry.attachment.data);
-    for (const material of entry.nowMaterials ?? []) references.push(material.url);
-  };
-  backup.entries.forEach(addEntry);
-  for (const material of backup.vault.draft?.materials ?? []) references.push(material.url);
-  for (const row of backup.vault.data.materials) {
-    if (!row || typeof row !== 'object') continue;
-    const candidate = row as { data?: unknown; url?: unknown };
-    references.push(
-      typeof candidate.data === 'string'
-        ? candidate.data
-        : typeof candidate.url === 'string'
-          ? candidate.url
-          : undefined,
-    );
-  }
-  return summarizeMaterialReferences(references);
-};
-
 const inspectPlaintext = (value: unknown): VaultBackupInspection => {
   validateVaultBackup(value);
   const backup = value as VaultBackup;
@@ -65,7 +40,7 @@ const inspectPlaintext = (value: unknown): VaultBackupInspection => {
     exportedAt: backup.exportedAt,
     entryCount: backup.entryCount,
     ...countDomains(backup),
-    materialReferences: materialReferencesFor(backup),
+    contentSummary: summarizeVaultBackupContent(backup),
   };
 };
 

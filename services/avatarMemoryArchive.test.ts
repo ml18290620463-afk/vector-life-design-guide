@@ -11,6 +11,7 @@ import {
   archiveScopeForMemory,
   isArchiveMemory,
   isDirectionCandidate,
+  isTimeSensitiveMemory,
   saveArchiveMemory,
 } from './avatarMemoryArchive';
 import { hasMeaningfulStatementChange } from './avatarMemoryShared';
@@ -70,6 +71,28 @@ it('rejects edits to canonical events and reports storage failure', () => {
   expect(readAvatarUnderstandings().find((p) => p.id === 'pending')?.status).toBe('pending');
 });
 
+it.each(['candidate', 'confirmed'] as const)(
+  'keeps a %s memory rejected after a user sets it aside',
+  (status) => {
+    const memory = {
+      ...seed(),
+      id: `review-${status}`,
+      statement: '我总是在压力下拖延',
+      status,
+      sourceRefs: [{ source: 'entry' as const, id: 'entry-2' }],
+    };
+    expect(writeAvatarAtomicMemory(memory)).toBe(true);
+    expect(saveArchiveMemory(memory, memory.statement, 'rejected')).toBe(true);
+    expect(readAvatarAtomicMemories().find((item) => item.id === memory.id)).toMatchObject({
+      status: 'rejected',
+      sourceRefs: memory.sourceRefs,
+    });
+    // A later extraction cannot silently revive something the person rejected.
+    expect(writeAvatarAtomicMemory({ ...memory, id: `new-${status}` })).toBe(true);
+    expect(readAvatarAtomicMemories().some((item) => item.id === `new-${status}`)).toBe(false);
+  },
+);
+
 it('keeps canonical past and future projections out of the archive while allowing proposed directions', () => {
   expect(isArchiveMemory({ ...seed(), id: 'atomic_pattern_1' })).toBe(false);
   expect(isDirectionCandidate({ nature: 'commitment', facets: ['boundary'] })).toBe(true);
@@ -86,7 +109,9 @@ it('keeps reviewed pattern revision history for audit and removes it after forge
     before: '过去我习惯独自完成',
     after: '现在我会先判断是否需要协作',
   });
-  const latest = readAvatarUnderstandings().find((p) => p.statement === '现在我会先判断是否需要协作' && p.status === 'confirmed')!;
+  const latest = readAvatarUnderstandings().find(
+    (p) => p.statement === '现在我会先判断是否需要协作' && p.status === 'confirmed',
+  )!;
   expect(saveArchiveMemory(memory, latest.statement, 'rejected')).toBe(false);
   saveArchiveMemory(atomicMemoryFromUnderstanding(latest), latest.statement, 'rejected');
   expect(archiveChanges([], readAvatarUnderstandings())).toEqual([]);
@@ -140,4 +165,9 @@ it('keeps formatting-only edits out of revision history', () => {
     createdAt: 2,
   };
   expect(archiveChanges([before, after], [])).toEqual([]);
+});
+
+it('does not label an explicit preference as temporary just because of its legacy category', () => {
+  expect(isTimeSensitiveMemory({ nature: 'explicit', category: 'recent_state' })).toBe(false);
+  expect(isTimeSensitiveMemory({ nature: 'state', category: 'recent_state' })).toBe(true);
 });

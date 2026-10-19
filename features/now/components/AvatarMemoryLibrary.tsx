@@ -1,3 +1,4 @@
+import type { DiaryEntry } from '../../../types';
 import { selfMemoryVoice } from '../../../services/avatarMemoryVoice';
 import { saveArchiveDirection } from '../../../services/futureRepository';
 import { isPatternMemoryReadyForConfirmation } from '../../../services/avatarMemory';
@@ -66,12 +67,14 @@ function matchesPatternDimension(memory: AvatarAtomicMemory, dimension: PatternD
 
 export function AvatarMemoryLibrary({
   memories,
+  entries = [],
   pendingMemories = [],
   onRefresh,
   showToast,
   onAdd,
 }: {
   memories: AvatarAtomicMemory[];
+  entries?: DiaryEntry[];
   pendingMemories?: AvatarAtomicMemory[];
   historyMemories?: AvatarAtomicMemory[];
   patterns?: AvatarUnderstandingVersion[];
@@ -105,7 +108,8 @@ export function AvatarMemoryLibrary({
   const searching = query.trim().length > 0;
   const visible = allMemories
     .filter((memory) => {
-      if (!matchesQuery(`${selfMemoryVoice(memory.statement)} ${memory.tags.join(' ')}`)) return false;
+      if (!matchesQuery(`${selfMemoryVoice(memory.statement)} ${memory.tags.join(' ')}`))
+        return false;
       if (showingPending) return pending.some((item) => item.id === memory.id);
       if (memory.status === 'candidate') return false;
       if (archiveScopeForMemory(memory) !== archiveScope) return false;
@@ -197,11 +201,7 @@ export function AvatarMemoryLibrary({
       if (!supersedeArchiveMemory(selected, statement)) throw new Error('save failed');
       setSelected(null);
       onRefresh();
-      showToast(
-        selected.id.startsWith('atomic_pattern_')
-          ? '已更新模式'
-          : '已更新记忆',
-      );
+      showToast(selected.id.startsWith('atomic_pattern_') ? '已更新模式' : '已更新记忆');
     } catch {
       showToast('保存失败，请重试');
     } finally {
@@ -210,8 +210,8 @@ export function AvatarMemoryLibrary({
   };
   const detailTitle =
     archiveScope === 'self'
-        ? SELF_DIMENSIONS.find((item) => item.id === selectedDimension)?.label
-        : PATTERN_DIMENSIONS.find((item) => item.id === selectedDimension)?.label;
+      ? SELF_DIMENSIONS.find((item) => item.id === selectedDimension)?.label
+      : PATTERN_DIMENSIONS.find((item) => item.id === selectedDimension)?.label;
   return (
     <section className="avatar-library" aria-label="记忆库">
       {!showingPending && (
@@ -330,20 +330,17 @@ export function AvatarMemoryLibrary({
       {(showingPending || isDetail || searching) && (
         <div
           className="avatar-library__memories"
-          aria-label={
-            showingPending ? '待确认记忆' : '已确认记忆'
-          }
+          aria-label={showingPending ? '待确认记忆' : '已确认记忆'}
         >
-          {visible.length === 0 &&
-            archiveScope !== 'changes' && (
-              <p className="avatar-library__empty">
-                {query
-                  ? '没有匹配的记忆'
-                  : archiveScope === 'pattern' && !showingPending
-                      ? '暂无已确认模式'
-                      : '暂无已确认记忆'}
-              </p>
-            )}
+          {visible.length === 0 && archiveScope !== 'changes' && (
+            <p className="avatar-library__empty">
+              {query
+                ? '没有匹配的记忆'
+                : archiveScope === 'pattern' && !showingPending
+                  ? '暂无已确认模式'
+                  : '暂无已确认记忆'}
+            </p>
+          )}
           {visible.map((memory) =>
             memory.status === 'candidate' ? (
               <article className="avatar-library__candidate" key={memory.id}>
@@ -404,7 +401,7 @@ export function AvatarMemoryLibrary({
         <AvatarMemoryDetail
           busy={saving}
           memory={selected}
-          sources={memories}
+          entries={entries}
           readOnly={
             isCanonicalAvatarProjection(selected) && !selected.id.startsWith('atomic_pattern_')
           }

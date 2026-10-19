@@ -2,7 +2,7 @@ import { isCanonicalAvatarProjection } from './avatarKnowledgeProjection';
 import type { ActionItem, DiaryEntry, Principle } from '../types';
 import type { FutureState } from '../types/future';
 import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../features/avatar/types';
-import { isCurrentAvatarMemory, readAvatarNameStatement } from './avatarMemoryPolicy';
+import { readAvatarNameStatement } from './avatarMemoryPolicy';
 import { goalProgress } from './futureRepository';
 import type { GuidanceSource } from './avatarGuidance';
 import { describeActionPractice } from './actionPracticeSemantics';
@@ -51,6 +51,7 @@ export function buildGuidanceSources(input: {
                 text: excerpt(`${entry.title}：${entry.content}`),
                 searchText: searchableExcerpt(`${entry.title}：${entry.content}`),
                 occurredAt: entry.createdAt,
+                source: 'entry' as const,
               },
             ]
           : [];
@@ -167,6 +168,7 @@ export function buildGuidanceSources(input: {
       module: 'past' as const,
       nature: 'inferred' as const,
       status: p.status,
+      temporalStatus: 'current_understanding' as const,
       validFrom: p.confirmedAt ?? p.createdAt,
       detail:
         [
@@ -185,6 +187,7 @@ export function buildGuidanceSources(input: {
       module: 'past' as const,
       relatedKeys: (p.sourcePatternIds ?? []).map((id) => `模式:${id}`),
       nature: 'explicit' as const,
+      temporalStatus: 'current_understanding' as const,
       detail: p.application
         ? `适用情境：${p.application.trigger}；尝试方式：${p.application.action}`
         : undefined,
@@ -242,6 +245,7 @@ export function buildGuidanceSources(input: {
         text: principle.text,
         module: 'past' as const,
         nature: 'explicit' as const,
+        temporalStatus: 'historical_understanding' as const,
         validFrom: principle.createdAt,
         validTo: successor.revisedAt ?? successor.createdAt,
         detail: `过去的判断；在 ${new Date(successor.revisedAt ?? successor.createdAt).toLocaleDateString('zh-CN')} 后已发生变化，不作为当前原则`,
@@ -266,6 +270,12 @@ export function buildGuidanceSources(input: {
         text: a.title,
         module: 'now' as const,
         status: a.status,
+        temporalStatus:
+          a.status === 'completed' || a.status === 'abandoned'
+            ? ('historical_fact' as const)
+            : a.scheduledOn
+              ? ('time_limited' as const)
+              : ('current_understanding' as const),
         detail:
           [a.scheduledOn && `安排于 ${a.scheduledOn}`, a.question, a.rationale]
             .filter(Boolean)
@@ -288,6 +298,8 @@ export function buildGuidanceSources(input: {
       kind: v.status === 'active' ? ('愿景' as const) : ('背景' as const),
       text: v.text,
       status: v.status,
+      temporalStatus:
+        v.status === 'active' ? ('current_understanding' as const) : ('historical_understanding' as const),
       detail: v.status === 'active' ? undefined : `历史愿景：${v.status}，不作为当前义务`,
       module: 'future' as const,
     })),
@@ -299,6 +311,8 @@ export function buildGuidanceSources(input: {
       text: g.title,
       module: 'future' as const,
       relatedKeys: g.visionId ? [`愿景:${g.visionId}`] : [],
+      temporalStatus:
+        g.status === 'active' ? ('current_understanding' as const) : ('historical_understanding' as const),
       results: validEvents
         .filter((e) => e.goalId === g.id)
         .map((e) => ({
@@ -322,8 +336,7 @@ export function buildGuidanceSources(input: {
       .filter(
         (memory) =>
           !isCanonicalAvatarProjection(memory) &&
-          isCurrentAvatarMemory(memory, input.now) &&
-          sourceExists(memory),
+          (memory.status === 'confirmed' || memory.status === 'retained') && sourceExists(memory),
       )
       .map((memory) => ({
         id: memory.id,
@@ -331,6 +344,14 @@ export function buildGuidanceSources(input: {
         text: memory.statement,
         nature: memory.nature,
         status: memory.status,
+        temporalStatus:
+          memory.validTo !== undefined
+            ? ('time_limited' as const)
+            : memory.nature === 'state' ||
+                memory.nature === 'experience' ||
+                memory.nature === 'commitment'
+              ? ('historical_fact' as const)
+              : ('current_understanding' as const),
         evidence: [
           ...evidence(memory.sourceRefs.filter((r) => r.source === 'entry').map((r) => r.id)),
           ...memory.sourceRefs
@@ -338,13 +359,19 @@ export function buildGuidanceSources(input: {
             .map((r) => ({
               text: excerpt(r.excerpt!),
               occurredAt: r.createdAt ?? memory.createdAt,
+              source: 'message' as const,
             })),
         ].slice(0, 3),
         validFrom: memory.validFrom,
         validTo: memory.validTo,
         confirmedAt: memory.confirmedAt ?? memory.updatedAt ?? memory.createdAt,
         avatarName:
-          memory.nature === 'explicit' || memory.nature === 'experience'
+          // A name is the avatar's present identity, never historical context.
+          // Do not expose candidate, inferred, expired, or future statements as
+          // a usable name merely because their text happens to match the format.
+          memory.nature === 'explicit' &&
+          (memory.validFrom === undefined || memory.validFrom <= now) &&
+          (memory.validTo === undefined || now < memory.validTo)
             ? (readAvatarNameStatement(memory.statement) ?? undefined)
             : undefined,
         module: memory.sourceRefs.find((ref) => ref.source === 'future' || ref.source === 'action')
@@ -373,6 +400,7 @@ export function buildGuidanceSources(input: {
       text: excerpt(`${entry.title}：${entry.content}`),
       nature: 'experience' as const,
       status: 'historical-record',
+      temporalStatus: 'historical_fact' as const,
       module: 'past' as const,
       evidence: evidence([entry.id]),
     })),

@@ -3,6 +3,7 @@ import { isCanonicalAvatarProjection } from './avatarKnowledgeProjection';
 import {
   readAvatarAtomicMemories,
   supersedeAvatarUnderstanding,
+  updateAvatarAtomicMemoryStatus,
   updateAvatarUnderstandingStatus,
   writeAvatarAtomicMemory,
   supersedeAvatarAtomicMemory,
@@ -34,6 +35,10 @@ export function saveArchiveMemory(
   }
   const current = readAvatarAtomicMemories().find((item) => item.id === memory.id);
   if (!current) return false;
+  // Review decisions must update the existing memory directly. The extraction
+  // merge deliberately favors confirmed knowledge and would discard a rejection.
+  if (status === 'rejected' || text === current.statement)
+    return !!updateAvatarAtomicMemoryStatus(current.id, status);
   const now = Date.now();
   return writeAvatarAtomicMemory({
     ...current,
@@ -60,7 +65,7 @@ export function supersedeArchiveMemory(memory: AvatarAtomicMemory, statement: st
 
 /** State and temporary conditions benefit from a lightweight validity check. */
 export const isTimeSensitiveMemory = (memory: Pick<AvatarAtomicMemory, 'category' | 'nature'>) =>
-  memory.category === 'recent_state' || memory.nature === 'state';
+  memory.nature === 'state' || (memory.category === 'recent_state' && memory.nature === 'inferred');
 
 export const SELF_CATEGORIES = [
   { id: 'profile', label: '基础信息' },

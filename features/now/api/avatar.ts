@@ -62,6 +62,20 @@ export interface AvatarFactCandidate {
   replacesReferenceId?: string;
 }
 
+// A conversation may describe an event, but only the recording flow can make
+// it a Past experience. Keep this client guard in addition to the server-side
+// allowlist so an invalid or stale provider response cannot open that path.
+const CHAT_MEMORY_KINDS = new Set<AvatarFactKind>([
+  'profile',
+  'preference',
+  'boundary',
+  'value',
+  'habit',
+  'goal',
+  'expression',
+  'pattern_candidate',
+]);
+
 /**
  * A deliberately small, non-sensitive view of existing memories.  It gives the
  * extractor enough context to avoid repeating an understanding, without
@@ -104,7 +118,9 @@ export async function extractAvatarFacts(
     candidates?: AvatarFactCandidate[];
     candidate?: AvatarFactCandidate | null;
   };
-  const candidates = result.candidates ?? (result.candidate ? [result.candidate] : []);
+  const candidates = (result.candidates ?? (result.candidate ? [result.candidate] : [])).filter(
+    (candidate) => CHAT_MEMORY_KINDS.has(candidate.kind),
+  );
   return candidates.map((candidate) => {
     const sourceMessages = candidate.sourceIndexes.map((index) => sources[index]);
     if (sourceMessages.some((source) => !source || source.role !== 'user'))

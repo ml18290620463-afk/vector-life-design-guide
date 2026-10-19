@@ -135,7 +135,8 @@ it('shows only the newest feedback note as the list progress summary', () => {
     />,
   );
   expect(screen.getByText('完成第一轮整理')).toBeTruthy();
-  expect(within(screen.getByRole('list', { name: '行动列表' })).getByText('进行中')).toBeTruthy();
+  expect(within(screen.getByRole('list', { name: '行动列表' })).getByText('记录进展')).toBeTruthy();
+  expect(screen.queryByText('进行中')).toBeNull();
 });
 
 it('migrates an old lifecycle filter without losing its search', () => {

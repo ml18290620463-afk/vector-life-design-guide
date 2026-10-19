@@ -12,6 +12,7 @@ import { normalizeMemoryCategory } from './avatarMemoryCategories';
 import { generateSecureId } from './idGenerator';
 import {
   memoryStatementKey,
+  sameMemoryScope,
   isSameDurableMemoryAssertion,
   getStoredJson,
   setStoredJson,
@@ -373,7 +374,6 @@ export const restoreAvatarMemoryTag = (name: string): boolean => {
  * it would turn a product convenience into an unreviewable inference.
  */
 
-
 const unique = <T>(values: T[], key: (value: T) => string) => {
   const seen = new Set<string>();
   return values.filter((value) => {
@@ -411,19 +411,9 @@ const mergeSameStatementMemory = (
     (preferred.status === 'confirmed' || preferred.status === 'retained') &&
     other.status === 'candidate'
   )
-    // A fresh source can corroborate a reviewed preference/boundary, but must
-    // never turn it back into a visible candidate or alter its reviewed wording.
-    return {
-      ...preferred,
-      sourceRefs: unique(
-        [...preferred.sourceRefs, ...other.sourceRefs],
-        (source) => `${source.source}:${source.id}:${source.excerpt ?? ''}`,
-      ),
-      updatedAt: Math.max(
-        preferred.updatedAt ?? preferred.createdAt,
-        other.updatedAt ?? other.createdAt,
-      ),
-    };
+    // Repeating an already reviewed assertion is not a new review task.
+    // In particular, unreviewed evidence must not strengthen confirmed recall.
+    return preferred;
   const sensitivity =
     sensitivityRank[existing.sensitivity] >= sensitivityRank[incoming.sensitivity]
       ? existing.sensitivity
@@ -436,7 +426,8 @@ const mergeSameStatementMemory = (
     contexts: unique([...existing.contexts, ...incoming.contexts], (context) => context),
     sourceRefs: unique(
       [...existing.sourceRefs, ...incoming.sourceRefs],
-      (source) => `${source.source}:${source.id}:${source.excerpt ?? ''}`,
+      (source) =>
+        `${source.source}:${source.id}:${source.supplementId ?? ''}:${source.excerpt ?? ''}`,
     ),
     confidence: Math.max(existing.confidence, incoming.confidence),
     sensitivity,
@@ -467,8 +458,19 @@ const mergeAtomicMemories = (current: AvatarAtomicMemory[], incoming: AvatarAtom
       (existing) =>
         (existing.status === 'rejected' || existing.status === 'superseded') &&
         (existing.id === memory.id ||
-          memoryStatementKey(existing.statement) === memoryStatementKey(memory.statement) ||
-          (!!existing.patternKey && existing.patternKey === memory.patternKey)),
+          (sameMemoryScope(existing, memory) &&
+            (isSameDurableMemoryAssertion(existing, memory) ||
+              memoryStatementKey(existing.statement) === memoryStatementKey(memory.statement) ||
+              (!!existing.patternKey &&
+                existing.patternKey === memory.patternKey &&
+                existing.sourceRefs.some((ref) =>
+                  memory.sourceRefs.some(
+                    (other) =>
+                      ref.source === other.source &&
+                      ref.id === other.id &&
+                      ref.supplementId === other.supplementId,
+                  ),
+                ))))),
     );
     if (withdrawn) continue;
     const matchingMemory = Array.from(byId.values()).find((candidate) => {
@@ -476,7 +478,10 @@ const mergeAtomicMemories = (current: AvatarAtomicMemory[], incoming: AvatarAtom
         memoryStatementKey(candidate.statement) === memoryStatementKey(memory.statement);
       // This is intentionally limited to explicit preferences/boundaries.  A
       // topic or broad semantic similarity never establishes equal scope.
-      return sameStatement || isSameDurableMemoryAssertion(candidate, memory);
+      return (
+        sameMemoryScope(candidate, memory) &&
+        (sameStatement || isSameDurableMemoryAssertion(candidate, memory))
+      );
     });
     if (matchingMemory) {
       byId.set(matchingMemory.id, mergeSameStatementMemory(matchingMemory, memory));
@@ -561,6 +566,10 @@ export const updateAvatarAtomicMemoryStatus = (
 export const supersedeAvatarAtomicMemory = (
   id: string,
   statement: string,
+  revision?: Pick<
+    AvatarAtomicMemory,
+    'sourceRefs' | 'nature' | 'category' | 'facets' | 'tags' | 'contexts'
+  >,
 ): AvatarAtomicMemory | null => {
   const text = statement.trim();
   const current = readAvatarAtomicMemories();
@@ -572,6 +581,9 @@ export const supersedeAvatarAtomicMemory = (
   const now = Date.now();
   const next: AvatarAtomicMemory = {
     ...target,
+    ...revision,
+    validTo: undefined,
+    proposedAt: undefined,
     id: generateSecureId('avatar-memory'),
     previousVersionId: target.id,
     statement: text,

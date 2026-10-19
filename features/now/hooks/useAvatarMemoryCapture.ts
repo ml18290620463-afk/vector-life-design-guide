@@ -61,7 +61,6 @@ interface UseAvatarMemoryCaptureOptions {
   draft: NowDraft;
   sessionId: string;
   avatarMemoryReferences: AvatarMemoryExtractionReference[];
-  onSend: (preview: RecordPreviewPayload, sessionId: string) => Promise<boolean>;
   showToast: (message: string) => void;
   refreshAvatarMemories: () => void;
 }
@@ -70,7 +69,6 @@ export const useAvatarMemoryCapture = ({
   draft,
   sessionId,
   avatarMemoryReferences,
-  onSend,
   showToast,
   refreshAvatarMemories,
 }: UseAvatarMemoryCaptureOptions) => {
@@ -213,31 +211,36 @@ export const useAvatarMemoryCapture = ({
       const candidates = await extractAvatarFacts(sourceMessages, avatarMemoryReferences);
       if (!extractionMounted.current || summaryOpen.current) return;
       const storedMemories = readAvatarAtomicMemories().filter(
-        (memory) => memory.status === 'candidate' || memory.status === 'confirmed' || memory.status === 'retained',
+        (memory) =>
+          memory.status === 'candidate' ||
+          memory.status === 'confirmed' ||
+          memory.status === 'retained',
       );
+      const durableAssertion = (candidate: (typeof candidates)[number]) => {
+        const metadata = factMemoryMetadata(candidate.kind);
+        return {
+          statement: candidate.statement,
+          facets: metadata.facets,
+          nature: metadata.nature,
+          // Chat candidates do not establish a verified real-world situation.
+          // Keep the scope empty so different stored situations are never merged.
+          contexts: [],
+        };
+      };
       const uniqueCandidates = candidates.filter(
         (candidate, index) =>
           !avatarMemoryReferences.some(
             (memory) => memoryStatementKey(memory.text) === memoryStatementKey(candidate.statement),
           ) &&
           !storedMemories.some((memory) =>
-            isSameDurableMemoryAssertion(memory, {
-              statement: candidate.statement,
-              facets: factMemoryMetadata(candidate.kind).facets,
-            }),
+            isSameDurableMemoryAssertion(memory, durableAssertion(candidate)),
           ) &&
           candidates.findIndex(
             (item) =>
               memoryStatementKey(item.statement) === memoryStatementKey(candidate.statement) ||
               isSameDurableMemoryAssertion(
-                {
-                  statement: item.statement,
-                  facets: factMemoryMetadata(item.kind).facets,
-                },
-                {
-                  statement: candidate.statement,
-                  facets: factMemoryMetadata(candidate.kind).facets,
-                },
+                durableAssertion(item),
+                durableAssertion(candidate),
               ),
           ) === index,
       );
@@ -263,18 +266,6 @@ export const useAvatarMemoryCapture = ({
     }
   };
 
-  const saveToPast = async (tags: string[]) => {
-    if (!companionSummary?.text.trim()) return;
-    try {
-      if (await onSend({ ...companionSummary, event_tags: tags }, sessionId)) {
-        advanceCandidate();
-        showToast('已存入过去');
-      }
-    } catch {
-      showToast('保存失败，请重试');
-    }
-  };
-
   const confirmMemory = async (
     tags: string[],
     category: AvatarMemoryCategory,
@@ -282,11 +273,10 @@ export const useAvatarMemoryCapture = ({
     directionKind?: 'vision' | 'goal' | 'action',
   ) => {
     if (!companionSummary?.text.trim()) return;
-    if (
-      confirmedNature === 'experience' ||
-      (category === 'experience' && confirmedNature !== 'inferred')
-    ) {
-      void saveToPast(tags);
+    // This hook only handles chat candidates. Past entries are created through
+    // the recording flow, never by confirming a conversation extraction.
+    if (confirmedNature === 'experience' || category === 'experience') {
+      showToast('经历请在「现在」中记录后保存到过去');
       return;
     }
     if (memorySavingRef.current) return;
@@ -319,7 +309,14 @@ export const useAvatarMemoryCapture = ({
         showToast('原有理解已发生变化，请重新确认这条信息');
         return;
       }
-      const updated = supersedeAvatarAtomicMemory(replacementId, companionSummary.text);
+      const updated = supersedeAvatarAtomicMemory(replacementId, companionSummary.text, {
+        sourceRefs: candidateSources,
+        nature: confirmedNature,
+        category,
+        facets: extractedFacets ?? inferMemoryFacets(companionSummary),
+        tags,
+        contexts: ['来自聊天自述'],
+      });
       if (!updated) {
         showToast('更新失败，请重试');
         return;
@@ -343,7 +340,7 @@ export const useAvatarMemoryCapture = ({
       ...(isPatternCandidate && candidatePatternKey ? { patternKey: candidatePatternKey } : {}),
       tags,
       contexts: [
-        candidateSources.length ? '对话记忆' : '手动添加',
+        candidateSources.length ? '来自聊天自述' : '手动添加',
         ...(isPatternCandidate ? ['待验证模式'] : []),
       ],
       sourceRefs: candidateSources,

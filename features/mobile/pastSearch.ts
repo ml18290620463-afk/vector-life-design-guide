@@ -32,7 +32,10 @@ export const searchPastEntriesWithMatchKind = (
         .toLocaleLowerCase();
       return tokens.every((token) => text.includes(token));
     })
-    .sort((left, right) => relevance(right, tokens) - relevance(left, tokens));
+    .sort(
+      (left, right) =>
+        relevance(right, tokens) - relevance(left, tokens) || right.createdAt - left.createdAt,
+    );
   // Keep the single search field precise. Only a one-word query with too few literal
   // matches gets a bounded thematic recall appended after exact results.
   if (tokens.length !== 1 || exact.length >= 3) return exact.map((entry) => ({ entry, match: 'exact' }));
@@ -55,7 +58,7 @@ export const searchPastEntriesWithMatchKind = (
       .filter((value) => typeof value === 'string')
       .join(' ');
     return semanticConceptsForText(entryText).some((concept) => queryConcepts.includes(concept));
-  });
+  }).sort((left, right) => right.createdAt - left.createdAt);
   return [
     ...exact.map((entry) => ({ entry, match: 'exact' as const })),
     ...related.map((entry) => ({ entry, match: 'related' as const })),
@@ -66,7 +69,7 @@ export const searchPastEntriesWithMatchKind = (
 export const searchPastEntries = (entries: DiaryEntry[], query: string): DiaryEntry[] =>
   searchPastEntriesWithMatchKind(entries, query).map(({ entry }) => entry);
 
-// Stable sorting keeps the caller's chronology when relevance is tied.
+// When literal relevance is tied, the more recent record appears first.
 const relevance = (entry: DiaryEntry, tokens: string[]) => {
   const title = entry.title.toLocaleLowerCase();
   const tags = (entry.tags ?? []).map((tag) =>

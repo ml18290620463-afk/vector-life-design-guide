@@ -110,19 +110,41 @@ describe('avatarMemory', () => {
 
   it('requires at least two distinct past records before surfacing a past pattern', () => {
     const base = {
-      id: 'past-pattern', statement: '面对压力时可能先独自梳理', nature: 'inferred' as const,
-      facets: ['cognitive_pattern'] as AvatarMemoryFacet[], tags: [], contexts: [], confidence: 0.5,
-      status: 'candidate' as const, sensitivity: 'normal' as const, createdAt: 1,
+      id: 'past-pattern',
+      statement: '面对压力时可能先独自梳理',
+      nature: 'inferred' as const,
+      facets: ['cognitive_pattern'] as AvatarMemoryFacet[],
+      tags: [],
+      contexts: [],
+      confidence: 0.5,
+      status: 'candidate' as const,
+      sensitivity: 'normal' as const,
+      createdAt: 1,
     };
-    expect(isPatternMemoryReadyForConfirmation({
-      ...base, sourceRefs: [{ source: 'entry', id: 'entry-a' }],
-    })).toBe(false);
-    expect(isPatternMemoryReadyForConfirmation({
-      ...base, sourceRefs: [{ source: 'entry', id: 'entry-a' }, { source: 'entry', id: 'entry-a' }],
-    })).toBe(false);
-    expect(isPatternMemoryReadyForConfirmation({
-      ...base, sourceRefs: [{ source: 'entry', id: 'entry-a' }, { source: 'entry', id: 'entry-b' }],
-    })).toBe(true);
+    expect(
+      isPatternMemoryReadyForConfirmation({
+        ...base,
+        sourceRefs: [{ source: 'entry', id: 'entry-a' }],
+      }),
+    ).toBe(false);
+    expect(
+      isPatternMemoryReadyForConfirmation({
+        ...base,
+        sourceRefs: [
+          { source: 'entry', id: 'entry-a' },
+          { source: 'entry', id: 'entry-a' },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      isPatternMemoryReadyForConfirmation({
+        ...base,
+        sourceRefs: [
+          { source: 'entry', id: 'entry-a' },
+          { source: 'entry', id: 'entry-b' },
+        ],
+      }),
+    ).toBe(true);
   });
 
   it('keeps scoped or conflicting statements separate even when their pattern keys match', () => {
@@ -154,7 +176,13 @@ describe('avatarMemory', () => {
     ).toBe(true);
     expect(
       writeAvatarAtomicMemory(
-        makePattern('two', '面对工作压力时用户不再独处，而是找同事讨论', '压力下先独处梳理', 'm2', 2),
+        makePattern(
+          'two',
+          '面对工作压力时用户不再独处，而是找同事讨论',
+          '压力下先独处梳理',
+          'm2',
+          2,
+        ),
       ),
     ).toBe(true);
     expect(readAvatarAtomicMemories()).toHaveLength(2);
@@ -162,7 +190,11 @@ describe('avatarMemory', () => {
       id: 'one',
       patternKey: '压力下先独处梳理',
     });
-    expect(readAvatarAtomicMemories().find((memory) => memory.id === 'one')?.sourceRefs.map((source) => source.id)).toEqual(['m1']);
+    expect(
+      readAvatarAtomicMemories()
+        .find((memory) => memory.id === 'one')
+        ?.sourceRefs.map((source) => source.id),
+    ).toEqual(['m1']);
     expect(
       writeAvatarAtomicMemory(
         makePattern('three', '用户在冲突时会先延后表达', '冲突中延后表达', 'm3', 3),
@@ -181,7 +213,9 @@ describe('avatarMemory', () => {
       patternKey: '压力下先独自梳理',
       tags: [],
       contexts: ['待验证模式'],
-      sourceRefs: [{ source: 'entry' as const, id: entryId, createdAt: at, excerpt: '先自己整理思路' }],
+      sourceRefs: [
+        { source: 'entry' as const, id: entryId, createdAt: at, excerpt: '先自己整理思路' },
+      ],
       confidence: 0.58,
       status: 'candidate' as const,
       sensitivity: 'normal' as const,
@@ -906,7 +940,7 @@ describe('avatar memory revision boundaries', () => {
 describe('durable preference and boundary deduplication', () => {
   beforeEach(() => localStorage.clear());
 
-  it('adds later evidence to a confirmed preference instead of creating another candidate', () => {
+  it('ignores unreviewed corroboration without creating another preference candidate', () => {
     const base = {
       id: 'preference-concise',
       statement: '用户偏好简洁表达',
@@ -924,6 +958,7 @@ describe('durable preference and boundary deduplication', () => {
       sourceRefs: [{ source: 'entry' as const, id: 'entry-1' }],
     };
     writeAvatarAtomicMemory(base);
+    const reviewed = readAvatarAtomicMemories();
     upsertAvatarAtomicMemories([
       {
         ...base,
@@ -935,19 +970,17 @@ describe('durable preference and boundary deduplication', () => {
       },
     ]);
 
+    expect(readAvatarAtomicMemories()).toEqual(reviewed);
     expect(readAvatarAtomicMemories()).toEqual([
       expect.objectContaining({
         id: 'preference-concise',
         status: 'confirmed',
-        sourceRefs: expect.arrayContaining([
-          expect.objectContaining({ id: 'entry-1' }),
-          expect.objectContaining({ id: 'entry-2' }),
-        ]),
+        sourceRefs: [{ source: 'entry', id: 'entry-1' }],
       }),
     ]);
   });
 
-  it('adds later evidence to an equivalent boundary without changing its confirmed wording', () => {
+  it('preserves confirmed boundary evidence when an equivalent candidate arrives', () => {
     const base = {
       id: 'boundary-emotion',
       statement: '用户不想一直承担别人的情绪',
@@ -981,10 +1014,7 @@ describe('durable preference and boundary deduplication', () => {
         id: 'boundary-emotion',
         statement: '用户不想一直承担别人的情绪',
         status: 'confirmed',
-        sourceRefs: expect.arrayContaining([
-          expect.objectContaining({ id: 'entry-1' }),
-          expect.objectContaining({ id: 'entry-2' }),
-        ]),
+        sourceRefs: [{ source: 'entry', id: 'entry-1' }],
       }),
     ]);
   });
@@ -1047,4 +1077,34 @@ it('does not resurrect rejected or superseded memories through fresh extraction,
     expect(readAvatarAtomicMemories()).toHaveLength(1);
     expect(readAvatarAtomicMemories()[0].status).toBe(status);
   }
+});
+
+it('does not re-propose a rejected preference using equivalent first-person wording', () => {
+  localStorage.clear();
+  const base = {
+    id: 'rejected-preference',
+    statement: '用户偏好简洁表达',
+    nature: 'explicit' as const,
+    facets: ['preference'] as AvatarMemoryFacet[],
+    tags: [],
+    contexts: [],
+    confidence: 0.7,
+    status: 'candidate' as const,
+    sensitivity: 'normal' as const,
+    createdAt: 1,
+    sourceRefs: [{ source: 'entry' as const, id: 'entry-1' }],
+  };
+  writeAvatarAtomicMemory(base);
+  updateAvatarAtomicMemoryStatus(base.id, 'rejected');
+  upsertAvatarAtomicMemories([
+    {
+      ...base,
+      id: 'new-id',
+      statement: '我喜欢少一些解释',
+      sourceRefs: [{ source: 'entry', id: 'entry-2' }],
+    },
+  ]);
+  expect(readAvatarAtomicMemories()).toEqual([
+    expect.objectContaining({ id: base.id, status: 'rejected' }),
+  ]);
 });

@@ -1,5 +1,9 @@
 import type { DiaryEntry } from '../types';
-import { isAccessibleDiaryEntry, parseAvatarTimeRange, type AvatarTimeRange } from './avatarQueryPlan';
+import {
+  isAccessibleDiaryEntry,
+  parseAvatarTimeRange,
+  type AvatarTimeRange,
+} from './avatarQueryPlan';
 
 export interface AvatarEvidenceMetricMatch {
   entryId: string;
@@ -21,10 +25,9 @@ export interface AvatarEvidenceMetric {
 const COUNTABLE_TERMS = ['痛苦', '焦虑', '委屈', '压力', '难过', '生气', '疲惫'] as const;
 
 const countQuestion = (question: string) =>
-  /(多少|几)(次|回|个)?|统计|一共|总共/.test(question) && !/(为什么|怎么|建议|分析|总结)/.test(question);
+  /(多少|几)(次|回|个)?|统计|一共|总共/.test(question);
 
-const requestedTerm = (question: string) =>
-  COUNTABLE_TERMS.find((term) => question.includes(term));
+const requestedTerm = (question: string) => COUNTABLE_TERMS.find((term) => question.includes(term));
 
 const explicitTextMatch = (text: string, term: string) => {
   // A conservative lexical count, not a semantic count of real-world events.
@@ -35,7 +38,9 @@ const explicitTextMatch = (text: string, term: string) => {
     if (/(他说|她说|朋友|同事|别人|他人|对方|妈妈|爸爸|母亲|父亲)/.test(compact)) return false;
     return [...compact.matchAll(new RegExp(term, 'g'))].some((hit) => {
       const prefix = compact.slice(Math.max(0, hit.index! - 10), hit.index);
-      return !/(?:不|没|无|并非|没有|毫无|不再|从未)(?:感到|觉得|感觉|那么|很|太|任何|什么|过|了)*$/.test(prefix);
+      return !/(?:不|没|无|并非|没有|毫无|不再|从未)(?:感到|觉得|感觉|那么|很|太|任何|什么|过|了)*$/.test(
+        prefix,
+      );
     });
   });
 };
@@ -53,8 +58,23 @@ export const findAvatarEvidenceMetric = (
   const matches = uniqueEntries.flatMap((entry): AvatarEvidenceMetricMatch[] => {
     if (!isAccessibleDiaryEntry(entry, now)) return [];
     if (range && (entry.createdAt < range.start || entry.createdAt >= range.end)) return [];
-    const tagged = (entry.tags ?? []).some((tag) => tag.trim() === term || tag.trim().split(/[:：]/).length === 2 && tag.trim().split(/[:：]/)[1].trim() === term);
-    const text = [entry.title, entry.content, entry.reflection, ...(entry.supplements ?? []).map((s) => s.content)].join('\n');
+    const tagged = (entry.tags ?? []).some(
+      (tag) =>
+        tag.trim() === term ||
+        (tag.trim().split(/[:：]/).length === 2 && tag.trim().split(/[:：]/)[1].trim() === term),
+    );
+    const text = [
+      entry.title,
+      entry.content,
+      entry.reflection,
+      ...(entry.supplements ?? [])
+        .filter(
+          (s) =>
+            s.createdAt <= now &&
+            (!range || (s.createdAt >= range.start && s.createdAt < range.end)),
+        )
+        .map((s) => s.content),
+    ].join('\n');
     const inText = explicitTextMatch(text, term);
     if (!tagged && !inText) return [];
     return [{ entryId: entry.id, reason: tagged ? 'tag' : 'explicit_text', matchedTerms: [term] }];

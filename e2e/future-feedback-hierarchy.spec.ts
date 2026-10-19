@@ -73,7 +73,7 @@ for (const width of [390, 1440]) {
       const filters = page.getByRole('group', { name: '行动状态' });
       const list = page.getByRole('list', { name: '行动列表' });
       await page.getByRole('searchbox', { name: '搜索行动' }).fill('路线');
-      await filters.getByRole('button', { name: '未开始', exact: true }).click();
+      await filters.getByRole('button', { name: '待推进', exact: true }).click();
       await expect(list.getByRole('button', { name: '核对路线与装备' })).toBeVisible();
       await page.screenshot({
         path: info.outputPath(`feedback-list-${width}.png`),
@@ -87,7 +87,7 @@ for (const width of [390, 1440]) {
           if (index > 2) await expect(dialog.getByText(`历史反馈（${index - 2}）`)).toBeVisible();
           await expect(
             dialog
-              .getByRole('region', { name: '最近结果' })
+              .getByRole('region', { name: '最新结果' })
               .getByText(`第${index - 1}次核对`, { exact: true }),
           ).toBeVisible();
           await expect(
@@ -96,6 +96,10 @@ for (const width of [390, 1440]) {
         }
         await dialog.getByRole('button', { name: '更新进展', exact: true }).click();
         await dialog.getByLabel('本次执行状态').selectOption(index === 5 ? 'completed' : 'partial');
+        if (index === 5)
+          await dialog
+            .getByRole('combobox', { name: '完成后', exact: true })
+            .selectOption('long_term');
         await dialog.getByLabel('反馈内容（可选）').fill(`第${index}次核对`);
         expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
         await page.screenshot({
@@ -104,18 +108,18 @@ for (const width of [390, 1440]) {
         });
         await dialog.getByRole('button', { name: '保存', exact: true }).click();
         await expect(dialog).toHaveCount(0);
-        await expect(page.getByText('行动反馈已保存')).toBeVisible();
         await filters
-          .getByRole('button', { name: index === 5 ? '已结束' : '进行中', exact: true })
+          .getByRole('button', { name: index === 5 ? '已结束' : '待推进', exact: true })
           .click();
         await expect(page.getByRole('searchbox')).toHaveValue('路线');
         await expect(list.getByRole('button', { name: '核对路线与装备' })).toBeVisible();
+        await expect(list.getByText(`第${index}次核对`, { exact: true })).toBeVisible();
       }
       await list.getByRole('button', { name: '核对路线与装备' }).click();
       const dialog = page.getByRole('dialog', { name: '核对路线与装备' });
       await expect(dialog.getByLabel('反馈内容（可选）')).toHaveCount(0);
       await expect(
-        dialog.getByRole('region', { name: '最近结果' }).getByText('第5次核对', { exact: true }),
+        dialog.getByRole('region', { name: '最新结果' }).getByText('第5次核对', { exact: true }),
       ).toBeVisible();
       await page.screenshot({
         path: info.outputPath(`action-results-${width}.png`),

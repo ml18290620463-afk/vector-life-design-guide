@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 const harness = `<!doctype html><html lang="zh-CN" class="vector-force-mobile">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Avatar integration</title><link rel="stylesheet" href="/index.css"></head>
+<title>Avatar integration</title><link rel="stylesheet" href="/index.css"><link rel="stylesheet" href="/styles/experiences.css"></head>
 <body><div id="root"></div><script type="module">
 import RefreshRuntime from '/@react-refresh';
 RefreshRuntime.injectIntoGlobalHook(window);
@@ -33,52 +33,50 @@ for (const width of [320, 393, 1280]) {
       route.fulfill({ contentType: 'text/html', body: harness }),
     );
     await page.goto('/__avatar-spec');
-    await page.getByRole('button', { name: '记忆档案', exact: true }).click();
-    for (const name of ['关于我', '我的模式', '我的变化']) {
+    await page.getByRole('button', { name: '记忆库', exact: true }).click();
+    for (const name of ['关于我', '我的认识', '我的变化']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
     }
     await expect(page.getByText('重要选择先留出思考时间')).toHaveCount(0);
     await expect(page.getByText('管理标签')).toHaveCount(0);
     await page.getByRole('button', { name: '新增记忆' }).click();
-    await page.getByRole('textbox', { name: '提炼的信息' }).fill('我倾向使用简短直接的语句');
+    await page.getByRole('textbox', { name: '提炼的信息' }).fill('用户倾向使用简短直接的语句');
     await expect(page.getByRole('combobox')).toHaveCount(0);
     await page.getByRole('button', { name: '确认记住', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '我倾向使用简短直接的语句' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '用户倾向使用简短直接的语句' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     await page.screenshot({ path: info.outputPath('archive.png') });
     await page.getByRole('button', { name: /^偏好与边界/ }).click();
-    await page.getByRole('button', { name: '我倾向使用简短直接的语句' }).click();
-    await page.getByRole('button', { name: '需要调整', exact: true }).click();
-    await page.getByRole('textbox', { name: '记忆内容' }).fill('我喜欢直接表达');
+    await page.getByRole('button', { name: '用户倾向使用简短直接的语句' }).click();
+    await page.getByRole('button', { name: '调整表述', exact: true }).click();
+    await page.getByRole('textbox', { name: '记忆内容' }).fill('用户喜欢直接表达');
     await page.setViewportSize({ width: 812, height: 375 });
     await expect(page.getByRole('button', { name: '保存修改' })).toBeInViewport();
     await page.screenshot({ path: info.outputPath('archive-edit-landscape.png') });
     await page.getByRole('button', { name: '保存修改' }).click();
     await page.getByRole('button', { name: '我的变化', exact: true }).click();
-    await page.getByRole('button', { name: /^认识更新/ }).click();
-    await expect(page.getByRole('article')).toContainText('此前我倾向使用简短直接的语句');
-    await expect(page.getByRole('article')).toContainText('现在我喜欢直接表达');
+    await expect(page.getByText('尚无足够的前后经历可确认变化。')).toBeVisible();
     await page.getByRole('button', { name: '关于我', exact: true }).click();
     await page.getByRole('button', { name: /^偏好与边界/ }).click();
-    await page.getByRole('button', { name: '我喜欢直接表达' }).click();
-    await page.getByRole('button', { name: '需要调整', exact: true }).click();
-    await page.getByRole('textbox', { name: '记忆内容' }).fill('我喜欢清晰直接地表达');
+    await page.getByRole('button', { name: '用户喜欢直接表达' }).click();
+    await page.getByRole('button', { name: '调整表述', exact: true }).click();
+    await page.getByRole('textbox', { name: '记忆内容' }).fill('用户喜欢清晰直接地表达');
     await page.getByRole('button', { name: '保存修改', exact: true }).click();
-    await page.getByRole('button', { name: '我喜欢清晰直接地表达' }).click();
+    await page.getByRole('button', { name: '用户喜欢清晰直接地表达' }).click();
     await page.getByRole('button', { name: '暂不采用', exact: true }).click();
     await expect(page.getByRole('heading', { name: '暂不采用这条理解？' })).toBeVisible();
     await page.getByRole('button', { name: '暂不采用', exact: true }).click();
-    await expect(page.getByRole('button', { name: '我喜欢清晰直接地表达' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '用户喜欢清晰直接地表达' })).toHaveCount(0);
     const memories = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('vector:avatar:atomic-memories:v1') || '[]'),
     );
     expect(memories).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          statement: '我喜欢清晰直接地表达',
+          statement: '用户喜欢清晰直接地表达',
           status: 'rejected',
           sourceRefs: [],
         }),

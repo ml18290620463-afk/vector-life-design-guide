@@ -30,6 +30,38 @@ const entry = (): DiaryEntry => ({
 });
 
 describe('AvatarChatPage', () => {
+  it('keeps verified statistics when a mixed advice request fails to reach a model', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'model_not_configured' }),
+    } as Response);
+    render(
+      <AvatarChatPage
+        draft={draft()}
+        setDraft={vi.fn()}
+        pastEntries={[{ ...entry(), content: '我很痛苦' }]}
+        sending={false}
+        onBack={vi.fn()}
+        onRouteChange={vi.fn()}
+        onSend={vi.fn()}
+        showToast={vi.fn()}
+        launchContext={{ mode: 'general', source: 'global' }}
+      />,
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+      target: { value: '痛苦多少次，请给我建议' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^发送$/ }));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('尚未连接语言模型'),
+    );
+    expect(screen.getAllByText(/1 条/).length).toBeGreaterThan(0);
+    const call = vi.mocked(fetch).mock.calls.find(([url]) => url === '/api/v1/avatar/chat');
+    const payload = JSON.parse(String(call?.[1]?.body));
+    expect(payload.messages.at(-1).content).toContain('已核验统计');
+    expect(payload.messages.at(-1).content).toContain('1 条');
+  });
   beforeEach(() => {
     localStorage.clear();
     vi.stubGlobal(
@@ -101,47 +133,53 @@ describe('AvatarChatPage', () => {
     );
   });
 
-  it.each([false, true])('routes choices through the model and preserves follow-ups (history: %s)', async (withHistory) => {
-    const onSend = vi.fn();
-    render(
-      <AvatarChatPage
-        draft={draft()}
-        setDraft={vi.fn()}
-        pastEntries={withHistory ? [entry()] : []}
-        sending={false}
-        onBack={vi.fn()}
-        onRouteChange={vi.fn()}
-        onSend={onSend}
-        showToast={vi.fn()}
-        launchContext={{ mode: 'general', source: 'global' }}
-      />,
-    );
-    const question = withHistory
-      ? '结合过去的模式和依据，客户方案被否定，我该不该换工作？'
-      : '客户方案被否定，我要不要换工作？';
-    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
-      target: { value: question },
-    });
-    fireEvent.click(screen.getByText('发送'));
-    await screen.findByText('模型返回的回复');
-    const followup = '我有房贷，没有存款，先想想。';
-    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
-      target: { value: followup },
-    });
-    fireEvent.click(screen.getByText('发送'));
-    await waitFor(() => expect(screen.getAllByText('模型返回的回复')).toHaveLength(2));
-    const requests = vi.mocked(fetch).mock.calls
-      .filter(([url]) => String(url).endsWith('/avatar/chat'))
-      .map(([, init]) => JSON.parse(init!.body as string));
-    expect(requests).toHaveLength(2);
-    expect(requests[1].messages).toEqual(expect.arrayContaining([
-      expect.objectContaining({ role: 'user', content: question }),
-      expect.objectContaining({ role: 'assistant', content: '模型返回的回复' }),
-      expect.objectContaining({ role: 'user', content: followup }),
-    ]));
-    expect(onSend).not.toHaveBeenCalled();
-    expect(readAvatarAtomicMemories()).toHaveLength(0);
-  });
+  it.each([false, true])(
+    'routes choices through the model and preserves follow-ups (history: %s)',
+    async (withHistory) => {
+      const onSend = vi.fn();
+      render(
+        <AvatarChatPage
+          draft={draft()}
+          setDraft={vi.fn()}
+          pastEntries={withHistory ? [entry()] : []}
+          sending={false}
+          onBack={vi.fn()}
+          onRouteChange={vi.fn()}
+          onSend={onSend}
+          showToast={vi.fn()}
+          launchContext={{ mode: 'general', source: 'global' }}
+        />,
+      );
+      const question = withHistory
+        ? '结合过去的模式和依据，客户方案被否定，我该不该换工作？'
+        : '客户方案被否定，我要不要换工作？';
+      fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+        target: { value: question },
+      });
+      fireEvent.click(screen.getByText('发送'));
+      await screen.findByText('模型返回的回复');
+      const followup = '我有房贷，没有存款，先想想。';
+      fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+        target: { value: followup },
+      });
+      fireEvent.click(screen.getByText('发送'));
+      await waitFor(() => expect(screen.getAllByText('模型返回的回复')).toHaveLength(2));
+      const requests = vi
+        .mocked(fetch)
+        .mock.calls.filter(([url]) => String(url).endsWith('/avatar/chat'))
+        .map(([, init]) => JSON.parse(init!.body as string));
+      expect(requests).toHaveLength(2);
+      expect(requests[1].messages).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ role: 'user', content: question }),
+          expect.objectContaining({ role: 'assistant', content: '模型返回的回复' }),
+          expect.objectContaining({ role: 'user', content: followup }),
+        ]),
+      );
+      expect(onSend).not.toHaveBeenCalled();
+      expect(readAvatarAtomicMemories()).toHaveLength(0);
+    },
+  );
 
   it('uses compact mobile header label', () => {
     render(
@@ -475,7 +513,7 @@ describe('AvatarChatPage', () => {
       target: { value: '职业发展' },
     });
     expect(screen.queryByText('用户正在优化分身记忆标签系统')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '用户把职业发展作为一个长期线索' }));
+    fireEvent.click(screen.getByRole('button', { name: '我把职业发展作为一个长期线索' }));
     fireEvent.click(screen.getByRole('button', { name: '调整表述' }));
     fireEvent.change(screen.getByRole('textbox', { name: '记忆内容' }), {
       target: { value: '职业发展中我更看重自主性' },
@@ -627,6 +665,57 @@ describe('AvatarChatPage', () => {
       expect(readAvatarAtomicMemories()).toHaveLength(0);
     },
   );
+
+  it('drops an invalid experience candidate from chat instead of opening a past-record path', async () => {
+    const onSend = vi.fn();
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (!url.includes('/memory/extract'))
+        return { ok: true, json: async () => ({ reply: '我听到了。' }) };
+      return {
+        ok: true,
+        json: async () => ({
+          candidate: {
+            statement: '用户去年项目失败并很痛苦',
+            kind: 'experience',
+            sourceIndexes: [0],
+          },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <AvatarChatPage
+        draft={draft()}
+        setDraft={vi.fn()}
+        pastEntries={[]}
+        sending={false}
+        onBack={vi.fn()}
+        onRouteChange={vi.fn()}
+        onSend={onSend}
+        showToast={vi.fn()}
+        launchContext={{ mode: 'general', source: 'global' }}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
+      target: { value: '去年项目失败让我很痛苦。' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '发送' }));
+    await screen.findByText('我听到了。');
+    fireEvent.click(screen.getByRole('button', { name: '提炼记忆' }));
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => url.includes('/memory/extract'))).toBe(true),
+    );
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: '提炼记忆' }) as HTMLButtonElement).disabled).toBe(
+        false,
+      ),
+    );
+    expect(screen.queryByRole('dialog', { name: '记住这条关于你的信息？' })).toBeNull();
+    expect(onSend).not.toHaveBeenCalled();
+    expect(readAvatarAtomicMemories()).toHaveLength(0);
+  });
 
   it('requires confirmation and categorizes the edited memory automatically', () => {
     render(

@@ -2,6 +2,7 @@ import {
   buildGroundedGuidance,
   expandGuidanceAssociations,
   isAvatarContextContinuation,
+  sourceMatchesTemporalScope,
 } from '../../../services/avatarGuidance';
 import type { GuidanceSource } from '../../../services/avatarGuidance';
 import type { AvatarLaunchContext } from '../../avatar/types';
@@ -79,8 +80,10 @@ export function selectAvatarGuidanceContext(
         (source.validTo === undefined || now < source.validTo),
   );
   const retrievalIntent = detectAvatarRetrievalIntent(scopedQuestion);
-  const retrievalSources = sources.filter((source) =>
-    allowedSourceForIntent(source, retrievalIntent, launchContext),
+  const retrievalSources = sources.filter(
+    (source) =>
+      (plan.range || sourceMatchesTemporalScope(source, scopedQuestion)) &&
+      allowedSourceForIntent(source, retrievalIntent, launchContext),
   );
   let selected = buildGroundedGuidance(question, retrievalSources, previousQuestion, {
     range: plan.range,

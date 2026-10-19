@@ -1,3 +1,6 @@
+import { resolveAvatarSourceEvidence } from '../../../services/avatarSourceEvidence';
+import { readAvatarSessions } from '../../../services/avatarMemorySessions';
+import type { DiaryEntry } from '../../../types';
 import { selfMemoryVoice } from '../../../services/avatarMemoryVoice';
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
@@ -6,6 +9,7 @@ import type { AvatarAtomicMemory } from '../../avatar/types';
 
 export function AvatarMemoryDetail({
   memory,
+  entries = [],
   onClose,
   onSave,
   onSupersede,
@@ -13,7 +17,8 @@ export function AvatarMemoryDetail({
   busy = false,
 }: {
   memory: AvatarAtomicMemory;
-  sources: AvatarAtomicMemory[];
+  sources?: AvatarAtomicMemory[];
+  entries?: DiaryEntry[];
   onClose: () => void;
   busy?: boolean;
   onSave: (
@@ -25,6 +30,8 @@ export function AvatarMemoryDetail({
   /** Canonical past/future records are indexed here and edited in their owner module. */
   readOnly?: boolean;
 }) {
+  // A stored excerpt alone does not prove its source is still accessible.
+  const evidence = resolveAvatarSourceEvidence(memory.sourceRefs, entries, readAvatarSessions());
   const dialog = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<'vision' | 'goal' | 'action'>('goal');
   const direction = isDirectionCandidate(memory);
@@ -128,6 +135,24 @@ export function AvatarMemoryDetail({
         <p className="avatar-memory-detail__retained">
           这条理解由你选择保留；原始经历已删除，因此不再显示经历依据。
         </p>
+      )}
+      {!forgetting && evidence.length > 0 && (
+        <details className="avatar-memory-dialog__context">
+          <summary>出处摘录</summary>
+          {evidence.map((source, index) => (
+            <blockquote key={`${source.source}:${source.id}:${source.supplementId ?? ''}:${index}`}>
+              <p>{source.excerpt}</p>
+              <small>
+                {source.source === 'entry'
+                  ? '过往记录'
+                  : source.source === 'message'
+                    ? '来自聊天自述'
+                    : '来自记录'}
+                {source.supplementId ? ' · 补充' : ''}
+              </small>
+            </blockquote>
+          ))}
+        </details>
       )}
       <div className="avatar-memory-dialog__actions">
         {forgetting ? (

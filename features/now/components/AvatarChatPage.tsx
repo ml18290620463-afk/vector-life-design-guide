@@ -382,7 +382,10 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     setChatError('');
     failedChat.current = conversation;
     try {
-      const { scopedQuestion: question } = resolveAvatarQueryScope(conversation);
+      // A local statistics reply may already follow the question in the transcript.
+      const lastUserIndex = conversation.findLastIndex((message) => message.role === 'user');
+      const queryConversation = conversation.slice(0, lastUserIndex + 1);
+      const { scopedQuestion: question } = resolveAvatarQueryScope(queryConversation);
       const plan = parseAvatarQueryPlan(question);
       const eligibleEntries = pastEntries.filter(
         (entry) =>
@@ -401,12 +404,25 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
             ).catch(() => [])
           : [];
       const context = selectAvatarGuidanceContext(
-        conversation,
+        queryConversation,
         guidanceSources,
         launchContext,
         preferredEntryIds,
       );
-      const reply = await chatWithAvatar(conversation, context, controller.signal);
+      const metric = findAvatarEvidenceMetric(question, pastEntries);
+      const modelConversation = metric
+        ? [
+            ...conversation,
+            {
+              id: 'verified-count',
+              role: 'user' as const,
+              type: 'text' as const,
+              created_at: new Date().toISOString(),
+              content: `已核验统计：${buildAvatarEvidenceMetricReply(metric)} 请只回答用户的分析或建议部分。不得改写统计数量、将记录数解释为实际发生次数，或将推测当作事实。`,
+            },
+          ]
+        : conversation;
+      const reply = await chatWithAvatar(modelConversation, context, controller.signal);
       if (controller.signal.aborted) return;
       const replyReferences = context
         .flatMap((source) =>
@@ -507,13 +523,15 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       localReferences = metric.matches.flatMap((match) => {
         const entry = pastEntries.find((candidate) => candidate.id === match.entryId);
         if (!entry) return [];
-        return [{
-          entryId: entry.id,
-          title: entry.title || '未命名记录',
-          date: entry.createdAt,
-          excerpt: entry.content.replace(/\s+/g, ' ').trim().slice(0, 120),
-          reason: match.reason === 'tag' ? '明确标签' : '原文明确表达',
-        }];
+        return [
+          {
+            entryId: entry.id,
+            title: entry.title || '未命名记录',
+            date: entry.createdAt,
+            excerpt: entry.content.replace(/\s+/g, ' ').trim().slice(0, 120),
+            reason: match.reason === 'tag' ? '明确标签' : '原文明确表达',
+          },
+        ];
       });
     }
     if (detectAvatarRetrievalIntent(content) !== 'decision_support') {
@@ -526,16 +544,20 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     }
     localAnswer ??= buildDeterministicEntryCountReply(content, pastEntries);
     if (localAnswer) {
-      setMessages((current) => [
-        ...current,
+      const answeredMessages = [
+        ...messages,
         userMessage,
         buildAssistantTextMessage(localAnswer, {
           id: generateSecureId('msg'),
           createdAt: new Date().toISOString(),
           ...(localReferences?.length ? { references: localReferences } : {}),
         }),
-      ]);
+      ];
+      setMessages(answeredMessages);
       setInput('');
+      if (metric && general && /(为什么|为何|怎么|建议|分析|总结)/.test(content)) {
+        void requestReply(answeredMessages);
+      }
       return;
     }
     const nextRecallMemories = selectAvatarRecallMemories(pastEntries, content);
@@ -569,7 +591,6 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     draft,
     sessionId,
     avatarMemoryReferences: buildAvatarMemoryReferences(avatarMemories),
-    onSend,
     showToast,
     refreshAvatarMemories: () => setAvatarMemories(readAvatarAtomicMemories()),
   });
@@ -589,6 +610,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         />
       )}
       <AvatarChatSurface
+        pastEntries={pastEntries}
         avatarMemories={avatarMemories}
         candidateSummary={memoryCapture.companionSummary}
         chatError={chatError}
@@ -620,6 +642,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         candidateKind={memoryCapture.candidateKind}
         candidateCategory={memoryCapture.candidateCategory}
         candidateSourceCount={memoryCapture.candidateSources.length}
+        candidateSourceRefs={memoryCapture.candidateSources}
         candidatePosition={memoryCapture.candidatePosition}
         candidateTotal={memoryCapture.candidateTotal}
         draft={draft}

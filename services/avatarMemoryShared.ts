@@ -292,7 +292,6 @@ export const atomicMemoryFromUnderstanding = (
   ...(understanding.retainedAfterSourceDeletion ? { retainedAfterSourceDeletion: true } : {}),
 });
 
-
 /** Typography-only equality; never infer semantic agreement from a topic key. */
 export const memoryStatementKey = (statement: string) =>
   statement
@@ -312,7 +311,7 @@ export const memoryStatementKey = (statement: string) =>
 const durableAssertionBody = (statement: string, kind: 'preference' | 'boundary') => {
   let value = memoryStatementKey(statement);
   value = value
-    .replace(/^(用户|我|本人|自己)(?:一直|通常|更)?/u, '')
+    .replace(/^(用户|我|本人|自己)/u, '')
     .replace(/^(偏好|喜欢|更喜欢|更想要|希望|倾向于|倾向|想要)/u, '');
   if (kind === 'boundary') {
     value = value.replace(/^(我的)?(边界|底线)(是|为)?/u, '');
@@ -322,6 +321,10 @@ const durableAssertionBody = (statement: string, kind: 'preference' | 'boundary'
   // semantic judgement.  The surrounding object/context is intentionally kept.
   return value
     .replace(/(简短|精炼|少一些解释|少些解释|少解释)/gu, '简洁表达')
+    // Keep this deliberately limited to a paired wording variant.  It avoids
+    // treating neighbouring preferences as equal while covering the common
+    // "简洁直接" / "直接、简洁" rewrite produced by different models.
+    .replace(/(?:简洁直接|直接简洁)/gu, '简洁直接')
     .replace(/(回答|说明|解释)/gu, '表达')
     .replace(/(别人|他人)/gu, '他人')
     .replace(/(一直承担|承担着|承担)/gu, '承担')
@@ -347,11 +350,47 @@ export const durableMemoryAssertionKey = (
   return body.length >= 2 ? `${kind}:${body}` : null;
 };
 
-/** Same durable assertion, while preserving scope and conditions in the key. */
-export const isSameDurableMemoryAssertion = (
-  left: { statement: string; facets: readonly string[] },
-  right: { statement: string; facets: readonly string[] },
-) => {
+/** Capture labels describe provenance, not the scope of a preference. */
+export const memoryScopeKey = (contexts: readonly string[] = []) =>
+  [
+    ...new Set(
+      contexts
+        .map(memoryStatementKey)
+        .filter(
+          (context) => !['来自聊天自述', '手动添加', '对话记忆', '待验证模式'].includes(context),
+        ),
+    ),
+  ]
+    .sort()
+    .join('|');
+
+type ComparableMemory = {
+  statement: string;
+  facets: readonly string[];
+  contexts?: readonly string[];
+  nature?: string;
+};
+
+/** Same durable assertion only within the same known scope and kind of claim. */
+export const isSameDurableMemoryAssertion = (left: ComparableMemory, right: ComparableMemory) => {
+  if (left.nature && right.nature && left.nature !== right.nature) return false;
+  if (memoryScopeKey(left.contexts) !== memoryScopeKey(right.contexts)) return false;
   const leftKey = durableMemoryAssertionKey(left.statement, left.facets);
   return leftKey !== null && leftKey === durableMemoryAssertionKey(right.statement, right.facets);
+};
+
+export const sameMemoryScope = (left: AvatarAtomicMemory, right: AvatarAtomicMemory) => {
+  if (
+    left.nature !== right.nature ||
+    memoryScopeKey(left.contexts) !== memoryScopeKey(right.contexts)
+  )
+    return false;
+  // Identical feelings or plans on different occasions are separate observations.
+  if (['state', 'experience', 'commitment'].includes(left.nature))
+    return (
+      left.validFrom === right.validFrom &&
+      left.validTo === right.validTo &&
+      left.createdAt === right.createdAt
+    );
+  return left.validTo === right.validTo;
 };

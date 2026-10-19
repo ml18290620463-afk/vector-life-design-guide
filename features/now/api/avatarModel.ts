@@ -10,12 +10,15 @@ type StoredAvatarModelPreference = AvatarModelPreference & { rememberKey?: boole
 const SESSION_KEY = 'vector.avatar.model.session.v1';
 const REMEMBERED_KEY = 'vector.avatar.model.remembered.v1';
 const PREFERENCE_KEY = 'vector.avatar.model.preference.v1';
+export const AVATAR_MODEL_CHANGED_EVENT = 'vector:avatar-model-changed';
 
 const parseAvatarModel = (raw: string | null): AvatarModelConfig | null => {
   try {
     const value = JSON.parse(raw || 'null');
     return value &&
-      ['baseUrl', 'apiKey', 'model'].every((k) => typeof value[k] === 'string') &&
+      ['baseUrl', 'apiKey', 'model'].every(
+        (k) => typeof value[k] === 'string' && value[k].trim().length > 0,
+      ) &&
       (value.endpoint === undefined || value.endpoint === 'chat' || value.endpoint === 'responses')
       ? value
       : null;
@@ -48,7 +51,8 @@ export function hasRememberedAvatarModel(): boolean {
   return parseAvatarModel(localStorage.getItem(REMEMBERED_KEY)) !== null;
 }
 export function readAvatarModelPreference(): AvatarModelPreference | null {
-  const config = parseAvatarModel(sessionStorage.getItem(SESSION_KEY)) ||
+  const config =
+    parseAvatarModel(sessionStorage.getItem(SESSION_KEY)) ||
     parseAvatarModel(localStorage.getItem(REMEMBERED_KEY));
   return config
     ? { baseUrl: config.baseUrl, model: config.model, endpoint: config.endpoint }
@@ -92,6 +96,7 @@ export function saveAvatarModel(value: AvatarModelConfig | null, remember = true
     localStorage.removeItem(REMEMBERED_KEY);
     localStorage.removeItem(PREFERENCE_KEY);
   }
+  window.dispatchEvent(new Event(AVATAR_MODEL_CHANGED_EVENT));
 }
 export const modelError = (code: string) =>
   ({

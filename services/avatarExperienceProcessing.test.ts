@@ -20,7 +20,7 @@ const entry = (id: string, content = '我喜欢简洁的表达。'): DiaryEntry 
 
 const preferenceCandidate = (sourceIds: string[]) => ({
   id: `preference-${sourceIds.join('-')}`,
-  statement: '用户偏好简洁表达',
+  statement: '我偏好简洁表达',
   nature: 'explicit' as const,
   category: 'recent_state' as const,
   facets: ['preference'] as const,
@@ -44,7 +44,13 @@ describe('proposeExperienceMemories', () => {
       atomicMemoryCandidates: [preferenceCandidate(['entry-a'])],
     });
 
-    await proposeExperienceMemories(entry('entry-a'), { content: '我喜欢简洁的表达。', createdAt: 100 }, [entry('entry-a')], () => false, []);
+    await proposeExperienceMemories(
+      entry('entry-a'),
+      { content: '我喜欢简洁的表达。', createdAt: 100 },
+      [entry('entry-a')],
+      () => false,
+      [],
+    );
 
     expect(readAvatarAtomicMemories()).toEqual([]);
   });
@@ -56,15 +62,14 @@ describe('proposeExperienceMemories', () => {
 
     await proposeExperienceMemories(
       entry('entry-b'),
-      { content: '我希望回答少一些解释。', createdAt: 200 },
+      { content: '我喜欢简洁的表达。', createdAt: 200 },
       [entry('entry-a'), entry('entry-b')],
       () => false,
-      [],
     );
 
     expect(readAvatarAtomicMemories()).toEqual([
       expect.objectContaining({
-        statement: '用户偏好简洁表达',
+        statement: '我偏好简洁表达',
         status: 'candidate',
         sourceRefs: expect.arrayContaining([
           expect.objectContaining({ id: 'entry-a' }),
@@ -73,4 +78,33 @@ describe('proposeExperienceMemories', () => {
       }),
     ]);
   });
+  it.each(['unsent', 'quote', 'supplement'])(
+    'rejects %s evidence instead of saving an unsupported candidate',
+    async (kind) => {
+      const candidate = preferenceCandidate(['entry-a']);
+      vi.mocked(previewAvatarGrowth).mockResolvedValue({
+        atomicMemoryCandidates: [
+          {
+            ...candidate,
+            facets: ['value'],
+            sourceRefs: [
+              {
+                source: 'entry',
+                id: kind === 'unsent' ? 'invented' : 'entry-a',
+                ...(kind === 'quote' ? { excerpt: '原文不存在的内容' } : {}),
+                ...(kind === 'supplement' ? { supplementId: 'invented' } : {}),
+              },
+            ],
+          },
+        ],
+      });
+      await proposeExperienceMemories(
+        entry('entry-a'),
+        { content: '我喜欢简洁的表达。', createdAt: 100 },
+        [entry('entry-a')],
+        () => false,
+      );
+      expect(readAvatarAtomicMemories()).toEqual([]);
+    },
+  );
 });

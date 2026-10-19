@@ -201,7 +201,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
 
   useEffect(() => {
     setTimelineRenderLimit(TIMELINE_RENDER_BATCH_SIZE);
-  }, [normalizedTimelineQuery, entries]);
+  }, [normalizedTimelineQuery]);
 
   // Managing records is a task of its own.  A native modal puts it in the
   // browser's top layer, so neither the previous page nor the main navigation
@@ -260,20 +260,20 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                   <h3>{getSourceDateLabel(row.createdAt, language)}</h3>
                 </li>
               )}
-                <li key={row.id}>
-                  <MobilePastTimelineEntry
-                    searchQuery={normalizedTimelineQuery}
-                    draftPassword={draftPassword}
-                    onAppendSupplement={onAppendSupplement}
-                    entry={row.entry}
-                    searchMatchKind={row.match}
-                    highlight={!isManaging && !hasTimelineQuery && index === 0}
-                    language={language}
-                    selectionMode={isManaging}
-                    selected={selectedEntryIds.has(row.id)}
-                    onToggleSelection={toggleEntrySelection}
-                  />
-                </li>
+              <li key={row.id}>
+                <MobilePastTimelineEntry
+                  searchQuery={normalizedTimelineQuery}
+                  draftPassword={draftPassword}
+                  onAppendSupplement={onAppendSupplement}
+                  entry={row.entry}
+                  searchMatchKind={row.match}
+                  highlight={!isManaging && !hasTimelineQuery && index === 0}
+                  language={language}
+                  selectionMode={isManaging}
+                  selected={selectedEntryIds.has(row.id)}
+                  onToggleSelection={toggleEntrySelection}
+                />
+              </li>
             </React.Fragment>
           ))}
         </ul>
@@ -296,7 +296,9 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     <section className="mobile-past-page" data-testid="past-page">
       {processing.error && (
         <div role="alert">
-          {language === 'zh' ? processing.error : 'Some records could not be processed'}{' '}
+          {language === 'zh'
+            ? processing.error
+            : 'Avatar extraction is pending; your records are saved'}{' '}
           <button type="button" onClick={processing.retry}>
             {language === 'zh' ? '重试' : 'Retry'}
           </button>
@@ -364,6 +366,13 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 {language === 'zh' ? '选择' : 'Select'}
               </button>
             </div>
+            {hasTimelineQuery && (
+              <p className="mobile-past-search-result-count" role="status">
+                {language === 'zh'
+                  ? `找到 ${timelineRows.length} 条记录`
+                  : `${timelineRows.length} records found`}
+              </p>
+            )}
             {deleteStatus && (
               <p className="mobile-past-delete-status" role="status">
                 {deleteStatus}
