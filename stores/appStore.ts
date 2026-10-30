@@ -26,10 +26,23 @@ interface AppStore {
   setAvatarLaunchContext: (context: AvatarLaunchContext | null) => void;
 }
 
+// Adopt the approved light palette once, then respect subsequent theme choices.
+const getInitialTheme = (): Theme => {
+  const revision = 'cold-white-v1';
+  const migrated = getStoredString(AppStorageKeys.themeRevision) === revision;
+  const theme: Theme = migrated && getStoredString(AppStorageKeys.theme) === 'dark' ? 'dark' : 'light';
+  if (!migrated) {
+    setStoredString(AppStorageKeys.theme, theme);
+    setStoredString(AppStorageKeys.themeRevision, revision);
+  }
+  if (typeof document !== 'undefined') document.documentElement.classList.toggle('light', theme === 'light');
+  return theme;
+};
+
 export const useAppStore = create<AppStore>((set, get) => ({
   appState: AppState.COVER,
   language: 'zh',
-  theme: (getStoredString(AppStorageKeys.theme) as Theme) || 'dark',
+  theme: getInitialTheme(),
   currentUser: '用户名',
   userId: 'local-user',
   masterPassword: null,

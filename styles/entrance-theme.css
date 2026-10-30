@@ -1,0 +1,80 @@
+/* Product entry system: calm surfaces, readable typography, clear actions. */
+.master-lock-screen, .onboarding-screen { min-height: 100svh; background: var(--ds-page); color: var(--ds-text); }
+.master-lock-backdrop__base { background: var(--ds-page) !important; }
+.master-lock-card { width: min(100% - 40px, 560px) !important; padding: 40px !important; border: 1px solid var(--ds-border) !important; border-radius: var(--ds-radius-surface) !important; background: var(--ds-surface) !important; box-shadow: var(--ds-shadow-float) !important; backdrop-filter: none !important; }
+.master-unlock-form, .master-recovery-form { display: grid; gap: 24px; }
+.master-unlock-title-block, .master-recovery-heading { display: grid; gap: 8px; text-align: left; }
+.master-unlock-title-block h2, .master-recovery-heading h2 { margin: 0; color: var(--ds-text); font-size: 24px; font-weight: 500; line-height: 1.4; letter-spacing: -.02em; }
+.master-unlock-title-block p, .master-recovery-heading p { margin: 0; color: var(--ds-text-muted); font-size: var(--ds-size-support); line-height: 1.65; }
+.master-password-area { display: grid; gap: 10px; }
+.master-password-field, .master-recovery-field > div { position: relative; display: flex; align-items: center; min-height: 56px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control); background: var(--ds-surface-raised); transition: border-color var(--ds-duration-quick) var(--ds-ease), box-shadow var(--ds-duration-quick) var(--ds-ease); }
+.master-password-field:focus-within, .master-recovery-field > div:focus-within { border-color: var(--ds-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-accent) 18%, transparent); }
+.master-password-field--error { border-color: var(--ds-danger); animation: master-field-shake 240ms ease-in-out; }
+.master-password-field input, .master-recovery-field input { width: 100%; height: 54px; min-height: 54px; padding: 0 56px 0 16px; border: 0 !important; outline: 0; background: transparent !important; color: var(--ds-text) !important; font: 400 var(--ds-size-body)/1.5 var(--ds-font-sans); letter-spacing: 0; }
+.master-password-toggle, .master-recovery-field button { position: absolute; right: 6px; display: grid; width: 44px; height: 44px; min-height: 44px; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--ds-text-muted); }
+.master-password-toggle:hover, .master-recovery-field button:hover { color: var(--ds-accent); background: var(--ds-hover); }
+.master-unlock-message, .master-recovery-error { margin: 0; color: var(--ds-danger) !important; font-size: var(--ds-size-support); line-height: 1.5; }
+.master-connect-button, .master-recovery-submit { width: 100%; min-height: 52px; border: 1px solid var(--ds-accent); border-radius: var(--ds-radius-control); background: var(--ds-accent); color: var(--ds-on-accent); font: 500 var(--ds-size-control)/1.5 var(--ds-font-sans); transition: transform var(--ds-duration-quick) var(--ds-ease), background var(--ds-duration-quick) var(--ds-ease); }
+.master-connect-button:hover:not(:disabled), .master-recovery-submit:hover:not(:disabled) { background: var(--ds-accent-hover); transform: translateY(-1px); }
+.master-connect-button:disabled, .master-recovery-submit:disabled { background: var(--ds-disabled) !important; border-color: var(--ds-disabled) !important; color: var(--ds-page) !important; }
+.master-forgot-password { justify-self: start; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--ds-text-muted); font: 400 var(--ds-size-support)/1.5 var(--ds-font-sans); text-align: left; }
+.master-forgot-password:hover { color: var(--ds-accent); }
+.master-recovery-fields { display: grid; gap: 16px; }
+.master-recovery-field { display: grid; gap: 8px; color: var(--ds-text); font-size: var(--ds-size-support); font-weight: 500; line-height: 1.5; }
+.master-recovery-field input { font-size: var(--ds-size-control); }
+@keyframes master-field-shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+@media (max-width: 640px) { .master-lock-card { width: calc(100% - 32px) !important; padding: 28px 20px !important; } .master-unlock-title-block h2, .master-recovery-heading h2 { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { .master-password-field--error { animation: none; } }
+
+/* Protected entry: normal document flow, including mobile preview. */
+html body .master-lock-screen.master-lock-refined {
+  height: 100dvh; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  background: var(--ds-page) !important;
+}
+html body .master-lock-refined .master-lock-frame { width: 100%; max-width: 480px; margin: auto; }
+html body .master-lock-refined .master-lock-card {
+  width: 100% !important; min-height: 0; height: auto; margin: 0;
+  padding: 32px !important; border-radius: 20px !important;
+  background: var(--ds-surface) !important; border: 1px solid var(--ds-border) !important;
+  box-shadow: none !important; backdrop-filter: none;
+}
+.master-lock-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 32px; }
+html body .master-lock-refined .master-lock-nav,
+html body .master-lock-refined .master-lock-language { position: relative; inset: auto; }
+html body .master-lock-refined .master-lock-nav { flex: 1; min-width: 0; flex-wrap: wrap; gap: 8px; }
+html body .master-lock-refined .master-lock-nav button { width: 44px; height: 44px; flex-shrink: 0; }
+html body .master-lock-refined .master-lock-language > button { font-size: 14px; padding: 0 12px; color: var(--ds-text); }
+html body .master-lock-refined .master-lock-content { padding: 0; text-align: left; }
+html body .master-lock-refined .master-unlock-form { gap: 20px; padding: 0; min-height: 0; }
+html body .master-lock-refined .master-unlock-title-block { gap: 8px; margin-bottom: 8px; }
+html body .master-lock-refined :is(.master-unlock-title-block, .master-recovery-heading) h2 { font-size: 26px; line-height: 1.4; letter-spacing: 0; }
+html body .master-lock-refined :is(.master-unlock-title-block, .master-recovery-heading) p { font-size: 15px; color: var(--lock-secondary, var(--ds-text-muted)); }
+html body .master-lock-refined .master-password-area { gap: 10px; }
+html body .master-lock-refined .master-connect-button { width: 100%; min-width: 0; height: 52px; font-size: 16px; }
+html body .master-lock-refined .master-forgot-password { min-height: 44px; margin-top: -8px; font-size: 14px; color: var(--lock-secondary, var(--ds-text-muted)); }
+html body .master-lock-refined .master-lock-security {
+  position: static; display: flex; flex-direction: column; align-items: flex-start;
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ds-border);
+  gap: 4px; font-size: 12px; line-height: 1.75; letter-spacing: 0; text-align: left; color: var(--lock-secondary, var(--ds-text-muted));
+}
+@media (max-width: 640px) {
+  html body .master-lock-refined .master-lock-card { padding: 24px !important; }
+  .master-lock-toolbar { margin-bottom: 28px; }
+}
+html.vector-force-mobile body .master-lock-refined { width: min(100%, 390px); }
+
+html.light .master-lock-refined { --lock-secondary: #526873; }
+html.light.light body .master-lock-refined :is(.master-password-field, .master-recovery-field > div) {
+  background: var(--ds-surface-raised) !important; border-radius: var(--ds-radius-control);
+}
+html.light.light body .master-lock-refined input {
+  background: transparent !important; color: var(--ds-text) !important;
+  -webkit-text-fill-color: var(--ds-text) !important; box-shadow: none !important;
+  border-radius: inherit; outline: none !important;
+}
+html.light.light body .master-lock-refined input::placeholder { color: #607681 !important; -webkit-text-fill-color: #607681 !important; opacity: 1; }
+html.light.light body .master-lock-refined .master-connect-button {
+  background: #4d7889 !important; color: #fff !important; box-shadow: none !important;
+}
+html.light.light body .master-lock-refined .master-connect-button:disabled { background: #e2e9ec !important; color: #607681 !important; }

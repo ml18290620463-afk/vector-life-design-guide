@@ -50,7 +50,7 @@ export const getCurrentRestorablePathname = (): string | null => {
 };
 
 /**
- * The root URL is an application entry point, not the introductory cover.
+ * The root URL shows the cover; entry resumes the last canonical module.
  * Only canonical module paths are persisted; record, dialog, and query state
  * deliberately remain outside this recovery contract.
  */

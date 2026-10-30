@@ -1,0 +1,215 @@
+/* Product-wide typography and component rhythm. The cover owns its bespoke visual language. */
+:where(body, button, input, textarea, select) { font-family: var(--ds-font-sans); }
+body { background: var(--ds-page); color: var(--ds-text); font-size: var(--ds-size-body); line-height: var(--ds-line-body); }
+:where(.vector-app-shell, .desktop-main-module-frame, .mobile-shell, .now-shell, .now-page, .mobile-past-page, .future-page) { background: var(--ds-page); color: var(--ds-text); }
+:where(.now-page__title, .future-page__title, .mobile-past-page h1) { font-size: var(--ds-size-title); font-weight: 500; line-height: 1.4; letter-spacing: -0.018em; color: var(--ds-text); }
+:where(.now-page__title, .future-page__title, .mobile-past-page h1) + * { margin-top: var(--ds-space-4); }
+:where(.now-editor__surface, #now-record-text, .now-chat-bubble, .mobile-past-timeline__content p, .principle-card__content, .mobile-principle-card__content p, .mobile-principles-view__textarea, .future-card p, .future-dialog textarea) { font-size: var(--ds-size-body) !important; font-weight: 400; line-height: var(--ds-line-body) !important; letter-spacing: 0; text-align: left; color: var(--ds-text); opacity: 1; }
+:where(.now-chat-bubble, .mobile-past-timeline__content) p + p { margin-top: var(--ds-space-4); }
+:where(.now-editor__surface, .mobile-past-timeline__content, .future-card, .future-dialog) { max-width: 680px; }
+:where(.desktop-main-nav, .mobile-main-nav, .mobile-shell__bottom-nav) { background: var(--ds-sidebar); border-color: var(--ds-border); }
+:where(.desktop-main-nav__item, .mobile-main-nav__item) { color: var(--ds-text-muted); transition: color var(--ds-duration-quick) var(--ds-ease), background var(--ds-duration-quick) var(--ds-ease), border-color var(--ds-duration-quick) var(--ds-ease); }
+:where(.desktop-main-nav__item, .mobile-main-nav__item):hover { color: var(--ds-text); background: var(--ds-hover); }
+:where(.desktop-main-nav__item--active, .mobile-main-nav__item--active, .avatar-section-tabs button[aria-selected='true']) { color: var(--ds-accent); background: var(--ds-selected); border-color: var(--ds-border-strong); }
+:where(.now-card, .now-chat-bubble, .now-link-dialog, .now-exit-dialog, .now-material-popover, .future-card, .future-dialog, .avatar-model-dialog, .avatar-memory-dialog, .avatar-memory-confirm-dialog, .avatar-library__dimension-card) { color: var(--ds-text); background: var(--ds-surface); border-color: var(--ds-border); box-shadow: var(--ds-shadow-float); }
+:where(.now-chat-bubble.is-user) { background: var(--ds-selected); }
+:where(.future-card) { background-image: none; backdrop-filter: none; }
+:where(.future-page, .future-dialog) { --color-archive-bg: var(--ds-page); --color-archive-surface: var(--ds-surface); --color-archive-text-main: var(--ds-text); --color-archive-text-muted: var(--ds-text-muted); --color-archive-border: var(--ds-border); --color-archive-border-strong: var(--ds-border-strong); --color-archive-accent: var(--ds-accent); }
+:where(button, input, textarea, select) { border-color: var(--ds-border); color: var(--ds-text); }
+:where(input, textarea, select) { background: var(--ds-surface); caret-color: var(--ds-accent); }
+:where(input, textarea)::placeholder { color: var(--ds-text-subtle); opacity: 1; }
+:where(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid var(--ds-accent) !important; outline-offset: 3px; }
+:where(button, input, select, textarea) { min-height: 44px; }
+:where(.now-send-button, .future-primary, .principle-editor__save-button, .master-connect-button, .master-recovery-submit, [data-testid='onboarding-issue-key'], [data-testid='onboarding-recovery-saved']) { background: var(--ds-accent) !important; color: var(--ds-on-accent) !important; border-color: var(--ds-accent) !important; box-shadow: none; text-shadow: none; }
+:where(.now-send-button, .future-primary, .principle-editor__save-button, .master-connect-button, .master-recovery-submit, [data-testid='onboarding-issue-key'], [data-testid='onboarding-recovery-saved']):hover:not(:disabled) { background: var(--ds-accent-hover) !important; }
+:where(.now-send-button, .future-primary, .principle-editor__save-button, .master-connect-button, .master-recovery-submit, [data-testid='onboarding-issue-key'], [data-testid='onboarding-recovery-saved']):active:not(:disabled) { background: var(--ds-accent-pressed) !important; }
+:where(button:disabled, input:disabled, textarea:disabled, select:disabled) { color: var(--ds-disabled) !important; border-color: var(--ds-border) !important; opacity: 1; cursor: not-allowed; }
+:where(.future-danger, [role='alert']) { color: var(--ds-danger); }
+:where(.avatar-guide-page, .avatar-model-dialog, .avatar-memory-dialog, .avatar-memory-confirm-dialog) { color: var(--ds-text); }
+:where(.avatar-guide-page .avatar-page-controls, .avatar-model-dialog header, .avatar-model-dialog footer) { background: var(--ds-surface); border-color: var(--ds-border); }
+/* Entry surfaces inherit the application system while preserving their own structure. */
+:where(.onboarding-screen, .master-lock-screen, .onboarding-frame, .onboarding-step, .onboarding-step__base, .master-lock-backdrop__base) { background: var(--ds-page) !important; color: var(--ds-text); }
+:where(.master-lock-card, .onboarding-backup-phase > div) { background: var(--ds-surface) !important; color: var(--ds-text); border-color: var(--ds-border) !important; box-shadow: var(--ds-shadow-float) !important; }
+:where(.onboarding-screen, .master-lock-screen) :is(input, textarea) { background: var(--ds-page) !important; color: var(--ds-text) !important; border-color: var(--ds-border-strong) !important; }
+:where(.onboarding-screen, .master-lock-screen) :is(label, p, small) { color: var(--ds-text-muted); }
+/* The cover's letterform, brush and motion are intentionally excluded from global normalization. */
+.vector-brush-cover, .vector-brush-cover *, .vector-brush-cover__wordmark, .vector-brush-cover__e { font-family: revert; }
+@media (max-width: 640px) {
+  :where(.now-page__title, .future-page__title, .mobile-past-page h1) { font-size: 26px; }
+  :where(.now-page, .mobile-past-page, .future-page) { --mobile-page-gutter: var(--ds-space-5); }
+  :where(.now-editor__surface, .mobile-past-timeline__content, .future-card, .future-dialog) { max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 1ms !important; }
+}
+
+/* Resolve legacy per-screen palettes at their declaration scopes. */
+html.light.light, html.light.light :is(.vector-app-shell, .mobile-shell, .now-shell, .now-shell--light, .future-page, .future-dialog, .mobile-past-page, .desktop-workspace) {
+
+  --app-page: var(--ds-page);
+  --app-page-raised: var(--ds-page-raised);
+  --app-surface: var(--ds-surface);
+  --app-surface-raised: var(--ds-surface-raised);
+  --app-text: var(--ds-text);
+  --app-text-muted: var(--ds-text-muted);
+  --app-border: var(--ds-border);
+  --app-accent: var(--ds-accent);
+  --experience-bg: var(--ds-page);
+  --experience-surface: var(--ds-surface);
+  --experience-line: var(--ds-border);
+  --experience-ink: var(--ds-text);
+  --experience-muted: var(--ds-text-muted);
+  --experience-accent: var(--ds-accent);
+  --now-page: var(--ds-page);
+  --now-surface: var(--ds-surface);
+  --now-surface-strong: var(--ds-surface-raised);
+  --now-border: var(--ds-border);
+  --now-border-strong: var(--ds-border-strong);
+  --now-text: var(--ds-text);
+  --now-text-muted: var(--ds-text-muted);
+  --now-text-dim: var(--ds-text-subtle);
+  --now-accent: var(--ds-accent);
+  --now-accent-strong: var(--ds-accent-hover);
+  --now-success: var(--ds-success);
+  --mobile-paper: var(--ds-page);
+  --mobile-paper-warm: var(--ds-page);
+  --mobile-paper-cool: var(--ds-page-raised);
+  --mobile-surface: var(--ds-surface);
+  --mobile-surface-muted: var(--ds-surface-raised);
+  --mobile-ink: var(--ds-text);
+  --mobile-ink-soft: var(--ds-text-muted);
+  --mobile-muted: var(--ds-text-subtle);
+  --mobile-faint: var(--ds-text-subtle);
+  --mobile-line: var(--ds-border);
+  --mobile-line-strong: var(--ds-border-strong);
+  --mobile-accent: var(--ds-accent);
+  --mobile-accent-strong: var(--ds-accent-hover);
+  --mobile-accent-soft: var(--ds-selected);
+  --mobile-accent-line: var(--ds-border-strong);
+  --mobile-mint: var(--ds-success);
+  --mobile-mint-soft: var(--ds-success-bg);
+  --mobile-violet: var(--ds-insight);
+  --mobile-violet-soft: var(--ds-insight-bg);
+  --mobile-on-accent: var(--ds-on-accent);
+  --mobile-danger: var(--ds-danger);
+  --mobile-focus: var(--ds-accent);
+  --mobile-disabled: var(--ds-disabled);
+  --color-archive-bg: var(--ds-page);
+  --color-archive-surface: var(--ds-surface);
+  --color-archive-text-main: var(--ds-text);
+  --color-archive-text-muted: var(--ds-text-muted);
+  --color-archive-text-dim: var(--ds-text-subtle);
+  --color-archive-accent: var(--ds-accent);
+  --color-archive-accent-light: var(--ds-accent-hover);
+  --color-archive-electric: var(--ds-insight);
+  --color-archive-border: var(--ds-border);
+  --color-archive-border-strong: var(--ds-border-strong);
+  --color-archive-danger: var(--ds-danger);
+  --color-archive-success: var(--ds-success);
+}
+html.light.light :is(.vector-app-shell, .desktop-workspace, .desktop-main-module-frame, .mobile-shell, .now-shell, .now-page, .mobile-past-page, .future-page) {
+  background: var(--ds-page) !important; color: var(--ds-text) !important;
+}
+html.light.light :is(.desktop-main-nav, .mobile-main-nav) { background: var(--ds-sidebar) !important; border-color: var(--ds-border) !important; box-shadow: none !important; backdrop-filter: none !important; }
+html.light.light :is(.now-card, .now-chat-bubble, .future-card, .future-dialog, .now-material-popover, .now-link-dialog, .now-exit-dialog) { background: var(--ds-surface) !important; color: var(--ds-text); border-color: var(--ds-border) !important; box-shadow: none !important; }
+html.light.light .now-chat-bubble.is-user { background: var(--ds-selected) !important; }
+html.light.light :is(#now-record-text, .now-chat-bubble, .mobile-past-timeline__content p, .future-card p) { font-size: 17px !important; line-height: 1.8 !important; color: var(--ds-text) !important; }
+/* Onboarding still uses legacy utility classes: keep its interaction, replace its material. */
+html.light.light .onboarding-screen { background: var(--ds-page) !important; color: var(--ds-text) !important; backdrop-filter: none !important; }
+html.light.light .onboarding-screen :is(.onboarding-frame, .onboarding-step, .onboarding-step__base) { background: var(--ds-page) !important; box-shadow: none !important; border-color: transparent !important; backdrop-filter: none !important; }
+html.light.light .onboarding-screen :is(.onboarding-panel, .onboarding-backup-phase > div) { background: var(--ds-surface) !important; border: 1px solid var(--ds-border) !important; box-shadow: none !important; backdrop-filter: none !important; border-radius: var(--ds-radius-surface) !important; }
+html.light.light .onboarding-screen .onboarding-calibration-module { background: transparent !important; box-shadow: none !important; }
+html.light.light .onboarding-screen :is(div.pointer-events-none, svg.pointer-events-none, .onboarding-step__atmosphere, .onboarding-step__footer, .onboarding-hero > div:first-child) { visibility: hidden !important; }
+html.light.light .onboarding-screen :is(h2, label, p, span, small) { color: var(--ds-text) !important; font-family: var(--ds-font-sans); text-shadow: none !important; letter-spacing: normal !important; }
+html.light.light .onboarding-screen h2 { font-size: 26px !important; line-height: 1.4; font-weight: 500; }
+html.light.light .onboarding-screen :is(label, p, small) { font-size: 14px !important; }
+html.light.light .onboarding-screen .onboarding-input-grid :is(input, .relative.overflow-hidden) { background: var(--ds-surface-raised) !important; color: var(--ds-text) !important; border-color: var(--ds-border-strong) !important; box-shadow: none !important; }
+html.light.light .onboarding-screen input { font-family: var(--ds-font-sans); font-size: 17px; }
+html.light.light .onboarding-screen input::placeholder { color: var(--ds-text-muted) !important; }
+html.light.light .onboarding-screen button { text-shadow: none !important; box-shadow: none !important; color: var(--ds-text); }
+html.light.light .onboarding-screen :is([data-testid='onboarding-issue-key'], [data-testid='onboarding-recovery-saved']) { background: var(--ds-accent) !important; color: white !important; }
+html.light.light .onboarding-screen :is([data-testid='onboarding-issue-key'], [data-testid='onboarding-recovery-saved']) span { color: inherit !important; }
+html.light.light .onboarding-screen button:disabled { background: var(--ds-page-raised) !important; color: var(--ds-text-muted) !important; }
+
+html.light.light .onboarding-content[data-release-phase='calibration'] .onboarding-panel { height: auto; min-height: 438px; }
+html.light.light :is(.desktop-main-nav__item--active, .mobile-main-nav__item--active) { background: var(--ds-selected) !important; color: var(--ds-accent) !important; border-color: var(--ds-border-strong) !important; box-shadow: none !important; }
+html.light.light .onboarding-requirements > div { filter: none !important; }
+html.light.light .onboarding-requirements > div > span:first-child { background: var(--ds-page-raised) !important; border-color: var(--ds-border-strong) !important; box-shadow: none !important; }
+html.light.light .onboarding-requirements > div[data-met='true'] > span:first-child { background: var(--ds-accent) !important; }
+html.light.light .onboarding-requirements > div > span:first-child::before { display: none; }
+html.light.light .onboarding-requirements .pointer-events-none { background: var(--ds-surface) !important; }
+
+/* Past page: explicit light-mode control contrast at every viewport. */
+html.light.light .mobile-past-page { --past-control-ink: #375562; --past-secondary-ink: #526873; }
+html.light.light .mobile-past-page__segments { border-color: var(--ds-border) !important; }
+html.light.light .mobile-past-page__segments button { color: var(--past-secondary-ink) !important; background: transparent !important; opacity: 1; font-size: 16px; font-weight: 500; }
+html.light.light .mobile-past-page__segments button :is(span, small) { color: inherit !important; opacity: 1 !important; }
+html.light.light .mobile-past-page__segments button[aria-selected='true'] { color: var(--past-control-ink) !important; background: var(--ds-selected) !important; border-color: var(--ds-accent) !important; font-weight: 600; }
+html.light.light .mobile-past-page__segments button:hover { background: var(--ds-hover) !important; }
+html.light.light .mobile-past-search { background: var(--ds-surface) !important; border: 1px solid var(--ds-border-strong) !important; color: var(--past-control-ink) !important; box-shadow: none !important; }
+html.light.light .mobile-past-search input { color: var(--ds-text) !important; background: transparent !important; font-size: 16px; }
+html.light.light .mobile-past-search input::placeholder { color: var(--past-secondary-ink) !important; opacity: 1 !important; }
+html.light.light .mobile-past-page :is(.mobile-past-timeline__fold, .mobile-past-text-toggle, .mobile-past-search__clear, .mobile-past-selection-toggle, .mobile-past-load-more) { color: var(--past-control-ink) !important; opacity: 1; }
+html.light.light .mobile-past-page :is(.mobile-past-timeline__fold, .mobile-past-selection-toggle):hover { background: var(--ds-selected) !important; }
+html.light.light .mobile-past-page :is(.mobile-past-empty, .mobile-past-search-result-count, .mobile-past-date-group h3, time) { color: var(--past-secondary-ink) !important; opacity: 1; }
+html.light.light .mobile-past-page button:focus-visible { outline: 2px solid var(--past-control-ink); outline-offset: 3px; }
+
+/* Past library: title > navigation > action > metadata. */
+html:root body .mobile-past-page__segments button {
+  font-size: 16px !important;
+  line-height: 1.4;
+}
+html:root body .mobile-past-page__segments button small {
+  font-size: 12px !important;
+  font-weight: 500;
+}
+html:root body .mobile-principles-view--result-first .mobile-principles-view__result-header {
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 24px;
+}
+html:root body .mobile-principles-view--result-first .mobile-principles-view__result-header > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+html:root body .mobile-principles-view--result-first .mobile-principles-view__result-header strong {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+html:root body .mobile-principles-view--result-first .mobile-principles-view__result-header small {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+html:root body .mobile-principles-view--result-first .mobile-principles-view__manage-button {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+html.light body .mobile-principles-view__result-header strong { color: var(--ds-text); }
+html.light body .mobile-principles-view__result-header small { color: #526873; }
+html.light body .mobile-principles-view__manage-button { color: #375562; }
+@media (max-width: 767px) {
+  html:root body .mobile-principles-view--result-first .mobile-principles-view__result-header strong { font-size: 24px; }
+  html:root body .mobile-principles-view--result-first .mobile-principles-view__result-header { gap: 12px; padding-bottom: 16px; }
+}
+
+/* Tags carry meaning through text; use the same readable ink in both shells. */
+html.light.light .mobile-past-page .mobile-past-timeline__tags span {
+  color: var(--ds-text-muted) !important;
+  background: var(--ds-selected) !important;
+  border-color: var(--ds-border) !important;
+}
+
+/* Keep populated principle text legible on light surfaces. */
+html.light.light .mobile-principles-view__result-header small,
+html.light.light .principle-card__formed-year { color: var(--ds-text-muted) !important; opacity: 1 !important; }
+html.light.light .mobile-principle-card__content p { color: var(--ds-text) !important; opacity: 1 !important; }

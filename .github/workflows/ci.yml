@@ -108,3 +108,24 @@ jobs:
       #     commit before reverting the gate change.
       - name: Audit (production deps, hard gate)
         run: npm audit --omit=dev --audit-level=high
+
+  browser:
+    name: Core browser regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Core flows, backup and accessibility
+        run: npx playwright test e2e/now-functional.spec.ts e2e/future-functional.spec.ts e2e/contextual-pattern-review.spec.ts e2e/past-functional.spec.ts e2e/data-backup-functional.spec.ts e2e/a11y.spec.ts e2e/experience-layout.spec.ts --workers=1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failures
+          path: test-results/
+          retention-days: 7

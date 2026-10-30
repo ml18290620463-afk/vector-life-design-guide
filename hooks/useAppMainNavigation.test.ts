@@ -15,18 +15,30 @@ vi.mock('../lib/appEntryRoutes', () => ({
   rememberMainRoute: vi.fn(),
 }));
 
+vi.mock('../features/mobile/mobileLazyComponents', () => ({
+  preloadFuturePage: vi.fn(() => Promise.resolve()),
+  preloadPastRepository: vi.fn(() => Promise.resolve()),
+}));
+vi.mock('../features/now/nowLazyComponents', () => ({
+  preloadNowFlow: vi.fn(() => Promise.resolve()),
+}));
+vi.mock('../features/now/avatarChatLazy', () => ({
+  preloadAvatarChatPage: vi.fn(() => Promise.resolve()),
+}));
+
 describe('useAppMainNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isMobileExperience).mockReturnValue(false);
   });
 
-  it('leaves the avatar route cleanly when navigating to Past on desktop', () => {
+  it('leaves the avatar route cleanly when navigating to Past on desktop', async () => {
     const setAppState = vi.fn();
     const setNowRoute = vi.fn();
     const { result } = renderHook(() => useAppMainNavigation({ setAppState, setNowRoute }));
 
-    act(() => result.current.handleMainModuleNavigate('avatar'));
-    act(() => result.current.handleMainModuleNavigate('past'));
+    await act(async () => result.current.handleMainModuleNavigate('avatar'));
+    await act(async () => result.current.handleMainModuleNavigate('past'));
 
     expect(pushAppPath).toHaveBeenNthCalledWith(1, '/avatar', { nowRoute: 'avatar-chat' });
     expect(pushAppPath).toHaveBeenNthCalledWith(2, '/past', {});
@@ -40,13 +52,13 @@ describe('useAppMainNavigation', () => {
 
   it.each(['past', 'future'] as const)(
     'leaves the avatar subroute when navigating to %s on mobile',
-    (tab) => {
+    async (tab) => {
       vi.mocked(isMobileExperience).mockReturnValue(true);
       const setAppState = vi.fn();
       const setNowRoute = vi.fn();
       const { result } = renderHook(() => useAppMainNavigation({ setAppState, setNowRoute }));
-      act(() => result.current.handleMainModuleNavigate('avatar'));
-      act(() => result.current.handleMainModuleNavigate(tab));
+      await act(async () => result.current.handleMainModuleNavigate('avatar'));
+      await act(async () => result.current.handleMainModuleNavigate(tab));
       expect(setNowRoute).toHaveBeenLastCalledWith('now');
       expect(setAppState).toHaveBeenLastCalledWith(
         tab === 'past' ? AppState.PAST : AppState.FUTURE,
@@ -55,12 +67,12 @@ describe('useAppMainNavigation', () => {
     },
   );
 
-  it('clears the avatar subroute when navigating to Future on desktop', () => {
+  it('clears the avatar subroute when navigating to Future on desktop', async () => {
     const setAppState = vi.fn();
     const setNowRoute = vi.fn();
     const { result } = renderHook(() => useAppMainNavigation({ setAppState, setNowRoute }));
 
-    act(() => result.current.handleMainModuleNavigate('future'));
+    await act(async () => result.current.handleMainModuleNavigate('future'));
 
     expect(pushAppPath).toHaveBeenCalledWith('/future', {});
     expect(setNowRoute).toHaveBeenCalledWith('now');
@@ -68,3 +80,26 @@ describe('useAppMainNavigation', () => {
     expect(rememberMainRoute).toHaveBeenCalledWith('/future');
   });
 });
+
+it.each([false, true])(
+  'only commits the latest request when an earlier chunk resolves late (mobile=%s)',
+  async (mobile) => {
+    vi.mocked(isMobileExperience).mockReturnValue(mobile);
+    const { preloadPastRepository } = await import('../features/mobile/mobileLazyComponents');
+    let resolvePast!: () => void;
+    vi.mocked(preloadPastRepository).mockReturnValueOnce(
+      new Promise<Awaited<ReturnType<typeof preloadPastRepository>>>((resolve) => {
+        resolvePast = () => resolve({ default: () => null });
+      }),
+    );
+    const setAppState = vi.fn();
+    const setNowRoute = vi.fn();
+    const { result } = renderHook(() => useAppMainNavigation({ setAppState, setNowRoute }));
+    act(() => result.current.handleMainModuleNavigate('past'));
+    expect(setAppState).not.toHaveBeenCalled();
+    await act(async () => result.current.handleMainModuleNavigate('future'));
+    expect(setAppState).toHaveBeenCalledExactlyOnceWith(AppState.FUTURE);
+    await act(async () => resolvePast());
+    expect(setAppState).toHaveBeenCalledExactlyOnceWith(AppState.FUTURE);
+  },
+);

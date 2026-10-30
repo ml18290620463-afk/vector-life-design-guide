@@ -1,0 +1,154 @@
+/* VECTOR semantic design system. Keep this file last in the cascade. */
+:root {
+  --ds-font-sans: Inter, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --ds-font-mono: 'JetBrains Mono', 'PingFang SC', 'Noto Sans SC', monospace;
+  --ds-size-meta: 12px;
+  --ds-size-support: 14px;
+  --ds-size-control: 15px;
+  --ds-size-body: 17px;
+  --ds-size-section: 18px;
+  --ds-size-title: 30px;
+  --ds-line-body: 1.8;
+  --ds-line-ui: 1.5;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-radius-control: 12px;
+  --ds-radius-surface: 18px;
+  --ds-shadow-float: 0 12px 32px rgb(25 42 51 / 8%);
+  --ds-duration-quick: 160ms;
+  --ds-duration-standard: 220ms;
+  --ds-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.light {
+  color-scheme: light;
+  --ds-page: #f5f8f8;
+  --ds-page-raised: #eaf0f1;
+  --ds-sidebar: #eaf0f1;
+  --ds-surface: #ffffff;
+  --ds-surface-raised: #f8fbfb;
+  --ds-hover: #eaf0f1;
+  --ds-selected: #dce9ec;
+  --ds-text: #203641;
+  --ds-text-muted: #526873;
+  --ds-text-subtle: #526873;
+  --ds-disabled: #9aa9af;
+  --ds-accent: #426c7d;
+  --ds-accent-hover: #365d6d;
+  --ds-accent-pressed: #2c4e5d;
+  --ds-on-accent: #f5f8f8;
+  --ds-selection: #c9dde2;
+  --ds-line: #d9e1e3;
+  --ds-border: #c9d5d8;
+  --ds-border-strong: #9aafb6;
+  --ds-success: #397a63;
+  --ds-success-bg: #e5f1ec;
+  --ds-warning: #86652e;
+  --ds-warning-bg: #f6efdf;
+  --ds-danger: #a6575c;
+  --ds-danger-bg: #f6e9ea;
+  --ds-insight: #66749b;
+  --ds-insight-bg: #e9ebf4;
+}
+
+html:not(.light) {
+  color-scheme: dark;
+  --ds-page: #10171d;
+  --ds-page-raised: #141d25;
+  --ds-sidebar: #141d25;
+  --ds-surface: #19232c;
+  --ds-surface-raised: #202d38;
+  --ds-hover: #263540;
+  --ds-selected: #253d48;
+  --ds-text: #e8eef2;
+  --ds-text-muted: #a0afba;
+  --ds-text-subtle: #7e909e;
+  --ds-disabled: #596b79;
+  --ds-accent: #9ccbdd;
+  --ds-accent-hover: #b5ddea;
+  --ds-accent-pressed: #78b4cb;
+  --ds-on-accent: #10171d;
+  --ds-selection: #315362;
+  --ds-line: #293641;
+  --ds-border: #32414d;
+  --ds-border-strong: #4b6272;
+  --ds-success: #8dc4ae;
+  --ds-success-bg: #20382f;
+  --ds-warning: #d6b57a;
+  --ds-warning-bg: #3a3020;
+  --ds-danger: #e49a9d;
+  --ds-danger-bg: #3d282e;
+  --ds-insight: #abb7d8;
+  --ds-insight-bg: #2b3043;
+  --ds-shadow-float: 0 12px 32px rgb(0 0 0 / 18%);
+}
+
+/* Legacy aliases: old modules now resolve through the same semantic language. */
+:root {
+  --app-page: var(--ds-page);
+  --app-page-raised: var(--ds-page-raised);
+  --app-surface: var(--ds-surface);
+  --app-surface-raised: var(--ds-surface-raised);
+  --app-text: var(--ds-text);
+  --app-text-muted: var(--ds-text-muted);
+  --app-border: var(--ds-border);
+  --app-accent: var(--ds-accent);
+  --experience-bg: var(--ds-page);
+  --experience-surface: var(--ds-surface);
+  --experience-line: var(--ds-border);
+  --experience-ink: var(--ds-text);
+  --experience-muted: var(--ds-text-muted);
+  --experience-accent: var(--ds-accent);
+  --now-page: var(--ds-page);
+  --now-surface: var(--ds-surface);
+  --now-surface-strong: var(--ds-surface-raised);
+  --now-border: var(--ds-border);
+  --now-border-strong: var(--ds-border-strong);
+  --now-text: var(--ds-text);
+  --now-text-muted: var(--ds-text-muted);
+  --now-text-dim: var(--ds-text-subtle);
+  --now-accent: var(--ds-accent);
+  --now-accent-strong: var(--ds-accent-hover);
+  --now-success: var(--ds-success);
+  --mobile-paper: var(--ds-page);
+  --mobile-paper-warm: var(--ds-page);
+  --mobile-paper-cool: var(--ds-page-raised);
+  --mobile-surface: var(--ds-surface);
+  --mobile-surface-muted: var(--ds-surface-raised);
+  --mobile-ink: var(--ds-text);
+  --mobile-ink-soft: var(--ds-text-muted);
+  --mobile-muted: var(--ds-text-subtle);
+  --mobile-faint: var(--ds-text-subtle);
+  --mobile-line: var(--ds-border);
+  --mobile-line-strong: var(--ds-border-strong);
+  --mobile-accent: var(--ds-accent);
+  --mobile-accent-strong: var(--ds-accent-hover);
+  --mobile-accent-soft: var(--ds-selected);
+  --mobile-accent-line: var(--ds-border-strong);
+  --mobile-mint: var(--ds-success);
+  --mobile-mint-soft: var(--ds-success-bg);
+  --mobile-violet: var(--ds-insight);
+  --mobile-violet-soft: var(--ds-insight-bg);
+  --mobile-on-accent: var(--ds-on-accent);
+  --mobile-danger: var(--ds-danger);
+  --mobile-focus: var(--ds-accent);
+  --mobile-disabled: var(--ds-disabled);
+  --color-archive-bg: var(--ds-page);
+  --color-archive-surface: var(--ds-surface);
+  --color-archive-text-main: var(--ds-text);
+  --color-archive-text-muted: var(--ds-text-muted);
+  --color-archive-text-dim: var(--ds-text-subtle);
+  --color-archive-accent: var(--ds-accent);
+  --color-archive-accent-light: var(--ds-accent-hover);
+  --color-archive-electric: var(--ds-insight);
+  --color-archive-border: var(--ds-border);
+  --color-archive-border-strong: var(--ds-border-strong);
+  --color-archive-danger: var(--ds-danger);
+  --color-archive-success: var(--ds-success);
+}
+
+html.light ::selection { background: var(--ds-selection); color: var(--ds-text); }
+html:not(.light) ::selection { background: var(--ds-selection); color: var(--ds-text); }

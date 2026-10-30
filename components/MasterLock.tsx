@@ -10,7 +10,6 @@ import { useBiometricAuth } from '../hooks/useBiometricAuth';
 import { useMasterPasswordVerify } from '../hooks/useMasterPasswordVerify';
 import { useDoubleClickConfirm } from '../hooks/useDoubleClickConfirm';
 import { MasterLockBackdrop } from './MasterLockBackdrop';
-import { MasterLockCardChrome } from './MasterLockCardChrome';
 import { MasterLockHeader } from './MasterLockHeader';
 import { MasterLockRecoveryForm } from './MasterLockRecoveryForm';
 import { MasterLockUnlockForm } from './MasterLockUnlockForm';
@@ -99,166 +98,24 @@ export const MasterLock: React.FC<MasterLockProps> = ({
 
   return (
     <div
-      className={`master-lock-screen fixed inset-0 z-[200] flex items-center justify-center p-6 md:p-10 backdrop-blur-3xl overflow-y-auto transition-colors duration-1000 ${theme === 'light' ? 'bg-neutral-50' : 'bg-space-bg'}`}
+      className="master-lock-screen master-lock-refined fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 md:p-8"
     >
       <MasterLockBackdrop theme={theme} />
 
-      <div className="master-lock-frame relative z-10 my-auto w-full max-w-[760px] perspective-[3000px] transition-all duration-500">
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute -inset-10 opacity-80 blur-2xl [border-radius:37%_63%_48%_52%/12%_18%_82%_88%] ${
-            theme === 'light'
-              ? 'bg-tech-primary/14'
-              : 'bg-[radial-gradient(circle_at_18%_0%,color-mix(in_srgb,_var(--color-tech-primary)_34%,_transparent),transparent_30%),radial-gradient(circle_at_92%_20%,color-mix(in_srgb,_var(--color-tech-accent-violet)_12.6%,_transparent),transparent_36%),linear-gradient(135deg,color-mix(in_srgb,_var(--color-tech-primary)_12%,_transparent),color-mix(in_srgb,_var(--color-space-bg)_0%,_transparent)_52%)]'
-          }`}
-        />
-        <svg
-          aria-hidden="true"
-          data-testid="organic-lock-silhouette"
-          viewBox="0 0 820 690"
-          preserveAspectRatio="none"
-          className="master-lock-silhouette pointer-events-none absolute -inset-6 h-[calc(100%+3rem)] w-[calc(100%+3rem)] overflow-visible opacity-85 blur-[0.2px]"
-        >
-          <defs>
-            <linearGradient id="lock-organic-edge" x1="8%" y1="2%" x2="92%" y2="96%">
-              <stop
-                offset="0%"
-                stopColor="color-mix(in srgb, var(--color-tech-primary) 90%, transparent)"
-              />
-              <stop
-                offset="34%"
-                stopColor="color-mix(in srgb, var(--color-tech-primary) 42%, transparent)"
-              />
-              <stop
-                offset="64%"
-                stopColor="color-mix(in srgb, var(--color-tech-primary) 23.4%, transparent)"
-              />
-              <stop
-                offset="100%"
-                stopColor="color-mix(in srgb, var(--color-tech-primary) 78%, transparent)"
-              />
-            </linearGradient>
-            <filter id="lock-edge-glow" x="-12%" y="-12%" width="124%" height="124%">
-              <feGaussianBlur stdDeviation="5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <path
-            d="M78 48C153 14 253 24 327 28C433 33 502 11 598 30C682 47 746 69 779 123C814 178 788 249 795 318C804 403 825 477 775 544C723 613 619 627 520 636C410 646 325 668 226 635C131 603 57 541 39 458C20 375 53 308 41 231C27 149 16 76 78 48Z"
-            fill="none"
-            stroke="url(#lock-organic-edge)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            filter="url(#lock-edge-glow)"
-          />
-          <path
-            d="M108 62C185 37 273 47 359 48C468 50 552 31 653 58C731 79 766 129 774 191"
-            fill="none"
-            stroke="color-mix(in srgb, var(--color-tech-primary) 42%, transparent)"
-            strokeWidth="1"
-            strokeLinecap="round"
-          />
-          <path
-            d="M68 441C103 549 212 613 346 626C466 638 593 619 707 575"
-            fill="none"
-            stroke="color-mix(in srgb, var(--color-tech-primary) 30%, transparent)"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-          />
-        </svg>
+      <div className="master-lock-frame relative z-10 my-auto w-full max-w-[560px]">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={
             verify.isSuccess
-              ? {
-                  rotateX: 110,
-                  rotateY: [0, 45, -45, 0],
-                  z: 800,
-                  opacity: 0,
-                  scale: [1, 1.8, 2.5],
-                  skewX: [0, 40, -40, 0],
-                  skewY: [0, -20, 20, 0],
-                  filter: ['blur(0px)', 'blur(15px)', 'blur(30px)'],
-                }
-              : {
-                  opacity: 1,
-                  scale: 1,
-                  y: 0,
-                  rotateY: 0,
-                  rotateX: 0,
-                }
+              ? { opacity: 0, y: -4, scale: 0.985 }
+              : { opacity: 1, scale: 1, y: 0 }
           }
           transition={
-            verify.isSuccess
-              ? {
-                  duration: 1.36,
-                  delay: 0.48,
-                  ease: 'circIn',
-                  skewX: { duration: 0.68, repeat: 1 },
-                  skewY: { duration: 0.68, repeat: 1 },
-                }
-              : {
-                  opacity: { duration: 0.4 },
-                  scale: { duration: 0.4 },
-                }
+            { duration: 0.28, ease: 'easeOut' }
           }
-          className={`master-lock-card group relative min-h-[650px] w-full overflow-hidden border p-7 transition-all duration-1000 [border-radius:4.8rem_7.2rem_5.9rem_6.8rem/3.3rem_4.5rem_6.5rem_5.3rem] sm:p-10 ${theme === 'light' ? 'border-tech-primary/10 bg-white/82 shadow-[0_38px_100px_color-mix(in_srgb,_black_16%,_transparent)]' : 'border-tech-primary/14 bg-[radial-gradient(circle_at_14%_12%,color-mix(in_srgb,_var(--color-tech-primary)_18%,_transparent),transparent_25%),radial-gradient(circle_at_84%_16%,color-mix(in_srgb,_var(--color-tech-accent-violet)_9.9%,_transparent),transparent_33%),radial-gradient(circle_at_52%_72%,color-mix(in_srgb,_var(--color-tech-primary)_8%,_transparent),transparent_38%),linear-gradient(135deg,var(--color-space-layer),var(--color-space-bg)_48%,var(--color-space-layer))] shadow-[0_30px_90px_color-mix(in_srgb,_var(--color-space-bg)_50%,_transparent),0_0_120px_color-mix(in_srgb,_var(--color-tech-accent-violet)_6.3%,_transparent),0_0_100px_color-mix(in_srgb,_var(--color-tech-primary)_10%,_transparent),inset_0_1px_0_color-mix(in_srgb,_var(--color-tech-primary)_14%,_transparent),inset_16px_0_64px_color-mix(in_srgb,_var(--color-tech-primary)_8.5%,_transparent),inset_-22px_-18px_92px_color-mix(in_srgb,_var(--color-tech-accent-violet)_7.2%,_transparent)]'} ${verify.isSuccess ? 'pointer-events-none shadow-[0_0_80px_color-mix(in_srgb,_var(--color-tech-primary)_24%,_transparent)]' : ''}`}
+          className={`master-lock-card relative min-h-0 w-full ${verify.isSuccess ? 'pointer-events-none' : ''}`}
         >
-          <MasterLockCardChrome theme={theme} />
-          <div className="master-lock-language absolute right-7 top-7 z-50 font-mono uppercase tracking-widest">
-            <button
-              type="button"
-              onClick={() => setShowLanguageMenu((prev) => !prev)}
-              aria-expanded={showLanguageMenu}
-              aria-label={language === 'zh' ? '选择语言' : 'Select language'}
-              className={`flex items-center gap-2 rounded-full px-3 py-2 text-[9px] opacity-80 backdrop-blur-md transition-all hover:opacity-100 ${
-                theme === 'light'
-                  ? 'bg-white/34 text-cyan-700 hover:bg-white/58 hover:text-cyan-900'
-                  : 'bg-space-bg/10 text-tech-primary/85 hover:bg-space-bg/24 hover:text-tech-primary'
-              }`}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              <span>{language.toUpperCase()}</span>
-            </button>
-
-            {showLanguageMenu && (
-              <div
-                className={`absolute right-0 mt-2 w-32 border p-1 text-[9px] shadow-[0_16px_48px_color-mix(in_srgb,_var(--color-space-bg)_40%,_transparent)] backdrop-blur-md ${
-                  theme === 'light'
-                    ? 'border-tech-primary/20 bg-white/90 text-cyan-700'
-                    : 'border-tech-primary/25 bg-space-bg/72 text-tech-primary'
-                }`}
-              >
-                {(Object.keys(NATIVE_LANG_NAMES) as Language[]).map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => {
-                      onSetLanguage(lang);
-                      setShowLanguageMenu(false);
-                    }}
-                    className={`flex w-full items-center justify-between gap-2 px-2 py-2 text-left transition-all ${
-                      language === lang
-                        ? theme === 'light'
-                          ? 'bg-tech-primary/12 text-cyan-700'
-                          : 'bg-tech-primary/16 text-tech-primary'
-                        : theme === 'light'
-                          ? 'text-slate-500 hover:bg-tech-primary/8 hover:text-cyan-700'
-                          : 'text-cyan-700 hover:bg-tech-primary/8 hover:text-tech-primary'
-                    }`}
-                  >
-                    <span>{NATIVE_LANG_NAMES[lang]}</span>
-                    {language === lang && <Check className="h-3 w-3" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
+          <div className="master-lock-toolbar">
           <MasterLockHeader
             theme={theme}
             language={language}
@@ -269,6 +126,41 @@ export const MasterLock: React.FC<MasterLockProps> = ({
             isConfirmingCancel={cancelConfirm.isConfirming}
             onCancelClick={cancelConfirm.trigger}
           />
+          <div className="master-lock-language relative z-50">
+            <button
+              type="button"
+              onClick={() => setShowLanguageMenu((prev) => !prev)}
+              aria-expanded={showLanguageMenu}
+              aria-label={language === 'zh' ? '选择语言' : 'Select language'}
+              className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-raised)] px-3 text-xs text-[var(--ds-text-muted)] transition-colors hover:border-[var(--ds-border-strong)] hover:bg-[var(--ds-hover)] hover:text-[var(--ds-text)]"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>{language === 'zh' ? '中文' : language.toUpperCase()}</span>
+            </button>
+
+            {showLanguageMenu && (
+              <div
+                className="absolute right-0 mt-2 w-36 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-1 text-xs shadow-[var(--ds-shadow-float)]"
+              >
+                {(Object.keys(NATIVE_LANG_NAMES) as Language[]).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => {
+                      onSetLanguage(lang);
+                      setShowLanguageMenu(false);
+                    }}
+                    className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left transition-colors ${language === lang ? 'bg-[var(--ds-selected)] text-[var(--ds-accent)]' : 'text-[var(--ds-text-muted)] hover:bg-[var(--ds-hover)] hover:text-[var(--ds-text)]'}`}
+                  >
+                    <span>{NATIVE_LANG_NAMES[lang]}</span>
+                    {language === lang && <Check className="h-3 w-3" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          </div>
 
           <div className="master-lock-content flex flex-col items-center text-center space-y-4">
             {recovery.isRecoveryMode ? (
@@ -299,14 +191,10 @@ export const MasterLock: React.FC<MasterLockProps> = ({
           </div>
           {!recovery.isRecoveryMode && (
             <div
-              className={`master-lock-security pointer-events-none absolute bottom-6 left-8 right-8 flex items-center justify-center gap-2 text-center font-mono text-[9px] uppercase tracking-[0.22em] ${theme === 'light' ? 'text-slate-600' : 'text-space-text-muted'} md:text-[10px]`}
+              className="master-lock-security pointer-events-none mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs leading-5 text-[var(--ds-text-muted)]"
             >
-              <span className="text-vector-teal-online">●</span>
-              <span>本地加密存储</span>
-              <span className="text-vector-teal-online">●</span>
-              <span>使用 AI 时发送相关内容</span>
-              <span className="text-vector-teal-online">●</span>
-              <span>由所选模型处理</span>
+              <span>{language === 'zh' ? '本地加密存储' : 'Encrypted on this device'}</span>
+              <span>{language === 'zh' ? '使用 AI 时，相关内容将交由所选模型处理。' : 'When using AI, relevant content is sent to your selected model.'}</span>
             </div>
           )}
         </motion.div>

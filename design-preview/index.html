@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>VECTOR — 新首页方向</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <script>const c=new URLSearchParams(location.search).get('concept');if(c)document.body.classList.add('single','show-'+c);</script>
+  <main class="gallery" aria-label="VECTOR 首页视觉方向">
+    <section class="concept concept-a" aria-label="方案一：澄澈留白">
+      <div class="surface surface-a" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="identity"><h1>VECTOR</h1><p>记录此刻，让经历成为方向。</p></div>
+      <button class="enter" type="button">进入 <i aria-hidden="true">↗</i></button>
+      <div class="direction-label">01　澄澈留白</div>
+    </section>
+    <section class="concept concept-b" aria-label="方案二：静默界线">
+      <div class="surface surface-b" aria-hidden="true">
+        <svg class="trace-mark" viewBox="0 0 760 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="ink-silver" x1="76" y1="484" x2="684" y2="72" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#75858a" stop-opacity=".34"/>
+              <stop offset=".5" stop-color="#64777d" stop-opacity=".52"/>
+              <stop offset="1" stop-color="#465b62" stop-opacity=".64"/>
+            </linearGradient>
+            <linearGradient id="mist-blue" x1="142" y1="447" x2="641" y2="105" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#a3d0dd" stop-opacity=".08"/>
+              <stop offset=".36" stop-color="#95c6d4" stop-opacity=".86"/>
+              <stop offset=".72" stop-color="#86b7c7" stop-opacity=".72"/>
+              <stop offset="1" stop-color="#d5edf0" stop-opacity=".28"/>
+            </linearGradient>
+            <filter id="soften" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="2.4"/></filter>
+          </defs>
+          <path class="trace-base" pathLength="1" d="M76 481C190 503 229 444 293 389C365 327 425 365 484 280C532 212 570 144 659 91"/>
+          <path class="trace-underpaint" pathLength="1" d="M76 481C190 503 229 444 293 389C365 327 425 365 484 280C532 212 570 144 659 91"/>
+          <path class="trace-light" pathLength="1" d="M76 481C190 503 229 444 293 389C365 327 425 365 484 280C532 212 570 144 659 91"/>
+          <path class="trace-tip" d="M634 115L659 91L627 96"/>
+        </svg>
+      </div>
+      <div class="identity"><h1>VECTOR</h1><p>记录此刻，让经历成为方向。</p></div>
+      <button class="enter" type="button">进入 <i aria-hidden="true">↗</i></button>
+      <div class="direction-label">02　静默界线</div>
+    </section>
+    <section class="concept concept-c" aria-label="方案三：内向微光">
+      <div class="surface surface-c" aria-hidden="true"><span></span><span></span></div>
+      <div class="identity"><h1>VECTOR</h1><p>记录此刻，让经历成为方向。</p></div>
+      <button class="enter" type="button">进入 <i aria-hidden="true">↗</i></button>
+      <div class="direction-label">03　内向微光</div>
+    </section>
+  </main>
+</body>
+</html>

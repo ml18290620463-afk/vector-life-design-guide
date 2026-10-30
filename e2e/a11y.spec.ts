@@ -2,16 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { resetPersistentAppState, seedOnboardedApp } from './seedHelpers';
 
-/**
- * Accessibility regression gate for the entry-point shells (cover screen +
- * onboarding intro). We deliberately scope axe to WCAG A/AA + best-practice
- * tags and only fail on `serious` / `critical` impact so cosmetic issues
- * (e.g. decorative element contrast on the cyber theme) do not block CI
- * while we polish them in Phase 2/3.
- *
- * Add new flows here only after confirming they have zero
- * serious/critical violations locally; lower impact issues should be
- * tracked in EVALUATION.md instead of lowering this gate.
+/** Audit entry, unlocked modules and editors against WCAG A/AA.
+ * Keep target selectors and failure reasons in reports so regressions are actionable.
  */
 
 const RULES_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'];
@@ -24,7 +16,7 @@ const summarise = (violations: Awaited<ReturnType<AxeBuilder['analyze']>>['viola
       id: v.id,
       impact: v.impact,
       help: v.help,
-      nodes: v.nodes.length,
+      nodes: v.nodes.map((node) => ({ target: node.target, reason: node.failureSummary })),
     }));
 
 test.describe('axe accessibility', () => {
@@ -67,13 +59,21 @@ test.describe('axe accessibility', () => {
     ] as const) {
       await navigation.getByRole('button', { name: new RegExp(`^${moduleName}`) }).click();
       await page.locator(landmark).waitFor({ state: 'visible' });
+      await page.evaluate(async () => {
+        await Promise.all(
+          document
+            .getAnimations()
+            .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+            .map((animation) => animation.finished.catch(() => undefined)),
+        );
+      });
       const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
       const blockers = summarise(result.violations);
-      expect(blockers, `${moduleName}: ${JSON.stringify(blockers, null, 2)}`).toEqual([]);
+      expect.soft(blockers, `${moduleName}: ${JSON.stringify(blockers, null, 2)}`).toEqual([]);
     }
 
     await navigation.getByRole('button', { name: /^未来/ }).click();
-    await page.getByRole('button', { name: /^(从愿景开始|编辑未来规划)$/ }).click();
+    await page.getByRole('button', { name: /^(添加愿景|编辑愿景)$/ }).click();
     await page.getByRole('dialog', { name: '愿景' }).waitFor({ state: 'visible' });
     const editor = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
     const editorBlockers = summarise(editor.violations);

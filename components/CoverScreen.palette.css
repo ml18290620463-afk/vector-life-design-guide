@@ -1,0 +1,148 @@
+/* VECTOR fog gray / ice blue cover. Preserve the instrument and brand geometry. */
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell {
+  --color-space-bg: var(--vector-page);
+  --color-space-layer: var(--vector-surface);
+  --color-space-deep: var(--vector-page);
+  --color-cover-status-title: var(--vector-text);
+  --color-cover-status-body: var(--vector-secondary);
+  --color-cover-status-rule: var(--vector-border);
+  --color-cover-hero-subtitle: var(--vector-text);
+  --color-cover-cta-border: var(--vector-border);
+  --color-cover-cta-label: var(--vector-page);
+  --color-cover-cta-hover-glow: var(--vector-accent);
+  background: var(--vector-page) !important;
+  color: var(--vector-text);
+}
+
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-nebula-a,
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-nebula-b,
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-nebula-c,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-nebula-floor,
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-sky-bloom {
+  background: radial-gradient(ellipse at center, var(--vector-selected), transparent 72%);
+}
+
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-data-wall,
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-grid,
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .vector-detector,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-detector-aura {
+  filter: saturate(0.08);
+}
+
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-title,
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-subtitle,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-subtitle
+  > span {
+  color: var(--vector-text) !important;
+  text-shadow: none !important;
+  filter: none;
+}
+
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-subtitle
+  > span:first-child,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-subtitle
+  > span:last-child {
+  background: var(--vector-border) !important;
+  box-shadow: none !important;
+}
+
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-narrative,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-narrative
+  > span,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-core-status {
+  color: var(--vector-secondary) !important;
+  text-shadow: none !important;
+  filter: none;
+}
+
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-launch-tunnel {
+  background: var(--vector-accent) !important;
+  border-color: var(--vector-accent) !important;
+  color: var(--vector-page);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 18%) !important;
+}
+
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-launch-tunnel:hover {
+  background: var(--vector-accent-hover) !important;
+  border-color: var(--vector-accent-hover) !important;
+}
+
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-launch-tunnel:focus-visible,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .detector-core-control:focus-visible {
+  outline: 2px solid var(--vector-accent);
+  outline-offset: 5px;
+  --tw-ring-color: transparent;
+}
+
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-launch-label {
+  color: var(--vector-page) !important;
+  text-shadow: none !important;
+}
+
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-launch-tunnel
+  > .absolute,
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-label-pulse {
+  visibility: hidden;
+}
+
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-launch-thumb {
+  background: var(--vector-surface);
+  box-shadow: none !important;
+  filter: saturate(0.08);
+}
+
+/* Keep the palette consistent with the compact cover typography overrides. */
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-title,
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell .cover-subtitle {
+  background-image: none !important;
+  -webkit-text-fill-color: var(--vector-text) !important;
+}
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-core-status
+  > div {
+  color: var(--vector-secondary) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+html
+  .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell
+  .cover-core-status--observation
+  > div {
+  background: var(--vector-surface) !important;
+  border-color: var(--vector-border) !important;
+}
+
+html .cover-screen.cover-charcoal-shell.cover-charcoal-shell.cover-charcoal-shell::before {
+  background: none !important;
+}

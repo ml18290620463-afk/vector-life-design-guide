@@ -37,18 +37,23 @@ export const useAppEntryRouting = ({
 }: UseAppEntryRoutingOptions) => {
   const [nowRoute, setNowRoute] = useState<NowRoute>(() => getNowRouteFromPath() ?? 'now');
   const isUnlockedRef = useRef(isUnlocked);
+  const initialRouteRestoredRef = useRef(false);
   const pendingPathAfterUnlockRef = useRef<string | null>(null);
 
   useEffect(() => {
     isUnlockedRef.current = isUnlocked;
   }, [isUnlocked]);
 
-  const routeToEntryGate = useCallback((requestedPath?: string | null) => {
-    pendingPathAfterUnlockRef.current = requestedPath ?? getCurrentRestorablePathname() ?? getLastMainRoute();
-    isUnlockedRef.current = false;
-    setIsUnlocked(false);
-    setAppState(passwordHash ? AppState.LOGIN : AppState.ONBOARDING);
-  }, [passwordHash, setAppState, setIsUnlocked]);
+  const routeToEntryGate = useCallback(
+    (requestedPath?: string | null) => {
+      pendingPathAfterUnlockRef.current =
+        requestedPath ?? getCurrentRestorablePathname() ?? getLastMainRoute();
+      isUnlockedRef.current = false;
+      setIsUnlocked(false);
+      setAppState(passwordHash ? AppState.LOGIN : AppState.ONBOARDING);
+    },
+    [passwordHash, setAppState, setIsUnlocked],
+  );
 
   const applyEntryRouteAction = useCallback(
     (action: AppEntryRouteAction) => {
@@ -109,7 +114,9 @@ export const useAppEntryRouting = ({
         return;
       }
       setNowRoute(route);
-      rememberMainRoute(route === 'avatar-chat' ? '/avatar' : route === 'tags' ? '/now/tags' : '/now');
+      rememberMainRoute(
+        route === 'avatar-chat' ? '/avatar' : route === 'tags' ? '/now/tags' : '/now',
+      );
       setAppState(getNowRouteAppState(route));
     },
     [routeToEntryGate, setAppState],
@@ -128,6 +135,10 @@ export const useAppEntryRouting = ({
   }, [applyEntryRouteAction, loading]);
 
   const restoreCurrentOrStableRoute = useCallback(() => {
+    if (window.location.pathname === '/' && !getPreviewScreen()) {
+      setAppState(AppState.COVER);
+      return;
+    }
     const route = getNowRouteFromPath();
     if (route) {
       routeNowPath(route);
@@ -147,10 +158,13 @@ export const useAppEntryRouting = ({
     }
 
     applyEntryRouteAction(getPostUnlockRouteAction(fallbackPath));
-  }, [applyEntryRouteAction, routeMainTabFromPath, routeNowPath, routeToEntryGate]);
+  }, [applyEntryRouteAction, routeMainTabFromPath, routeNowPath, routeToEntryGate, setAppState]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || initialRouteRestoredRef.current) return;
+    // Vault creation changes passwordHash and therefore the routing callbacks.
+    // Restore only on boot; rerunning here interrupts the recovery-key step.
+    initialRouteRestoredRef.current = true;
     restoreCurrentOrStableRoute();
   }, [loading, restoreCurrentOrStableRoute]);
 

@@ -1330,9 +1330,9 @@ html.vector-force-web
 
 /* Mobile sky / shallow sea trial. Shared tokens also reach portalled editors.
    Desktop retains its existing palette; geometry and scroll ownership stay intact. */
-html.vector-force-mobile,
-html.vector-force-mobile .mobile-shell,
-html.vector-force-mobile .mobile-shell .now-shell {
+html.light.vector-force-mobile,
+html.light.vector-force-mobile .mobile-shell,
+html.light.vector-force-mobile .mobile-shell .now-shell {
   color-scheme: light;
   --experience-bg: #e6f1f6;
   --experience-surface: rgba(247, 252, 255, 0.28);
@@ -1380,40 +1380,40 @@ html.vector-force-mobile .mobile-shell .now-shell {
     radial-gradient(ellipse at 100% 62%, rgba(194, 229, 241, 0.3), transparent 56%),
     linear-gradient(155deg, #edf5fa 0%, #e6f1f6 56%, #dceef4 100%);
 }
-html.vector-force-mobile,
-html.vector-force-mobile body,
-html.vector-force-mobile #root,
-html.vector-force-mobile .vector-app-shell,
-html.vector-force-mobile .mobile-shell.mobile-shell {
+html.light.vector-force-mobile,
+html.light.vector-force-mobile body,
+html.light.vector-force-mobile #root,
+html.light.vector-force-mobile .vector-app-shell,
+html.light.vector-force-mobile .mobile-shell.mobile-shell {
   background: var(--sky-canvas) !important;
   color: var(--mobile-ink);
 }
-html.vector-force-mobile .mobile-shell :is(.now-shell, .now-page, .mobile-past-page, .future-page) {
+html.light.vector-force-mobile .mobile-shell :is(.now-shell, .now-page, .mobile-past-page, .future-page) {
   background: transparent;
 }
-html.vector-force-mobile .mobile-shell .mobile-main-nav.mobile-main-nav {
+html.light.vector-force-mobile .mobile-shell .mobile-main-nav.mobile-main-nav {
   background: rgba(235, 246, 251, 0.64) !important;
   border-color: var(--mobile-line);
   box-shadow: 0 -4px 24px rgba(54, 99, 126, 0.018) !important;
   backdrop-filter: blur(12px) !important;
 }
-html.vector-force-mobile .mobile-shell .mobile-main-nav__item {
+html.light.vector-force-mobile .mobile-shell .mobile-main-nav__item {
   color: var(--mobile-muted);
   font-weight: 500;
 }
-html.vector-force-mobile .mobile-shell .mobile-main-nav__item--active {
+html.light.vector-force-mobile .mobile-shell .mobile-main-nav__item--active {
   color: var(--mobile-accent);
   background: var(--mobile-accent-soft);
 }
-html.vector-force-mobile .mobile-shell__heading {
+html.light.vector-force-mobile .mobile-shell__heading {
   border-bottom-color: transparent;
 }
-html.vector-force-mobile .mobile-shell__heading h1 {
+html.light.vector-force-mobile .mobile-shell__heading h1 {
   color: var(--mobile-ink);
   font-size: 18px;
   letter-spacing: 1px;
 }
-html.vector-force-mobile
+html.light.vector-force-mobile
   .mobile-shell
   :is(.future-design-summary-card, .avatar-library__dimension-card, .now-card, .now-chat-input) {
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.4), rgba(230, 245, 251, 0.16));
@@ -1421,58 +1421,58 @@ html.vector-force-mobile
   box-shadow: var(--mobile-shadow);
   border-radius: 20px;
 }
-html.vector-force-mobile .avatar-guide-page .now-chat-list {
+html.light.vector-force-mobile .avatar-guide-page .now-chat-list {
   gap: 16px;
   padding-block: 16px;
 }
-html.vector-force-mobile .now-chat-bubble {
+html.light.vector-force-mobile .now-chat-bubble {
   border-radius: 18px;
   padding: 12px 14px;
   line-height: 1.7;
   border-color: transparent;
 }
-html.vector-force-mobile .now-chat-bubble.is-user {
+html.light.vector-force-mobile .now-chat-bubble.is-user {
   background: rgba(167, 209, 227, 0.23);
   border-color: rgba(64, 111, 136, 0.1);
 }
-html.vector-force-mobile .avatar-section-tabs button {
+html.light.vector-force-mobile .avatar-section-tabs button {
   font-weight: 500;
 }
-html.vector-force-mobile
+html.light.vector-force-mobile
   :is(.future-dialog, .future-practice-panel, .avatar-model-dialog, .avatar-memory-confirm-dialog) {
   color: var(--mobile-ink);
   background: linear-gradient(155deg, rgba(244, 250, 253, 0.97), rgba(229, 242, 248, 0.96));
   border-color: var(--mobile-line);
   box-shadow: 0 -12px 48px rgba(38, 63, 80, 0.12);
 }
-html.vector-force-mobile dialog::backdrop {
+html.light.vector-force-mobile dialog::backdrop {
   background: rgba(38, 63, 80, 0.28);
 }
-html.vector-force-mobile :is(input, textarea, select)::placeholder {
+html.light.vector-force-mobile :is(input, textarea, select)::placeholder {
   color: var(--mobile-muted);
   opacity: 1;
 }
-html.vector-force-mobile .mobile-shell .mobile-past-page__segments {
+html.light.vector-force-mobile .mobile-shell .mobile-past-page__segments {
   background: transparent !important;
   border-radius: 0;
   box-shadow: none !important;
   padding: 0 12px 12px;
   gap: 24px;
 }
-html.vector-force-mobile .mobile-shell .mobile-past-page__segments button {
+html.light.vector-force-mobile .mobile-shell .mobile-past-page__segments button {
   min-height: 44px;
   background: transparent !important;
   color: var(--mobile-muted) !important;
   -webkit-text-fill-color: currentColor !important;
 }
-html.vector-force-mobile .mobile-shell .mobile-past-page__segments button[aria-selected='true'] {
+html.light.vector-force-mobile .mobile-shell .mobile-past-page__segments button[aria-selected='true'] {
   color: var(--mobile-accent-strong) !important;
 }
-html.vector-force-mobile .mobile-shell .mobile-past-page__segment--active::after {
+html.light.vector-force-mobile .mobile-shell .mobile-past-page__segment--active::after {
   background: var(--mobile-accent);
   bottom: -12px;
 }
-html.vector-force-mobile
+html.light.vector-force-mobile
   .mobile-shell
   :is(
     .mobile-past-timeline__fold,
@@ -1485,7 +1485,7 @@ html.vector-force-mobile
   ) {
   background: var(--mobile-accent-soft) !important;
 }
-html.vector-force-mobile
+html.light.vector-force-mobile
   .mobile-shell
   :is(.mobile-past-timeline__tags, .future-chip-list)
   span:nth-child(3n + 2) {
@@ -2932,60 +2932,43 @@ html.vector-force-web
   }
 }
 
-/* A blank record is an invitation, not a full-height document. Keeping the
-   empty workbench deliberately shorter restores a calm visual centre on
-   desktop while the writing area still has room to begin. Once text or a
-   material is added, the regular, larger composition takes over. */
+/* Keep the writing canvas stable before and after the first keystroke. */
 html.vector-force-web
   .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
-  .now-page:not(.avatar-guide-page)
-  .now-card.now-card--empty {
-  /* An empty note only needs enough room to invite a first sentence.  A
-     document-height canvas made the primary action drift too far away and
-     turned the first-use state into unused decoration. */
-  min-height: clamp(392px, calc(100dvh - 510px), 452px);
-  grid-template-rows: minmax(184px, 1fr) auto auto;
-  gap: 18px 32px;
-}
-
-/* A recovered note already has a thought in progress. Give it a generous
-   writing surface while keeping the closing actions visible as part of the
-   same continuous card. */
-html.vector-force-web
-  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
-  .now-page:not(.avatar-guide-page)
-  .now-card:not(.now-card--empty) {
-  min-height: clamp(680px, calc(100dvh - 180px), 820px);
-  grid-template-rows: minmax(480px, 1fr) auto auto;
-  gap: 18px 24px;
-  padding: clamp(28px, 2.8vw, 38px);
+  .now-page:not(.avatar-guide-page) {
+  align-items: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: calc(100dvh - 88px);
 }
 
 html.vector-force-web
   .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
   .now-page:not(.avatar-guide-page)
-  .now-card:not(.now-card--empty)
+  .now-card {
+  min-height: max(420px, calc(100dvh - 160px));
+  max-height: none;
+  grid-template-rows: minmax(240px, 1fr) auto auto;
+  gap: 16px 24px;
+  padding: clamp(20px, 2vw, 32px);
+}
+
+html.vector-force-web
+  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
+  .now-page:not(.avatar-guide-page)
   .now-editor__surface {
-  flex: 1 1 auto;
-  min-height: 480px;
-}
-
-html.vector-force-web
-  .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
-  .now-page:not(.avatar-guide-page)
-  .now-card:not(.now-card--empty)
-  .now-editor
-  textarea {
-  min-height: 440px;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  margin: 0;
   flex: 1 1 auto;
 }
 
 html.vector-force-web
   .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
   .now-page:not(.avatar-guide-page)
-  .now-card:not(.now-card--empty)
-  .now-editor__meta {
-  padding-top: 6px;
+  .now-editor textarea {
+  min-height: 240px;
+  flex: 1 1 auto;
 }
 
 /* The SVG supplies the instrument itself; remove the legacy opaque housing. */
@@ -3599,7 +3582,9 @@ html:is(.vector-force-mobile, .vector-force-web)
 /* Principle editor final layout.  This file loads after index.css, so keep the
    decisive rules here rather than leaving the writing surface subject to the
    older workbench variants above. */
-dialog.principle-editor-screen {
+html:is(.vector-force-mobile, .vector-force-web) dialog.principle-editor-screen {
+  inset: 0;
+  transform: none;
   box-sizing: border-box;
   width: 100vw;
   height: 100dvh;

@@ -52,7 +52,7 @@ for (const width of [1440, 390]) {
       .getByRole('navigation', { name: '主页面导航' })
       .getByRole('button', { name: /^过去/ })
       .click();
-    await page.getByRole('tab', { name: '我的原则', exact: true }).click();
+    await page.getByRole('tab', { name: '沉淀', exact: true }).click();
     await page.getByRole('button', { name: '写原则', exact: true }).click();
     const input = page.getByRole('textbox', { name: '刻录新原则' });
     await expect(input).toBeFocused();
@@ -89,12 +89,35 @@ for (const width of [1440, 390]) {
     await editor.fill('先明确目标，再选择行动');
     await page.getByRole('button', { name: '保存修改', exact: true }).click();
     await expect(page.getByText('先明确目标，再选择行动', { exact: true })).toBeVisible();
+    await page.evaluate(async () => {
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => undefined)),
+      );
+    });
+    // Framer Motion can animate opacity in JS, outside document.getAnimations().
+    await expect
+      .poll(() =>
+        page.getByText('先明确目标，再选择行动', { exact: true }).evaluate((el) => {
+          let opacity = 1;
+          for (let node: Element | null = el; node; node = node.parentElement) {
+            opacity *= Number(getComputedStyle(node).opacity);
+          }
+          return opacity;
+        }),
+      )
+      .toBe(1);
     const accessibility = await new AxeBuilder({ page })
       .include('[data-testid="past-page"]')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     expect(
-      accessibility.violations.map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) })),
+      accessibility.violations.map((v) => ({
+        id: v.id,
+        nodes: v.nodes.map((n) => ({ target: n.target, reason: n.failureSummary })),
+      })),
     ).toEqual([]);
 
     await page

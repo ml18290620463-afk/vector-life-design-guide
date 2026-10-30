@@ -1,0 +1,79 @@
+{
+  "$description": "VECTOR product design tokens. Primitives feed semantic tokens, which feed component tokens.",
+  "primitive": {
+    "color": {
+      "light": {
+        "canvas": { "$type": "color", "$value": "#F5F8F8", "$description": "Cool-white application canvas" },
+        "canvasRaised": { "$type": "color", "$value": "#EAF0F1", "$description": "Quietly raised light canvas" },
+        "ink": { "$type": "color", "$value": "#203641", "$description": "Deep blue-gray reading ink" },
+        "muted": { "$type": "color", "$value": "#526873", "$description": "Fog blue-gray supporting ink" },
+        "accent": { "$type": "color", "$value": "#426C7D", "$description": "Restrained ice-blue action color" },
+        "accentSoft": { "$type": "color", "$value": "#B7C8CE", "$description": "Pale ice-blue emphasis" },
+        "line": { "$type": "color", "$value": "#D9E1E3", "$description": "Fine structural divider" }
+      },
+      "dark": {
+        "deep": { "$type": "color", "$value": "#0C1217", "$description": "Deepest dark canvas" },
+        "canvas": { "$type": "color", "$value": "#10171D", "$description": "Application canvas" },
+        "sidebar": { "$type": "color", "$value": "#141D25", "$description": "Navigation canvas" },
+        "surface": { "$type": "color", "$value": "#19232C", "$description": "Content surface" },
+        "elevated": { "$type": "color", "$value": "#202D38", "$description": "Floating surface" },
+        "hover": { "$type": "color", "$value": "#263540", "$description": "Hover surface" },
+        "selected": { "$type": "color", "$value": "#253D48", "$description": "Selected surface" },
+        "ink": { "$type": "color", "$value": "#E8EEF2", "$description": "Primary reading ink" },
+        "muted": { "$type": "color", "$value": "#A0AFBA", "$description": "Secondary reading ink" },
+        "subtle": { "$type": "color", "$value": "#7E909E", "$description": "Tertiary reading ink" },
+        "disabled": { "$type": "color", "$value": "#596B79", "$description": "Disabled content" },
+        "accent": { "$type": "color", "$value": "#9CCBDD", "$description": "Ice-blue primary action" },
+        "accentHover": { "$type": "color", "$value": "#B5DDEA", "$description": "Ice-blue hover action" },
+        "accentPressed": { "$type": "color", "$value": "#78B4CB", "$description": "Ice-blue pressed action" },
+        "selection": { "$type": "color", "$value": "#315362", "$description": "Text selection surface" },
+        "line": { "$type": "color", "$value": "#293641", "$description": "Fine structural divider" },
+        "border": { "$type": "color", "$value": "#32414D", "$description": "Default component border" },
+        "borderStrong": { "$type": "color", "$value": "#4B6272", "$description": "Strong component border" }
+      },
+      "state": {
+        "success": { "$type": "color", "$value": "#8DC4AE", "$description": "Success foreground" },
+        "successSurface": { "$type": "color", "$value": "#20382F", "$description": "Success background" },
+        "warning": { "$type": "color", "$value": "#D6B57A", "$description": "Warning foreground" },
+        "warningSurface": { "$type": "color", "$value": "#3A3020", "$description": "Warning background" },
+        "danger": { "$type": "color", "$value": "#E49A9D", "$description": "Danger foreground" },
+        "dangerSurface": { "$type": "color", "$value": "#3D282E", "$description": "Danger background" },
+        "insight": { "$type": "color", "$value": "#ABB7D8", "$description": "Insight foreground" },
+        "insightSurface": { "$type": "color", "$value": "#2B3043", "$description": "Insight background" }
+      }
+    },
+    "font": {
+      "sans": { "$type": "fontFamily", "$value": "Inter, PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif", "$description": "Product interface and Chinese reading font stack" },
+      "mono": { "$type": "fontFamily", "$value": "JetBrains Mono, PingFang SC, Noto Sans SC, monospace", "$description": "Date, identifier and numeric font stack" }
+    },
+    "fontSize": {
+      "meta": { "$type": "dimension", "$value": "12px", "$description": "Metadata size" },
+      "support": { "$type": "dimension", "$value": "14px", "$description": "Supporting copy size" },
+      "control": { "$type": "dimension", "$value": "15px", "$description": "Control label size" },
+      "body": { "$type": "dimension", "$value": "17px", "$description": "Long-form Chinese reading size" },
+      "section": { "$type": "dimension", "$value": "18px", "$description": "Section heading size" },
+      "titleMobile": { "$type": "dimension", "$value": "26px", "$description": "Mobile page title size" },
+      "title": { "$type": "dimension", "$value": "30px", "$description": "Desktop page title size" }
+    },
+    "space": {
+      "2": { "$type": "dimension", "$value": "8px", "$description": "Compact gap" },
+      "3": { "$type": "dimension", "$value": "12px", "$description": "Default compact gap" },
+      "4": { "$type": "dimension", "$value": "16px", "$description": "Paragraph gap" },
+      "5": { "$type": "dimension", "$value": "20px", "$description": "Mobile page gutter" },
+      "6": { "$type": "dimension", "$value": "24px", "$description": "Comfortable page gutter" }
+    },
+    "motion": {
+      "quick": { "$type": "duration", "$value": "160ms", "$description": "Micro interaction duration" },
+      "standard": { "$type": "duration", "$value": "220ms", "$description": "Standard component transition duration" }
+    }
+  },
+  "semantic": {
+    "page": { "$type": "color", "$value": "{primitive.color.dark.canvas}", "$description": "Resolved page background" },
+    "text": { "$type": "color", "$value": "{primitive.color.dark.ink}", "$description": "Resolved primary foreground" },
+    "action": { "$type": "color", "$value": "{primitive.color.dark.accent}", "$description": "Resolved primary action" }
+  },
+  "component": {
+    "button": { "$type": "color", "$value": "{semantic.action}", "$description": "Primary button background" },
+    "input": { "$type": "color", "$value": "{primitive.color.dark.surface}", "$description": "Input background" }
+  }
+}

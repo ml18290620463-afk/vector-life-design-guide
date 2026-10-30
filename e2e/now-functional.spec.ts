@@ -21,17 +21,14 @@ for (const viewport of [
     await expect(emptyCard).toHaveClass(/now-card--empty/);
     await expect(page.locator('#now-record-guide, #now-materials-hint')).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('now-minimal.png'), fullPage: true });
-    const emptyCardHeight = (await emptyCard.boundingBox())!.height;
     await page.getByLabel('保存到过去').click();
     await expect(page.getByText('请先输入内容或添加素材', { exact: true })).toBeVisible();
     const message = `模拟测试${viewport.width}：今天主动澄清会议目标，讨论更聚焦。`;
     await page.getByLabel('此刻发生了什么？').fill(message);
     await expect(emptyCard).not.toHaveClass(/now-card--empty/);
-    if (viewport.width >= 1000) {
-      // The first-use state stays compact; once a person is actually writing,
-      // the document opens into the normal, longer writing surface.
-      expect((await emptyCard.boundingBox())!.height).toBeGreaterThan(emptyCardHeight + 60);
-    }
+    await expect(page.getByLabel('此刻发生了什么？')).toBeInViewport();
+    await expect(page.getByLabel('保存到过去')).toBeInViewport();
+    expect(await emptyCard.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     await page.getByLabel('保存到过去').click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();

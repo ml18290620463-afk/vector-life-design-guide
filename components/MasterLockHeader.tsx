@@ -40,15 +40,15 @@ export const MasterLockHeader: React.FC<MasterLockHeaderProps> = ({
   onCancelClick,
 }) => (
   <>
-    <div className="master-lock-nav absolute left-7 top-7 z-50 flex items-center gap-3">
+    <div className="master-lock-nav relative z-50 flex items-center gap-3">
       {isRecoveryMode ? (
         <button
           onClick={onBackFromRecovery}
           aria-label={language === 'zh' ? '返回解锁' : 'Back to unlock'}
-          className={`flex h-20 w-20 items-center justify-center rounded-full border backdrop-blur-sm ${theme === 'light' ? 'border-tech-primary/25 bg-white/65 text-cyan-700 hover:text-cyan-900' : 'border-tech-primary/30 bg-space-bg/25 text-tech-primary hover:text-tech-primary'}`}
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-raised)] text-[var(--ds-text)] transition-colors hover:border-[var(--ds-border-strong)] hover:bg-[var(--ds-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-accent)]"
           title={language === 'zh' ? '返回解锁' : 'Back'}
         >
-          <ArrowRight className="h-7 w-7 rotate-180" />
+          <ArrowRight className="h-4 w-4 rotate-180" />
         </button>
       ) : (
         onCancel && (
@@ -56,18 +56,18 @@ export const MasterLockHeader: React.FC<MasterLockHeaderProps> = ({
             <button
               onClick={onCancelClick}
               aria-label={language === 'zh' ? '返回上一步' : 'Back to Previous Step'}
-              className={`flex h-20 w-20 items-center justify-center rounded-full border backdrop-blur-sm ${isConfirmingCancel ? 'border-vector-magenta bg-vector-magenta/15 text-vector-magenta shadow-[0_0_20px_color-mix(in_srgb,_var(--color-vector-magenta)_30%,_transparent)]' : theme === 'light' ? 'border-tech-primary/25 bg-white/65 text-cyan-700 hover:text-cyan-900' : 'border-tech-primary/30 bg-space-bg/25 text-tech-primary hover:text-tech-primary'}`}
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-accent)] ${isConfirmingCancel ? 'border-[var(--ds-danger)] bg-[var(--ds-danger-bg)] text-[var(--ds-danger)]' : 'border-[var(--ds-border)] bg-[var(--ds-surface-raised)] text-[var(--ds-text)] hover:border-[var(--ds-border-strong)] hover:bg-[var(--ds-hover)]'}`}
               title={language === 'zh' ? '返回上一步' : 'Back to Previous Step'}
             >
-              <ArrowLeft className="h-7 w-7" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
             {isConfirmingCancel && (
               <div
                 role="alert"
-                className="flex items-center gap-2 rounded-full border border-vector-magenta/30 bg-space-bg px-3 py-1 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-vector-magenta)_10%,_transparent)]"
+                className="flex items-center gap-2 rounded-lg border border-[var(--ds-danger)] bg-[var(--ds-danger-bg)] px-3 py-2"
               >
-                <AlertCircle className="h-3 w-3 text-vector-magenta" />
-                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-vector-magenta neon-glow-alert">
+                <AlertCircle className="h-4 w-4 text-[var(--ds-danger)]" />
+                <span className="text-xs font-medium text-[var(--ds-danger)]">
                   {t.confirmAction}
                 </span>
               </div>

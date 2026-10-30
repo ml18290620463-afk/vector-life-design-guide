@@ -47,20 +47,20 @@
 @import '@fontsource/jetbrains-mono/latin-700.css';
 
 @theme {
-  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
   --font-mono:
-    'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, monospace;
+    'JetBrains Mono', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, monospace;
 
   /*
    * Product palette — ice / mint / mist-violet / luminous-white (2026)
    * 背景底色 / 主背景层 / 深蓝层 · 主副弱文字 · 科技主色 / 青能量 / 弱发光青 / 克制强调
    */
-  --color-space-bg: #071a2a;
-  --color-space-layer: #0b2a3b;
-  --color-space-deep: #173b52;
-  --color-space-text: #f7ffff;
-  --color-space-text-secondary: #d8f4f2;
-  --color-space-text-muted: #94b9c3;
+  --color-space-bg: #10171D;
+  --color-space-layer: #19232C;
+  --color-space-deep: #202D38;
+  --color-space-text: #E8EEF2;
+  --color-space-text-secondary: #A0AFBA;
+  --color-space-text-muted: #7E909E;
   /*
    * Cover 文案墙（深色）— 字色 + 透明度带
    * 普通 18–28% · 稍重要 30–40% · 重点句 45%
@@ -75,29 +75,29 @@
   --opacity-cover-type-strong: 0.56;
 
   /* Cover hero + status + CTA（深色封面专项，见设计原则：90% 低温静默 / 10% 高能秩序） */
-  --color-cover-hero-title: #f7ffff;
+  --color-cover-hero-title: #E8EEF2;
   --color-cover-hero-subtitle: #d9f8f4;
   --color-cover-hero-rule: #a7e8f2;
-  --color-cover-status-title: #9ddff2;
-  --color-cover-status-body: #d8f4f2;
-  --color-cover-status-rule: #85e6c4;
-  --color-cover-cta-border: #9ddff2;
+  --color-cover-status-title: #9CCBDD;
+  --color-cover-status-body: #A0AFBA;
+  --color-cover-status-rule: #8DC4AE;
+  --color-cover-cta-border: #9CCBDD;
   --color-cover-cta-bg: rgba(10, 42, 59, 0.78);
-  --color-cover-cta-icon: #f7ffff;
+  --color-cover-cta-icon: #E8EEF2;
   --color-cover-cta-label: #d9f8f4;
   --color-cover-cta-hover-glow: #b7f4ff;
   /* 神秘感紫：仅轨迹线 / 少量粒子 / 极少数关键词，不用玫红粉紫 */
-  --color-cover-orbit-violet: #9b91c9;
+  --color-cover-orbit-violet: #ABB7D8;
   --color-cover-keyword-violet: #bbb5dc;
-  --color-tech-primary: #9ddff2;
-  --color-tech-cyan-energy: #83d7ea;
-  --color-tech-cyan-glow: #d9f8ff;
-  --color-tech-accent-violet: #9b91c9;
-  --color-vector-champagne: #f7ffff;
-  --color-vector-champagne-soft: #c9e5e3;
-  --color-vector-ice-blue: #9ddff2;
-  --color-vector-deep-ink: #071a2a;
-  --color-vector-quiet-moss: #85e6c4;
+  --color-tech-primary: #9CCBDD;
+  --color-tech-cyan-energy: #78B4CB;
+  --color-tech-cyan-glow: #B5DDEA;
+  --color-tech-accent-violet: #ABB7D8;
+  --color-vector-champagne: #E8EEF2;
+  --color-vector-champagne-soft: #A0AFBA;
+  --color-vector-ice-blue: #9CCBDD;
+  --color-vector-deep-ink: #10171D;
+  --color-vector-quiet-moss: #8DC4AE;
 
   /* Vector Core - High-End Technical Theme Tokens */
   --color-archive-bg: #f4f7f9;
@@ -6772,7 +6772,7 @@ html.vector-force-mobile .archive-past-record {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   padding: 0.22rem 0.5rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ds-text-muted, rgba(255, 255, 255, 0.5));
   font-size: 0.66rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -10388,7 +10388,7 @@ html.mobile-product-active
   color: var(--mobile-accent-strong) !important;
 }
 
-html.mobile-product-active .mobile-shell .mobile-past-timeline__tags span:nth-child(3n + 2),
+html.dark.mobile-product-active .mobile-shell .mobile-past-timeline__tags span:nth-child(3n + 2),
 html.mobile-product-active .mobile-shell .future-chip-list span:nth-child(3n + 2) {
   background: var(--mobile-mint-soft) !important;
   color: #a6ead5 !important;

@@ -13,7 +13,7 @@ test('renders the cover experience', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: 'VECTOR' })).toBeVisible();
-  await expect(page.getByText(/矢量空间|VECTOR LIFE/i).first()).toBeVisible();
+  await expect(page.getByText(/让经历创造方向|Let experience shape direction/i).first()).toBeVisible();
   await expect(
     page.getByText(/记录 \|\| 过去·此刻 ⇌ 未来|Record \|\| Past · Now ⇌ Future/i).first(),
   ).toBeVisible();

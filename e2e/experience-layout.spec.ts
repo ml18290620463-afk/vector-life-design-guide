@@ -11,7 +11,7 @@ for (const mode of ['web', 'mobile']) {
       await page.route('**/__layout*', (route) =>
         route.fulfill({
           contentType: 'text/html',
-          body: `<!doctype html><html class="vector-force-${mode} ${mode === 'mobile' ? 'mobile-product-active' : ''}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/index.css"><link rel="stylesheet" href="/styles/experiences.css"></head><body><div id="root"></div><script type="module">
+          body: `<!doctype html><html class="light vector-force-${mode} ${mode === 'mobile' ? 'mobile-product-active' : ''}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/index.css"><link rel="stylesheet" href="/styles/experiences.css"><link rel="stylesheet" href="/styles/theme-v1.css"><link rel="stylesheet" href="/styles/entrance-theme.css"><link rel="stylesheet" href="/styles/design-tokens.css"><link rel="stylesheet" href="/styles/global-type.css"></head><body><div id="root"></div><script type="module">
         import RefreshRuntime from '/@react-refresh';
         RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true;
         const {default:React}=await import('/node_modules/.vite/deps/react.js');
@@ -20,7 +20,7 @@ for (const mode of ['web', 'mobile']) {
         const {AppPageFrame}=await import('/components/AppPageFrame.tsx');
         const {${{ past: 'PastRepository', now: 'NowPage', future: 'FuturePage', avatar: 'AvatarChatPage' }[module]}:Module}=await import('${{ past: '/features/mobile/PastRepository.tsx', now: '/features/now/components/NowPage.tsx', future: '/features/future/FuturePage.tsx', avatar: '/features/now/components/AvatarChatPage.tsx' }[module]}');
         const noop=()=>{};
-        const common={language:'zh',theme:'dark',entries:[],pastEntries:[],principles:[],actions:[],onSelectEntry:noop,onAddPrinciple:noop,onDeletePrinciple:noop,onUpdatePrinciple:noop,onDeleteEntries:noop,draft:{text:'${module === 'now' ? '一段尚未完成的想法，留在这里继续写下去。' : ''}',materials:[],mood_tags:[],event_tags:[],record_time:'2026-09-22',display_time:'2026年9月22日',updated_at:'2026-09-22'},setDraft:noop,sending:false,onSend:async()=>true,onSaveDraft:noop,onDiscardDraft:noop,onExit:noop,onBack:noop,onRouteChange:noop,showToast:noop,mobileShell:${mode === 'mobile'},onNavigateModule:noop,launchContext:{mode:'general',source:'global'}};
+        const common={language:'zh',theme:'light',entries:[],pastEntries:[],principles:[],actions:[],onSelectEntry:noop,onAddPrinciple:noop,onDeletePrinciple:noop,onUpdatePrinciple:noop,onDeleteEntries:noop,draft:{text:'${module === 'now' ? '一段尚未完成的想法，留在这里继续写下去。' : ''}',materials:[],mood_tags:[],event_tags:[],record_time:'2026-09-22',display_time:'2026年9月22日',updated_at:'2026-09-22'},setDraft:noop,sending:false,onSend:async()=>true,onSaveDraft:noop,onDiscardDraft:noop,onExit:noop,onBack:noop,onRouteChange:noop,showToast:noop,mobileShell:${mode === 'mobile'},onNavigateModule:noop,launchContext:{mode:'general',source:'global'}};
         if ('${module}' === 'past') {
           common.entries = [
             {id:'past-one',title:'把注意力放回真正重要的事情',content:'今天重新安排了工作顺序，先完成最重要的一件事。'+ '减少切换后，我更能专注，也留出了休息时间。'.repeat(8),tags:['心情:平静','事件:个人成长'],createdAt:Date.parse('2026-09-22T09:30:00+08:00'),updatedAt:Date.now(),isLocked:false},
@@ -127,7 +127,7 @@ for (const mode of ['web', 'mobile']) {
         await expect(management.getByRole('checkbox').first()).toBeVisible();
         await management.getByRole('button', { name: '返回回看', exact: true }).click();
         await expect(management).not.toBeVisible();
-        for (const width of mode === 'mobile' ? [320, 390, 430] : [1280, 1440]) {
+        for (const width of mode === 'mobile' ? [320, 390, 430, 768] : [1280, 1440]) {
           await page.setViewportSize({ width, height: 844 });
           expect(
             await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -147,7 +147,7 @@ for (const mode of ['web', 'mobile']) {
         expect(bounds.height).toBe(page.viewportSize()!.height);
         await expect(page.locator('.mobile-main-nav')).toBeHidden();
         await page.screenshot({ path: info.outputPath(`${mode}-principle-editor.png`) });
-        await page.getByRole('button', { name: '完成', exact: true }).click();
+        await page.getByRole('button', { name: '返回', exact: true }).click();
         await expect(editor).not.toBeVisible();
       }
       if (module === 'future') {
@@ -193,7 +193,7 @@ for (const mode of ['web', 'mobile']) {
           ).toBe(true);
           await page.setViewportSize({ width: 1440, height: 1000 });
         }
-        await page.getByRole('button', { name: /^(从愿景开始|编辑未来规划)$/ }).click();
+        await page.getByRole('button', { name: /^(添加愿景|编辑愿景)$/ }).click();
         await expect(page.getByRole('dialog')).toBeVisible();
         if (module === 'future') {
           const bounds = (await page.getByRole('dialog').boundingBox())!;
@@ -313,7 +313,7 @@ for (const mode of ['web', 'mobile']) {
           mode === 'web' ? { width: 1440, height: 1000 } : { width: 390, height: 844 },
         );
 
-        await page.getByRole('button', { name: '记忆档案', exact: true }).click();
+        await page.getByRole('button', { name: '记忆库', exact: true }).click();
         const cards = page.locator('.avatar-library__dimension-card');
         await expect(cards.first()).toBeVisible();
         const first = await cards.nth(0).boundingBox();

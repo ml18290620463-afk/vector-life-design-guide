@@ -1,0 +1,398 @@
+/* VECTOR dark v1: canonical palette. Legacy adapters keep every module on one theme. */
+:root {
+  --vector-deep: #0c1217;
+  --vector-page: #10171d;
+  --vector-sidebar: #141d25;
+  --vector-surface: #19232c;
+  --vector-elevated: #202d38;
+  --vector-hover: #263540;
+  --vector-selected: #253d48;
+  --vector-text: #e8eef2;
+  --vector-secondary: #a0afba;
+  --vector-muted: #7e909e;
+  --vector-disabled: #596b79;
+  --vector-accent: #9ccbdd;
+  --vector-accent-hover: #b5ddea;
+  --vector-accent-pressed: #78b4cb;
+  --vector-selection: #315362;
+  --vector-line: #293641;
+  --vector-border: #32414d;
+  --vector-strong: #4b6272;
+  --vector-success: #8dc4ae;
+  --vector-success-bg: #20382f;
+  --vector-warning: #d6b57a;
+  --vector-warning-bg: #3a3020;
+  --vector-danger: #e49a9d;
+  --vector-danger-bg: #3d282e;
+  --vector-insight: #abb7d8;
+  --vector-insight-bg: #2b3043;
+}
+html:not(.light),
+html:not(.light)
+  body
+  :is(
+    .vector-app-shell,
+    .desktop-main-module-frame,
+    .mobile-shell,
+    .now-shell,
+    .future-page,
+    .future-dialog
+  ) {
+  color-scheme: dark;
+  --mobile-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+  --desktop-type-body: 17px;
+  --desktop-type-page: 30px;
+  --desktop-type-section: 18px;
+  --desktop-type-meta: 12px;
+  --app-page: var(--vector-page);
+  --app-page-raised: var(--vector-sidebar);
+  --app-surface: var(--vector-surface);
+  --app-surface-raised: var(--vector-elevated);
+  --app-text: var(--vector-text);
+  --app-text-muted: var(--vector-secondary);
+  --app-border: var(--vector-border);
+  --app-accent: var(--vector-accent);
+  --experience-bg: var(--vector-page);
+  --experience-surface: var(--vector-surface);
+  --experience-line: var(--vector-border);
+  --experience-ink: var(--vector-text);
+  --experience-muted: var(--vector-secondary);
+  --experience-accent: var(--vector-accent);
+  --now-page: var(--vector-page);
+  --now-surface: var(--vector-surface);
+  --now-surface-strong: var(--vector-elevated);
+  --now-border: var(--vector-border);
+  --now-border-strong: var(--vector-strong);
+  --now-text: var(--vector-text);
+  --now-text-muted: var(--vector-secondary);
+  --now-text-dim: var(--vector-muted);
+  --now-accent: var(--vector-accent);
+  --now-accent-strong: var(--vector-accent-hover);
+  --now-success: var(--vector-success);
+  --mobile-paper: var(--vector-page);
+  --mobile-paper-warm: var(--vector-page);
+  --mobile-paper-cool: var(--vector-sidebar);
+  --mobile-surface: var(--vector-surface);
+  --mobile-surface-muted: var(--vector-elevated);
+  --mobile-ink: var(--vector-text);
+  --mobile-ink-soft: var(--vector-secondary);
+  --mobile-muted: var(--vector-muted);
+  --mobile-faint: var(--vector-muted);
+  --mobile-line: var(--vector-border);
+  --mobile-line-strong: var(--vector-strong);
+  --mobile-accent: var(--vector-accent);
+  --mobile-accent-strong: var(--vector-accent-hover);
+  --mobile-accent-soft: var(--vector-selected);
+  --mobile-accent-line: var(--vector-strong);
+  --mobile-mint: var(--vector-success);
+  --mobile-mint-soft: var(--vector-success-bg);
+  --mobile-violet: var(--vector-insight);
+  --mobile-violet-soft: var(--vector-insight-bg);
+  --mobile-on-accent: var(--vector-page);
+  --mobile-danger: var(--vector-danger);
+  --mobile-focus: var(--vector-accent);
+  --mobile-disabled: var(--vector-disabled);
+  --vector-mobile-bg: var(--vector-page);
+  --vector-mobile-glass: var(--vector-surface);
+  --vector-mobile-ink: var(--vector-text);
+  --vector-mobile-muted: var(--vector-secondary);
+  --vector-mobile-line: var(--vector-border);
+  --vector-mobile-accent: var(--vector-accent);
+  --color-archive-bg: var(--vector-page);
+  --color-archive-surface: var(--vector-surface);
+  --color-archive-text-main: var(--vector-text);
+  --color-archive-text-muted: var(--vector-secondary);
+  --color-archive-text-dim: var(--vector-muted);
+  --color-archive-accent: var(--vector-accent);
+  --color-archive-accent-light: var(--vector-accent-hover);
+  --color-archive-electric: var(--vector-insight);
+  --color-archive-border: var(--vector-border);
+  --color-archive-border-strong: var(--vector-strong);
+  --color-archive-danger: var(--vector-danger);
+  --color-archive-success: var(--vector-success);
+}
+html:not(.light) body {
+  background: var(--vector-page);
+  color: var(--vector-text);
+}
+html:not(.light) ::selection {
+  background: var(--vector-selection);
+  color: var(--vector-text);
+}
+html:not(.light)
+  body
+  :is(
+    .vector-app-shell,
+    .desktop-main-module-frame,
+    .mobile-shell,
+    .now-shell,
+    .now-page,
+    .mobile-past-page,
+    .future-page
+  ) {
+  background: var(--vector-page);
+  color: var(--vector-text);
+}
+html:not(.light) body .desktop-main-module-frame .desktop-main-nav {
+  background: var(--vector-sidebar);
+  border-color: var(--vector-border);
+}
+html:not(.light) body .desktop-main-module-frame .desktop-main-nav__item:hover {
+  background: var(--vector-hover);
+}
+html:not(.light) body .desktop-main-module-frame .desktop-main-nav__item--active {
+  background: var(--vector-selected);
+  color: var(--vector-accent);
+  border-color: var(--vector-strong);
+}
+html:not(.light)
+  body
+  :is(.now-card, .now-chat-bubble, .now-link-dialog, .now-exit-dialog, .now-material-popover) {
+  background: var(--vector-surface);
+  border-color: var(--vector-border);
+  color: var(--vector-text);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+}
+html:not(.light) body .now-chat-bubble.is-user {
+  background: var(--vector-selected);
+  color: var(--vector-text);
+}
+html:not(.light)
+  body
+  :is(
+    .now-editor__surface,
+    #now-record-text,
+    .now-chat-bubble,
+    .mobile-past-timeline__content p,
+    .principle-card__content,
+    .mobile-principle-card__content p,
+    .mobile-principles-view__textarea
+  ) {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.8;
+  letter-spacing: 0;
+  text-align: left;
+  color: var(--vector-text);
+  opacity: 1;
+}
+/* Keep the writing specification above legacy mobile input-size overrides. */
+html:not(.light) body #now-record-text {
+  font-size: 17px !important;
+  font-weight: 400 !important;
+  line-height: 1.8 !important;
+}
+html:not(.light) body :is(.now-chat-bubble, .mobile-past-timeline__content) p + p {
+  margin-top: 16px;
+}
+html:not(.light) body :is(.now-page__title, .future-page__title) {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+html:not(.light) body :is(input, textarea)::placeholder {
+  color: var(--vector-muted);
+  opacity: 1;
+}
+html:not(.light) body :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--vector-accent);
+  outline-offset: 3px;
+}
+html:not(.light) body :is(.now-send-button, .future-primary, .principle-editor__save-button) {
+  background: var(--vector-accent);
+  color: var(--vector-page);
+  border-color: var(--vector-accent);
+}
+html:not(.light)
+  body
+  :is(.now-send-button, .future-primary, .principle-editor__save-button):hover:not(:disabled):not(
+    [data-state='disabled']
+  ) {
+  background: var(--vector-accent-hover);
+}
+html:not(.light)
+  body
+  :is(.now-send-button, .future-primary, .principle-editor__save-button):active:not(:disabled):not(
+    [data-state='disabled']
+  ) {
+  background: var(--vector-accent-pressed);
+}
+html:not(.light)
+  body
+  :is(.now-send-button, .future-primary, .principle-editor__save-button):is(
+    :disabled,
+    [data-state='disabled']
+  ) {
+  background: var(--vector-elevated);
+  color: var(--vector-disabled);
+  border-color: var(--vector-border);
+  opacity: 1;
+}
+html:not(.light) body .future-danger {
+  color: var(--vector-danger);
+}
+@media (max-width: 640px) {
+  html:not(.light) body :is(.now-page__title, .future-page__title) {
+    font-size: 26px;
+  }
+}
+
+/* A writing surface needs room for thought; keep reading columns narrow elsewhere. */
+html:not(.light) body .now-editor__surface {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+html:not(.light) body :is(.avatar-model-dialog, .avatar-memory-confirm-dialog, .future-dialog) {
+  background: var(--vector-elevated);
+  color: var(--vector-text);
+  border-color: var(--vector-border);
+}
+html:not(.light) body :is(.mobile-main-nav, .desktop-main-nav) {
+  background: var(--vector-sidebar);
+}
+html:not(.light)
+  body
+  :is(.mobile-main-nav__item--active, .avatar-section-tabs button[aria-selected='true']) {
+  background: var(--vector-selected);
+  color: var(--vector-accent);
+}
+html:not(.light)
+  body
+  :is(.future-design-summary-card, .avatar-library__dimension-card, .now-chat-input) {
+  background: var(--vector-surface);
+  border-color: var(--vector-border);
+}
+html:not(.light) body :is(.now-time, .desktop-main-nav__item small) {
+  color: var(--vector-secondary);
+  font-size: 12px;
+}
+html:not(.light) body :is(input, textarea, select) {
+  border-color: var(--vector-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not(.light) :is(button, a, input, textarea) {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* Canonical mobile adapter -------------------------------------------------
+ * The application still contains several older, colorful mobile skins. Keep
+ * their component structure, but give every module the same quiet surface,
+ * one active treatment, and a single reading hierarchy.
+ */
+html:not(.light).mobile-product-active body .mobile-shell,
+html:not(.light).mobile-product-active body .mobile-shell__content,
+html:not(.light).mobile-product-active body .mobile-past-page,
+html:not(.light).mobile-product-active body .mobile-future-page,
+html:not(.light).mobile-product-active body .mobile-shell[data-mobile-tab='future'] .mobile-future-page {
+  background: var(--vector-page) !important;
+  background-image: none !important;
+}
+
+html:not(.light).mobile-product-active body .mobile-main-nav,
+html:not(.light).mobile-product-active body .mobile-shell__bottom-nav {
+  background: color-mix(in srgb, var(--vector-sidebar) 94%, transparent) !important;
+  border-color: var(--vector-border) !important;
+  box-shadow: 0 -8px 20px rgb(0 0 0 / 12%) !important;
+  backdrop-filter: blur(16px) saturate(1) !important;
+}
+
+html:not(.light).mobile-product-active body .mobile-main-nav__item {
+  color: var(--vector-secondary) !important;
+  font-weight: 500 !important;
+}
+
+html:not(.light).mobile-product-active body .mobile-main-nav__item--active {
+  position: relative;
+  color: var(--vector-accent) !important;
+  background: var(--vector-selected) !important;
+  font-weight: 500 !important;
+}
+
+html:not(.light).mobile-product-active body .mobile-main-nav__item--active::after {
+  width: 18px !important;
+  height: 2px !important;
+  border-radius: 999px !important;
+  background: var(--vector-accent) !important;
+  box-shadow: none !important;
+}
+
+html:not(.light).mobile-product-active body .mobile-past-page__segments button {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--vector-secondary) !important;
+}
+
+html:not(.light).mobile-product-active body .mobile-past-page__segment--active {
+  position: relative;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--vector-accent) !important;
+  -webkit-text-fill-color: var(--vector-accent) !important;
+}
+
+html:not(.light).mobile-product-active body .mobile-past-page__segment--active::after {
+  width: 20px !important;
+  height: 2px !important;
+  border-radius: 999px !important;
+  background: var(--vector-accent) !important;
+  box-shadow: none !important;
+}
+
+html:not(.light).mobile-product-active body .avatar-section-tabs button[aria-selected='true'] {
+  background: var(--vector-selected) !important;
+  border-color: var(--vector-strong) !important;
+  color: var(--vector-accent) !important;
+  box-shadow: none !important;
+}
+
+/* Cards explain grouping, not decoration. Remove legacy gradients and glass
+ * from ordinary content so the text, rather than every container, leads. */
+html:not(.light).mobile-product-active
+  body
+  .mobile-shell
+  :is(
+    .mobile-past-search,
+    .mobile-past-ask-avatar,
+    .mobile-past-page__overview,
+    .mobile-past-page__segments,
+    .mobile-past-timeline__item,
+    .mobile-past-timeline__reading-column,
+    .now-flow--mobile-shell .now-editor__surface,
+    .now-avatar-mode-intro,
+    .now-avatar-invitation,
+    .now-avatar-recall,
+    .now-avatar-understanding,
+    .now-avatar-insight,
+    .now-avatar-fusion-map,
+    .mobile-future-page__stage,
+    .future-context,
+    .future-insight-card,
+    .mobile-avatar-memory-layer__hero,
+    .mobile-avatar-memory-layer__stats,
+    .mobile-avatar-memory-layer__cta
+  ) {
+  background: var(--vector-surface) !important;
+  border-color: var(--vector-border) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html:not(.light) body .mobile-principle-card__content p {
+  color: var(--vector-text) !important;
+  font-size: 17px !important;
+  font-weight: 400 !important;
+  line-height: 1.8 !important;
+}
+
+html:not(.light) body :is(.mobile-past-page__header h1, .mobile-future-page__header h1, .now-header h1, .mobile-principles-view__title) {
+  font-weight: 500 !important;
+}
+
+html:not(.light) body .now-chat-bubble {
+  border-color: var(--vector-line);
+  box-shadow: none;
+}
