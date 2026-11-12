@@ -1,7 +1,8 @@
+import { accountLocalStorage } from './accountScope';
 /** Only a missing IDB key may use a legacy mirror. Corruption is never an empty vault. */
 export function withLegacyValue(value: unknown, key: string): unknown {
   if (value !== undefined) return value;
-  const raw = localStorage.getItem(key);
+  const raw = accountLocalStorage.getItem(key);
   return raw === null ? undefined : JSON.parse(raw);
 }
 

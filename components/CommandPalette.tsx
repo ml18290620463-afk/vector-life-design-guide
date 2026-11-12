@@ -1,3 +1,4 @@
+import { currentAccountId } from '../services/accountScope';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Command } from 'cmdk';
 import {
@@ -122,7 +123,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       t.toggleTheme || (theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'),
     switchLanguage: t.switchLanguage || 'Switch language…',
     lockVault: t.lockVault || 'Lock the vault',
-    wipeData: t.wipeData || 'Wipe all local data',
+    wipeData: currentAccountId() ? '清除此设备资料（云端保留）' : t.wipeData || 'Wipe all local data',
   };
 
   return (

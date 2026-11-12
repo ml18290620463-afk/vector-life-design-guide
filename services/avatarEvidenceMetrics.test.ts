@@ -8,7 +8,7 @@ const entry = (id: string, content: string, overrides = {}) => ({
   content,
   tags: [],
   createdAt: new Date(2026, 3, 2).getTime(),
-  isLocked: false,
+  aiVisibility: 'allowed' as const, isLocked: false,
   ...overrides,
 });
 

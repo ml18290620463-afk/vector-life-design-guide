@@ -24,7 +24,7 @@ const entry: DiaryEntry = {
   title: '会议',
   content: '会议先确认目标',
   createdAt: 1,
-  isLocked: false,
+  aiVisibility: 'allowed' as const, isLocked: false,
   tags: [],
 };
 beforeEach(() => {

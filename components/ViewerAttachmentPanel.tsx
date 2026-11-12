@@ -29,15 +29,13 @@ const PdfAttachmentSlot: React.FC<{ attachment: Attachment; theme: Theme }> = ({
       <div
         className={`w-full flex flex-col items-center gap-3 p-6 rounded-lg border ${theme === 'light' ? 'border-slate-200 bg-white/60' : 'border-cyan-900/30 bg-black/30'}`}
       >
-        <div
-          className={`text-[10px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-500' : 'text-cyan-700'}`}
-        >
+        <div className={`ds-meta ${theme === 'light' ? 'text-slate-500' : 'text-cyan-700'}`}>
           PDF · {attachment.name}
         </div>
         <button
           type="button"
           onClick={() => setShouldRender(true)}
-          className={`px-4 py-2 rounded border text-[11px] font-mono uppercase tracking-widest transition-colors ${theme === 'light' ? 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' : 'border-cyan-700/60 text-cyan-300 hover:bg-cyan-900/20'}`}
+          className={`px-4 py-2 rounded border ds-meta transition-colors ${theme === 'light' ? 'border-cyan-300 text-cyan-700 hover:bg-cyan-50' : 'border-cyan-700/60 text-cyan-300 hover:bg-cyan-900/20'}`}
         >
           Load Document
         </button>
@@ -45,7 +43,7 @@ const PdfAttachmentSlot: React.FC<{ attachment: Attachment; theme: Theme }> = ({
           href={pdfUrl ?? attachment.data}
           download={attachment.name}
           rel="noopener noreferrer"
-          className={`text-[10px] font-mono underline ${theme === 'light' ? 'text-slate-500 hover:text-cyan-700' : 'text-cyan-700 hover:text-cyan-400'}`}
+          className={`ds-meta underline ${theme === 'light' ? 'text-slate-500 hover:text-cyan-700' : 'text-cyan-700 hover:text-cyan-400'}`}
         >
           Download raw
         </a>
@@ -80,7 +78,7 @@ export const ViewerAttachmentPanel: React.FC<ViewerAttachmentPanelProps> = ({
       className={`mt-8 p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-vector-ink-deep border-cyan-900/30'}`}
     >
       <div
-        className={`flex items-center gap-2 mb-4 font-mono text-xs uppercase tracking-widest ${theme === 'light' ? 'text-slate-500' : 'text-cyan-600'}`}
+        className={`flex items-center gap-2 mb-4 ds-meta ${theme === 'light' ? 'text-slate-500' : 'text-cyan-600'}`}
       >
         {attachment.type === 'image' && <Image className="w-4 h-4" />}
         {attachment.type === 'video' && <Video className="w-4 h-4" />}
@@ -118,7 +116,7 @@ export const ViewerAttachmentPanel: React.FC<ViewerAttachmentPanelProps> = ({
           <a
             href={src}
             download={attachment.name}
-            className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono border rounded transition-colors ${theme === 'light' ? 'border-cyan-200 text-cyan-700 hover:bg-cyan-50' : 'border-cyan-900/50 text-cyan-400 hover:bg-cyan-900/30'}`}
+            className={`flex items-center gap-2 px-3 py-1.5 ds-meta border rounded transition-colors ${theme === 'light' ? 'border-cyan-200 text-cyan-700 hover:bg-cyan-50' : 'border-cyan-900/50 text-cyan-400 hover:bg-cyan-900/30'}`}
           >
             <Download className="w-3 h-3" /> Download
           </a>

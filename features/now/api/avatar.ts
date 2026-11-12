@@ -1,3 +1,9 @@
+import {
+  assertAIPrivacyUnchanged,
+  readAIPrivacy,
+  isAIMessageAllowed,
+  canAIReadEntry,
+} from '../../../services/aiPrivacy';
 import { readAvatarModel } from './avatarModel';
 import type { ChatMessage } from '../types/now';
 import type { AvatarFactKind } from '../../../server/avatarFactExtraction';
@@ -18,13 +24,23 @@ export const summarizeAvatarMessages = async (args: {
   record_time: string;
   followup_round: number;
 }): Promise<AvatarSummarizeResponse> => {
+  const privacy = await readAIPrivacy();
+  const messages = args.messages.filter((m) =>
+    isAIMessageAllowed(m, privacy.entries, privacy.token),
+  );
+  if (!messages.some((m) => m.role === 'user')) throw new Error('请先发送新的对话');
   const response = await fetch('/api/v1/avatar/summarize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(args),
+    body: JSON.stringify({
+      ...args,
+      messages: messages.map(({ role, content }) => ({ role, content })),
+    }),
   });
   if (!response.ok) throw new Error('avatar-summarize-failed');
-  return (await response.json()) as AvatarSummarizeResponse;
+  const result = (await response.json()) as AvatarSummarizeResponse;
+  await assertAIPrivacyUnchanged(privacy.token);
+  return result;
 };
 
 export async function chatWithAvatar(
@@ -32,6 +48,10 @@ export async function chatWithAvatar(
   memories: import('../../../services/avatarGuidance').GuidanceSource[],
   signal?: AbortSignal,
 ): Promise<string> {
+  const privacy = await readAIPrivacy();
+  messages = messages.filter((m) => isAIMessageAllowed(m, privacy.entries, privacy.token));
+  memories = memories.filter((m) => m.aiPrivacyToken === privacy.token);
+  if (!messages.some((m) => m.role === 'user')) throw new Error('请先发送新的对话');
   const response = await fetch('/api/v1/avatar/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,10 +62,11 @@ export async function chatWithAvatar(
         .filter((m) => m.type === 'text' && m.role !== 'system')
         .slice(-120)
         .map((m) => ({ role: m.role, content: m.content })),
-      memories: memories.slice(0, 12),
+      memories: memories.slice(0, 12).map(({ aiPrivacyToken: _token, ...source }) => source),
     }),
   });
   const result = await response.json();
+  await assertAIPrivacyUnchanged(privacy.token);
   if (!response.ok) throw new Error(result.error || 'model_unavailable');
   if (typeof result.reply !== 'string' || !result.reply.trim())
     throw new Error('model_unavailable');
@@ -82,6 +103,7 @@ const CHAT_MEMORY_KINDS = new Set<AvatarFactKind>([
  * exposing its evidence, private notes, or internal relations to a provider.
  */
 export interface AvatarMemoryExtractionReference {
+  aiPrivacyToken?: string;
   /** Opaque, request-scoped reference. It enables an optional confirmed update. */
   id?: string;
   text: string;
@@ -96,14 +118,22 @@ export async function extractAvatarFacts(
 ) {
   // Keep the dialogue intact: assistant turns provide clarification context, but the
   // server accepts evidence only from user turns.
-  const sources = messages.filter((m) => m.type === 'text' && m.role !== 'system').slice(-120);
+  const privacy = await readAIPrivacy();
+  const sources = messages
+    .filter((m) => isAIMessageAllowed(m, privacy.entries, privacy.token))
+    .filter((m) => m.type === 'text' && m.role !== 'system')
+    .slice(-120);
+  if (!sources.some((m) => m.role === 'user')) throw new Error('请先发送新的对话');
   const response = await fetch('/api/v1/avatar/memory/extract', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       ...(readAvatarModel() ? { modelConfig: readAvatarModel() } : {}),
       messages: sources.map((m) => ({ role: m.role, content: m.content })),
-      memories: known.slice(-12),
+      memories: known
+        .filter((m) => m.aiPrivacyToken === privacy.token)
+        .slice(-12)
+        .map(({ aiPrivacyToken: _token, ...reference }) => reference),
     }),
   });
   if (!response.ok) {
@@ -118,6 +148,7 @@ export async function extractAvatarFacts(
     candidates?: AvatarFactCandidate[];
     candidate?: AvatarFactCandidate | null;
   };
+  await assertAIPrivacyUnchanged(privacy.token);
   const candidates = (result.candidates ?? (result.candidate ? [result.candidate] : [])).filter(
     (candidate) => CHAT_MEMORY_KINDS.has(candidate.kind),
   );
@@ -135,18 +166,66 @@ export async function previewAvatarGrowth(args: {
   sourceEntryId: string;
   sourceSupplementId?: string;
   occurredAt: number;
-  evidenceSources: Array<{ entryId: string; supplementId?: string; content: string; createdAt: number }>;
+  evidenceSources: Array<{
+    entryId: string;
+    supplementId?: string;
+    content: string;
+    createdAt: number;
+  }>;
   entries: Array<{ id: string; title: string; content: string; tags: string[]; createdAt: number }>;
   understandings: unknown[];
 }) {
+  const privacy = await readAIPrivacy();
+  const allowed = new Map(privacy.entries.filter((e) => canAIReadEntry(e)).map((e) => [e.id, e]));
+  if (
+    !allowed.has(args.sourceEntryId) ||
+    !args.evidenceSources.some(
+      (s) => s.entryId === args.sourceEntryId && s.supplementId === args.sourceSupplementId,
+    ) ||
+    args.evidenceSources.some((source) => {
+      const entry = allowed.get(source.entryId);
+      const text = source.supplementId
+        ? entry?.supplements?.find((s) => s.id === source.supplementId && !s.isEncrypted)?.content
+        : entry?.content;
+      return !text || text !== source.content;
+    }) ||
+    args.entries.some((e) => !allowed.has(e.id))
+  )
+    throw new Error('记录未授权 AI 读取');
   const modelConfig = readAvatarModel();
   if (!modelConfig) throw new Error('model_not_configured');
   const response = await fetch('/api/v1/avatar/growth-preview', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...args, modelConfig }),
+    body: JSON.stringify({
+      ...args,
+      modelConfig,
+      messages: args.evidenceSources.map((s) => ({
+        role: 'user',
+        content: s.content,
+        createdAt: s.createdAt,
+      })),
+      entries: args.evidenceSources.map((s) => ({
+        id: s.entryId,
+        title: '',
+        content: s.content,
+        tags: [],
+        createdAt: s.createdAt,
+        aiVisibility: 'allowed',
+      })),
+      understandings: args.understandings.filter((item) => {
+        const value = item as { sourceEntryIds?: string[]; status?: string } | null;
+        return (
+          value?.status === 'confirmed' &&
+          Array.isArray(value.sourceEntryIds) &&
+          value.sourceEntryIds.length > 0 &&
+          value.sourceEntryIds.every((id) => allowed.has(id))
+        );
+      }),
+    }),
   });
   const result = await response.json();
+  await assertAIPrivacyUnchanged(privacy.token);
   if (!response.ok) throw new Error(result.error || 'model_unavailable');
   return result;
 }

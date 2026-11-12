@@ -103,3 +103,14 @@ describe('record integrity', () => {
     expect(await SecurityService.decrypt(saved.supplements![0].content, 'right-password')).toBe('补充');
   });
 });
+
+ it('commits supplement and fresh permission together, including the backup', async () => {
+  await set(keys.entries, [{ ...entry, aiVisibility: 'allowed', aiConsentAt: Date.now() + 1000 }]);
+  const previous = (await get(keys.entries))[0];
+  await appendEntrySupplement(keys, entry.id, '私密补充', 'private-supplement', undefined, 'private');
+  const saved = (await get(keys.entries))[0];
+  expect(saved.aiVisibility).toBe('private');
+  expect(saved.aiConsentAt).toBeGreaterThan(previous.aiConsentAt);
+  expect(saved.supplements[0].content).toBe('私密补充');
+  expect(await get(keys.backup)).toEqual([saved]);
+});

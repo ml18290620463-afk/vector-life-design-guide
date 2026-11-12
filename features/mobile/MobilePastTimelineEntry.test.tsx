@@ -100,7 +100,7 @@ describe('MobilePastTimelineEntry', () => {
 
     expect(screen.queryByRole('button', { name: '查看记录' })).toBeNull();
     expect(screen.queryByRole('button', { name: '展开记录内容' })).toBeNull();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: '仅自己可见' })).toBeTruthy();
   });
 });
 

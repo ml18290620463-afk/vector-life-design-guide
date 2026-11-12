@@ -10,7 +10,7 @@ async function enterFuture(page: Page) {
 async function addAction(page: Page, title: string) {
   await page.getByRole('button', { name: '添加行动', exact: true }).click();
   await page.getByLabel('行动内容').fill(title);
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function reloadAndUnlock(page: Page) {
   await page.reload();
@@ -83,16 +83,17 @@ test('未来：删除目标会持久清理关联行动并保留愿景', async ({
   const action = '阅读第一章';
   await page.getByRole('button', { name: '添加愿景', exact: true }).click();
   await page.getByLabel('愿景内容').fill(vision);
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: '添加目标', exact: true }).click();
   await page.getByLabel('目标内容').fill(goal);
+  await page.getByText('时间与关联（可选）', { exact: true }).click();
   await page.getByLabel('所属愿景（可选）').selectOption({ label: vision });
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: '添加行动', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   await page.getByText('可选设置', { exact: true }).click();
   await page.getByLabel('所属目标（可选）').selectOption({ label: goal });
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: new RegExp(`查看目标：.*${goal}`) }).click();
   await page.getByRole('button', { name: '编辑', exact: true }).click();
   await page.getByRole('button', { name: '删除目标', exact: true }).click();
@@ -138,3 +139,23 @@ test('完成行动：长期推进留在未来，存入过去成为普通经历',
   await expect(page.getByText('完成访谈', { exact: true }).first()).toBeVisible();
   await expect(page.locator('.mobile-past-goal-summary')).toHaveCount(0);
 });
+
+
+for (const width of [390, 1440]) {
+  test(`未来草稿刷新恢复并在保存后清理 ${width}px`, async ({ page }) => {
+    test.setTimeout(120000);
+    await page.setViewportSize({ width, height: 900 });
+    await seedOnboardedApp(page);
+    await enterFuture(page);
+    await page.getByRole('button', { name: '添加行动', exact: true }).click();
+    await page.getByLabel('行动内容').fill('刷新后继续的规划草稿');
+    await expect(page.getByRole('status').filter({ hasText: '草稿已加密保存在本机' })).toBeVisible();
+    await reloadAndUnlock(page);
+    await page.getByRole('button', { name: '添加行动', exact: true }).click();
+    await expect(page.getByLabel('行动内容')).toHaveValue('刷新后继续的规划草稿');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('button', { name: '添加行动', exact: true }).click();
+    await expect(page.getByLabel('行动内容')).toHaveValue('');
+  });
+}

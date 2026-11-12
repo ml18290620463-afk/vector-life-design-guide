@@ -1,3 +1,4 @@
+import { aiPrivacyToken, isAIMessageAllowed } from '../../../services/aiPrivacy';
 /* eslint-disable max-lines -- This page composes the complete chat flow; focused logic lives in state and hooks. */
 import {
   selectAvatarGuidanceContext,
@@ -46,9 +47,9 @@ import {
 import type { AvatarRecallMemory } from '../state/nowRules';
 import {
   entryToRecallMemory,
-  buildAssistantTextMessage,
-  buildRecordPreviewMessage,
-  buildUserTextMessage,
+  buildAssistantTextMessage as rawbuildAssistantTextMessage,
+  buildRecordPreviewMessage as rawbuildRecordPreviewMessage,
+  buildUserTextMessage as rawbuildUserTextMessage,
   getAvatarIntroMessages,
   readAndMarkAvatarIntroFirstVisit,
 } from '../state/avatarChatRules';
@@ -109,6 +110,23 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   launchContext = { mode: 'capture', source: 'now' },
   onSelectEntry,
 }) => {
+  const [storedAvatarMemories, setAvatarMemories] = useState(readAvatarAtomicMemories);
+  const privacyToken = aiPrivacyToken(pastEntries, future, actions, principles, storedAvatarMemories);
+  const buildAssistantTextMessage = (...args: Parameters<typeof rawbuildAssistantTextMessage>) => ({
+    ...rawbuildAssistantTextMessage(...args),
+    aiPrivacyToken: privacyToken,
+  });
+  const buildUserTextMessage = (...args: Parameters<typeof rawbuildUserTextMessage>) => ({
+    ...rawbuildUserTextMessage(...args),
+    aiPrivacyToken: privacyToken,
+  });
+  const buildRecordPreviewMessage = (...args: Parameters<typeof rawbuildRecordPreviewMessage>) => ({
+    ...rawbuildRecordPreviewMessage(...args),
+    aiPrivacyToken: privacyToken,
+  });
+  const launchAllowed =
+    !launchContext.entryId ||
+    pastEntries.some((e) => e.id === launchContext.entryId && isAccessibleDiaryEntry(e));
   const [restoredSession] = useState(() => readAvatarConversation(launchContext));
   const [sessionId] = useState(() => restoredSession?.id ?? generateSecureId('avatar-session'));
   const [sessionCreatedAt] = useState(() => restoredSession?.createdAt ?? Date.now());
@@ -122,10 +140,10 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   >(null);
   const chatController = useRef<AbortController | null>(null);
   const failedChat = useRef<ChatMessage[] | null>(null);
-  useEffect(() => () => chatController.current?.abort(), []);
+  useEffect(() => () => chatController.current?.abort(), [privacyToken]);
   const general = launchContext.mode === 'general';
   const [patterns, setPatterns] = useState(readAvatarUnderstandings);
-  const [storedAvatarMemories, setAvatarMemories] = useState(readAvatarAtomicMemories);
+
   const refreshAvatarKnowledge = () => {
     setPatterns(readAvatarUnderstandings());
     setAvatarMemories(readAvatarAtomicMemories());
@@ -169,9 +187,9 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     const focusedEntry = launchContext.entryId
       ? pastEntries.find((entry) => entry.id === launchContext.entryId)
       : undefined;
-    const seed = launchContext.query || launchContext.prompt || '';
+    const seed = launchAllowed ? launchContext.query || launchContext.prompt || '' : '';
     const recalled = seed ? selectAvatarRecallMemories(pastEntries, seed) : [];
-    if (!focusedEntry) return recalled;
+    if (!focusedEntry || !isAccessibleDiaryEntry(focusedEntry)) return recalled;
     return [
       entryToRecallMemory(focusedEntry),
       ...recalled.filter((memory) => memory.sourceEntryId !== focusedEntry.id),
@@ -185,8 +203,19 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const [choosingCorrection, setChoosingCorrection] = useState(false);
   const correctionIds = useRef<string[]>([]);
   const [generating, setGenerating] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const seed = launchContext.prompt || launchContext.query;
+  const lastPrivacyToken = useRef(privacyToken);
+  useEffect(() => {
+    if (lastPrivacyToken.current === privacyToken) return;
+    lastPrivacyToken.current = privacyToken;
+    failedChat.current = null;
+    setPreview(null);
+    setUnderstanding(null);
+    setChoosingCorrection(false);
+    correctionIds.current = [];
+    setChatError('记录权限已变化，历史对话保留在本机，后续回答将使用新的授权范围。');
+  }, [privacyToken]);
+  const [storedMessages, setMessages] = useState<ChatMessage[]>(() => {
+    const seed = launchAllowed ? launchContext.prompt || launchContext.query : undefined;
     if (launchContext.mode === 'general') {
       const history = restoredSession?.messages ?? [];
       return seed
@@ -214,10 +243,16 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       ? [...intro, buildAssistantTextMessage(seed, options)]
       : [...intro, buildUserTextMessage(seed, options)];
   });
+  const messages = useMemo(
+    () => storedMessages.filter((m) => isAIMessageAllowed(m, pastEntries, privacyToken)),
+    [storedMessages, pastEntries, privacyToken],
+  );
   const userMessages = useMemo(() => messages.filter((m) => m.role === 'user'), [messages]);
-  const chatViewport = useAvatarChatViewport(messages, chatListRef);
+  const chatViewport = useAvatarChatViewport(storedMessages, chatListRef);
   const validRecallMemories = useMemo(() => {
-    const existingIds = new Set(pastEntries.map((entry) => entry.id));
+    const existingIds = new Set(
+      pastEntries.filter((e) => isAccessibleDiaryEntry(e)).map((entry) => entry.id),
+    );
     return recallMemories.filter((memory) => existingIds.has(memory.sourceEntryId));
   }, [pastEntries, recallMemories]);
   const liveInsight = useMemo(
@@ -236,18 +271,18 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     [validRecallMemories],
   );
   useEffect(() => {
-    if (!messages.some((message) => message.role === 'user')) return;
+    if (!storedMessages.some((message) => message.role === 'user')) return;
     const saved = writeAvatarSession({
       id: sessionId,
       mode: launchContext.mode,
       context: launchContext,
-      messages,
+      messages: storedMessages,
       references,
       createdAt: sessionCreatedAt,
       updatedAt: Date.now(),
     });
     if (!saved) setChatError('聊天记录未能保存，请检查浏览器存储空间后重试。');
-  }, [launchContext, messages, references, sessionCreatedAt, sessionId]);
+  }, [launchContext, storedMessages, references, sessionCreatedAt, sessionId]);
   const formUnderstanding = () => {
     const statement =
       liveInsight.thought || liveInsight.result || liveInsight.action || liveInsight.fact;
@@ -415,6 +450,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
             ...conversation,
             {
               id: 'verified-count',
+              aiPrivacyToken: privacyToken,
               role: 'user' as const,
               type: 'text' as const,
               created_at: new Date().toISOString(),
@@ -484,7 +520,9 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       id: generateSecureId('msg'),
       createdAt: new Date().toISOString(),
     });
-    const activePatterns = readAvatarUnderstandings().filter((item) => item.status === 'confirmed');
+    const activePatterns = readAvatarUnderstandings().filter(
+      (item) => item.status === 'confirmed' && guidanceSources.some((s) => s.id === item.id),
+    );
     const requestedReliabilityTask = general ? detectAvatarReliabilityTask(content) : null;
     const correcting =
       /(?:修正|修改|不认可|不认同|纠正|不符合).*(?:模式|理解)|(?:模式|理解).*(?:不对|错了|不符合)/.test(
@@ -537,8 +575,8 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     if (detectAvatarRetrievalIntent(content) !== 'decision_support') {
       localAnswer ??= answerAvatarEvidence(
         content,
-        readAvatarUnderstandings(),
-        principles,
+        activePatterns,
+        principles.filter((p) => guidanceSources.some((s) => s.kind === '原则' && s.id === p.id)),
         pastEntries,
       );
     }
@@ -553,7 +591,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
           ...(localReferences?.length ? { references: localReferences } : {}),
         }),
       ];
-      setMessages(answeredMessages);
+      setMessages((current) => [...current, ...answeredMessages.slice(-2)]);
       setInput('');
       if (metric && general && /(为什么|为何|怎么|建议|分析|总结)/.test(content)) {
         void requestReply(answeredMessages);
@@ -590,13 +628,16 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const memoryCapture = useAvatarMemoryCapture({
     draft,
     sessionId,
-    avatarMemoryReferences: buildAvatarMemoryReferences(avatarMemories),
+    avatarMemoryReferences: buildAvatarMemoryReferences(
+      avatarMemories.filter((m) => guidanceSources.some((s) => s.id === m.id)),
+    ).map((ref) => ({ ...ref, aiPrivacyToken: privacyToken })),
     showToast,
     refreshAvatarMemories: () => setAvatarMemories(readAvatarAtomicMemories()),
   });
 
   return (
     <>
+      {memoryCapture.dialog}
       {understanding && (
         <PatternReviewDialog
           key={understanding.id}

@@ -1,3 +1,4 @@
+import { readAIPrivacy } from '../../../services/aiPrivacy';
 import { resolveAvatarSourceEvidence } from '../../../services/avatarSourceEvidence';
 import { readAvatarSessions } from '../../../services/avatarMemorySessions';
 import type { DiaryEntry } from '../../../types';
@@ -30,8 +31,24 @@ export function AvatarMemoryDetail({
   /** Canonical past/future records are indexed here and edited in their owner module. */
   readOnly?: boolean;
 }) {
+  const [privacyToken, setPrivacyToken] = useState<string>();
+  useEffect(() => {
+    let active = true;
+    void readAIPrivacy().then(({ token }) => {
+      if (active) setPrivacyToken(token);
+    });
+    return () => {
+      active = false;
+    };
+  }, [memory, entries]);
   // A stored excerpt alone does not prove its source is still accessible.
-  const evidence = resolveAvatarSourceEvidence(memory.sourceRefs, entries, readAvatarSessions());
+  const evidence = resolveAvatarSourceEvidence(
+    memory.sourceRefs,
+    entries,
+    readAvatarSessions(),
+    Date.now(),
+    privacyToken,
+  );
   const dialog = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<'vision' | 'goal' | 'action'>('goal');
   const direction = isDirectionCandidate(memory);
@@ -123,7 +140,10 @@ export function AvatarMemoryDetail({
           />
         </>
       ) : (
-        <p className="avatar-memory-detail__statement">{selfMemoryVoice(memory.statement)}</p>
+        <>
+          <p className="avatar-memory-detail__privacy">{memory.aiVisibility === 'allowed' ? '允许 AI 可见 · 仍受来源权限限制' : '仅自己可见'}</p>
+          <p className="avatar-memory-detail__statement">{selfMemoryVoice(memory.statement)}</p>
+        </>
       )}
       {!forgetting && !pending && (
         <p className="avatar-memory-detail__status">

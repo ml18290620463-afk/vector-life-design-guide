@@ -20,6 +20,7 @@ import type { AvatarReliabilityTask } from '../state/avatarReliabilityTasks';
 
 const AvatarChatMessage = React.memo(function AvatarChatMessage({
   message,
+  pastEntries,
   preview,
   sending,
   launchContext,
@@ -29,6 +30,7 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
   onSendPreview,
 }: {
   message: ChatMessage;
+  pastEntries?: DiaryEntry[];
   preview: RecordPreviewPayload | null;
   sending: boolean;
   launchContext: AvatarLaunchContext;
@@ -54,13 +56,19 @@ const AvatarChatMessage = React.memo(function AvatarChatMessage({
     <div className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}>
       {message.role === 'assistant' ? formatAvatarReply(message.content) : message.content}
       {message.role === 'assistant' && message.references?.length ? (
-        <button
-          type="button"
-          className="avatar-message-references"
-          onClick={() => onSelectEntry?.(message.references![0].entryId)}
-        >
-          查看 {message.references.length} 条经历
-        </button>
+        <details className="avatar-message-references">
+          <summary>查看 {message.references.length} 条经历</summary>
+          <ul>{message.references.map((reference, index) => {
+            const available = pastEntries?.some(entry => entry.id === reference.entryId && !entry.isEncrypted) ?? false;
+            return <li key={`${reference.entryId}:${index}`}>
+              <button type="button" disabled={!available || !onSelectEntry} onClick={() => onSelectEntry?.(reference.entryId)}>{reference.title || '未命名记录'}</button>
+              <time>{new Date(reference.date).toLocaleDateString('zh-CN')}</time>
+              <p>{reference.excerpt}</p>
+              {reference.reason && <p>{reference.reason}</p>}
+              {!available && <p>来源已删除、锁定或不可访问</p>}
+            </li>;
+          })}</ul>
+        </details>
       ) : null}
     </div>
   );
@@ -318,7 +326,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
           <header className="avatar-backup-workspace__header">
             <p>资料管理</p>
             <h1 id="avatar-backup-title">备份与恢复</h1>
-            <span>带走完整资料，回到任何一台设备后继续使用。</span>
+            <span>导出备份文件，在另一台设备上导入后继续使用。</span>
           </header>
           <AvatarReliabilityAssistant
             task="backup"
@@ -344,6 +352,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             <AvatarChatMessage
               key={message.id}
               message={message}
+              pastEntries={pastEntries}
               preview={preview}
               sending={sending}
               launchContext={launchContext}

@@ -1,3 +1,4 @@
+import { useAIVisibilityChoice } from '../../../components/AIVisibilityDialog';
 import type { DiaryEntry } from '../../../types';
 import { selfMemoryVoice } from '../../../services/avatarMemoryVoice';
 import { saveArchiveDirection } from '../../../services/futureRepository';
@@ -162,6 +163,7 @@ export function AvatarMemoryLibrary({
     setPendingOpen(false);
     setQuery('');
   };
+  const visibilityChoice = useAIVisibilityChoice('zh', 'memory');
   const saveMemory = async (
     memory: AvatarAtomicMemory,
     statement: string,
@@ -171,17 +173,20 @@ export function AvatarMemoryLibrary({
     if (saving) return;
     setSaving(true);
     try {
+      const aiVisibility = status === 'confirmed' ? await visibilityChoice.request() : 'private';
+      if (!aiVisibility) return;
       if (status === 'confirmed' && kind) {
         setSaving(true);
         await saveArchiveDirection({
           proposalId: memory.id,
+          aiVisibility,
           kind,
           text: statement,
           tags: memory.tags,
           sourceRefs: memory.sourceRefs,
         });
         setConverted((ids) => [...ids, memory.id]);
-      } else if (!saveArchiveMemory(memory, statement, status)) throw new Error('save failed');
+      } else if (!saveArchiveMemory(memory, statement, status, aiVisibility)) throw new Error('save failed');
       if (memory.status === 'candidate') setConverted((ids) => [...ids, memory.id]);
       setSelected(null);
       onRefresh();
@@ -194,11 +199,13 @@ export function AvatarMemoryLibrary({
       setSaving(false);
     }
   };
-  const supersede = (statement: string) => {
+  const supersede = async (statement: string) => {
     if (!selected || saving) return;
     setSaving(true);
     try {
-      if (!supersedeArchiveMemory(selected, statement)) throw new Error('save failed');
+      const aiVisibility = await visibilityChoice.request();
+      if (!aiVisibility) return;
+      if (!supersedeArchiveMemory(selected, statement, aiVisibility)) throw new Error('save failed');
       setSelected(null);
       onRefresh();
       showToast(selected.id.startsWith('atomic_pattern_') ? '已更新模式' : '已更新记忆');
@@ -214,6 +221,7 @@ export function AvatarMemoryLibrary({
       : PATTERN_DIMENSIONS.find((item) => item.id === selectedDimension)?.label;
   return (
     <section className="avatar-library" aria-label="记忆库">
+      {visibilityChoice.dialog}
       {!showingPending && (
         <nav className="avatar-self-categories avatar-library__scopes" aria-label="记忆库范围">
           {(
@@ -387,6 +395,7 @@ export function AvatarMemoryLibrary({
               >
                 <span className="avatar-library__row-content">
                   <span>{selfMemoryVoice(memory.statement)}</span>
+                  <small className="avatar-library__privacy">{memory.aiVisibility === 'allowed' ? '允许 AI 可见' : '仅自己可见'}</small>
                   {memory.retainedAfterSourceDeletion ? (
                     <small className="avatar-library__retained">已保留 · 原始经历已删除</small>
                   ) : null}

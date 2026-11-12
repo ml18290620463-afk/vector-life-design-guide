@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { currentAccountId } from '../services/accountScope';
 import { AppState } from '../types';
 import { SecurityService } from '../services/securityService';
 import { changeFutureProtection } from '../services/vaultTransaction';
@@ -118,7 +119,10 @@ export const useVaultAuthActions = ({
     setMasterPassword(null);
     setIsUnlocked(false);
     setAppState(AppState.COVER);
-    wipeData().catch(console.error);
+    wipeData().then(() => {
+      // Re-enter the account gate so a retained cloud vault is restored before initialization.
+      if (currentAccountId()) window.location.reload();
+    }).catch(console.error);
   }, [setAppState, setIsUnlocked, setMasterPassword, wipeData]);
 
   return {

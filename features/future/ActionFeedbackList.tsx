@@ -1,3 +1,4 @@
+import { accountSessionStorage } from '../../services/accountScope';
 import { useEffect, useState } from 'react';
 import type { ActionItem } from '../../types';
 import type { ActionPracticeRecord, Goal } from '../../types/future';
@@ -12,7 +13,7 @@ const readSavedView = (): SavedFeedbackView => {
   if (typeof window === 'undefined') return { query: '', status: '全部' };
   try {
     const value: unknown = JSON.parse(
-      window.sessionStorage.getItem(ACTION_FEEDBACK_VIEW_KEY) ?? '{}',
+      accountSessionStorage.getItem(ACTION_FEEDBACK_VIEW_KEY) ?? '{}',
     );
     if (!value || typeof value !== 'object') return { query: '', status: '全部' };
     const saved = value as { query?: unknown; status?: unknown };
@@ -74,7 +75,7 @@ export function ActionFeedbackList({
 
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(ACTION_FEEDBACK_VIEW_KEY, JSON.stringify({ query, status }));
+      accountSessionStorage.setItem(ACTION_FEEDBACK_VIEW_KEY, JSON.stringify({ query, status }));
     } catch {
       // The view still works when browser storage is unavailable.
     }

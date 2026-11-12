@@ -15,7 +15,7 @@ const entry = (id: string, content = '我喜欢简洁的表达。'): DiaryEntry 
   content,
   createdAt: 100,
   tags: [],
-  isLocked: false,
+  aiVisibility: 'allowed' as const, isLocked: false,
 });
 
 const preferenceCandidate = (sourceIds: string[]) => ({

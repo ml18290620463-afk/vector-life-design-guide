@@ -61,6 +61,7 @@ export interface ChatMessageModelAssistance {
 }
 
 export interface ChatMessage {
+  aiPrivacyToken?: string;
   id: string;
   role: 'user' | 'assistant' | 'system';
   type: 'text' | 'audio' | 'record_preview';

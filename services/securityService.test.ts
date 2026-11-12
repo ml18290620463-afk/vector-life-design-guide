@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { webcrypto } from 'node:crypto';
-import { SecurityService } from './securityService';
+import { CryptoEnvironmentError, SecurityService } from './securityService';
 import { ARGON2_OWASP_MIN, hashArgon2idPassword } from './argon2idPoc';
 
 if (!globalThis.crypto) {
@@ -21,6 +21,23 @@ describe('SecurityService', () => {
 
     const decrypted = await SecurityService.decrypt(encrypted, password);
     expect(decrypted).toBe(text);
+  });
+
+  it('distinguishes unavailable encryption from a wrong password without changing ciphertext', async () => {
+    const encrypted = await SecurityService.encrypt(text, password);
+    const originalCrypto = window.crypto;
+    Object.defineProperty(window, 'crypto', { value: {}, configurable: true });
+    try {
+      await expect(SecurityService.decrypt(encrypted, password)).rejects.toBeInstanceOf(
+        CryptoEnvironmentError,
+      );
+      await expect(SecurityService.encrypt(text, password)).rejects.toBeInstanceOf(
+        CryptoEnvironmentError,
+      );
+    } finally {
+      Object.defineProperty(window, 'crypto', { value: originalCrypto, configurable: true });
+    }
+    await expect(SecurityService.decrypt(encrypted, password)).resolves.toBe(text);
   });
 
   it('should throw an error on incorrect password', async () => {

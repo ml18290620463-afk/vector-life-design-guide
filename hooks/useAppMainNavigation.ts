@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { AppState } from '../types';
 import { getMainTabPathname, isNowSurfacePathname } from '../lib/appPathRules';
 import { pushNowPath, rememberMainRoute } from '../lib/appEntryRoutes';
@@ -20,7 +20,6 @@ type UseAppMainNavigationOptions = {
 };
 
 export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNavigationOptions) => {
-  const navigationRequestRef = useRef(0);
   const preloadMainModule = useCallback((tab: MobileMainTab) => {
     if (tab === 'past') return preloadPastRepository();
     if (tab === 'future') return preloadFuturePage();
@@ -31,20 +30,11 @@ export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNav
     return Promise.resolve();
   }, []);
 
-  /**
-   * A route is committed only after its lazy chunk is ready. This retains the current,
-   * usable screen instead of replacing it with a full-screen loading mask. The request
-   * id also ensures a quick second tap always wins over an earlier navigation.
-   */
+  // Navigation feedback must never wait for a network chunk.
   const commitWhenReady = useCallback(
     (tab: MobileMainTab, commit: () => void) => {
-      const requestId = ++navigationRequestRef.current;
-      void preloadMainModule(tab)
-        .catch(() => undefined)
-        .then(() => {
-          if (requestId !== navigationRequestRef.current) return;
-          startTransition(commit);
-        });
+      void preloadMainModule(tab).catch(() => undefined);
+      commit();
     },
     [preloadMainModule],
   );
@@ -68,25 +58,12 @@ export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNav
   const handleNowRouteChange = useCallback(
     (route: NowRoute) => {
       const tab: MobileMainTab = route === 'avatar-chat' ? 'avatar' : 'now';
-      const prepare = route === 'avatar-chat' ? preloadMainModule('avatar') : preloadMainModule('now');
-      const requestId = ++navigationRequestRef.current;
-      void prepare
-        .catch(() => undefined)
-        .then(() => {
-          if (requestId !== navigationRequestRef.current) return;
-          startTransition(() => {
-            rememberMainRoute(
-              route === 'avatar-chat' ? '/avatar' : route === 'tags' ? '/now/tags' : '/now',
-            );
-            if (isMobileExperience() && route === 'avatar-chat') {
-              navigateMobileTab(tab);
-            } else {
-              pushNowPath(route);
-            }
-            setNowRoute(route);
-            setAppState(getNowRouteAppState(route));
-          });
-        });
+      void preloadMainModule(tab).catch(() => undefined);
+      rememberMainRoute(route === 'avatar-chat' ? '/avatar' : route === 'tags' ? '/now/tags' : '/now');
+      if (isMobileExperience() && route === 'avatar-chat') navigateMobileTab(tab);
+      else pushNowPath(route);
+      setNowRoute(route);
+      setAppState(getNowRouteAppState(route));
     },
     [preloadMainModule, setAppState, setNowRoute],
   );

@@ -11736,3 +11736,23 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
   min-width: 44px;
   min-height: 44px;
 }
+
+/* Per-save AI consent keeps the editor footprint unchanged. */
+.ai-visibility-dialog { width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; box-sizing: border-box; }
+.ai-visibility-dialog > p { font-size: 13px; line-height: 1.7; opacity: .75; }
+.ai-visibility-options { display: grid; gap: 10px; margin: 18px 0; }
+.ai-visibility-options button { display: grid; gap: 6px; padding: 16px; text-align: left; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 12px; min-height: 80px; cursor: pointer; }
+.ai-visibility-options strong { font-size: 15px; font-weight: 500; }
+.ai-visibility-options span { font-size: 12px; line-height: 1.6; opacity: .7; }
+.ai-visibility-options button:hover { background: rgb(128 128 128 / .08); }
+.ai-visibility-options button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.ai-visibility-dialog .ai-visibility-note { font-size: 11px; }
+
+.past-search-filters { margin: 12px 0; font-size: 13px; }
+.past-search-filters summary { cursor: pointer; padding: 8px 0; }
+.past-search-filters__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 0; }
+.past-search-filters__fields label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.past-search-filters__fields input, .past-search-filters__fields select { width: 100%; min-width: 0; padding: 8px; border: 1px solid currentColor; border-radius: 6px; background: var(--bg-primary, #171b20); color: inherit; }
+
+.now-privacy-choice { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:8px 16px; font-size:12px; color:var(--text-secondary, #858b94); }
+.now-privacy-choice select { min-width:0; max-width:65%; padding:6px 8px; border:1px solid var(--border-color, #5558); border-radius:8px; color:inherit; background:transparent; }

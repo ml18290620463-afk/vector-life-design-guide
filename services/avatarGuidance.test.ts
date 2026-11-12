@@ -14,6 +14,7 @@ const pattern: AvatarUnderstandingVersion = {
   id: 'pattern',
   statement: '面对登山安排，我会反复推迟出发',
   status: 'confirmed',
+  aiVisibility: 'allowed',
   sourceEntryIds: ['entry'],
   createdAt: 1,
 };
@@ -23,11 +24,20 @@ const principle: Principle = {
   year: 2026,
   createdAt: 1,
   showOnHome: false,
+  aiVisibility: 'allowed',
   sourcePatternIds: ['pattern'],
 };
 const fixture = () => ({
   entries: [
-    { id: 'entry', title: '登山', content: '推迟出发', tags: [], createdAt: 1, isLocked: false },
+    {
+      id: 'entry',
+      title: '登山',
+      content: '推迟出发',
+      tags: [],
+      createdAt: 1,
+      aiVisibility: 'allowed' as const,
+      isLocked: false,
+    },
   ],
   patterns: [pattern],
   principles: [principle],
@@ -36,7 +46,7 @@ const fixture = () => ({
 });
 
 describe('read-only avatar guidance', () => {
-  it('uses only confirmed patterns with extant evidence or explicit retention', () => {
+  it('uses only confirmed patterns with authorized extant evidence', () => {
     const input = fixture();
     input.patterns = [
       pattern,
@@ -48,7 +58,7 @@ describe('read-only avatar guidance', () => {
       buildGuidanceSources(input)
         .filter((s) => s.kind === '模式')
         .map((s) => s.id),
-    ).toEqual(['pattern', 'kept']);
+    ).toEqual(['pattern']);
   });
   it('connects a pattern and its chosen principle without changing either', () => {
     const input = fixture();
@@ -208,6 +218,7 @@ describe('read-only avatar guidance', () => {
           sourceRefs: [{ source: 'entry', id: 'entry' }],
           confidence: 0.86,
           status: 'confirmed',
+          aiVisibility: 'allowed',
           sensitivity: 'normal',
           createdAt: 1,
           confirmedBy: 'user',
@@ -225,10 +236,19 @@ describe('read-only avatar guidance', () => {
   it('reads current progress and follows action-goal-vision links, excluding inactive plans', () => {
     const input = fixture();
     input.future.visions = [
-      { id: 'vision', text: '亲近自然', status: 'active', revision: 1, createdAt: 1, updatedAt: 1 },
+      {
+        aiVisibility: 'allowed',
+        id: 'vision',
+        text: '亲近自然',
+        status: 'active',
+        revision: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
     ];
     input.future.goals = [
       {
+        aiVisibility: 'allowed',
         id: 'goal',
         title: '登十座山',
         visionId: 'vision',
@@ -263,6 +283,7 @@ describe('read-only avatar guidance', () => {
       ...input,
       actions: [
         {
+          aiVisibility: 'allowed' as const,
           id: 'action',
           title: '周末出发',
           goalId: 'goal',
@@ -291,6 +312,7 @@ const atomic = (overrides: Partial<AvatarAtomicMemory> = {}): AvatarAtomicMemory
   sourceRefs: [{ source: 'entry', id: 'entry' }],
   confidence: 0.7,
   status: 'confirmed',
+  aiVisibility: 'allowed',
   sensitivity: 'normal',
   createdAt: 1,
   confirmedAt: 1,

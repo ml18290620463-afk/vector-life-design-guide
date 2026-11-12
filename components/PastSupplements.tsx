@@ -1,5 +1,6 @@
+import { useAIVisibilityChoice } from './AIVisibilityDialog';
 import React, { useEffect, useRef, useState } from 'react';
-import { get, set, del } from 'idb-keyval';
+import { get, set, del } from '../services/accountIdb';
 import type { DiaryEntry, Language } from '../types';
 import { PastActionDialog } from './PastActionDialog';
 import { generateSecureId } from '../services/idGenerator';
@@ -9,15 +10,23 @@ export function PastSupplements({
   entry,
   language,
   onAppend,
+  onChangeAIVisibility,
   draftPassword,
   revealedId,
 }: {
   entry: DiaryEntry;
   language: Language;
-  onAppend?: (entryId: string, content: string, supplementId: string) => Promise<void>;
+  onAppend?: (
+    entryId: string,
+    content: string,
+    supplementId: string,
+    aiVisibility: 'private' | 'allowed',
+  ) => Promise<void>;
+  onChangeAIVisibility?: (entryId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
   draftPassword?: string | null;
   revealedId?: string;
 }) {
+  const privacy = useAIVisibilityChoice(language);
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,39 +46,50 @@ export function PastSupplements({
     ++draftVersion.current;
     setDraftLoaded(false);
     setContent('');
-    void get<{ content: string; encrypted?: boolean }>(draftKey).then(async (draft) => {
-      if (!active) return;
-      if (!draft) {
-        setDraftLoaded(true);
-        return;
-      }
-      if (draft.encrypted && !draftPassword) return;
-      try {
-        const restored = draft.encrypted
-          ? await SecurityService.decrypt(draft.content, draftPassword!)
-          : draft.content;
-        if (active) setContent(restored);
-      } catch {
-        // Keep an unreadable draft intact until the correct password is available.
-        return;
-      }
-      if (active) setDraftLoaded(true);
-    }).catch(() => { if (active) setDraftLoaded(true); });
-    return () => { active = false; };
+    void get<{ content: string; encrypted?: boolean }>(draftKey)
+      .then(async (draft) => {
+        if (!active) return;
+        if (!draft) {
+          setDraftLoaded(true);
+          return;
+        }
+        if (draft.encrypted && !draftPassword) return;
+        try {
+          const restored = draft.encrypted
+            ? await SecurityService.decrypt(draft.content, draftPassword!)
+            : draft.content;
+          if (active) setContent(restored);
+        } catch {
+          // Keep an unreadable draft intact until the correct password is available.
+          return;
+        }
+        if (active) setDraftLoaded(true);
+      })
+      .catch(() => {
+        if (active) setDraftLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [draftKey, draftPassword]);
   useEffect(() => {
     if (!draftLoaded) return;
     const version = ++draftVersion.current;
     const timer = window.setTimeout(() => {
-      draftWrites.current = draftWrites.current.catch(() => undefined).then(async () => {
-        if (version !== draftVersion.current) return;
-        if (!content.trim()) { await del(draftKey); return; }
-        const stored = draftPassword
-          ? { content: await SecurityService.encrypt(content, draftPassword), encrypted: true }
-          : { content, encrypted: false };
-        if (version !== draftVersion.current) return;
-        await set(draftKey, stored);
-      });
+      draftWrites.current = draftWrites.current
+        .catch(() => undefined)
+        .then(async () => {
+          if (version !== draftVersion.current) return;
+          if (!content.trim()) {
+            await del(draftKey);
+            return;
+          }
+          const stored = draftPassword
+            ? { content: await SecurityService.encrypt(content, draftPassword), encrypted: true }
+            : { content, encrypted: false };
+          if (version !== draftVersion.current) return;
+          await set(draftKey, stored);
+        });
     }, 350);
     return () => window.clearTimeout(timer);
   }, [content, draftKey, draftLoaded, draftPassword]);
@@ -86,8 +106,18 @@ export function PastSupplements({
         </section>
       ))}
       {(entry.supplements?.length ?? 0) > 3 && (
-        <button type="button" className="past-supplements__open" onClick={() => setShowAll((value) => !value)}>
-          {showAll ? (zh ? '收起补充' : 'Show less') : (zh ? `查看全部 ${entry.supplements!.length} 条补充` : `Show all ${entry.supplements!.length} supplements`)}
+        <button
+          type="button"
+          className="past-supplements__open"
+          onClick={() => setShowAll((value) => !value)}
+        >
+          {showAll
+            ? zh
+              ? '收起补充'
+              : 'Show less'
+            : zh
+              ? `查看全部 ${entry.supplements!.length} 条补充`
+              : `Show all ${entry.supplements!.length} supplements`}
         </button>
       )}
       {onAppend && (
@@ -103,6 +133,35 @@ export function PastSupplements({
           {zh ? '补充' : 'Add supplement'}
         </button>
       )}
+      <button
+        type="button"
+        className="past-supplements__open"
+        disabled={busy || !onChangeAIVisibility}
+        onClick={async () => {
+          if (pending.current) return;
+          pending.current = true;
+          setBusy(true);
+          setError('');
+          try {
+            const choice = await privacy.request(true);
+            if (choice) await onChangeAIVisibility?.(entry.id, choice);
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : '权限保存失败，请重试');
+          } finally {
+            pending.current = false;
+            setBusy(false);
+          }
+        }}
+      >
+        {entry.aiVisibility === 'allowed'
+          ? zh
+            ? '允许 AI 可见'
+            : 'AI allowed'
+          : zh
+            ? '仅自己可见'
+            : 'Only me'}
+      </button>
+      {!open && error && <p role="alert">{error}</p>}
       {open && (
         <PastActionDialog
           title={zh ? '补充' : 'Add supplement'}
@@ -117,7 +176,9 @@ export function PastSupplements({
               setBusy(true);
               setError('');
               try {
-                await onAppend(entry.id, content, submission.current);
+                const aiVisibility = await privacy.request(true);
+                if (!aiVisibility) return;
+                await onAppend(entry.id, content, submission.current, aiVisibility);
                 ++draftVersion.current;
                 await draftWrites.current.catch(() => undefined);
                 await del(draftKey);
@@ -156,6 +217,7 @@ export function PastSupplements({
           </form>
         </PastActionDialog>
       )}
+      {privacy.dialog}
     </div>
   );
 }

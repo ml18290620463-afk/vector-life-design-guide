@@ -1,4 +1,4 @@
-import { get, set } from 'idb-keyval';
+import { get, set } from './accountIdb';
 import type { DiaryEntry } from '../types';
 import { DiaryStorageKeys } from './diaryStorage';
 

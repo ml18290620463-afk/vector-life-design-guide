@@ -1,3 +1,4 @@
+import { useAIVisibilityChoice } from '../../components/AIVisibilityDialog';
 import React, { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useFuture } from '../../hooks/useFuture';
 import { generateSecureId } from '../../services/idGenerator';
@@ -81,6 +82,8 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   } = useNowDraft();
   const { toastMessage, showToast } = useToast();
   const [sending, setSending] = useState(false);
+  const [recordVisibility, setRecordVisibility] = useState<'private' | 'allowed'>('private');
+  const privacy = useAIVisibilityChoice(_language);
   const editorContainer = useRef<HTMLDivElement>(null);
   const scrollPositions = useRef<{ element: HTMLElement; top: number }[]>([]);
   const changeRecordingRoute = (next: NowRoute) => {
@@ -164,13 +167,15 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       };
     const attempt = retry.current;
     try {
+      const aiVisibility = source === 'manual' && recordVisibility === 'private' ? 'private' : await privacy.request();
+      if (!aiVisibility) return false;
       if (!(await saveDraft({ ...overrideDraft, submission_id: attempt.id })))
         throw new Error('草稿尚未安全保存，请重试');
       const resumedEntry = pastEntries.find((entry) => entry.id === attempt.id);
       const entryPayload = recordToDiaryEntry(record);
       entryPayload.updatedAt = attempt.updatedAt;
       const persistedEntry =
-        resumedEntry ?? (await onPersistRecord({ ...entryPayload, id: attempt.id }));
+        resumedEntry ?? (await onPersistRecord({ ...entryPayload, id: attempt.id, aiVisibility, aiConsentAt: Date.now(), aiSourceSessionId: avatarSessionId ?? undefined }));
       // Start cleanup before navigation so unmount cannot flush the submitted draft again.
       const cleanup = resetAfterSend().catch(() => false);
       retry.current = null;
@@ -230,6 +235,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       {(route === 'now' || route === 'tags') && (
         <div ref={editorContainer} hidden={route === 'tags'}>
           <NowPage
+            privacyControl={<label className="now-privacy-choice">内容可见性 <select value={recordVisibility} disabled={sending} onChange={event => setRecordVisibility(event.target.value as 'private' | 'allowed')}><option value="private">仅自己可见</option><option value="allowed">允许 AI 使用（保存时确认）</option></select></label>}
             draft={draft}
             setDraft={setDraft}
             sending={sending}
@@ -283,6 +289,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           />
         </Suspense>
       )}
+      {privacy.dialog}
       {toastMessage && <div className="now-toast">{toastMessage}</div>}
     </div>
   );

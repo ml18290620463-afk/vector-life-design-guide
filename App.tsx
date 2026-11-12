@@ -23,10 +23,7 @@ import { useEntrySurfaceActions } from './hooks/useEntrySurfaceActions';
 import { useAppBootEffects } from './hooks/useAppBootEffects';
 import { useVaultAuthActions } from './hooks/useVaultAuthActions';
 import { getHomePrinciples } from './lib/homePrinciples';
-import {
-  shouldShowGlobalBackground,
-  shouldUseMobileShell,
-} from './lib/appShellRules';
+import { shouldShowGlobalBackground, shouldUseMobileShell } from './lib/appShellRules';
 import { DEFAULT_AVATAR_CONTEXT } from './features/avatar/types';
 
 import { readAvatarAtomicMemories } from './services/avatarMemoryAtoms';
@@ -103,6 +100,7 @@ const App: React.FC = () => {
     patternPrincipleLinks,
     addEntry,
     updateEntryRelatedIds,
+    changeAIVisibility,
     appendSupplement,
     deleteEntry,
     deleteEntries,
@@ -155,22 +153,32 @@ const App: React.FC = () => {
     preloadMainModule,
   } = useAppMainNavigation({ setAppState, setNowRoute });
 
-  // Main modules share a persistent navigation bar, so waiting until a click
-  // to start their first chunk request makes the product feel unresponsive.
-  // Warm them once the entry surface has settled; individual navigation still
-  // retains its race protection if the user clicks before this work finishes.
+  // Stagger background loading so it does not compete with the initial render.
   useEffect(() => {
+    const connection = (
+      navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }
+    ).connection;
+    if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType ?? '')) return;
     let cancelled = false;
-    const warmMainModules = () => {
-      if (cancelled) return;
-      void Promise.allSettled([
-        preloadMainModule('past'),
-        preloadMainModule('future'),
-        preloadMainModule('now'),
-        preloadMainModule('avatar'),
-      ]);
+    let timer: number;
+    const tabs = ['past', 'now', 'future', 'avatar'] as const;
+    const warm = async (index: number) => {
+      if (cancelled || index >= tabs.length) return;
+      try {
+        await preloadMainModule(tabs[index]);
+      } catch {
+        /* Navigation retains its error boundary. */
+      }
+      if (!cancelled)
+        timer = window.setTimeout(() => {
+          void warm(index + 1);
+        }, 500);
     };
-    const timer = window.setTimeout(warmMainModules, 450);
+    timer = window.setTimeout(() => {
+      void warm(0);
+    }, 1500);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -242,8 +250,15 @@ const App: React.FC = () => {
   if (loadError)
     return (
       <main className="min-h-screen grid place-content-center gap-4 p-6" role="alert">
-        <h1>暂时无法打开资料库</h1>
-        <p>{loadError}</p>
+        <h1>{!window.crypto?.subtle ? '请通过安全连接打开资料库' : '暂时无法打开资料库'}</h1>
+        <p>
+          {!window.crypto?.subtle
+            ? '当前 HTTP 连接无法使用浏览器加密功能。请使用 HTTPS 地址；反复刷新无法解决此问题。'
+            : loadError.startsWith('DECRYPTION_FAILED')
+              ? '加密资料未能解锁，可能是密码不匹配或加密内容异常。请保留当前浏览器数据，以便进一步检查。'
+              : loadError}
+        </p>
+        <p>请勿清除浏览器的网站数据，以免丢失本机记录。</p>
         <button type="button" onClick={() => window.location.reload()}>
           重新加载
         </button>
@@ -338,8 +353,9 @@ const App: React.FC = () => {
             onNowRecordComplete={handleNowRecordComplete}
             onNowRouteChange={changeNowRoute}
             onPersistNowRecord={handlePersistNowRecord}
-            onAppendSupplement={(entryId, content, supplementId) =>
-              appendSupplement(entryId, content, supplementId, masterPassword)
+            onChangeAIVisibility={changeAIVisibility}
+            onAppendSupplement={(entryId, content, supplementId, aiVisibility) =>
+              appendSupplement(entryId, content, supplementId, masterPassword, aiVisibility)
             }
             onRelatedEntriesResolved={updateEntryRelatedIds}
             actions={actions}

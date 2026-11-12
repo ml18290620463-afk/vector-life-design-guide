@@ -35,7 +35,7 @@
  *   - `unlockSecretKey(password)` — returns the 32-byte secret as
  *     a `Uint8Array`. Wipe via `wipeSecret()` after use.
  */
-import { get, set, del } from 'idb-keyval';
+import { get, set, del } from './accountIdb';
 import { ed } from './edBootstrap';
 import { sha512 } from '@noble/hashes/sha2.js';
 import { DiaryStorageKeys } from './diaryStorage';

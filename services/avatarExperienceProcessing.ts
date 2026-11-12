@@ -15,7 +15,7 @@ export async function proposeExperienceMemories(
   entries: DiaryEntry[],
   cancelled: () => boolean,
   index: LocalSemanticIndexItem[] = buildLocalSemanticIndex(
-    entries.map((item) => ({ ...item, title: '', tags: [], supplements: undefined })),
+    entries.filter(item => isAccessibleDiaryEntry(item)).map((item) => ({ ...item, title: '', tags: [], supplements: undefined })),
   ),
 ): Promise<boolean> {
   if (!isAccessibleDiaryEntry(entry) || cancelled()) return false;
@@ -66,7 +66,7 @@ export async function proposeExperienceMemories(
       tags: [],
       createdAt: source.createdAt,
     })),
-    understandings: readAvatarUnderstandings().filter((item) => item.status === 'confirmed'),
+    understandings: readAvatarUnderstandings().filter((item) => item.status === 'confirmed' && item.sourceEntryIds.length > 0 && item.sourceEntryIds.every(id => entries.some(e => e.id === id && isAccessibleDiaryEntry(e)))),
   });
   if (cancelled()) return false;
   // Only evidence actually supplied in this request can support a proposal.

@@ -1,7 +1,7 @@
 import { clear } from 'idb-keyval';
 import { readFutureSnapshot } from '../../../services/futureRepository';
 import { afterEach, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AvatarMemoryLibrary } from './AvatarMemoryLibrary';
 import type { AvatarAtomicMemory } from '../../avatar/types';
 import {
@@ -13,11 +13,14 @@ import {
 } from '../../../services/avatarMemory';
 import * as storage from '../../../services/browserStorage';
 
+const choosePrivate = () =>
+  fireEvent.click(within(screen.getByRole('dialog', { name: '是否允许 AI 可见？' })).getByRole('button', { name: /仅自己可见/ }));
+
 afterEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
 });
-it('keeps pending interpretations out of confirmed results and retains the dialog when saving fails', () => {
+it('keeps pending interpretations out of confirmed results and retains the dialog when saving fails', async () => {
   const pattern = {
     id: 'pending',
     statement: '可能更喜欢独立工作',
@@ -54,19 +57,20 @@ it('keeps pending interpretations out of confirmed results and retains the dialo
   expect(screen.queryByText(pattern.statement)).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
   expect(screen.queryByText(unready.statement)).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: pattern.statement }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(pattern.statement) }));
   expect(screen.queryByText(/不可展示的旧原文/)).toBeNull();
   fireEvent.change(screen.getByRole('textbox', { name: '记忆内容' }), {
     target: { value: '我喜欢协作' },
   });
   const failed = vi.spyOn(storage, 'setStoredJson').mockReturnValue(false);
   fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
-  expect(screen.getByRole('dialog')).toBeTruthy();
-  expect(toast).toHaveBeenCalledWith('保存失败，请重试');
+  choosePrivate();
+  await waitFor(() => expect(toast).toHaveBeenCalledWith('保存失败，请重试'));
   expect(refresh).not.toHaveBeenCalled();
   failed.mockRestore();
   fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
-  expect(screen.queryByRole('dialog')).toBeNull();
+  choosePrivate();
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(readAvatarUnderstandings()[0]).toMatchObject({
     id: 'pending',
     statement: '我喜欢协作',
@@ -101,11 +105,12 @@ it('confirms one direction candidate into the canonical action store', async () 
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
-  fireEvent.click(screen.getByRole('button', { name: memory.statement }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(memory.statement) }));
   fireEvent.change(screen.getByRole('combobox', { name: '保存类型' }), {
     target: { value: 'action' },
   });
   fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
+  choosePrivate();
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   const snapshot = await readFutureSnapshot();
   expect(snapshot.actions).toHaveLength(1);
@@ -153,16 +158,16 @@ it('filters about-me categories without duplicating multi-facet memories or hidi
       onAdd={vi.fn()}
     />,
   );
-  expect(screen.queryByRole('button', { name: memory.statement })).toBeNull();
+  expect(screen.queryByRole('button', { name: new RegExp(`^${memory.statement}$`) })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: /偏好与边界/ }));
-  expect(screen.getByRole('button', { name: memory.statement })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: profile.statement })).toBeNull();
+  expect(screen.getByRole('button', { name: new RegExp(memory.statement) })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: new RegExp(profile.statement) })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '返回' }));
   fireEvent.click(screen.getByRole('button', { name: /基础与处境/ }));
-  expect(screen.queryByRole('button', { name: memory.statement })).toBeNull();
-  expect(screen.getByRole('button', { name: profile.statement })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: new RegExp(memory.statement) })).toBeNull();
+  expect(screen.getByRole('button', { name: new RegExp(profile.statement) })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
-  expect(screen.getByRole('button', { name: pending.statement })).toBeTruthy();
+  expect(screen.getByRole('button', { name: new RegExp(pending.statement) })).toBeTruthy();
   expect(screen.queryByRole('navigation', { name: '关于我分类' })).toBeNull();
 });
 
@@ -199,11 +204,11 @@ it('shows editable patterns without mirroring principles or future plans', () =>
   );
   fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  expect(screen.getByRole('button', { name: pattern.statement })).toBeTruthy();
+  expect(screen.getByRole('button', { name: new RegExp(pattern.statement) })).toBeTruthy();
   expect(screen.queryByText(principle.statement)).toBeNull();
   expect(screen.queryByText(vision.statement)).toBeNull();
   expect(screen.queryByText(action.statement)).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: pattern.statement }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(pattern.statement) }));
   expect(screen.getByRole('button', { name: '调整表述' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '关闭' }));
   fireEvent.click(screen.getByRole('button', { name: '我的变化' }));
@@ -254,8 +259,8 @@ it('searches confirmed facts across drawers, excludes candidates and clears sear
   fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
     target: { value: '工作' },
   });
-  expect(screen.getByRole('button', { name: preference.statement })).toBeTruthy();
-  expect(screen.getByRole('button', { name: profile.statement })).toBeTruthy();
+  expect(screen.getByRole('button', { name: new RegExp(preference.statement) })).toBeTruthy();
+  expect(screen.getByRole('button', { name: new RegExp(profile.statement) })).toBeTruthy();
   expect(screen.queryByText(pending.statement)).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '返回' }));
   expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
@@ -263,10 +268,10 @@ it('searches confirmed facts across drawers, excludes candidates and clears sear
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: '工作' } });
   fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
-  expect(screen.queryByRole('button', { name: preference.statement })).toBeNull();
+  expect(screen.queryByRole('button', { name: new RegExp(preference.statement) })).toBeNull();
 });
 
-it('shows concise evidence counts and lets a person confirm or set aside an interpretation', () => {
+it('shows concise evidence counts and lets a person confirm or set aside an interpretation', async () => {
   const memory: AvatarAtomicMemory = {
     id: 'traceable-memory',
     statement: '我在复杂选择前会先独处整理判断',
@@ -297,10 +302,11 @@ it('shows concise evidence counts and lets a person confirm or set aside an inte
   fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
   expect(screen.queryByText('基于 2 条依据')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: memory.statement }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(memory.statement) }));
   expect(screen.queryByText('基于 2 条依据')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '准确' }));
-  expect(screen.queryByRole('dialog')).toBeNull();
+  choosePrivate();
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(readAvatarAtomicMemories()[0]).toMatchObject({
     id: memory.id,
     status: 'confirmed',
@@ -335,7 +341,7 @@ it('sets aside an interpretation without deleting the original evidence', () => 
   );
   fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  fireEvent.click(screen.getByRole('button', { name: memory.statement }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(memory.statement) }));
   fireEvent.click(screen.getByRole('button', { name: '暂不采用' }));
   expect(screen.getByText('分身将不再使用这条理解，原始记录和经历不会删除。')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '暂不采用' }));
@@ -346,7 +352,7 @@ it('sets aside an interpretation without deleting the original evidence', () => 
   });
 });
 
-it('lets a person update a current state and then compare the dated prior wording in my changes', () => {
+it('lets a person update a current state and then compare the dated prior wording in my changes', async () => {
   const state: AvatarAtomicMemory = {
     id: 'state-role-before',
     statement: '我目前在杭州从事产品设计',
@@ -377,7 +383,7 @@ it('lets a person update a current state and then compare the dated prior wordin
   );
 
   fireEvent.click(screen.getByRole('button', { name: /基础与处境/ }));
-  fireEvent.click(screen.getByRole('button', { name: state.statement }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(state.statement) }));
   expect(screen.getByText(/当前状态 · 最近更新于/)).toBeTruthy();
   expect(screen.getByRole('button', { name: '仍适用' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '已经变化' }));
@@ -385,7 +391,8 @@ it('lets a person update a current state and then compare the dated prior wordin
     target: { value: '我目前在上海从事产品策略' },
   });
   fireEvent.click(screen.getByRole('button', { name: '确认更新' }));
-  expect(toast).toHaveBeenCalledWith('已更新记忆');
+  choosePrivate();
+  await waitFor(() => expect(toast).toHaveBeenCalledWith('已更新记忆'));
 
   const history = readAvatarAtomicMemories();
   rerender(
@@ -402,7 +409,7 @@ it('lets a person update a current state and then compare the dated prior wordin
   expect(screen.queryByText('我目前在上海从事产品策略')).toBeNull();
 });
 
-it('revises a confirmed pattern cautiously without presenting the revision as a change', () => {
+it('revises a confirmed pattern cautiously without presenting the revision as a change', async () => {
   const pattern = {
     id: 'pattern-version-ui',
     statement: '面对压力时我会先独自整理',
@@ -432,7 +439,7 @@ it('revises a confirmed pattern cautiously without presenting the revision as a 
 
   fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
   fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  fireEvent.click(screen.getByRole('button', { name: pattern.statement }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(pattern.statement) }));
   fireEvent.click(screen.getByRole('button', { name: '调整表述' }));
   expect(
     screen.getByText('只有当这个规律持续变化时再修订；一次情绪或事件更适合留在记录中。'),
@@ -441,7 +448,8 @@ it('revises a confirmed pattern cautiously without presenting the revision as a 
     target: { value: '面对持续压力时我会先判断是否需要支持' },
   });
   fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
-  expect(toast).toHaveBeenCalledWith('已更新模式');
+  choosePrivate();
+  await waitFor(() => expect(toast).toHaveBeenCalledWith('已更新模式'));
   expect(refresh).toHaveBeenCalledOnce();
 
   rerender(
@@ -490,7 +498,7 @@ it('explains a retained pattern after its original experience was deleted withou
 
 it.each(['confirmed', 'rejected'] as const)(
   'reviews a candidate inline as %s without opening a form',
-  (status) => {
+  async (status) => {
     const memory: AvatarAtomicMemory = {
       id: 'inline-candidate',
       statement: '我偏好安静的工作环境',
@@ -521,14 +529,15 @@ it.each(['confirmed', 'rejected'] as const)(
     fireEvent.click(
       screen.getByRole('button', { name: status === 'confirmed' ? '确认记住' : '忽略' }),
     );
-    expect(screen.queryByRole('dialog')).toBeNull();
+    if (status === 'confirmed') choosePrivate();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(readAvatarAtomicMemories().find((item) => item.id === memory.id)?.status).toBe(status);
     expect(refresh).toHaveBeenCalledOnce();
     expect(screen.queryByRole('button', { name: '待确认 · 1' })).toBeNull();
   },
 );
 
-it('keeps a failed inline review available and excludes expired candidates', () => {
+it('keeps a failed inline review available and excludes expired candidates', async () => {
   const memory: AvatarAtomicMemory = {
     id: 'retry-candidate',
     statement: '我偏好安静的工作环境',
@@ -558,7 +567,8 @@ it('keeps a failed inline review available and excludes expired candidates', () 
   fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
   vi.spyOn(storage, 'setStoredJson').mockReturnValue(false);
   fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
-  expect(toast).toHaveBeenCalledWith('保存失败，请重试');
+  choosePrivate();
+  await waitFor(() => expect(toast).toHaveBeenCalledWith('保存失败，请重试'));
   expect(refresh).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: '确认记住' })).toBeTruthy();
 });

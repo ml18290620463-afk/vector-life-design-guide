@@ -1,4 +1,4 @@
-import { get } from 'idb-keyval';
+import { get } from './accountIdb';
 import type {
   ActionItem,
   ActionItemStatus,
@@ -118,6 +118,13 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
   const now = Date.now();
   return {
     id: safeEntry.id || generateSecureId('rec'),
+    aiVisibility: safeEntry.aiVisibility === 'allowed' ? 'allowed' : 'private',
+    aiConsentAt:
+      typeof safeEntry.aiConsentAt === 'number' && Number.isFinite(safeEntry.aiConsentAt)
+        ? safeEntry.aiConsentAt
+        : undefined,
+    aiSourceSessionId:
+      typeof safeEntry.aiSourceSessionId === 'string' ? safeEntry.aiSourceSessionId : undefined,
     title: safeEntry.title || safeEntry.name || 'Trace Record',
     content: safeEntry.content || safeEntry.text || safeEntry.body || '',
     createdAt:
@@ -163,6 +170,8 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
 
 export const sanitizePrinciple = (principle: Principle): Principle => ({
   ...principle,
+  aiVisibility: principle.aiVisibility === 'allowed' ? 'allowed' : 'private',
+  aiConsentAt: typeof principle.aiConsentAt === 'number' && Number.isFinite(principle.aiConsentAt) && principle.aiConsentAt >= 0 ? principle.aiConsentAt : undefined,
   tags: sanitizeStringArray(principle.tags),
   supersedesPrincipleId:
     typeof principle.supersedesPrincipleId === 'string' && principle.supersedesPrincipleId.trim()
@@ -275,6 +284,8 @@ export const sanitizeActionItem = (value: unknown): ActionItem | null => {
   }
 
   return {
+    aiVisibility: action.aiVisibility === 'allowed' ? 'allowed' : 'private',
+    aiConsentAt: action.aiConsentAt,
     id: action.id,
     title: action.title.trim(),
     goalId: typeof action.goalId === 'string' ? action.goalId : undefined,

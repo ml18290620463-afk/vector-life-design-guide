@@ -1,3 +1,4 @@
+import { accountLocalStorage } from './accountScope';
 import { forgetPastProcessing } from './pastProcessingCache';
 import type { DiaryEntry, Principle, PatternPrincipleLink } from '../types';
 import { DiaryStorageKeys as K, removeDiaryMirror } from './diaryStorage';
@@ -37,12 +38,12 @@ export function recoverSourceDeletion(): Promise<void> {
       const key = 'vector:avatar:sessions:v1';
       let sessions: unknown[] = [];
       try {
-        const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '[]');
+        const parsed: unknown = JSON.parse(accountLocalStorage.getItem(key) ?? '[]');
         if (Array.isArray(parsed)) sessions = parsed;
       } catch {
         /* Corrupt derived cache can be discarded; source records remain in IDB. */
       }
-      localStorage.setItem(
+      accountLocalStorage.setItem(
         key,
         JSON.stringify(
           sessions.filter(

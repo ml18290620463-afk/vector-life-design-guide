@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ArchivePrinciplesView } from './ArchivePrinciplesView';
 import { TRANSLATIONS } from '../constants';
 import type { Principle } from '../types';
 
 const t = TRANSLATIONS.zh;
+const choosePrivate = () => fireEvent.click(within(screen.getByRole('dialog', { name: '是否允许 AI 可见？' })).getByRole('button', { name: /仅自己可见/ }));
 
 const baseProps = {
   theme: 'dark' as const,
@@ -27,12 +28,7 @@ describe('ArchivePrinciplesView', () => {
     };
 
     render(
-      <ArchivePrinciplesView
-        {...baseProps}
-        language="zh"
-        displayFirst
-        principles={[principle]}
-      />,
+      <ArchivePrinciplesView {...baseProps} language="zh" displayFirst principles={[principle]} />,
     );
 
     expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
@@ -95,10 +91,14 @@ describe('ArchivePrinciplesView', () => {
     expect(screen.getByRole('heading', { name: '编辑原则' })).toBeTruthy();
     expect(screen.getByText('这一条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
-    expect(onUpdatePrinciple).toHaveBeenCalledWith({
+    choosePrivate();
+    await waitFor(() => expect(onUpdatePrinciple).toHaveBeenCalledWith({
       ...principle,
       text: '先核对事实，再作判断',
-    });
+      application: undefined,
+      aiVisibility: 'private',
+      aiConsentAt: expect.any(Number),
+    }));
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '书写原则' })).toBeNull());
     expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
@@ -131,12 +131,14 @@ describe('ArchivePrinciplesView', () => {
     expect(screen.getByLabelText('修正原话')).toBeTruthy();
     fireEvent.click(screen.getByText('记录新的变化'));
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+    choosePrivate();
 
     await waitFor(() =>
       expect(onRevisePrinciple).toHaveBeenCalledWith(
         principle,
         '先核对事实，再作判断',
         'evolution',
+        expect.objectContaining({ aiVisibility: 'private' }),
       ),
     );
   });
@@ -186,9 +188,10 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.change(screen.getByLabelText(t.addPrinciple), {
       target: { value: '先确认事实，再作判断' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+    choosePrivate();
 
-    expect(onAddPrinciple).toHaveBeenCalledWith(
+    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledWith(
       '先确认事实，再作判断',
       expect.any(Number),
       true,
@@ -197,13 +200,14 @@ describe('ArchivePrinciplesView', () => {
       undefined,
       [],
       [],
-    );
+      'private',
+    ));
     await waitFor(() => expect(onManagementChange).toHaveBeenLastCalledWith(false));
     expect(screen.queryByLabelText(t.addPrinciple)).toBeNull();
     expect(screen.getByRole('button', { name: '写原则' })).toBeTruthy();
   });
 
-  it('keeps the exact practice record as the source when an action is distilled', () => {
+  it('keeps the exact practice record as the source when an action is distilled', async () => {
     const onAddPrinciple = vi.fn();
     render(
       <ArchivePrinciplesView
@@ -225,8 +229,9 @@ describe('ArchivePrinciplesView', () => {
       target: { value: '会议开始前先确认范围' },
     });
     fireEvent.click(screen.getByRole('button', { name: t.addPrinciple }));
+    choosePrivate();
 
-    expect(onAddPrinciple).toHaveBeenLastCalledWith(
+    await waitFor(() => expect(onAddPrinciple).toHaveBeenLastCalledWith(
       '会议开始前先确认范围',
       expect.any(Number),
       true,
@@ -235,7 +240,8 @@ describe('ArchivePrinciplesView', () => {
       undefined,
       [],
       ['practice-2'],
-    );
+      'private',
+    ));
   });
 
   it('keeps writing focused and records principle metadata automatically', () => {
@@ -244,7 +250,7 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
 
     expect(screen.getByText('这一条')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '留下这句话' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '保存' })).toBeTruthy();
     for (const hiddenControl of [
       '记录于',
       '更多设置',
@@ -282,13 +288,14 @@ describe('ArchivePrinciplesView', () => {
     expect(textarea.value).toBe('Be water');
   });
 
-  it('saves the complete principle at the 120-character boundary', () => {
+  it('saves the complete principle at the 120-character boundary', async () => {
     const onAddPrinciple = vi.fn();
     render(<ArchivePrinciplesView {...baseProps} onAddPrinciple={onAddPrinciple} />);
     const text = 'A'.repeat(120);
     fireEvent.change(screen.getByLabelText(t.addPrinciple), { target: { value: text } });
     fireEvent.click(screen.getByRole('button', { name: t.addPrinciple }));
-    expect(onAddPrinciple).toHaveBeenCalledTimes(1);
+    choosePrivate();
+    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledTimes(1));
     expect(onAddPrinciple.mock.calls[0][0]).toBe(text);
   });
 
@@ -316,7 +323,7 @@ describe('ArchivePrinciplesView', () => {
     expect(onAddPrinciple).not.toHaveBeenCalled();
   });
 
-  it('clicking add with a non-empty input fires onAddPrinciple with text + year + showOnHome', () => {
+  it('clicking add with a non-empty input fires onAddPrinciple with text + year + showOnHome', async () => {
     const onAddPrinciple = vi.fn();
     render(<ArchivePrinciplesView {...baseProps} onAddPrinciple={onAddPrinciple} />);
     fireEvent.change(screen.getByLabelText(t.addPrinciple), {
@@ -326,7 +333,8 @@ describe('ArchivePrinciplesView', () => {
       .getAllByRole('button')
       .find((b) => b.textContent?.includes(t.addPrinciple));
     fireEvent.click(button!);
-    expect(onAddPrinciple).toHaveBeenCalledTimes(1);
+    choosePrivate();
+    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledTimes(1));
     const [text, year, showOnHome] = onAddPrinciple.mock.calls[0];
     expect(text).toBe('Be water, friend');
     expect(typeof year).toBe('number');
@@ -430,7 +438,7 @@ describe('ArchivePrinciplesView', () => {
     expect(screen.queryByText('压力升高时，你会忽略自己的边界。')).toBeNull();
   });
 
-  it('keeps principle writing independent from avatar patterns', () => {
+  it('keeps principle writing independent from avatar patterns', async () => {
     const onAddPrinciple = vi.fn();
     render(
       <ArchivePrinciplesView
@@ -450,7 +458,8 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.click(
       screen.getAllByRole('button').find((button) => button.textContent?.includes(t.addPrinciple))!,
     );
-    expect(onAddPrinciple).toHaveBeenCalledWith(
+    choosePrivate();
+    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledWith(
       '先做最小步骤',
       expect.any(Number),
       true,
@@ -459,10 +468,11 @@ describe('ArchivePrinciplesView', () => {
       undefined,
       [],
       [],
-    );
+      'private',
+    ));
   });
 
-  it('creates a principle with system-owned metadata and no manual tag selection', () => {
+  it('creates a principle with system-owned metadata and no manual tag selection', async () => {
     const onAddPrinciple = vi.fn();
     render(<ArchivePrinciplesView {...baseProps} language="zh" onAddPrinciple={onAddPrinciple} />);
     fireEvent.change(screen.getByLabelText(t.addPrinciple), {
@@ -471,7 +481,8 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.click(
       screen.getAllByRole('button').find((button) => button.textContent?.includes(t.addPrinciple))!,
     );
-    expect(onAddPrinciple).toHaveBeenCalledWith(
+    choosePrivate();
+    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledWith(
       '重要事情先开始',
       new Date().getFullYear(),
       true,
@@ -480,7 +491,8 @@ describe('ArchivePrinciplesView', () => {
       undefined,
       [],
       [],
-    );
+      'private',
+    ));
     expect(screen.queryByLabelText('标签（可选）')).toBeNull();
   });
 
@@ -620,12 +632,14 @@ describe('Past principle failure and exit protection', () => {
     render(<ArchivePrinciplesView {...baseProps} displayFirst onAddPrinciple={save} />);
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
     fireEvent.change(screen.getByLabelText(t.addPrinciple), { target: { value: '先验证再判断' } });
-    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+    choosePrivate();
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('操作失败'));
     expect((screen.getByLabelText(t.addPrinciple) as HTMLTextAreaElement).value).toBe(
       '先验证再判断',
     );
-    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+    choosePrivate();
     await waitFor(() => expect(screen.queryByLabelText(t.addPrinciple)).toBeNull());
     expect(save).toHaveBeenCalledTimes(2);
   });
@@ -697,4 +711,29 @@ it('does not expose any avatar-pattern linkage in the principle editor', () => {
   fireEvent.click(screen.getByRole('button', { name: '写原则' }));
   expect(screen.queryByText('关联模式（可选）')).toBeNull();
   expect(screen.queryByText('任务不清楚时延后开始')).toBeNull();
+});
+
+it('saves optional principle annotations without requiring them', async () => {
+  const onAddPrinciple = vi.fn().mockResolvedValue(undefined);
+  render(<ArchivePrinciplesView {...baseProps} language="zh" onAddPrinciple={onAddPrinciple} />);
+  fireEvent.change(screen.getByLabelText(t.addPrinciple), { target: { value: '先核实，再判断' } });
+  fireEvent.click(screen.getByRole('button', { name: /补充说明/ }));
+  fireEvent.change(screen.getByLabelText('适用时刻'), { target: { value: '信息不足时' } });
+  fireEvent.change(screen.getByLabelText('具体做法'), { target: { value: '找两个独立来源' } });
+  fireEvent.click(screen.getByRole('button', { name: '完成' }));
+  fireEvent.click(screen.getByRole('button', { name: t.addPrinciple }));
+  choosePrivate();
+  await waitFor(() =>
+    expect(onAddPrinciple).toHaveBeenCalledWith(
+      '先核实，再判断',
+      expect.any(Number),
+      true,
+      undefined,
+      { trigger: '信息不足时', action: '找两个独立来源' },
+      undefined,
+      [],
+      [],
+      'private',
+    ),
+  );
 });

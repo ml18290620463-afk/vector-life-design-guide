@@ -1,5 +1,6 @@
+import { accountLocalStorage } from './accountScope';
 import { PAST_PROCESSING_KEY } from './pastProcessingCache';
-import { PRIVATE_DRAFT_KEY } from './privateDraftKey';
+import { PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY } from './privateDraftKey';
 import { getDiaryStorageKeys } from './diaryStorage';
 import { getLegacyStorageKeys, migrationEpochKey } from './diaryMigration';
 import { emptyFutureState } from './futureRepository';
@@ -18,7 +19,7 @@ export function recoverVaultWipe(): Promise<void> {
       true,
     );
     if (!job) return;
-    for (const key of job) localStorage.removeItem(key);
+    for (const key of job) accountLocalStorage.removeItem(key);
     await vaultTransaction([WIPE_JOB], (v) => {
       v[WIPE_JOB] = undefined;
     });
@@ -39,13 +40,14 @@ export async function wipeVault(userId?: string) {
     ...legacyKeys,
     'vector:avatar:understandings:v1',
     'vector:avatar:sessions:v1',
+    `vector:backup-status:v1:${userId ?? 'local'}`,
     'now_draft',
     'pending_records',
     'user_custom_anchors',
   ];
   await vaultTransaction(
     [
-      PRIVATE_DRAFT_KEY,
+      PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY,
       epochKey,
       ...Object.values(keys),
       ...legacyKeys,
@@ -59,7 +61,7 @@ export async function wipeVault(userId?: string) {
       for (const key of legacyKeys) v[key] = undefined;
       v[keys.future] = emptyFutureState();
       for (const key of [
-        PRIVATE_DRAFT_KEY,
+        PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY,
         keys.passwordHash,
         keys.passwordSalt,
         keys.deviceKeypair,

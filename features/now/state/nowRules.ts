@@ -1,3 +1,4 @@
+import { canAIReadEntry } from '../../../services/aiPrivacy';
 import { generateSecureId } from '../../../services/idGenerator';
 import { CONFIG } from '../constants/config';
 import {
@@ -248,7 +249,7 @@ const tokenizeRecallText = (text: string): string[] => {
 };
 
 export const selectAvatarRecallMemories = (
-  entries: Array<Pick<DiaryEntry, 'id' | 'title' | 'content' | 'tags' | 'createdAt'>>,
+  entries: DiaryEntry[],
   query: string,
   limit = 3,
 ): AvatarRecallMemory[] => {
@@ -260,7 +261,7 @@ export const selectAvatarRecallMemories = (
   const queryTermSet = new Set(queryTerms);
 
   return entries
-    .filter((entry) => normalizeEntryText(entry).length > 0)
+    .filter((entry) => canAIReadEntry(entry) && normalizeEntryText(entry).length > 0)
     .map((entry) => {
       const body = normalizeEntryText(entry);
       const tags = entry.tags.map(stripNowTagPrefix).filter(Boolean);

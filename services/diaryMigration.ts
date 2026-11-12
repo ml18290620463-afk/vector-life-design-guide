@@ -1,4 +1,5 @@
-import { get } from 'idb-keyval';
+import { accountLocalStorage } from './accountScope';
+import { get } from './accountIdb';
 import { Container, DiaryEntry, Principle } from '../types';
 import { getStoredString } from './browserStorage';
 import { DIARY_LEGACY_KEYS, getDiaryStorageKeys, mirrorDiaryValue } from './diaryStorage';
@@ -208,7 +209,7 @@ export const scanLegacyDiaryData = async (
   for (let index = 0; index < legacyKeys.length; index += 1) {
     const key = legacyKeys[index];
     const idbValue = await get(key);
-    const value = idbValue === undefined ? parseLocalValue(localStorage.getItem(key)) : idbValue;
+    const value = idbValue === undefined ? parseLocalValue(accountLocalStorage.getItem(key)) : idbValue;
     collectLegacyValue(key, value, result);
 
     options.onProgress?.(Math.floor(5 + (index / legacyKeys.length) * 10));

@@ -16,14 +16,16 @@ import { PastActionDialog } from '../../components/PastActionDialog';
 import { ArchivePrinciplesView } from '../../components/ArchivePrinciplesView';
 import { MobilePastTimelineEntry } from './MobilePastTimelineEntry';
 import type { PastRepositorySection } from './types';
-import type { PracticeReflectionContext } from '../../types/future';
+import type { ActionDraftContext, PracticeReflectionContext } from '../../types/future';
 import type { PrincipleRevisionKind } from '../../services/principleRevision';
 import { currentPrinciples } from '../../services/principleRevision';
-import { searchPastEntriesWithMatchKind } from './pastSearch';
+import { filterPastEntries, searchPastEntriesWithMatchKind } from './pastSearch';
 
 interface PastRepositoryProps {
+  onOpenFutureAction?: (context: ActionDraftContext) => void;
   archiveMode?: boolean;
-  onAppendSupplement?: (entryId: string, content: string, supplementId: string) => Promise<void>;
+  onAppendSupplement?: (entryId: string, content: string, supplementId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
+  onChangeAIVisibility?: (entryId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
   draftPassword?: string | null;
   onRelatedEntriesResolved?: (entryId: string, ids: string[]) => void | Promise<void>;
   /** Allows a deliberate cross-module handoff, such as an action that is ready to be reflected on. */
@@ -79,9 +81,11 @@ const getSafeTimestamp = (value: unknown) =>
 const TIMELINE_RENDER_BATCH_SIZE = 100;
 
 export const PastRepository: React.FC<PastRepositoryProps> = ({
+  onOpenFutureAction,
   archiveMode = false,
   onRelatedEntriesResolved,
   onAppendSupplement,
+  onChangeAIVisibility,
   draftPassword,
   initialSection,
   initialQuery = '',
@@ -106,6 +110,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
     if (initialSection) setSection(initialSection);
   }, [initialSection]);
   const [deleting, setDeleting] = useState(false);
+  const [filters, setFilters] = useState({ from: '', to: '', tag: '', material: '' });
+  const hasFilters = Object.values(filters).some(Boolean);
   const [timelineQuery, setTimelineQuery] = useState(initialQuery);
   const [timelineRenderLimit, setTimelineRenderLimit] = useState(TIMELINE_RENDER_BATCH_SIZE);
   useEffect(() => {
@@ -121,16 +127,16 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
   const [clearedDerivedKnowledge, setClearedDerivedKnowledge] = useState(false);
   const bulkManagerRef = useRef<HTMLDialogElement>(null);
   const normalizedTimelineQuery = timelineQuery.trim();
-  const hasTimelineQuery = normalizedTimelineQuery.length > 0;
+  const hasTimelineQuery = normalizedTimelineQuery.length > 0 || hasFilters;
   const safeEntries = useMemo(() => (Array.isArray(entries) ? entries : []), [entries]);
   const safePrinciples = useMemo(() => (Array.isArray(principles) ? principles : []), [principles]);
   const activePrinciples = useMemo(() => currentPrinciples(safePrinciples), [safePrinciples]);
   const timelineResults = useMemo(() => {
-    const active = [...safeEntries].sort(
+    const active = filterPastEntries(safeEntries, filters).sort(
       (a, b) => getSafeTimestamp(b.createdAt) - getSafeTimestamp(a.createdAt),
     );
     return searchPastEntriesWithMatchKind(active, normalizedTimelineQuery);
-  }, [safeEntries, normalizedTimelineQuery]);
+  }, [safeEntries, normalizedTimelineQuery, filters]);
   const visibleEntryIds = useMemo(
     () => timelineResults.map(({ entry }) => entry.id),
     [timelineResults],
@@ -201,7 +207,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
 
   useEffect(() => {
     setTimelineRenderLimit(TIMELINE_RENDER_BATCH_SIZE);
-  }, [normalizedTimelineQuery]);
+    setSelectedEntryIds(new Set());
+  }, [normalizedTimelineQuery, filters]);
 
   // Managing records is a task of its own.  A native modal puts it in the
   // browser's top layer, so neither the previous page nor the main navigation
@@ -265,6 +272,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                   searchQuery={normalizedTimelineQuery}
                   draftPassword={draftPassword}
                   onAppendSupplement={onAppendSupplement}
+                onChangeAIVisibility={onChangeAIVisibility}
                   entry={row.entry}
                   searchMatchKind={row.match}
                   highlight={!isManaging && !hasTimelineQuery && index === 0}
@@ -366,6 +374,17 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 {language === 'zh' ? '选择' : 'Select'}
               </button>
             </div>
+            <details className="past-search-filters">
+              <summary>{language === 'zh' ? '筛选记录' : 'Filter records'}{hasFilters ? ' · 已启用' : ''}</summary>
+              <div className="past-search-filters__fields">
+                <label>开始日期<input type="date" value={filters.from} onChange={e => setFilters({...filters, from: e.target.value})} /></label>
+                <label>结束日期<input type="date" value={filters.to} onChange={e => setFilters({...filters, to: e.target.value})} /></label>
+                <label>标签<select value={filters.tag} onChange={e => setFilters({...filters, tag: e.target.value})}><option value="">全部标签</option>{Array.from(new Set(safeEntries.flatMap(e => e.tags ?? []))).sort().map(tag => <option key={tag}>{tag}</option>)}</select></label>
+                <label>素材类型<select value={filters.material} onChange={e => setFilters({...filters, material: e.target.value})}><option value="">全部类型</option><option value="text">纯文字</option><option value="image">图片</option><option value="audio">音频</option><option value="video">视频</option><option value="link">链接</option></select></label>
+              </div>
+              {filters.from && filters.to && filters.from > filters.to && <p role="alert">开始日期不能晚于结束日期。</p>}
+              {hasFilters && <button type="button" onClick={() => setFilters({from: '', to: '', tag: '', material: ''})}>清除筛选</button>}
+            </details>
             {hasTimelineQuery && (
               <p className="mobile-past-search-result-count" role="status">
                 {language === 'zh'
@@ -490,6 +509,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
         {section === 'principle' && (
           <div className="mobile-past-experience">
             <ArchivePrinciplesView
+              onOpenFutureAction={onOpenFutureAction}
               theme={theme}
               language={language}
               t={t}

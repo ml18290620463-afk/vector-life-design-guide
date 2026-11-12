@@ -1,5 +1,6 @@
+import { currentAccountId } from '../services/accountScope';
 import { useCallback, useState } from 'react';
-import { set } from 'idb-keyval';
+import { set } from '../services/accountIdb';
 import { AppError, reportError } from '../lib/error';
 import { getDiaryStorageKeys, removeDiaryMirror } from '../services/diaryStorage';
 import { vaultTransaction } from '../services/vaultTransaction';
@@ -47,6 +48,7 @@ export const useDiaryProtection = (userId: string | undefined) => {
   );
 
   const clearPasswordHash = useCallback(async () => {
+    if (currentAccountId()) throw new Error('云同步账号必须保留资料库密码，请使用修改密码功能');
     const keys = getDiaryStorageKeys(userId);
     const { changeFutureProtection } = await import('../services/vaultTransaction');
     await changeFutureProtection(null);

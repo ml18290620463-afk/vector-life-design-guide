@@ -1,11 +1,12 @@
-import { PRIVATE_DRAFT_KEY } from './privateDraftKey';
-import { createStore } from 'idb-keyval';
+import { PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY } from './privateDraftKey';
+import { accountStore } from './accountIdb';
+import { accountChannelName } from './accountScope';
 import { DiaryStorageKeys as K, readDiaryString } from './diaryStorage';
 import { SecurityService } from './securityService';
 import { useAppStore } from '../stores/appStore';
 
 // Same database/store as idb-keyval's default. A read/check/write is one transaction.
-const store = createStore('keyval-store', 'keyval');
+
 const listeners = new Set<() => void>();
 let channel: BroadcastChannel | undefined;
 export function publishVaultChange() {
@@ -28,7 +29,7 @@ function notifyListeners() {
 }
 export function subscribeVault(listener: () => void) {
   if (!channel && typeof BroadcastChannel !== 'undefined') {
-    channel = new BroadcastChannel('vector-vault-commits-v1');
+    channel = new BroadcastChannel(accountChannelName());
     channel.onmessage = notifyListeners;
   }
   listeners.add(listener);
@@ -44,7 +45,7 @@ export async function rawVaultTransaction<T>(
 ): Promise<T> {
   const unique = [...new Set(keys)];
   if (!unique.length) throw new Error('事务必须指定存储键');
-  const result = await store(
+  const result = await accountStore()(
     readonly ? 'readonly' : 'readwrite',
     (objectStore) =>
       new Promise<T>((resolve, reject) => {
@@ -88,7 +89,7 @@ export class VaultLockedError extends Error {
   }
 }
 export const BACKUP_RESTORE_JOB = 'vector_backup_restore_job_v1';
-const privateKeys = [K.future, K.actions, PRIVATE_DRAFT_KEY, BACKUP_RESTORE_JOB] as string[];
+const privateKeys = [K.future, K.actions, PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY, BACKUP_RESTORE_JOB] as string[];
 type Envelope = { format: 'vector-private-v1'; ciphertext: string };
 const encrypted = (value: unknown): value is Envelope =>
   !!value && typeof value === 'object' && 'format' in value && value.format === 'vector-private-v1';

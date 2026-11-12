@@ -1,3 +1,4 @@
+import { accountLocalStorage } from './accountScope';
 /**
  * SECURITY PROTOCOL: VECTOR_ENCRYPTION_LAYER_V1
  *
@@ -49,7 +50,18 @@ const resolveIterationOverride = (): number => {
   return Math.floor(raw);
 };
 
+export class CryptoEnvironmentError extends Error {
+  constructor() {
+    super('当前连接不支持安全加密，请使用 HTTPS 地址访问。现有资料未被修改。');
+    this.name = 'CryptoEnvironmentError';
+  }
+}
+
 export class SecurityService {
+  private static requireEncryptionSupport() {
+    if (!window.crypto?.subtle) throw new CryptoEnvironmentError();
+  }
+
   private static ITERATIONS = resolveIterationOverride();
   private static PASSWORD_HASH_PREFIX = 'pbkdf2-sha256:v1';
   private static ARGON2_HASH_PREFIX = 'argon2id:v1';
@@ -95,7 +107,7 @@ export class SecurityService {
   static isArgon2idVerifierEnabled(): boolean {
     try {
       if (typeof localStorage === 'undefined') return false;
-      const value = localStorage.getItem(this.ARGON2_VERIFIER_FLAG_KEY);
+      const value = accountLocalStorage.getItem(this.ARGON2_VERIFIER_FLAG_KEY);
       if (value === null) return false;
       return value === '1' || value.toLowerCase() === 'true';
     } catch {
@@ -112,9 +124,9 @@ export class SecurityService {
     try {
       if (typeof localStorage === 'undefined') return false;
       if (enabled) {
-        localStorage.setItem(this.ARGON2_VERIFIER_FLAG_KEY, '1');
+        accountLocalStorage.setItem(this.ARGON2_VERIFIER_FLAG_KEY, '1');
       } else {
-        localStorage.removeItem(this.ARGON2_VERIFIER_FLAG_KEY);
+        accountLocalStorage.removeItem(this.ARGON2_VERIFIER_FLAG_KEY);
       }
       return true;
     } catch {
@@ -138,7 +150,7 @@ export class SecurityService {
     if (!this.isArgon2idVerifierEnabled()) return false;
     try {
       if (typeof localStorage === 'undefined') return false;
-      const value = localStorage.getItem(this.ARGON2_MINTER_FLAG_KEY);
+      const value = accountLocalStorage.getItem(this.ARGON2_MINTER_FLAG_KEY);
       if (value === null) return false;
       return value === '1' || value.toLowerCase() === 'true';
     } catch {
@@ -162,9 +174,9 @@ export class SecurityService {
         if (!this.isArgon2idVerifierEnabled()) {
           this.setArgon2idVerifierEnabled(true);
         }
-        localStorage.setItem(this.ARGON2_MINTER_FLAG_KEY, '1');
+        accountLocalStorage.setItem(this.ARGON2_MINTER_FLAG_KEY, '1');
       } else {
-        localStorage.removeItem(this.ARGON2_MINTER_FLAG_KEY);
+        accountLocalStorage.removeItem(this.ARGON2_MINTER_FLAG_KEY);
       }
       return true;
     } catch {
@@ -189,12 +201,12 @@ export class SecurityService {
   static applyArgon2idDefaults(): boolean {
     try {
       if (typeof localStorage === 'undefined') return false;
-      if (localStorage.getItem(this.ARGON2_DEFAULT_APPLIED_KEY) !== null) {
+      if (accountLocalStorage.getItem(this.ARGON2_DEFAULT_APPLIED_KEY) !== null) {
         return false;
       }
       // Mark BEFORE flipping so a partial failure leaves us in a
       // consistent "we tried" state rather than re-firing forever.
-      localStorage.setItem(this.ARGON2_DEFAULT_APPLIED_KEY, '1');
+      accountLocalStorage.setItem(this.ARGON2_DEFAULT_APPLIED_KEY, '1');
       // Both flags ON. setArgon2idMinterEnabled handles the
       // verify-≥-mint invariant internally.
       this.setArgon2idMinterEnabled(true);
@@ -264,6 +276,7 @@ export class SecurityService {
    * Returns a base64 encoded string containing [salt(16)][iv(12)][ciphertext]
    */
   static async encrypt(text: string, password: string): Promise<string> {
+    this.requireEncryptionSupport();
     const encoder = new TextEncoder();
     const salt = window.crypto.getRandomValues(new Uint8Array(16));
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -288,6 +301,7 @@ export class SecurityService {
    * Decrypts a base64 encoded string using a master password.
    */
   static async decrypt(base64: string, password: string): Promise<string> {
+    this.requireEncryptionSupport();
     if (!base64 || !password) {
       throw new Error('DECRYPTION_FAILED: Invalid password or corrupted data.');
     }

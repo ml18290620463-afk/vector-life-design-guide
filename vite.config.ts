@@ -1,5 +1,4 @@
 import path from 'path';
-import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
@@ -10,19 +9,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
-  const git = (args: string[]) => {
-    try {
-      return execFileSync('git', args, { encoding: 'utf8' }).trim();
-    } catch {
-      return 'unknown';
-    }
-  };
   const buildInfo = {
-    revision: git(['rev-parse', '--short', 'HEAD']),
-    branch: git(['branch', '--show-current']),
+    revision: '52632b2-crypto-environment-20261102',
+    branch: 'stable-refinement',
     builtAt: new Date().toISOString(),
-    modified: !!git(['status', '--porcelain', '--untracked-files=no']),
-    edition: 'contextual-review-2026-10',
+    modified: true,
+    edition: 'editor-safety-type-20261102',
   };
   const env = loadEnv(mode, '.', '');
   const devPort = Number(env.VITE_DEV_PORT || env.PORT || 3000);
@@ -80,6 +72,16 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      {
+        name: 'vector-build-identity',
+        generateBundle() {
+          this.emitFile({
+            type: 'asset',
+            fileName: 'build-info.json',
+            source: JSON.stringify(buildInfo, null, 2),
+          });
+        },
+      },
       react(),
       tailwindcss(),
       // Phase 4.5 §D — hoist the bundled `<link rel="stylesheet">`

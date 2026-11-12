@@ -1,5 +1,5 @@
 .vector-brush-cover {
-  --cover-serif: 'Songti SC', 'STSong', 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
+  --cover-chinese: 'PingFang SC', 'Noto Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif;
   /* A clear upper field opens into a distinct mist-blue lower field.
      Shared stops keep the brand atmosphere consistent across viewports. */
   --cover-ground: #f7fbfc;
@@ -25,7 +25,13 @@
   --cover-line: #819ba5;
   /* One restrained material shift gives the identity an internal current.
      It is deliberately close in value: VECTOR should read as one word first. */
-  --cover-wordmark-flow: linear-gradient(104deg, #203641 0%, #294a55 43%, #345762 61%, #203641 100%);
+  --cover-wordmark-flow: linear-gradient(
+    104deg,
+    #203641 0%,
+    #294a55 43%,
+    #345762 61%,
+    #203641 100%
+  );
   position: relative;
   isolation: isolate;
   width: 100%;
@@ -48,10 +54,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--cover-serif);
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0.045em;
+  font-family: var(--cover-chinese);
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0.1em;
   color: rgb(59 85 96 / 0.88);
 }
 .vector-brush-cover__header > :first-child {
@@ -97,19 +103,14 @@
   margin: 0 0.026em -0.006em 0.012em;
   overflow: visible;
 }
-.vector-brush-cover__e-bar {
-  /* A single restrained gradient makes the present feel continuous, without
-   * breaking the E into decorative strokes. */
-  fill: url(#vector-e-present-flow);
-}
 .vector-brush-cover__tagline {
   margin: 0;
   max-width: min(660px, 84vw);
-  font-family: var(--cover-serif);
-  font-size: clamp(23px, 1.68vw, 27px);
-  font-weight: 400;
-  line-height: 1.58;
-  letter-spacing: 0.055em;
+  font-family: var(--cover-chinese);
+  font-size: clamp(20px, 1.45vw, 23px);
+  font-weight: 300;
+  line-height: 1.7;
+  letter-spacing: 0.1em;
   color: rgb(32 54 65 / 0.94);
   text-wrap: pretty;
 
@@ -144,11 +145,11 @@
   padding: 0 26px;
   background: rgb(255 255 255 / 0.1);
   color: var(--cover-ink);
-  font-family: var(--cover-serif);
-  font-size: 18px;
+  font-family: var(--cover-chinese);
+  font-size: 16px;
   font-weight: 400;
   line-height: 1.5;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.16em;
   box-shadow: none;
   cursor: pointer;
   touch-action: manipulation;
@@ -240,7 +241,14 @@
   filter: grayscale(1) brightness(0.72) contrast(1.02);
   mix-blend-mode: multiply;
   opacity: 0.74;
-  -webkit-mask-image: linear-gradient(to bottom, #000d 0%, #000e 30%, #000f 57%, #000d 78%, #000b 100%);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000d 0%,
+    #000e 30%,
+    #000f 57%,
+    #000d 78%,
+    #000b 100%
+  );
   mask-image: linear-gradient(to bottom, #000d 0%, #000e 30%, #000f 57%, #000d 78%, #000b 100%);
 }
 /*
@@ -279,24 +287,65 @@
   animation: vector-cover-depart 130ms ease-out 110ms both;
 }
 @keyframes vector-cover-depart {
-  from { opacity: 1; }
-  to { opacity: 0.35; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.35;
+  }
 }
 /* Positions follow the painted tail, counterclockwise loop, then ascent.
    The alpha mask retains the original dry-brush grain. */
 @keyframes vector-brush-rising-wash {
-  0% { background-position: -9% 114%; opacity: 0; }
-  8% { background-position: 12% 106%; opacity: 0.68; }
-  19% { background-position: 37% 91%; opacity: 0.82; }
-  29% { background-position: 55% 68%; opacity: 0.88; }
-  38% { background-position: 44% 46%; opacity: 0.88; }
-  46% { background-position: 15% 49%; opacity: 0.88; }
-  54% { background-position: 13% 73%; opacity: 0.88; }
-  63% { background-position: 35% 77%; opacity: 0.88; }
-  73% { background-position: 60% 46%; opacity: 0.82; }
-  83% { background-position: 87% 11%; opacity: 0.64; }
-  92% { background-position: 112% -23%; opacity: 0.28; }
-  97%, 100% { background-position: 115% -25%; opacity: 0; }
+  0% {
+    background-position: -9% 114%;
+    opacity: 0;
+  }
+  8% {
+    background-position: 12% 106%;
+    opacity: 0.68;
+  }
+  19% {
+    background-position: 37% 91%;
+    opacity: 0.82;
+  }
+  29% {
+    background-position: 55% 68%;
+    opacity: 0.88;
+  }
+  38% {
+    background-position: 44% 46%;
+    opacity: 0.88;
+  }
+  46% {
+    background-position: 15% 49%;
+    opacity: 0.88;
+  }
+  54% {
+    background-position: 13% 73%;
+    opacity: 0.88;
+  }
+  63% {
+    background-position: 35% 77%;
+    opacity: 0.88;
+  }
+  73% {
+    background-position: 60% 46%;
+    opacity: 0.82;
+  }
+  83% {
+    background-position: 87% 11%;
+    opacity: 0.64;
+  }
+  92% {
+    background-position: 112% -23%;
+    opacity: 0.28;
+  }
+  97%,
+  100% {
+    background-position: 115% -25%;
+    opacity: 0;
+  }
 }
 
 .vector-brush-cover__footer {
@@ -327,7 +376,8 @@
     /* The same blue field supports the stacked mobile composition. */
     min-height: 100svh;
     height: auto;
-    padding: max(34px, env(safe-area-inset-top)) clamp(28px, 8.4vw, 38px) max(72px, env(safe-area-inset-bottom));
+    padding: max(34px, env(safe-area-inset-top)) clamp(28px, 8.4vw, 38px)
+      max(72px, env(safe-area-inset-bottom));
     box-sizing: border-box;
     background:
       radial-gradient(ellipse 94% 52% at 14% 0%, rgb(255 255 255 / 0.62), transparent 76%),
@@ -340,8 +390,8 @@
     left: auto;
     top: auto;
     gap: 7px;
-    font-size: 14px;
-    letter-spacing: 0.045em;
+    font-size: 12px;
+    letter-spacing: 0.08em;
     color: rgb(72 99 110 / 0.86);
   }
   .vector-brush-cover__header > :first-child {
@@ -363,9 +413,9 @@
     margin-right: 0.026em;
   }
   .vector-brush-cover__tagline {
-    font-size: clamp(20px, 5.45vw, 22px);
-    line-height: 1.58;
-    letter-spacing: 0.05em;
+    font-size: clamp(17px, 4.6vw, 19px);
+    line-height: 1.7;
+    letter-spacing: 0.07em;
   }
   .vector-brush-cover__divider {
     font-size: 13px;
@@ -377,7 +427,7 @@
     margin-top: 28px;
     padding: 0 27px;
     border-radius: 10px;
-    font-size: 18px;
+    font-size: 16px;
   }
   .vector-brush-cover__art {
     /* On a phone the brush becomes the second field of the composition, not
@@ -412,7 +462,7 @@
     margin-bottom: 16px;
   }
   .vector-brush-cover__tagline {
-    font-size: 19px;
+    font-size: 17px;
   }
   .vector-brush-cover__entry {
     min-height: 54px;
@@ -429,16 +479,26 @@
   }
 }
 @media (max-width: 700px) and (max-height: 600px) {
-  .vector-brush-cover__hero { margin-top: 28px; }
+  .vector-brush-cover__hero {
+    margin-top: 28px;
+  }
   .vector-brush-cover__art {
     top: 258px;
     width: min(82vw, 324px);
   }
 }
 @media (min-width: 701px) and (max-width: 999px) {
-  .vector-brush-cover__hero { top: 23%; }
-  .vector-brush-cover__tagline { max-width: 440px; }
-  .vector-brush-cover__art { left: 42%; top: 43%; width: 53%; }
+  .vector-brush-cover__hero {
+    top: 23%;
+  }
+  .vector-brush-cover__tagline {
+    max-width: 440px;
+  }
+  .vector-brush-cover__art {
+    left: 42%;
+    top: 43%;
+    width: 53%;
+  }
 }
 .vector-brush-cover[data-paused] .vector-brush-cover__rising-wash {
   animation-play-state: paused;
@@ -467,4 +527,12 @@
   .vector-brush-cover__entry .vector-brush-cover__entry-mark {
     transform: none;
   }
+}
+
+/* Subpixel dust stays fine at every viewport; the original gesture determines its outline. */
+.vector-brush-cover__particles {
+  display: block;
+  width: 100%;
+  aspect-ratio: 750 / 676;
+  pointer-events: none;
 }

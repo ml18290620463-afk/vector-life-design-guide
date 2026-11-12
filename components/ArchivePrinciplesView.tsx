@@ -1,3 +1,6 @@
+import type { ActionDraftContext } from '../types/future';
+import { useAIVisibilityChoice } from './AIVisibilityDialog';
+import { useEditorViewport } from '../hooks/useEditorViewport';
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Check, Pencil, Plus, Shield, Star, Trash2, X } from 'lucide-react';
@@ -20,6 +23,7 @@ function PrincipleEditorSurface({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  useEditorViewport(ref, open);
   useEffect(() => {
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;
@@ -37,6 +41,7 @@ function PrincipleEditorSurface({
       className="principle-editor-screen"
       aria-label="书写原则"
       onCancel={(event) => {
+        if (event.target !== event.currentTarget) return;
         event.preventDefault();
         onClose();
       }}
@@ -49,6 +54,7 @@ function PrincipleEditorSurface({
 }
 
 interface ArchivePrinciplesViewProps {
+  onOpenFutureAction?: (context: ActionDraftContext) => void;
   theme: Theme;
   language?: Language;
   t: TranslationDictionary;
@@ -62,6 +68,7 @@ interface ArchivePrinciplesViewProps {
     sourcePatternIds?: string[],
     tags?: string[],
     derivedFromPracticeIds?: string[],
+    aiVisibility?: 'private' | 'allowed',
   ) => void | Promise<void>;
   onDeletePrinciple: (id: string) => void | Promise<void>;
   onUpdatePrinciple: (principle: Principle) => void | Promise<void>;
@@ -69,6 +76,7 @@ interface ArchivePrinciplesViewProps {
     original: Principle,
     text: string,
     revisionKind: PrincipleRevisionKind,
+    consent?: Pick<Principle, 'aiVisibility' | 'aiConsentAt' | 'application'>,
   ) => void | Promise<void>;
   /** @deprecated Legacy data is accepted for migration compatibility and is never rendered here. */
   patterns?: Array<{ id: string; statement: string; status?: string }>;
@@ -93,6 +101,7 @@ type PrincipleSection = 'extract' | typeof ALL_SECTION | string;
  * Pulled out of `ArchiveVault.tsx` as part of Phase 2 §2.k.
  */
 export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
+  onOpenFutureAction,
   theme,
   language = 'zh',
   t,
@@ -108,6 +117,8 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   emptyReason,
 }) => {
   const [newPrincipleText, setNewPrincipleText] = useState('');
+  const [annotationOpen, setAnnotationOpen] = useState(false);
+  const [annotation, setAnnotation] = useState({ trigger: '', action: '' });
   const [selectedSection, setSelectedSection] = useState<PrincipleSection>(
     displayFirst ? ALL_SECTION : 'extract',
   );
@@ -127,6 +138,10 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   const allowNavigation = useRef(false);
   const dirty = Boolean(
     newPrincipleText.trim() ||
+    annotation.trigger !==
+      (principles.find((p) => p.id === editingPrincipleId)?.application?.trigger ?? '') ||
+    annotation.action !==
+      (principles.find((p) => p.id === editingPrincipleId)?.application?.action ?? '') ||
     (editingPrincipleId &&
       editingPrincipleText !== principles.find((p) => p.id === editingPrincipleId)?.text),
   );
@@ -154,13 +169,12 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
       document.removeEventListener('click', intercept, true);
     };
   }, [dirty, busy]);
-  const runMutation = async (action: () => void | Promise<void>, done?: () => void) => {
+  const runMutation = async (action: () => void | false | Promise<void | false>, done?: () => void) => {
     if (busy) return;
     setBusy(true);
     setSaveError('');
     try {
-      await action();
-      done?.();
+      if (await action() !== false) done?.();
     } catch {
       setSaveError(
         language === 'zh'
@@ -186,10 +200,12 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
   }, [displayFirst, managementOpen]);
 
   const closeManagement = () => {
+    setAnnotationOpen(false);
     setManagementOpen(false);
     setEditingPrincipleId(null);
     setEditingPrincipleText('');
     setNewPrincipleText('');
+    setAnnotation({ trigger: '', action: '' });
     onManagementChange?.(false);
   };
 
@@ -203,6 +219,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
     closeManagement();
   };
 
+  const visibilityChoice = useAIVisibilityChoice(language, 'principle');
   const editingPrinciple = editingPrincipleId
     ? principles.find((principle) => principle.id === editingPrincipleId)
     : undefined;
@@ -232,6 +249,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
 
   return (
     <PrincipleEditorSurface open={displayFirst && managementOpen} onClose={requestCloseManagement}>
+      {visibilityChoice.dialog}
       <div
         className={
           displayFirst && managementOpen
@@ -261,6 +279,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
               <button
                 onClick={() => {
                   setNewPrincipleText('');
+                  setAnnotation({ trigger: '', action: '' });
                   setConfirmExit(false);
                   closeManagement();
                   const target = pendingNavigation.current;
@@ -421,7 +440,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
             }
           >
             <div className="principle-editor-layout">
-              {displayFirst && (
+              {
                 <header className="principle-editor__header">
                   <button
                     type="button"
@@ -442,14 +461,60 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                           ? '写下原则'
                           : 'Write a principle'}
                     </h2>
-                    <p>
-                      {language === 'zh'
-                        ? '给下一次的自己，留一句笃定的话。'
-                        : 'Leave your future self one steady sentence.'}
-                    </p>
                   </div>
+                  <CyberButton
+                    onClick={() => {
+                      if (!editorText.trim() || editorOverLimit) return;
+                      void runMutation(
+                        async () => {
+                          const aiVisibility = await visibilityChoice.request();
+                          if (!aiVisibility) return;
+                          const consent = { aiVisibility, aiConsentAt: Math.max(Date.now(), (editingPrinciple?.aiConsentAt ?? 0) + 1) };
+                          const application = annotation.trigger || annotation.action || editingPrinciple?.application ? annotation : undefined;
+                          if (editingPrinciple) {
+                            if (editorText.trim() !== editingPrinciple.text.trim() && onRevisePrinciple) {
+                              await onRevisePrinciple(editingPrinciple, editorText.trim(), revisionKind, { ...consent, application });
+                            } else {
+                              await onUpdatePrinciple({ ...editingPrinciple, text: editorText.trim(), application, ...consent });
+                            }
+                          } else {
+                            await onAddPrinciple(editorText.trim(), new Date().getFullYear(), true, undefined, application, undefined, [], practiceReflectionContext ? [practiceReflectionContext.practiceRecordId] : [], aiVisibility);
+                          }
+                        },
+                        () => {
+                          setNewPrincipleText('');
+                          setAnnotation({ trigger: '', action: '' });
+                          setEditingPrincipleId(null);
+                          setEditingPrincipleText('');
+                          setRevisionKind('correction');
+                          if (displayFirst) {
+                            setManagementOpen(false);
+                            onManagementChange?.(false);
+                          }
+                        },
+                      );
+                    }}
+                    disabled={busy || !editorText.trim() || editorOverLimit}
+                    className="principle-editor__save-button w-full"
+                    theme={theme}
+                  >
+                    {displayFirst ? (
+                      <Check className="w-4 h-4" aria-hidden="true" />
+                    ) : (
+                      <Plus className="w-4 h-4" aria-hidden="true" />
+                    )}
+                    {displayFirst
+                      ? editingPrinciple
+                        ? language === 'zh'
+                          ? '保存修改'
+                          : 'Save changes'
+                        : language === 'zh'
+                          ? '保存'
+                          : 'Keep this sentence'
+                      : t.addPrinciple}
+                  </CyberButton>{' '}
                 </header>
-              )}
+              }
 
               <main className="principle-editor__writing">
                 <label
@@ -498,7 +563,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                     <span className={editorOverLimit ? 'is-warning' : ''}>
                       {t.charLimit.replace('{count}', editorText.length.toString())}
                     </span>
-                  {editorOverLimit && <span role="alert">{t.charLimitWarning}</span>}
+                    {editorOverLimit && <span role="alert">{t.charLimitWarning}</span>}
                   </div>
                 )}
                 {editingPrinciple && editorText.trim() !== editingPrinciple.text.trim() && (
@@ -526,63 +591,64 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                     </label>
                   </fieldset>
                 )}
+                <button
+                  type="button"
+                  className="principle-editor__optional"
+                  aria-haspopup="dialog"
+                  disabled={busy}
+                  onClick={() => setAnnotationOpen(true)}
+                >
+                  <Plus size={16} aria-hidden="true" />
+                  {language === 'zh' ? '补充说明' : 'Add details'}
+                  <span>{annotation.trigger.trim() || annotation.action.trim()
+                    ? language === 'zh' ? '已补充' : 'Added'
+                    : language === 'zh' ? '选填' : 'Optional'}</span>
+                </button>
+                {annotationOpen && (
+                  <PastActionDialog
+                    title={language === 'zh' ? '补充说明' : 'Additional details'}
+                    className="principle-details-dialog"
+                    onCancel={() => setAnnotationOpen(false)}
+                  >
+                    <p className="principle-details-dialog__hint">
+                      {language === 'zh' ? '为下一次用到这条原则，留一点提示。' : 'Leave a cue for the next time you use this principle.'}
+                    </p>
+                <div className="principle-editor__annotations">
+                  <label>
+                    {' '}
+                    {language === 'zh' ? '适用时刻 · 可选' : 'When · optional'}
+                    <textarea
+                      aria-label={language === 'zh' ? '适用时刻' : 'When'}
+                      rows={2}
+                      disabled={busy}
+                      value={annotation.trigger}
+                      onChange={(event) =>
+                        setAnnotation((value) => ({ ...value, trigger: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {' '}
+                    {language === 'zh' ? '具体做法 · 可选' : 'Action · optional'}
+                    <textarea
+                      aria-label={language === 'zh' ? '具体做法' : 'Action'}
+                      rows={2}
+                      disabled={busy}
+                      value={annotation.action}
+                      onChange={(event) =>
+                        setAnnotation((value) => ({ ...value, action: event.target.value }))
+                      }
+                    />
+                  </label>
+                </div>
+                    <button type="button" data-cancel className="principle-details-dialog__done" onClick={() => setAnnotationOpen(false)}>
+                      {language === 'zh' ? '完成' : 'Done'}
+                    </button>
+                  </PastActionDialog>
+                )}
               </main>
 
               <footer className="principle-editor__footer">
-                <CyberButton
-                  onClick={() => {
-                    if (!editorText.trim() || editorOverLimit) return;
-                    void runMutation(
-                      () =>
-                        editingPrinciple
-                          ? editorText.trim() === editingPrinciple.text.trim()
-                            ? onUpdatePrinciple(editingPrinciple)
-                            : onRevisePrinciple
-                              ? onRevisePrinciple(editingPrinciple, editorText.trim(), revisionKind)
-                              : onUpdatePrinciple({ ...editingPrinciple, text: editorText.trim() })
-                          : onAddPrinciple(
-                              editorText.trim(),
-                              new Date().getFullYear(),
-                              true,
-                              undefined,
-                              undefined,
-                              undefined,
-                              [],
-                              practiceReflectionContext
-                                ? [practiceReflectionContext.practiceRecordId]
-                                : [],
-                            ),
-                      () => {
-                        setNewPrincipleText('');
-                        setEditingPrincipleId(null);
-                        setEditingPrincipleText('');
-                        setRevisionKind('correction');
-                        if (displayFirst) {
-                          setManagementOpen(false);
-                          onManagementChange?.(false);
-                        }
-                      },
-                    );
-                  }}
-                  disabled={busy || !editorText.trim() || editorOverLimit}
-                  className="principle-editor__save-button w-full"
-                  theme={theme}
-                >
-                  {displayFirst ? (
-                    <Check className="w-4 h-4" aria-hidden="true" />
-                  ) : (
-                    <Plus className="w-4 h-4" aria-hidden="true" />
-                  )}
-                  {displayFirst
-                    ? editingPrinciple
-                      ? language === 'zh'
-                        ? '保存修改'
-                        : 'Save changes'
-                      : language === 'zh'
-                        ? '留下这句话'
-                        : 'Keep this sentence'
-                    : t.addPrinciple}
-                </CyberButton>
                 {displayFirst && editingPrinciple && (
                   <button
                     type="button"
@@ -630,9 +696,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                 <div key={year} className="mobile-principles-view__year space-y-4">
                   {!displayFirst && (
                     <div className="mobile-principles-view__year-label flex items-center gap-4">
-                      <span
-                        className={`text-[10px] font-bold tracking-[0.3em] uppercase ${theme === 'light' ? 'text-vector-slate-soft/40' : 'text-green-600'}`}
-                      >
+                      <span className="ds-meta">
                         {t.formedThrough.replace('{year}', year.toString())}
                       </span>
                     </div>
@@ -680,6 +744,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                   >
                                     {principle.text}
                                   </p>
+                                  <small>{principle.aiVisibility === 'allowed' ? '允许 AI 可见 · 仍受来源权限限制' : '仅自己可见'}</small>
                                   {displayFirst && (
                                     <time className="principle-card__formed-year">
                                       {language === 'zh'
@@ -703,14 +768,19 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                               </div>
                               {(!displayFirst || !managementOpen) && (
                                 <div className="mobile-principle-card__actions flex items-center gap-2">
+                                  {onOpenFutureAction && <button type="button" onClick={() => onOpenFutureAction({ principleId: principle.id, sourceEntryId: principle.derivedFromEntryIds?.[0], evidenceEntryIds: principle.derivedFromEntryIds, rationale: principle.text })}>{language === 'zh' ? '实践这条原则' : 'Practice this principle'}</button>}
                                   <button
                                     type="button"
                                     disabled={busy}
                                     onClick={() => {
                                       if (displayFirst) {
                                         setNewPrincipleText('');
+                                        setAnnotation({ trigger: '', action: '' });
                                         setEditingPrincipleId(principle.id);
                                         setEditingPrincipleText(principle.text);
+                                        setAnnotation(
+                                          principle.application ?? { trigger: '', action: '' },
+                                        );
                                         setRevisionKind('correction');
                                         setManagementOpen(true);
                                         onManagementChange?.(true);
@@ -718,6 +788,9 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                       }
                                       setEditingPrincipleId(principle.id);
                                       setEditingPrincipleText(principle.text);
+                                      setAnnotation(
+                                        principle.application ?? { trigger: '', action: '' },
+                                      );
                                       setRevisionKind('correction');
                                     }}
                                     aria-label={

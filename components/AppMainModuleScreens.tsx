@@ -1,3 +1,4 @@
+import { MobileShell } from '../features/mobile/MobileShell';
 import type { FC } from 'react';
 import { Suspense, useCallback, useState } from 'react';
 import type {
@@ -15,7 +16,7 @@ import { AppState } from '../types';
 import type { MobileMainTab } from '../features/mobile/types';
 import type { NowRoute } from '../features/now/types/now';
 import { isNowSurfaceState, isPastSurfaceState } from '../lib/appShellRules';
-import { FuturePage, MobileShell, PastRepository } from '../features/mobile/mobileLazyComponents';
+import { FuturePage, PastRepository } from '../features/mobile/mobileLazyComponents';
 import { NowFlow } from '../features/now/nowLazyComponents';
 import { DesktopNowFrame } from '../features/now/components/DesktopNowFrame';
 import { ScreenLoader } from './ScreenLoader';
@@ -47,6 +48,7 @@ type AppMainModuleScreensProps = {
     sourcePatternIds?: string[],
     tags?: string[],
     derivedFromPracticeIds?: string[],
+    aiVisibility?: 'private' | 'allowed',
   ) => void;
   appState: AppState;
   deletePrinciple: (id: string) => void;
@@ -64,7 +66,8 @@ type AppMainModuleScreensProps = {
   onPersistNowRecord: (
     payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
   ) => Promise<DiaryEntry>;
-  onAppendSupplement?: (entryId: string, content: string, supplementId: string) => Promise<void>;
+  onAppendSupplement?: (entryId: string, content: string, supplementId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
+  onChangeAIVisibility?: (entryId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
   draftPassword?: string | null;
   onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void | Promise<void>;
   onSelectEntry: (entry: DiaryEntry) => void;
@@ -76,6 +79,7 @@ type AppMainModuleScreensProps = {
     original: Principle,
     text: string,
     revisionKind: PrincipleRevisionKind,
+    consent?: Pick<Principle, 'aiVisibility' | 'aiConsentAt' | 'application'>,
   ) => void | Promise<void>;
   useMobileShell: boolean;
   avatarLaunchContext: AvatarLaunchContext;
@@ -105,6 +109,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   onPersistNowRecord,
   onRelatedEntriesResolved,
   onAppendSupplement,
+  onChangeAIVisibility,
   draftPassword,
   onSelectEntry,
   principles,
@@ -154,17 +159,19 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   return (
     <>
       {useMobileShell && mobileMainTab && (
-        <Suspense fallback={<ScreenLoader language={language} />}>
           <MobileShell
             activeTab={mobileMainTab}
             language={language}
             onTabChange={onMobileTabChange}
             onTabIntent={onMainModuleIntent}
           >
+            <Suspense fallback={<div role="status" className="module-loading">{language === 'zh' ? '正在打开…' : 'Opening…'}</div>}>
             {isPastSurfaceState(appState) && (
               <PastRepository
+              onOpenFutureAction={openFutureAction}
                 draftPassword={draftPassword}
                 onAppendSupplement={onAppendSupplement}
+                onChangeAIVisibility={onChangeAIVisibility}
                 onRelatedEntriesResolved={onRelatedEntriesResolved}
                 initialSection={pastSection}
                 initialQuery={pastQuery}
@@ -221,8 +228,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
                 }}
               />
             )}
+            </Suspense>
           </MobileShell>
-        </Suspense>
       )}
 
       {!useMobileShell && isPastSurfaceState(appState) && (
@@ -234,8 +241,10 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             onNavigateIntent={onMainModuleIntent}
           >
             <PastRepository
+              onOpenFutureAction={openFutureAction}
               draftPassword={draftPassword}
               onAppendSupplement={onAppendSupplement}
+                onChangeAIVisibility={onChangeAIVisibility}
               onRelatedEntriesResolved={onRelatedEntriesResolved}
               initialSection={pastSection}
               initialQuery={pastQuery}

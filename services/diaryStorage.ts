@@ -45,7 +45,7 @@ export const evaluateAttachmentSize = (bytes: number): AttachmentSizeAssessment 
 
 /**
  * Returns true when the entries snapshot is too large to safely mirror to
- * localStorage. Callers can use this to drop a syncStatus warning rather than
+ * accountLocalStorage. Callers can use this to drop a syncStatus warning rather than
  * pretending the mirror succeeded silently.
  */
 export const entriesPayloadExceedsMirror = (serializedLength: number): boolean =>

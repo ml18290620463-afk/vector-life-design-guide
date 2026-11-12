@@ -22,6 +22,7 @@ export function ActionFeedbackReading({
   goalRecords,
   canUpdate,
   onUpdate,
+  onReflect,
   onDeletePractice,
   onDeleteGoalFeedback,
 }: {
@@ -32,6 +33,7 @@ export function ActionFeedbackReading({
   goalRecords: GoalFeedbackRecord[];
   canUpdate: boolean;
   onUpdate: () => void;
+  onReflect?: (record: ActionPracticeRecord) => void;
   onDeletePractice: (id: string) => void;
   onDeleteGoalFeedback: (id: string) => void;
 }) {
@@ -66,6 +68,7 @@ export function ActionFeedbackReading({
           更新进展 <span aria-hidden="true">→</span>
         </button>
       )}
+      {latest && onReflect && <button type="button" className="future-reading-edit" onClick={() => onReflect(latest)}>回看这次实践，提炼原则</button>}
       {goal && (
         <details className="future-action-drawer future-action-goal-drawer">
           <summary>

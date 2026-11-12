@@ -87,7 +87,8 @@ function command<T>(fn: (state: FutureState, values: Record<string, unknown>) =>
   });
 }
 export async function saveVision(
-  input: Pick<Vision, 'text' | 'status'> & Partial<Pick<Vision, 'id' | 'revision'>>,
+  input: Pick<Vision, 'text' | 'status'> &
+    Partial<Pick<Vision, 'id' | 'revision' | 'aiVisibility'>>,
 ) {
   const vision = await command((state) => {
     textRequired(input.text, '愿景');
@@ -106,6 +107,8 @@ export async function saveVision(
     )
       throw new Error('请先处理关联目标，再结束愿景');
     const vision: Vision = {
+      aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
+      aiConsentAt: Math.max(Date.now(), (old?.aiConsentAt ?? 0) + 1),
       id: old?.id ?? generateSecureId('vision'),
       text: input.text.trim(),
       status: input.status,
@@ -158,6 +161,8 @@ export async function saveGoal(
     }
     const goal: Goal = {
       ...input,
+      aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
+      aiConsentAt: Math.max(Date.now(), (old?.aiConsentAt ?? 0) + 1),
       title: input.title.trim(),
       id: old?.id ?? generateSecureId('goal'),
       revision: (old?.revision ?? 0) + 1,
@@ -265,6 +270,8 @@ function recordGoalFeedbackInState(
     status,
     input.expectedGoalRevision,
   );
+  updatedGoal.aiVisibility = input.aiVisibility === 'allowed' ? 'allowed' : 'private';
+  updatedGoal.aiConsentAt = Math.max(Date.now(), (goal.aiConsentAt ?? 0) + 1);
   // A direction review is a meaningful state transition even when its mapped
   // status is already active (for example, "adjust"). Advance the revision
   // so an older page cannot append a conflicting review afterwards.
@@ -313,6 +320,8 @@ export async function saveFutureAction(
       throw new Error('行动已更新，请刷新后重试');
     const action: ActionItem = {
       ...input,
+      aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
+      aiConsentAt: Math.max(Date.now(), (old?.aiConsentAt ?? 0) + 1),
       id: old?.id ?? generateSecureId('action'),
       createdAt: old?.createdAt ?? Date.now(),
       revision: (old?.revision ?? 0) + 1,
@@ -358,8 +367,8 @@ function removePracticeFeedbackFromPrinciples(
   const principles = (values[K.principles] as Principle[] | undefined) ?? [];
   values[K.principles] = principles.map((principle) => {
     const practiceIds = new Set(principle.appliedFeedbackPracticeIds ?? []);
-    const applied = [...removed].filter(([id, feedback]) =>
-      practiceIds.has(id) && feedback?.principleId === principle.id,
+    const applied = [...removed].filter(
+      ([id, feedback]) => practiceIds.has(id) && feedback?.principleId === principle.id,
     );
     if (!applied.length) return principle;
 
@@ -369,7 +378,13 @@ function removePracticeFeedbackFromPrinciples(
     let partialCount = principle.partialCount ?? 0;
     let unhelpfulCount = principle.unhelpfulCount ?? 0;
     for (const [, feedback] of applied) {
-      confidence = Math.min(1, Math.max(0, Math.round((confidence - practiceFeedbackDelta[feedback!.outcome]) * 100) / 100));
+      confidence = Math.min(
+        1,
+        Math.max(
+          0,
+          Math.round((confidence - practiceFeedbackDelta[feedback!.outcome]) * 100) / 100,
+        ),
+      );
       recallCount = Math.max(0, recallCount - 1);
       if (feedback!.outcome === 'helpful') helpfulCount = Math.max(0, helpfulCount - 1);
       if (feedback!.outcome === 'partial') partialCount = Math.max(0, partialCount - 1);
@@ -405,15 +420,23 @@ function removeEventsInState(state: FutureState, eventIds: Set<string>) {
     return retainedEventIds.length ? [{ ...receipt, eventIds: retainedEventIds }] : [];
   });
   const referencedItemIds = new Set(
-    state.events.flatMap((event) => (event.value.kind === 'quantity' && event.value.itemId ? [event.value.itemId] : [])),
+    state.events.flatMap((event) =>
+      event.value.kind === 'quantity' && event.value.itemId ? [event.value.itemId] : [],
+    ),
   );
   state.items = state.items.filter((item) => referencedItemIds.has(item.id));
 }
 
-function removeArchiveOrigins(state: FutureState, kind: 'vision' | 'goal' | 'action', ids: Set<string>) {
+function removeArchiveOrigins(
+  state: FutureState,
+  kind: 'vision' | 'goal' | 'action',
+  ids: Set<string>,
+) {
   if (!state.archiveOrigins) return;
   state.archiveOrigins = Object.fromEntries(
-    Object.entries(state.archiveOrigins).filter(([, origin]) => !(origin.kind === kind && ids.has(origin.id))),
+    Object.entries(state.archiveOrigins).filter(
+      ([, origin]) => !(origin.kind === kind && ids.has(origin.id)),
+    ),
   );
 }
 
@@ -423,12 +446,16 @@ function deletePracticeRecordsInState(
   practiceIds: Set<string>,
 ) {
   if (!practiceIds.size) return;
-  const removedPractice = (state.practiceRecords ?? []).filter((record) => practiceIds.has(record.id));
+  const removedPractice = (state.practiceRecords ?? []).filter((record) =>
+    practiceIds.has(record.id),
+  );
   const removedGoalFeedbackIds = new Set(
     removedPractice.flatMap((record) => (record.goalFeedbackId ? [record.goalFeedbackId] : [])),
   );
   removePracticeFeedbackFromPrinciples(values, removedPractice);
-  state.practiceRecords = (state.practiceRecords ?? []).filter((record) => !practiceIds.has(record.id));
+  state.practiceRecords = (state.practiceRecords ?? []).filter(
+    (record) => !practiceIds.has(record.id),
+  );
   state.goalFeedbackRecords = (state.goalFeedbackRecords ?? []).filter(
     (record) => !removedGoalFeedbackIds.has(record.id),
   );
@@ -449,7 +476,11 @@ function deleteActionsInState(
   deletePracticeRecordsInState(state, values, practiceIds);
   removeEventsInState(
     state,
-    new Set(state.events.filter((event) => event.sourceActionId && actionIds.has(event.sourceActionId)).map((event) => event.id)),
+    new Set(
+      state.events
+        .filter((event) => event.sourceActionId && actionIds.has(event.sourceActionId))
+        .map((event) => event.id),
+    ),
   );
   values[K.actions] = actions.filter((action) => !actionIds.has(action.id));
   removeArchiveOrigins(state, 'action', actionIds);
@@ -462,10 +493,20 @@ function deleteGoalsInState(
 ) {
   if (!goalIds.size) return;
   const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
-  deleteActionsInState(state, values, new Set(actions.filter((action) => action.goalId && goalIds.has(action.goalId)).map((action) => action.id)));
+  deleteActionsInState(
+    state,
+    values,
+    new Set(
+      actions
+        .filter((action) => action.goalId && goalIds.has(action.goalId))
+        .map((action) => action.id),
+    ),
+  );
 
   const removedGoalFeedbackIds = new Set(
-    (state.goalFeedbackRecords ?? []).filter((record) => goalIds.has(record.goalId)).map((record) => record.id),
+    (state.goalFeedbackRecords ?? [])
+      .filter((record) => goalIds.has(record.goalId))
+      .map((record) => record.id),
   );
   state.goalFeedbackRecords = (state.goalFeedbackRecords ?? []).filter(
     (record) => !goalIds.has(record.goalId),
@@ -499,8 +540,10 @@ function deleteGoalsInState(
 }
 
 /** Delete a vision and every future plan, feedback, and outcome nested beneath it. */
-export async function deleteVision(id: string, expectedRevision: number) {
+export async function deleteVision(id: string, expectedRevision: number, expectedStateRevision?: number) {
   return command((state, values) => {
+    if (expectedStateRevision !== undefined && state.revision !== expectedStateRevision)
+      throw new Error('关联内容已变化，请重新打开规划并核对删除范围。');
     const vision = state.visions.find((candidate) => candidate.id === id);
     if (!vision || vision.revision !== expectedRevision)
       throw new Error('愿景已更新，请刷新后重试');
@@ -515,8 +558,10 @@ export async function deleteVision(id: string, expectedRevision: number) {
 }
 
 /** Delete a goal and all of its future-side dependent records. */
-export async function deleteGoal(id: string, expectedRevision: number) {
+export async function deleteGoal(id: string, expectedRevision: number, expectedStateRevision?: number) {
   return command((state, values) => {
+    if (expectedStateRevision !== undefined && state.revision !== expectedStateRevision)
+      throw new Error('关联内容已变化，请重新打开规划并核对删除范围。');
     const goal = state.goals.find((candidate) => candidate.id === id);
     if (!goal || goal.revision !== expectedRevision) throw new Error('目标已更新，请刷新后重试');
     deleteGoalsInState(state, values, new Set([id]));
@@ -535,12 +580,12 @@ export async function deleteFutureAction(id: string, expectedRevision: number) {
 }
 
 /** Delete several actions in one atomic transaction, including their dependent future records. */
-export async function deleteFutureActions(
-  candidates: Array<Pick<ActionItem, 'id' | 'revision'>>,
-) {
+export async function deleteFutureActions(candidates: Array<Pick<ActionItem, 'id' | 'revision'>>) {
   return command((state, values) => {
     if (!candidates.length) throw new Error('请先选择行动');
-    const selected = new Map(candidates.map((candidate) => [candidate.id, candidate.revision ?? 0]));
+    const selected = new Map(
+      candidates.map((candidate) => [candidate.id, candidate.revision ?? 0]),
+    );
     if (selected.size !== candidates.length) throw new Error('行动选择重复，请重试');
 
     const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
@@ -567,7 +612,9 @@ export async function deleteGoalFeedback(id: string) {
   return command((state) => {
     if (!(state.goalFeedbackRecords ?? []).some((record) => record.id === id))
       throw new Error('目标反馈不存在');
-    state.goalFeedbackRecords = (state.goalFeedbackRecords ?? []).filter((record) => record.id !== id);
+    state.goalFeedbackRecords = (state.goalFeedbackRecords ?? []).filter(
+      (record) => record.id !== id,
+    );
     state.practiceRecords = (state.practiceRecords ?? []).map((record) =>
       record.goalFeedbackId === id ? { ...record, goalFeedbackId: undefined } : record,
     );
@@ -595,8 +642,10 @@ export async function recordActionPractice(input: ActionPracticeInput) {
       throw new Error('行动状态无效');
     if (!['continue', 'adjust', 'pause', 'end'].includes(input.nextStep))
       throw new Error('下一步无效');
-    if (input.completionDestination !== undefined &&
-      (input.status !== 'completed' || !['long_term', 'past'].includes(input.completionDestination)))
+    if (
+      input.completionDestination !== undefined &&
+      (input.status !== 'completed' || !['long_term', 'past'].includes(input.completionDestination))
+    )
       throw new Error('完成后的保存方式无效');
     const actions = (values[K.actions] as ActionItem[] | undefined) ?? [];
     const action = actions.find((candidate) => candidate.id === input.actionId);
@@ -685,6 +734,8 @@ export async function recordActionPractice(input: ActionPracticeInput) {
       candidate.id === action.id
         ? {
             ...candidate,
+            aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
+            aiConsentAt: Math.max(Date.now(), (candidate.aiConsentAt ?? 0) + 1),
             resultEntryId: record.pastEntryId ?? candidate.resultEntryId,
             archivedToPast: record.pastEntryId ? true : candidate.archivedToPast,
             title: nextAction ?? candidate.title,
@@ -907,6 +958,7 @@ export function detachFutureSources(
 
 /** One idempotent write for a confirmed proposal, using the same canonical store as every view. */
 export function saveArchiveDirection(input: {
+  aiVisibility?: 'private' | 'allowed';
   proposalId: string;
   kind: 'vision' | 'goal' | 'action';
   text: string;
@@ -926,6 +978,7 @@ export function saveArchiveDirection(input: {
       input.text.trim(),
       input.tags,
       input.sourceRefs,
+      input.aiVisibility ?? 'private',
     ]);
     if (existing) {
       if (existing.fingerprint && existing.fingerprint !== fingerprint)
@@ -940,6 +993,8 @@ export function saveArchiveDirection(input: {
         text: input.text.trim(),
         status: 'active',
         revision: 1,
+        aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
+        aiConsentAt: now,
         createdAt: now,
         updatedAt: now,
       });
@@ -951,6 +1006,8 @@ export function saveArchiveDirection(input: {
         measurement: { kind: 'narrative' },
         tags: input.tags,
         revision: 1,
+        aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
+        aiConsentAt: now,
         createdAt: now,
         updatedAt: now,
       });
@@ -962,7 +1019,9 @@ export function saveArchiveDirection(input: {
           title: input.text.trim(),
           status: 'pending',
           revision: 1,
-          createdAt: now,
+          aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
+        aiConsentAt: now,
+        createdAt: now,
           updatedAt: now,
         },
         ...actions,

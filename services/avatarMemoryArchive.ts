@@ -1,3 +1,5 @@
+import { saveReviewedAvatarMemory } from './avatarMemoryAtoms';
+import type { AIVisibility } from './aiPrivacy';
 import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../features/avatar/types';
 import { isCanonicalAvatarProjection } from './avatarKnowledgeProjection';
 import {
@@ -5,7 +7,6 @@ import {
   supersedeAvatarUnderstanding,
   updateAvatarAtomicMemoryStatus,
   updateAvatarUnderstandingStatus,
-  writeAvatarAtomicMemory,
   supersedeAvatarAtomicMemory,
 } from './avatarMemory';
 import { categoryForMemory } from './avatarMemoryCategories';
@@ -26,22 +27,24 @@ export function saveArchiveMemory(
   memory: AvatarAtomicMemory,
   statement: string,
   status: 'confirmed' | 'rejected',
+  aiVisibility: AIVisibility = 'private',
 ): boolean {
   const text = statement.trim();
   if (!text || (!isArchiveMemory(memory) && !memory.id.startsWith('atomic_pattern_'))) return false;
   if (memory.id.startsWith('atomic_pattern_')) {
     const owner = memory.sourceRefs.find((ref) => ref.source === 'pattern');
-    return !!owner && !!updateAvatarUnderstandingStatus(owner.id, status, text);
+    return !!owner && !!updateAvatarUnderstandingStatus(owner.id, status, text, aiVisibility);
   }
   const current = readAvatarAtomicMemories().find((item) => item.id === memory.id);
   if (!current) return false;
   // Review decisions must update the existing memory directly. The extraction
   // merge deliberately favors confirmed knowledge and would discard a rejection.
-  if (status === 'rejected' || text === current.statement)
+  if (status === 'rejected')
     return !!updateAvatarAtomicMemoryStatus(current.id, status);
   const now = Date.now();
-  return writeAvatarAtomicMemory({
+  return saveReviewedAvatarMemory({
     ...current,
+    aiVisibility,
     statement: text,
     category:
       text === current.statement
@@ -54,13 +57,13 @@ export function saveArchiveMemory(
 }
 
 /** Supersede a user-confirmed statement while retaining its revision history for audit. */
-export function supersedeArchiveMemory(memory: AvatarAtomicMemory, statement: string): boolean {
+export function supersedeArchiveMemory(memory: AvatarAtomicMemory, statement: string, aiVisibility: AIVisibility = 'private'): boolean {
   if (memory.id.startsWith('atomic_pattern_')) {
     const owner = memory.sourceRefs.find((ref) => ref.source === 'pattern');
-    return !!owner && !!supersedeAvatarUnderstanding(owner.id, statement);
+    return !!owner && !!supersedeAvatarUnderstanding(owner.id, statement, aiVisibility);
   }
   if (!isArchiveMemory(memory)) return false;
-  return !!supersedeAvatarAtomicMemory(memory.id, statement);
+  return !!supersedeAvatarAtomicMemory(memory.id, statement, { aiVisibility });
 }
 
 /** State and temporary conditions benefit from a lightweight validity check. */

@@ -1,12 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import { AccountBoundary } from './components/AccountBoundary';
+import { AppUpdateNotice } from './components/AppUpdateNotice';
 import './index.css';
 import './styles/experiences.css';
 import './styles/theme-v1.css';
 import './styles/entrance-theme.css';
 import './styles/design-tokens.css';
 import './styles/global-type.css';
+import './styles/refinement.css';
 import * as Sentry from '@sentry/react';
 import { initWebVitalsReporter } from './lib/vitals';
 import { registerVectorServiceWorker } from './lib/pwaRegister';
@@ -75,6 +77,7 @@ registerVectorServiceWorker();
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <AccountBoundary />
+    <AppUpdateNotice />
   </React.StrictMode>,
 );

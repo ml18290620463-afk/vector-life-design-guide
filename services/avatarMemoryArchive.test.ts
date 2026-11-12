@@ -13,6 +13,7 @@ import {
   isDirectionCandidate,
   isTimeSensitiveMemory,
   saveArchiveMemory,
+  supersedeArchiveMemory,
 } from './avatarMemoryArchive';
 import { hasMeaningfulStatementChange } from './avatarMemoryShared';
 import { buildGuidanceSources } from './avatarGuidance';
@@ -59,6 +60,18 @@ it('confirms and edits the canonical understanding without a second copy or supe
       patterns: readAvatarUnderstandings(),
     }).map((s) => s.text),
   ).not.toContain('修正后的理解');
+});
+it('persists each pattern consent choice and hides private patterns from AI sources', () => {
+  const memory = seed();
+  expect(saveArchiveMemory(memory, '修正后的理解', 'confirmed', 'allowed')).toBe(true);
+  const confirmed = readAvatarUnderstandings().find((p) => p.id === 'pending')!;
+  expect(confirmed.aiVisibility).toBe('allowed');
+  expect(atomicMemoryFromUnderstanding(confirmed).aiVisibility).toBe('allowed');
+  expect(supersedeArchiveMemory(atomicMemoryFromUnderstanding(confirmed), '现在我会重新判断', 'private')).toBe(true);
+  const latest = readAvatarUnderstandings().find((p) => p.statement === '现在我会重新判断')!;
+  expect(latest.aiVisibility).toBe('private');
+  expect(atomicMemoryFromUnderstanding(latest).aiVisibility).toBe('private');
+  expect(buildGuidanceSources({ entries: [], principles: [], actions: [], patterns: readAvatarUnderstandings() }).map((s) => s.text)).not.toContain(latest.statement);
 });
 it('rejects edits to canonical events and reports storage failure', () => {
   const memory = seed();

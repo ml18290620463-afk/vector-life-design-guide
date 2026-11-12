@@ -1,5 +1,7 @@
+import { accountLocalStorage } from './accountScope';
+import { normalizeFutureDrafts, type FutureDraft, type FutureDraftSnapshot } from './futureDraftRepository';
 import { PAST_PROCESSING_KEY } from './pastProcessingCache';
-import { PRIVATE_DRAFT_KEY } from './privateDraftKey';
+import { PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY } from './privateDraftKey';
 import { normalizeNowDraft, loadNowDraft, type DraftSnapshot } from './nowDraftRepository';
 import type { NowDraft } from '../features/now/types/now';
 import type { DiaryEntry } from '../types';
@@ -62,6 +64,7 @@ export interface VaultBackup {
     data: Record<keyof typeof domains, unknown[]>;
     future: FutureState;
     draft?: NowDraft | null;
+    futureDrafts?: Record<string, FutureDraft>;
     caches: Record<string, unknown[]>;
   };
 }
@@ -132,6 +135,7 @@ export function validateVaultBackup(value: unknown): asserts value is VaultBacku
       throw new Error('记录格式无效');
   stateFrom(b.vault.future);
   if (b.vault.draft) normalizeNowDraft(b.vault.draft);
+  normalizeFutureDrafts(b.vault.futureDrafts);
   for (const key of cacheKeys) {
     if (key === PAST_PROCESSING_KEY && b.vault.caches[key] === undefined) continue;
     if (
@@ -170,7 +174,7 @@ export function recoverBackupRestore(): Promise<void> {
     const session = useAppStore.getState();
     const protectedVault = await rawVaultTransaction(
       [K.passwordHash],
-      (v) => v[K.passwordHash] ?? localStorage.getItem(K.passwordHash),
+      (v) => v[K.passwordHash] ?? accountLocalStorage.getItem(K.passwordHash),
       true,
     );
     if (protectedVault && (!session.isUnlocked || !session.masterPassword)) return;
@@ -179,9 +183,9 @@ export function recoverBackupRestore(): Promise<void> {
         | { caches: Record<string, unknown[]>; mirrorKeys: string[] }
         | undefined;
       if (!job) return;
-      for (const key of cacheKeys) localStorage.setItem(key, JSON.stringify(job.caches[key] ?? []));
-      for (const key of job.mirrorKeys) localStorage.removeItem(key);
-      localStorage.removeItem(K.backup);
+      for (const key of cacheKeys) accountLocalStorage.setItem(key, JSON.stringify(job.caches[key] ?? []));
+      for (const key of job.mirrorKeys) accountLocalStorage.removeItem(key);
+      accountLocalStorage.removeItem(K.backup);
       v[RESTORE_JOB] = undefined;
     });
   })().finally(() => {
@@ -200,9 +204,9 @@ async function snapshotVaultBackup(
   await recoverSourceDeletion();
   await recoverBackupRestore();
   return preparedVaultTransaction(
-    [...Object.values(domains), K.future, K.passwordHash, PRIVATE_DRAFT_KEY],
+    [...Object.values(domains), K.future, K.passwordHash, PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY],
     async (v) => {
-      if (!allowProtected && (v[K.passwordHash] || localStorage.getItem(K.passwordHash)))
+      if (!allowProtected && (v[K.passwordHash] || accountLocalStorage.getItem(K.passwordHash)))
         throw new Error('完整备份暂不支持加密资料库，未导出任何文件');
       const data = Object.fromEntries(
         Object.entries(domains).map(([name, key]) => [name, storedArray(v[key], key) ?? []]),
@@ -222,7 +226,7 @@ async function snapshotVaultBackup(
         );
       }
       const caches = Object.fromEntries(
-        cacheKeys.map((key) => [key, JSON.parse(localStorage.getItem(key) ?? '[]')]),
+        cacheKeys.map((key) => [key, JSON.parse(accountLocalStorage.getItem(key) ?? '[]')]),
       );
       const result: VaultBackup = {
         type: 'vector-vault-backup',
@@ -244,6 +248,7 @@ async function snapshotVaultBackup(
             return future;
           })(),
           caches,
+          futureDrafts: (v[FUTURE_DRAFT_KEY] as FutureDraftSnapshot | undefined)?.drafts ?? {},
           draft: (v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined)?.draft ?? null,
         },
       };
@@ -251,7 +256,7 @@ async function snapshotVaultBackup(
       return {
         backup: result,
         skippedEntries: decoded.unreadableEntries,
-        protectedVault: Boolean(v[K.passwordHash] ?? localStorage.getItem(K.passwordHash)),
+        protectedVault: Boolean(v[K.passwordHash] ?? accountLocalStorage.getItem(K.passwordHash)),
       };
     },
     true,
@@ -318,7 +323,7 @@ export async function drillVaultBackupRestore(
   validateVaultBackup(backup);
   const localDomains = domainsFor(userId);
   return preparedVaultTransaction(
-    [...Object.values(localDomains), K.passwordHash, PRIVATE_DRAFT_KEY],
+    [...Object.values(localDomains), K.passwordHash, PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY],
     async (v) => {
       const current = await decodeEntries(
         (storedArray(v[K.entries], K.entries) as DiaryEntry[]) ?? [],
@@ -333,6 +338,12 @@ export async function drillVaultBackupRestore(
         if (old && canonical(old) !== canonical(entry)) conflicts.push(`记录编号冲突：${entry.id}`);
       }
       const oldDraft = v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined;
+      const oldFutureDraft = v[FUTURE_DRAFT_KEY] as FutureDraftSnapshot | undefined;
+      const incomingFutureDrafts = normalizeFutureDrafts(backup.vault.futureDrafts);
+      const localFutureDrafts = normalizeFutureDrafts(oldFutureDraft?.drafts);
+      const draftConflicts = Object.keys(incomingFutureDrafts).filter(key => localFutureDrafts[key] && canonical(localFutureDrafts[key]) !== canonical(incomingFutureDrafts[key]));
+      if (mode === 'merge' && draftConflicts.length) conflicts.push('本机和备份存在不同规划草稿');
+
       if (
         mode === 'merge' &&
         backup.vault.draft &&
@@ -417,7 +428,7 @@ export async function importVaultBackup(
   await recoverBackupRestore();
   const hasProtection = await rawVaultTransaction(
     [K.passwordHash],
-    (v) => Boolean(v[K.passwordHash] ?? localStorage.getItem(K.passwordHash)),
+    (v) => Boolean(v[K.passwordHash] ?? accountLocalStorage.getItem(K.passwordHash)),
     true,
   );
   const protection =
@@ -440,7 +451,7 @@ export async function importVaultBackup(
       K.passwordHash,
       K.initializedFlag,
       K.semanticEmbeddings,
-      PRIVATE_DRAFT_KEY,
+      PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY,
       RESTORE_JOB,
     ],
     async (v) => {
@@ -451,6 +462,12 @@ export async function importVaultBackup(
         useAppStore.getState().masterPassword,
       );
       const oldDraft = v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined;
+      const oldFutureDraft = v[FUTURE_DRAFT_KEY] as FutureDraftSnapshot | undefined;
+      const incomingFutureDrafts = normalizeFutureDrafts(backup.vault.futureDrafts);
+      const localFutureDrafts = normalizeFutureDrafts(oldFutureDraft?.drafts);
+      const draftConflicts = Object.keys(incomingFutureDrafts).filter(key => localFutureDrafts[key] && canonical(localFutureDrafts[key]) !== canonical(incomingFutureDrafts[key]));
+      if (mode === 'merge' && draftConflicts.length) throw new Error('本机和备份存在不同规划草稿，请先保存本机规划后再合并。');
+
       const incomingDraft = backup.vault.draft;
       if (
         mode === 'merge' &&
@@ -520,7 +537,7 @@ export async function importVaultBackup(
             ? (backup.vault.caches[key] ?? [])
             : mergeValues(
                 key,
-                JSON.parse(localStorage.getItem(key) ?? '[]'),
+                JSON.parse(accountLocalStorage.getItem(key) ?? '[]'),
                 backup.vault.caches[key] ?? [],
               ),
         ]),
@@ -550,6 +567,7 @@ export async function importVaultBackup(
         );
       for (const [name, key] of Object.entries(domains))
         v[key] = data[name as keyof typeof domains];
+      v[FUTURE_DRAFT_KEY] = { revision: (oldFutureDraft?.revision ?? 0) + 1, drafts: mode === 'replace' ? incomingFutureDrafts : { ...incomingFutureDrafts, ...localFutureDrafts } };
       v[PRIVATE_DRAFT_KEY] = { revision: (oldDraft?.revision ?? 0) + 1, draft: nextDraft };
       v[K.future] = future;
       v[K.backup] = data.entries;

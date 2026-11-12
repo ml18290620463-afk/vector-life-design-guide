@@ -138,3 +138,14 @@ export function getPastSearchMatch(entry: DiaryEntry, query: string) {
     id: matching.id,
   };
 }
+
+export interface PastFilters { from: string; to: string; tag: string; material: string }
+export function filterPastEntries(entries: DiaryEntry[], filters: PastFilters): DiaryEntry[] {
+  return entries.filter(entry => {
+    const date = new Date(entry.createdAt);
+    const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return (!filters.from || day >= filters.from) && (!filters.to || day <= filters.to) &&
+      (!filters.tag || entry.tags?.includes(filters.tag)) &&
+      (!filters.material || (filters.material === 'text' ? !entry.nowMaterials?.length && !entry.attachment : entry.nowMaterials?.some(m => m.type === filters.material) || entry.attachment?.type === filters.material));
+  });
+}

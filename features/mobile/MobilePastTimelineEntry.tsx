@@ -8,7 +8,8 @@ import { splitEntryContent } from '../../lib/entryContent';
 import { getPastSearchMatch } from './pastSearch';
 
 interface MobilePastTimelineEntryProps {
-  onAppendSupplement?: (entryId: string, content: string, supplementId: string) => Promise<void>;
+  onAppendSupplement?: (entryId: string, content: string, supplementId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
+  onChangeAIVisibility?: (entryId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
   draftPassword?: string | null;
   searchQuery?: string;
   searchMatchKind?: 'exact' | 'related';
@@ -23,6 +24,7 @@ interface MobilePastTimelineEntryProps {
 export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = ({
   entry,
   onAppendSupplement,
+  onChangeAIVisibility,
   draftPassword,
   searchQuery = '',
   searchMatchKind = 'exact',
@@ -148,6 +150,7 @@ export const MobilePastTimelineEntry: React.FC<MobilePastTimelineEntryProps> = (
           entry={entry}
           language={language}
           onAppend={selectionMode ? undefined : onAppendSupplement}
+          onChangeAIVisibility={selectionMode ? undefined : onChangeAIVisibility}
         />
       </div>
     </article>

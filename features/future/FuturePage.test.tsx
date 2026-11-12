@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom/vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { clear, set } from 'idb-keyval';
@@ -8,6 +9,7 @@ import {
   saveFutureAction,
   saveGoal,
   saveVision,
+  setGoalStatus,
 } from '../../services/futureRepository';
 import { DiaryStorageKeys as K } from '../../services/diaryStorage';
 import type { Principle } from '../../types';
@@ -126,10 +128,12 @@ describe('Future page', () => {
     );
     const dialog = await screen.findByRole('dialog', { name: '行动规划' });
     expect(within(dialog).getByText('行动依据：项目复盘记录')).toBeTruthy();
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.change(within(dialog).getByRole('textbox', { name: '行动内容' }), {
       target: { value: '先确认下次会议的问题' },
     });
-    fireEvent.click(within(dialog).getByRole('button', { name: '确定' }));
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
 
     await waitFor(async () => {
       const snapshot = await readFutureSnapshot();
@@ -142,10 +146,10 @@ describe('Future page', () => {
     });
   });
 
-  it('uses design and practice as the only primary navigation', async () => {
+  it('offers design, practice and history navigation', async () => {
     await mount();
     const navigation = screen.getByRole('tablist', { name: '未来分区' });
-    expect(within(navigation).getAllByRole('tab')).toHaveLength(2);
+    expect(within(navigation).getAllByRole('tab')).toHaveLength(3);
     expect(within(navigation).getByRole('tab', { name: '设计', selected: true })).toBeTruthy();
     expect(within(navigation).getByRole('tab', { name: '反馈' })).toBeTruthy();
   });
@@ -295,6 +299,7 @@ describe('Future page', () => {
     expect(within(row).queryByLabelText('关联经历（可选）')).toBeNull();
     fireEvent.change(note, { target: { value: '路线已经确认，可以按计划出发' } });
     fireEvent.click(within(row).getByRole('button', { name: '保存' }));
+
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     const snapshot = await readFutureSnapshot();
@@ -306,7 +311,9 @@ describe('Future page', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: action.title }));
     expect(
-      within(screen.getByRole('dialog', { name: action.title })).getByText('路线已经确认，可以按计划出发'),
+      within(screen.getByRole('dialog', { name: action.title })).getByText(
+        '路线已经确认，可以按计划出发',
+      ),
     ).toBeTruthy();
     expect(screen.queryByLabelText('本次执行状态')).toBeNull();
   });
@@ -334,7 +341,9 @@ describe('Future page', () => {
     expect(within(dialog).getByLabelText('本次执行状态')).toBeTruthy();
     fireEvent.click(within(dialog).getByText('评价这次行动（可选）'));
     fireEvent.change(within(dialog).getByLabelText('我的判断'), { target: { value: 'unhelpful' } });
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const snapshot = await readFutureSnapshot();
     expect(snapshot.state.practiceRecords?.[0].principleFeedback).toEqual({
@@ -361,6 +370,7 @@ describe('Future page', () => {
     fireEvent.click(within(row).getByText('下一步（默认继续完成）'));
     fireEvent.change(within(row).getByLabelText('下一步'), { target: { value: 'continue' } });
     fireEvent.click(within(row).getByRole('button', { name: '保存' }));
+
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('button', { name: action.title })).toBeTruthy();
     expect((await readFutureSnapshot()).actions.find((item) => item.id === action.id)?.status).toBe(
@@ -424,7 +434,8 @@ describe('Future page', () => {
     expect(within(dialog).queryByLabelText('愿景内容')).toBeNull();
     fireEvent.click(within(dialog).getByRole('button', { name: '编辑' }));
     fireEvent.change(within(dialog).getByLabelText('愿景内容'), { target: { value: duplicate } });
-    fireEvent.click(within(dialog).getByRole('button', { name: '确定' }));
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
     await screen.findByText('发现相似愿景');
     expect(screen.getByRole('button', { name: '继续已有愿景' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '仍然保存' })).toBeTruthy();
@@ -435,7 +446,7 @@ describe('Future page', () => {
     render(<FuturePage archiveMode entries={[]} onSelectEntry={vi.fn()} />);
     await screen.findByRole('heading', { name: '资料库已锁定' });
     const navigation = screen.getByRole('tablist', { name: '未来分区' });
-    expect(within(navigation).getAllByRole('tab')).toHaveLength(2);
+    expect(within(navigation).getAllByRole('tab')).toHaveLength(3);
     expect(screen.queryByRole('button', { name: '编辑未来规划' })).toBeNull();
     switchToPractice();
     expect(screen.getByRole('heading', { name: '资料库已锁定' })).toBeTruthy();
@@ -473,7 +484,9 @@ describe('Action detail goal context', () => {
     fireEvent.change(within(dialog).getByLabelText('目标进展（可选）'), {
       target: { value: '完成一座，还有九座' },
     });
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const { state } = await readFutureSnapshot();
     expect(state.practiceRecords).toHaveLength(1);
@@ -503,7 +516,9 @@ describe('Action detail goal context', () => {
     fireEvent.change(within(dialog).getByLabelText('目标进展（可选）'), {
       target: { value: '完成本年度登山目标' },
     });
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const snapshot = await readFutureSnapshot();
     expect(snapshot.state.goals[0].status).toBe('completed');
@@ -533,10 +548,50 @@ it('allows retained long-term actions to append progress and later archive', asy
   });
   fireEvent.change(within(dialog).getByLabelText('完成后'), { target: { value: 'past' } });
   fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+
   await waitFor(async () => {
     const snapshot = await readFutureSnapshot();
     expect(snapshot.state.practiceRecords).toHaveLength(2);
     expect(snapshot.actions[0].archivedToPast).toBe(true);
     expect(snapshot.actions[0].status).toBe('completed');
+  });
+});
+
+describe('history and deliberate reflection', () => {
+  it('finds a completed goal without any linked actions', async () => {
+    const goal = await mountain();
+    await setGoalStatus(goal.id, 'completed', goal.revision);
+    await mount();
+    fireEvent.click(screen.getByRole('tab', { name: '历史' }));
+    expect(screen.getByRole('button', { name: /爬十座山/ })).toBeTruthy();
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索历史' }), {
+      target: { value: '不存在' },
+    });
+    expect(screen.queryByRole('button', { name: /爬十座山/ })).toBeNull();
+  });
+  it('opens completed action feedback from history and passes an explicit practice reference', async () => {
+    const action = await saveFutureAction({ title: '完成核对', status: 'pending' });
+    await recordActionPractice({
+      actionId: action.id,
+      expectedActionRevision: action.revision,
+      occurredOn: '2026-11-12',
+      status: 'completed',
+      nextStep: 'end',
+      note: '提前核对避免遗漏',
+    });
+    const { onReflectInPast } = await mount();
+    fireEvent.click(screen.getByRole('tab', { name: '历史' }));
+    fireEvent.click(screen.getByRole('button', { name: /完成核对/ }));
+    expect(
+      within(screen.getByRole('dialog', { name: '完成核对' })).getByText('提前核对避免遗漏'),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '回看这次实践，提炼原则' }));
+    expect(onReflectInPast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: action.id,
+        practiceRecordId: expect.any(String),
+        result: '提前核对避免遗漏',
+      }),
+    );
   });
 });

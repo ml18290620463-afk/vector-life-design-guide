@@ -1,3 +1,4 @@
+import { aiPrivacyToken } from '../../../services/aiPrivacy';
 import { afterEach, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AvatarMemoryDetail } from './AvatarMemoryDetail';
@@ -15,7 +16,7 @@ it('keeps verified dialogue and supplement evidence collapsed and removes inacce
     updatedAt: 1,
     references: [],
     messages: [
-      { id: 'm', role: 'user', type: 'text', content: '我喜欢安静', created_at: '2026-01-01' },
+      { aiPrivacyToken: aiPrivacyToken([{id:'entry',title:'',content:'',tags:[],createdAt:1,isLocked:false,aiVisibility:'allowed'}]), id: 'm', role: 'user', type: 'text', content: '我喜欢安静', created_at: '2026-01-01' },
     ],
   });
   const memory = atomicMemoryFromUnderstanding({
@@ -40,7 +41,7 @@ it('keeps verified dialogue and supplement evidence collapsed and removes inacce
           title: '',
           content: '工作',
           tags: [],
-          isLocked: false,
+          aiVisibility: 'allowed' as const, isLocked: false,
           createdAt: 1,
           supplements: [{ id: 's', content: '独处更专注', createdAt: 2 }],
         },

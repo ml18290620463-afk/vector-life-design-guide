@@ -5,7 +5,7 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from 'react';
-import { set } from 'idb-keyval';
+import { set } from '../services/accountIdb';
 import type { Attachment, Container, DiaryEntry } from '../types';
 import { AppError, reportError } from '../lib/error';
 import { generateSecureId } from '../services/idGenerator';

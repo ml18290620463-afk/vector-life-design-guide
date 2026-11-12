@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { Language, Principle, Theme } from '../types';
 import './CoverScreen.brush.css';
+import { CoverParticleArrow } from './CoverParticleArrow';
 
 interface CoverScreenProps {
   onStart: () => void;
@@ -44,7 +45,11 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({ onStart, language, onM
     }, 250);
   };
   return (
-    <main className="vector-brush-cover" data-entering={entering || undefined} data-paused={paused || undefined}>
+    <main
+      className="vector-brush-cover"
+      data-entering={entering || undefined}
+      data-paused={paused || undefined}
+    >
       <header className="vector-brush-cover__header">
         <span className="vector-brush-cover__header-record">{zh ? '记录' : 'Record'}</span>
         <span className="vector-brush-cover__divider">||</span>
@@ -69,27 +74,16 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({ onStart, language, onM
                 <stop offset="0.5" stopColor="#2b4a55" />
                 <stop offset="1" stopColor="#203641" />
               </linearGradient>
-              {/* The present begins at the shared spine and rises by one quiet degree. */}
-              <linearGradient
-                id="vector-e-present-flow"
-                x1="2"
-                y1="40"
-                x2="62.8"
-                y2="32"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop stopColor="var(--cover-present-base)" />
-                <stop offset="0.18" stopColor="rgb(var(--cover-present-mid))" />
-                <stop offset="0.58" stopColor="rgb(var(--cover-present-light))" />
-                <stop offset="1" stopColor="rgb(var(--cover-present-tip))" />
-              </linearGradient>
             </defs>
-            <path fill="url(#vector-e-word-flow)" d="M2 0H59V8.2H11V75.8H59V84H2Z" />
-            <path
-              className="vector-brush-cover__e-bar"
-              fill="url(#vector-e-present-flow)"
-              d="M2 35H40C48.5 35 55.5 33.8 61 31.5C59.8 35 57.2 38 53.5 40C49.8 42 45.4 43 40 43H2Z"
-            />
+            <g
+              fill="none"
+              stroke="url(#vector-e-word-flow)"
+              strokeWidth="14"
+              strokeLinecap="round"
+            >
+              <path d="M9 7H54 M9 77H54" />
+              <path d="M9 42H18.6" />
+            </g>
           </svg>
           <span aria-hidden="true">CTOR</span>
         </h1>
@@ -114,9 +108,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({ onStart, language, onM
         </button>
       </section>
       <div className="vector-brush-cover__art" aria-hidden="true">
-        <img src="/vector-brush-arrow-ink-depth.png" alt="" />
-        {/* The masked wash preserves the original brush texture as light moves toward its tip. */}
-        <span className="vector-brush-cover__rising-wash" />
+        <CoverParticleArrow />
       </div>
       <footer className="vector-brush-cover__footer">
         {onMigrate && (

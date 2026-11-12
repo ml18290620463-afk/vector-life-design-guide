@@ -1,6 +1,7 @@
+import { accountLocalStorage } from './accountScope';
 export function getStoredString(key: string): string | null {
   try {
-    return localStorage.getItem(key);
+    return accountLocalStorage.getItem(key);
   } catch {
     return null;
   }
@@ -8,7 +9,7 @@ export function getStoredString(key: string): string | null {
 
 export function setStoredString(key: string, value: string): boolean {
   try {
-    localStorage.setItem(key, value);
+    accountLocalStorage.setItem(key, value);
     return true;
   } catch {
     return false;
@@ -17,7 +18,7 @@ export function setStoredString(key: string, value: string): boolean {
 
 export function removeStoredValue(key: string): boolean {
   try {
-    localStorage.removeItem(key);
+    accountLocalStorage.removeItem(key);
     return true;
   } catch {
     return false;
@@ -41,7 +42,7 @@ export function getStoredJson<T>(key: string): T | null {
 
 export function setStoredJson(key: string, value: unknown): boolean {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    accountLocalStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch {
     return false;

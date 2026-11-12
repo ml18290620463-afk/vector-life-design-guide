@@ -33,6 +33,8 @@ export interface PrincipleApplication {
 export type PrincipleRevisionKind = 'correction' | 'evolution';
 
 export interface Principle {
+  aiVisibility?: 'private' | 'allowed';
+  aiConsentAt?: number;
   id: string;
   text: string;
   /** User-authored labels used to organise principles without changing their meaning. */
@@ -93,6 +95,9 @@ export type ActionItemStatus = 'pending' | 'active' | 'completed' | 'abandoned';
  * intentionally deferred until the principle feedback loop has been validated.
  */
 export interface ActionItem {
+  aiVisibility?: 'private' | 'allowed';
+  aiConsentAt?: number;
+
   archivedToPast?: boolean;
   goalId?: string;
   scheduledOn?: string;
@@ -155,6 +160,9 @@ export interface EntrySupplement {
 }
 
 export interface DiaryEntry {
+  aiVisibility?: 'private' | 'allowed';
+  aiConsentAt?: number;
+  aiSourceSessionId?: string;
   supplements?: EntrySupplement[];
   id: string;
   title: string;

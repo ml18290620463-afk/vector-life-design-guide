@@ -52,6 +52,8 @@ export type PastPatternDomain =
 
 export interface AvatarUnderstandingVersion {
   id: string;
+  aiVisibility?: 'private' | 'allowed';
+  aiConsentAt?: number;
   statement: string;
   status: AvatarUnderstandingStatus;
   sourceEntryIds: string[];
@@ -146,6 +148,8 @@ export interface AvatarMemoryTagOverviewItem extends AvatarMemoryTag {
 }
 
 export interface AvatarAtomicMemory {
+  aiVisibility?: 'private' | 'allowed';
+  aiConsentAt?: number;
   /** Explicit link to the previous reviewed version. */
   previousVersionId?: string;
   id: string;

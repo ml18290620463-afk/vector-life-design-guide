@@ -1,6 +1,6 @@
 import { appendEntrySupplement, assertEntryUnchanged } from '../services/entryIntegrity';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { get, set } from 'idb-keyval';
+import { get, set } from '../services/accountIdb';
 import type {
   Attachment,
   Container,
@@ -257,7 +257,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         const currentPasswordSalt = await readStoredScalar(keys.passwordSalt);
 
         // One-shot migration: prior versions mirrored the password hash and
-        // salt to localStorage. Move any leftover values into IndexedDB and
+        // salt to accountLocalStorage. Move any leftover values into IndexedDB and
         // wipe the mirror copies so an XSS payload can no longer harvest
         // them.
         const passwordHashMirror = readDiaryString(keys.passwordHash);
@@ -461,10 +461,26 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     [entries, persistEntries],
   );
 
+  const changeAIVisibility = useCallback(async (entryId: string, aiVisibility: 'private' | 'allowed') => {
+    const keys = getDiaryStorageKeys(userId);
+    const saved = await vaultTransaction([keys.entries, keys.backup], (values) => {
+      const current = (values[keys.entries] as DiaryEntry[] | undefined) ?? [];
+      if (!current.some(e => e.id === entryId)) throw new Error('记录已不存在');
+      const next = current.map(e => e.id === entryId ? { ...e, aiVisibility, aiConsentAt: Math.max(Date.now(), (e.aiConsentAt ?? 0) + 1) } : e);
+      values[keys.entries] = next;
+      values[keys.backup] = next;
+      return next;
+    });
+    entriesRef.current = saved;
+    setEntries(saved);
+    removeDiaryMirror(keys.entries);
+    removeDiaryMirror(keys.backup);
+  }, [userId]);
+
   const appendSupplement = useCallback(
-    async (entryId: string, content: string, supplementId: string, password?: string | null) => {
+    async (entryId: string, content: string, supplementId: string, password?: string | null, aiVisibility: 'private' | 'allowed' = 'private') => {
       const keys = getDiaryStorageKeys(userId);
-      const saved = await appendEntrySupplement(keys, entryId, content, supplementId, password);
+      const saved = await appendEntrySupplement(keys, entryId, content, supplementId, password, aiVisibility);
       entriesRef.current = saved;
       setEntries(saved);
       removeDiaryMirror(keys.entries);
@@ -568,8 +584,11 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
       sourcePatternIds: string[] = [],
       tags: string[] = [],
       derivedFromPracticeIds: string[] = [],
+      aiVisibility: 'private' | 'allowed' = 'private',
     ) => {
       const newPrinciple: Principle = {
+        aiVisibility,
+        aiConsentAt: Date.now(),
         id: generateSecureId(),
         text,
         tags:
@@ -699,10 +718,12 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   );
 
   const revisePrinciple = useCallback(
-    async (original: Principle, text: string, revisionKind: PrincipleRevisionKind) => {
+    async (original: Principle, text: string, revisionKind: PrincipleRevisionKind, consent?: Pick<Principle, 'aiVisibility' | 'aiConsentAt' | 'application'>) => {
       const revisedAt = Date.now();
       const successor: Principle = {
         ...original,
+        aiVisibility: 'private',
+        ...consent,
         id: generateSecureId('principle'),
         text: text.trim(),
         year: new Date(revisedAt).getFullYear(),
@@ -846,6 +867,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     updateEntry,
     updateEntryRelatedIds,
     appendSupplement,
+    changeAIVisibility,
     bulkUpdateEntries,
     deleteEntry,
     deleteEntries,

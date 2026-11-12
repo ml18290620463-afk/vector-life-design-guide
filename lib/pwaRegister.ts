@@ -1,30 +1,12 @@
-/**
- * W3.2 — Service worker registration glue.
- *
- * `injectRegister: 'auto'` in vite-plugin-pwa would already insert
- * a basic registration script for us, but doing it by hand here
- * gives us:
- *   1. A typed entry point (`registerVectorServiceWorker`) so the
- *      bootstrap call from `index.tsx` is greppable.
- *   2. A console-only "update available" hook today; trivial to
- *      promote into a UI banner later (W4 / post-launch) by
- *      surfacing the `updateSW` callback through React context.
- *   3. A clean no-op when running under `vite dev` without
- *      `VITE_PWA_DEV=1` (the `virtual:pwa-register` import returns
- *      a stub in that mode).
- *
- * We intentionally do NOT auto-update — the `'prompt'` register type
- * means a new SW waits until the user accepts. This avoids
- * surprising layout / behaviour changes mid-session on long-lived
- * tabs (a common journaling pattern for VECTOR users).
- */
-
+/** Register updates without interrupting a writing session. */
 let updateAvailable = false;
-let updateCallback: (() => void) | null = null;
+const subscribers = new Set<() => void>();
+let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
 
 export interface ServiceWorkerStatus {
   /** True once an updated SW is waiting for the user to confirm. */
   isUpdateAvailable: () => boolean;
+  applyUpdate: () => Promise<void>;
   /**
    * Subscribe to updates. The callback fires once when an update is
    * detected. Returns an unsubscribe function.
@@ -34,10 +16,14 @@ export interface ServiceWorkerStatus {
 
 const status: ServiceWorkerStatus = {
   isUpdateAvailable: () => updateAvailable,
+  applyUpdate: async () => {
+    if (!updateSW) throw new Error('更新尚未就绪，请稍后重试');
+    await updateSW(true);
+  },
   onUpdateAvailable: (cb) => {
-    updateCallback = cb;
+    subscribers.add(cb);
     return () => {
-      if (updateCallback === cb) updateCallback = null;
+      subscribers.delete(cb);
     };
   },
 };
@@ -63,14 +49,11 @@ export const registerVectorServiceWorker = (): ServiceWorkerStatus => {
 
   void import('virtual:pwa-register')
     .then(({ registerSW }) => {
-      registerSW({
+      updateSW = registerSW({
         immediate: true,
         onNeedRefresh() {
           updateAvailable = true;
-          if (updateCallback) updateCallback();
-          // Console hint for the developer in this release; a UI
-          // banner is on the post-launch list.
-          console.info('[VECTOR SW] A new version is available — refresh to apply.');
+          subscribers.forEach((notify) => notify());
         },
         onOfflineReady() {
           console.info('[VECTOR SW] Cached for offline use.');

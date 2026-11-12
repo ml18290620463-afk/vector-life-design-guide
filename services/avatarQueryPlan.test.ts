@@ -13,7 +13,7 @@ const entries = [
     content: '',
     tags: [],
     createdAt: new Date(2026, 4, 2).getTime(),
-    isLocked: false,
+    aiVisibility: 'allowed' as const, isLocked: false,
   },
   {
     id: 'march',
@@ -21,7 +21,7 @@ const entries = [
     content: '',
     tags: [],
     createdAt: new Date(2026, 2, 2).getTime(),
-    isLocked: false,
+    aiVisibility: 'allowed' as const, isLocked: false,
   },
   {
     id: 'locked',
@@ -37,7 +37,7 @@ const entries = [
     content: '',
     tags: [],
     createdAt: new Date(2026, 4, 4).getTime(),
-    isLocked: false,
+    aiVisibility: 'allowed' as const, isLocked: false,
     isSample: true,
   },
   {
@@ -46,7 +46,7 @@ const entries = [
     content: '',
     tags: [],
     createdAt: new Date(2026, 4, 5).getTime(),
-    isLocked: false,
+    aiVisibility: 'allowed' as const, isLocked: false,
     isEncrypted: true,
   },
   {
@@ -55,7 +55,7 @@ const entries = [
     content: '',
     tags: [],
     createdAt: new Date(2026, 4, 6).getTime(),
-    isLocked: false,
+    aiVisibility: 'allowed' as const, isLocked: false,
     unlockAt: now + 1,
   },
 ];

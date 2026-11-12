@@ -1,3 +1,4 @@
+import { accountLocalStorage } from '../../../services/accountScope';
 import type { DiaryEntry } from '../../../types';
 import type { AvatarRecallMemory } from './nowRules';
 import { STORAGE_KEYS } from '../constants/config';
@@ -82,7 +83,7 @@ export const getAvatarIntroMessages = (args: {
       ];
 };
 
-export const readAndMarkAvatarIntroFirstVisit = (storage: Storage = window.localStorage) => {
+export const readAndMarkAvatarIntroFirstVisit = (storage: Storage = accountLocalStorage) => {
   const isFirstVisit = storage.getItem(STORAGE_KEYS.avatarIntroShown) !== 'true';
   storage.setItem(STORAGE_KEYS.avatarIntroShown, 'true');
   return isFirstVisit;

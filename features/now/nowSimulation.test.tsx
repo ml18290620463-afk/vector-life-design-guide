@@ -88,6 +88,7 @@ describe('Now simulated input integration', () => {
     const persist = vi.fn(saved);
     render(<Flow persist={persist} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     const timestamp = document.querySelector('time')!.textContent;
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
@@ -107,6 +108,7 @@ describe('Now simulated input integration', () => {
       .mockImplementation(saved);
     render(<Flow persist={persist} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
     await screen.findByText('模拟存储失败');
@@ -127,6 +129,7 @@ describe('Now simulated input integration', () => {
     });
     render(<Flow persist={persist} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fillRecord();
     const picker = document.querySelector('input[type=file][accept="image/*"]') as HTMLInputElement;
     fireEvent.change(picker, {
@@ -162,6 +165,7 @@ describe('Now simulated input integration', () => {
     );
     render(<Flow persist={persist} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fillRecord();
     const send = screen.getByLabelText('保存到过去');
     fireEvent.click(send);
@@ -174,6 +178,7 @@ describe('Now simulated input integration', () => {
     const persist = vi.fn(saved);
     render(<Flow persist={persist} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
     await waitFor(() => expect(input()).toHaveValue(''));
@@ -185,6 +190,7 @@ describe('Now simulated input integration', () => {
     const exit = vi.fn();
     const view = render(<Flow persist={vi.fn(saved)} exit={exit} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fillRecord();
     fireEvent.click(screen.getByLabelText('返回过去'));
     await waitFor(() => expect(exit).toHaveBeenCalledOnce());
@@ -200,6 +206,7 @@ describe('Now simulated input integration', () => {
       const exit = vi.fn();
       const view = render(<Flow persist={vi.fn(saved)} exit={exit} />);
       await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
       fillRecord();
       fireEvent.click(screen.getByRole('button', { name: '清空草稿' }));
       fireEvent.click(screen.getByRole('button', { name: choice }));
@@ -217,6 +224,7 @@ describe('Now simulated input integration', () => {
   it('preserves tag changes immediately on return', async () => {
     render(<Flow persist={vi.fn(saved)} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fireEvent.click(screen.getByLabelText('心情与事件'));
     fireEvent.click(screen.getByText('平静'));
     fireEvent.click(screen.getByLabelText('返回'));
@@ -259,6 +267,7 @@ describe('Now simulated input integration', () => {
       exit = vi.fn();
     render(<Flow persist={persist} exit={exit} />);
     await screen.findByLabelText('此刻发生了什么？');
+    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fireEvent.click(screen.getByLabelText('返回过去'));
     expect(exit).toHaveBeenCalledOnce();
     expect(window.prompt).not.toHaveBeenCalled();

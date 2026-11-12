@@ -6,6 +6,7 @@ const pattern: AvatarUnderstandingVersion = {
   id: 'p',
   statement: '行动前会准备',
   status: 'confirmed',
+  aiVisibility: 'allowed',
   sourceEntryIds: ['e'],
   createdAt: 1,
 };
@@ -15,7 +16,7 @@ const entry: DiaryEntry = {
   content: '提前整理材料，仍出现了遗漏。',
   tags: [],
   createdAt: 1,
-  isLocked: false,
+  aiVisibility: 'allowed' as const, isLocked: false,
 };
 const principle: Principle = {
   id: 'rule',
@@ -23,6 +24,7 @@ const principle: Principle = {
   year: 2026,
   createdAt: 1,
   showOnHome: true,
+  aiVisibility: 'allowed',
   sourcePatternIds: ['p'],
   confidence: 0.62,
 };
@@ -69,7 +71,7 @@ describe('Avatar evidence answers', () => {
       [{ ...entry, unlockAt: Date.now() + 100000 }],
     ]) {
       const answer = answerAvatarEvidence('模式的证据是什么？', [pattern], [], entries);
-      expect(answer).toContain('没有可读取的关联经历');
+      expect(answer).toContain('目前还没有你认可的模式');
       expect(answer).not.toContain(entry.content);
     }
   });

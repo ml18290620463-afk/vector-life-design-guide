@@ -734,7 +734,8 @@ describe('avatarMemory', () => {
     expect(readAvatarAtomicMemories()[0]).toMatchObject({
       id: 'memory-source',
       status: 'retained',
-      sourceRefs: [],
+      sourceRefs: [{ source: 'entry', id: 'entry-1' }],
+      aiVisibility: 'private',
       retainedAfterSourceDeletion: true,
     });
 

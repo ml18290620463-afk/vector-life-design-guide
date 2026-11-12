@@ -9,7 +9,7 @@ import { formatLogError } from './scrubLog';
 
 const sanitizeAvatarGrowthEntries = (
   entries: unknown,
-): Array<Pick<DiaryEntry, 'id' | 'title' | 'content' | 'tags' | 'createdAt'>> => {
+): DiaryEntry[] => {
   if (!Array.isArray(entries)) return [];
   return entries.flatMap((entry) => {
     if (!entry || typeof entry !== 'object') return [];
@@ -19,6 +19,7 @@ const sanitizeAvatarGrowthEntries = (
       content?: unknown;
       tags?: unknown;
       createdAt?: unknown;
+      aiVisibility?: unknown;
     };
     if (
       typeof candidate.id !== 'string' ||
@@ -37,6 +38,8 @@ const sanitizeAvatarGrowthEntries = (
           ? candidate.tags.filter((tag): tag is string => typeof tag === 'string')
           : [],
         createdAt: candidate.createdAt,
+        isLocked: false,
+        aiVisibility: candidate.aiVisibility === 'allowed' ? 'allowed' : 'private',
       },
     ];
   });
@@ -64,6 +67,7 @@ const sanitizeAvatarGrowthUnderstandings = (
       status?: unknown;
       sourceEntryIds?: unknown;
       createdAt?: unknown;
+      aiVisibility?: unknown;
       updatedAt?: unknown;
       previousVersionId?: unknown;
     };
@@ -84,6 +88,8 @@ const sanitizeAvatarGrowthUnderstandings = (
           ? candidate.sourceEntryIds.filter((id): id is string => typeof id === 'string')
           : [],
         createdAt: candidate.createdAt,
+        isLocked: false,
+        aiVisibility: candidate.aiVisibility === 'allowed' ? 'allowed' : 'private',
         ...(typeof candidate.updatedAt === 'number' ? { updatedAt: candidate.updatedAt } : {}),
         ...(typeof candidate.previousVersionId === 'string'
           ? { previousVersionId: candidate.previousVersionId }

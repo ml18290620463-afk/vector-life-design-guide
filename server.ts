@@ -360,7 +360,7 @@ async function startServer() {
     fontSrc: ["'self'", 'data:'],
     styleSrc: ["'self'", "'unsafe-inline'"],
     scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
-    connectSrc: ["'self'", 'https://openrouter.ai', 'https://generativelanguage.googleapis.com'],
+    connectSrc: ["'self'", 'https://openrouter.ai', 'https://generativelanguage.googleapis.com', ...(process.env.VITE_SUPABASE_URL ? [new URL(process.env.VITE_SUPABASE_URL).origin] : [])],
     workerSrc: ["'self'", 'blob:'],
     upgradeInsecureRequests: [],
   };
@@ -528,7 +528,7 @@ async function startServer() {
     );
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && process.env.VECTOR_SERVE_BUILD !== '1') {
     const vite = await createViteServer({
       server: { allowedHosts: true, middlewareMode: true },
       appType: 'spa',

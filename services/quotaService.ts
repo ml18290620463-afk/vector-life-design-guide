@@ -1,3 +1,4 @@
+import { accountLocalStorage } from './accountScope';
 export type UserTier = 'free' | 'stardust' | 'polaris' | 'owner';
 
 /**
@@ -23,7 +24,7 @@ export const getCurrentTier = (): UserTier => {
     window.location.hostname.endsWith('.local');
   if (!isDevHost) return 'free';
   try {
-    const raw = window.localStorage.getItem('vector_dev_tier');
+    const raw = accountLocalStorage.getItem('vector_dev_tier');
     if (raw === 'stardust' || raw === 'polaris' || raw === 'owner') return raw;
   } catch {
     // localStorage may be unavailable (e.g. private mode) — fall through.

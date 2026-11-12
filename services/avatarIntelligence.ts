@@ -118,7 +118,7 @@ export interface AvatarGrowthPreview {
 }
 
 export interface AvatarGrowthContext {
-  entries?: Array<Pick<DiaryEntry, 'id' | 'title' | 'content' | 'tags' | 'createdAt'>>;
+  entries?: Array<Pick<DiaryEntry, 'id' | 'title' | 'content' | 'tags' | 'createdAt'> & Partial<DiaryEntry>>;
   understandings?: AvatarUnderstandingVersion[];
   evidenceSources?: Array<{ entryId: string; supplementId?: string; createdAt: number }>;
   now?: number;
@@ -478,7 +478,7 @@ export const buildAvatarGrowthPreview = async (
       candidate.patternKey = extraction.patternKey;
   }
   const recallEntryIds = selectAvatarRecallMemories(
-    context.entries ?? [],
+    (context.entries ?? []).map(entry => ({ ...entry, isLocked: entry.isLocked ?? false })),
     [extraction.summary, ...extraction.moodTags, ...extraction.eventTags].join(' '),
     5,
   ).map((memory) => memory.sourceEntryId);

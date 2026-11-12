@@ -8,6 +8,7 @@ import { MaterialPreview } from './MaterialPreview';
 import { normalizeWebMaterialUrl } from '../../../lib/materialPersistence';
 
 interface NowPageProps {
+  privacyControl?: React.ReactNode;
   draft: NowDraft;
   setDraft: (updater: NowDraft | ((draft: NowDraft) => NowDraft)) => void;
   sending: boolean;
@@ -21,6 +22,7 @@ interface NowPageProps {
 }
 
 export const NowPage: React.FC<NowPageProps> = ({
+  privacyControl,
   draft,
   setDraft,
   sending,
@@ -258,6 +260,7 @@ export const NowPage: React.FC<NowPageProps> = ({
           </div>
         </form>
       </dialog>
+      {privacyControl}
       <header className="now-header">
         <button
           type="button"
@@ -422,7 +425,8 @@ export const NowPage: React.FC<NowPageProps> = ({
                 aria-label="图片"
                 onClick={handleImageImport}
               >
-                <Image size={19} />
+                <Image size={19} aria-hidden="true" />
+                <span>图片</span>
               </button>
               <button
                 type="button"
@@ -431,7 +435,8 @@ export const NowPage: React.FC<NowPageProps> = ({
                 aria-label="视频"
                 onClick={handleVideoImport}
               >
-                <Video size={19} />
+                <Video size={19} aria-hidden="true" />
+                <span>视频</span>
               </button>
               <button
                 type="button"
@@ -440,7 +445,8 @@ export const NowPage: React.FC<NowPageProps> = ({
                 aria-label="链接"
                 onClick={handleLinkImport}
               >
-                <LinkIcon size={19} />
+                <LinkIcon size={19} aria-hidden="true" />
+                <span>链接</span>
               </button>
             </div>
           ) : null}

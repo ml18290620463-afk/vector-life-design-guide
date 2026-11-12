@@ -1,3 +1,4 @@
+import { aiPrivacyToken } from './aiPrivacy';
 import { describe, expect, it } from 'vitest';
 import type { DiaryEntry } from '../types';
 import type { AvatarSession, AvatarMemorySourceRef } from '../features/avatar/types';
@@ -9,7 +10,7 @@ const entry: DiaryEntry = {
   content: '我的经历',
   tags: [],
   createdAt: 1,
-  isLocked: false,
+  aiVisibility: 'allowed' as const, isLocked: false,
   supplements: [{ id: 's', content: '补充事实', createdAt: 2 }],
 };
 const refs: AvatarMemorySourceRef[] = [
@@ -21,7 +22,7 @@ const session: AvatarSession = {
   mode: 'general',
   context: { mode: 'general', source: 'global' },
   messages: [
-    { id: 'm', role: 'user', type: 'text', content: '我的想法', created_at: '2026-01-01' },
+    { aiPrivacyToken: aiPrivacyToken([entry]), id: 'm', role: 'user', type: 'text', content: '我的想法', created_at: '2026-01-01' },
   ],
   references: [],
   createdAt: 1,

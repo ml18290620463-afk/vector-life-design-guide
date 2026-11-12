@@ -260,6 +260,8 @@ const memoryFacetFromPatternDomain = (domain?: PastPatternDomain): AvatarMemoryF
 export const atomicMemoryFromUnderstanding = (
   understanding: AvatarUnderstandingVersion,
 ): AvatarAtomicMemory => ({
+  aiVisibility: understanding.aiVisibility === 'allowed' ? 'allowed' : 'private',
+  aiConsentAt: understanding.aiConsentAt,
   id: stableAvatarId('atomic_pattern', [understanding.id, understanding.statement]),
   statement: understanding.statement,
   nature: 'inferred',

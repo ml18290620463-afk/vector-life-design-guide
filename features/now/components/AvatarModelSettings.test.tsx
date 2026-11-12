@@ -1,3 +1,5 @@
+import { clear } from 'idb-keyval';
+import { aiPrivacyToken } from '../../../services/aiPrivacy';
 import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -5,7 +7,8 @@ import { AvatarModelSettings } from './AvatarModelSettings';
 import { readAvatarModel, saveAvatarModel } from '../api/avatarModel';
 import { chatWithAvatar } from '../api/avatar';
 
-beforeEach(() => {
+beforeEach(async () => {
+  await clear();
   sessionStorage.clear();
   localStorage.clear();
   HTMLDialogElement.prototype.showModal = function () {
@@ -36,7 +39,19 @@ it('lets the user choose a model from the default dropdown and sends the saved c
   expect(readAvatarModel()?.model).toBe('gpt-4.1-mini');
   expect(localStorage.getItem('vector.avatar.model.session.v1')).toBeNull();
 
-  await chatWithAvatar([], []);
+  await chatWithAvatar(
+    [
+      {
+        id: 'new',
+        role: 'user',
+        type: 'text',
+        content: '你好',
+        created_at: '2026-01-01',
+        aiPrivacyToken: aiPrivacyToken([]),
+      },
+    ],
+    [],
+  );
   expect(JSON.parse(fetcher.mock.calls[1][1].body).modelConfig).toEqual({
     baseUrl: 'https://api.openai.com/v1',
     apiKey: 'secret-test',
@@ -99,7 +114,19 @@ it('remembers the API Key on this device by default', async () => {
   });
 
   sessionStorage.clear();
-  await chatWithAvatar([], []);
+  await chatWithAvatar(
+    [
+      {
+        id: 'new',
+        role: 'user',
+        type: 'text',
+        content: '你好',
+        created_at: '2026-01-01',
+        aiPrivacyToken: aiPrivacyToken([]),
+      },
+    ],
+    [],
+  );
   expect(JSON.parse(fetcher.mock.calls[1][1].body).modelConfig).toEqual({
     baseUrl: 'https://api.openai.com/v1',
     apiKey: 'remembered-key',
@@ -244,7 +271,7 @@ it('keeps default provider URL unmarked for generic connection failures', async 
   await waitFor(() =>
     expect(screen.getByLabelText('模型').getAttribute('aria-invalid')).toBe('false'),
   );
-  expect(screen.getByRole('alert').textContent).toContain('服务商已收到请求');
+  expect((await screen.findByRole('alert')).textContent).toContain('服务商已收到请求');
   expect(screen.getByRole('alert').textContent).not.toContain('稳定备选');
   expect(screen.getByLabelText('API 地址').getAttribute('aria-invalid')).toBe('false');
 });

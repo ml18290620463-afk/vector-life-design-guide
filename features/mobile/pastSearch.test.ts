@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DiaryEntry } from '../../types';
 import {
+  filterPastEntries,
   getPastSearchMatch,
   searchPastEntries,
   searchPastEntriesWithMatchKind,
@@ -119,4 +120,45 @@ it('marks literal and thematic results separately without changing the old searc
   ]);
   expect(searchPastEntries([exact, related], '焦虑')).toEqual([exact, related]);
   expect(searchPastEntriesWithMatchKind([exact, related], '焦虑 项目')).toEqual([]);
+});
+
+describe('archive filters', () => {
+  it('combines inclusive local dates and exact tags', () => {
+    const entries = [
+      entry('first', new Date(2026, 10, 12, 0).getTime(), ['工作']),
+      entry('last', new Date(2026, 10, 12, 23, 59).getTime(), ['工作']),
+      entry('other', new Date(2026, 10, 13).getTime(), ['工作']),
+      entry('partial', new Date(2026, 10, 12).getTime(), ['工作事业']),
+    ];
+    expect(
+      filterPastEntries(entries, {
+        from: '2026-11-12',
+        to: '2026-11-12',
+        tag: '工作',
+        material: '',
+      }).map((e) => e.id),
+    ).toEqual(['first', 'last']);
+  });
+  it('keeps text-only separate from legacy attachments and rejects reversed dates', () => {
+    const text = entry('text', new Date(2026, 10, 12).getTime());
+    const image = {
+      ...text,
+      id: 'image',
+      attachment: {
+        type: 'image' as const,
+        data: 'data:image/png;base64,test',
+        name: 'photo.png',
+        mimeType: 'image/png',
+      },
+    };
+    expect(
+      filterPastEntries([text, image], { from: '', to: '', tag: '', material: 'image' }),
+    ).toEqual([image]);
+    expect(
+      filterPastEntries([text, image], { from: '', to: '', tag: '', material: 'text' }),
+    ).toEqual([text]);
+    expect(
+      filterPastEntries([text], { from: '2026-11-13', to: '2026-11-12', tag: '', material: '' }),
+    ).toEqual([]);
+  });
 });

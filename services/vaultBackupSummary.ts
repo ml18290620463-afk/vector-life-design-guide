@@ -26,6 +26,7 @@ type BackupLike = {
     data: { materials: unknown[]; actions: unknown[] };
     future: FutureState;
     draft?: unknown | null;
+    futureDrafts?: Record<string, unknown>;
     caches: Record<string, unknown[]>;
   };
 };
@@ -90,7 +91,7 @@ export const summarizeVaultBackupContent = (backup: BackupLike): VaultBackupCont
       materialReferences.externalLink +
       materialReferences.unstableReference,
     portableMaterials: materialReferences.embedded,
-    hasDraft: hasDraftContent(backup.vault.draft),
+    hasDraft: hasDraftContent(backup.vault.draft) || Object.keys(backup.vault.futureDrafts ?? {}).length > 0,
     visions: backup.vault.future.visions.length,
     goals: backup.vault.future.goals.length,
     // FutureState.items are goal checklist items. Deliberate actions live in the

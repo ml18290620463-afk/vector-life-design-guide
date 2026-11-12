@@ -289,26 +289,17 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
                   { label: t.sec, val: timeLeft.s },
                 ].map((segment, i) => (
                   <div key={i} className="flex flex-col items-center">
-                    <span
-                      className={`text-[8px] font-mono opacity-30 uppercase tracking-[0.3em] mb-3`}
-                    >
-                      {segment.label}
-                    </span>
+                    <span className={`ds-meta mb-3`}>{segment.label}</span>
                     <div className="relative">
-                      <span className="text-3xl font-black tracking-tighter opacity-90 font-mono">
+                      <span className="viewer-countdown-value">
                         {segment.val.toString().padStart(2, '0')}
                       </span>
-                      <div className="absolute -inset-2 border border-cyan-500/10 rounded-sm" />
                     </div>
                   </div>
                 ))}
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-[1px] bg-indigo-500/20 shadow-[0_0_5px_color-mix(in_srgb,_var(--color-indigo-500)_20%,_transparent)]" />
-                <span className="text-[10px] font-mono uppercase tracking-[0.6em] text-indigo-400 font-bold animate-pulse neon-glow-indigo drop-shadow-[0_0_5px_color-mix(in_srgb,_var(--color-indigo-500)_40%,_transparent)]">
-                  {t.timeLock}
-                </span>
-                <div className="w-12 h-[1px] bg-indigo-500/20 shadow-[0_0_5px_color-mix(in_srgb,_var(--color-indigo-500)_20%,_transparent)]" />
+                <span className="ds-meta">{t.timeLock}</span>
               </div>
             </div>
           )}
@@ -318,7 +309,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
               role="alert"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-indigo-500/10 border border-indigo-500/30 p-2 text-[8px] text-vector-magenta font-mono text-center w-full uppercase tracking-widest mt-2 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-vector-magenta)_10%,_transparent)] neon-glow-alert"
+              className="viewer-lock-error"
             >
               {biometricError || decryptionError}
             </motion.div>

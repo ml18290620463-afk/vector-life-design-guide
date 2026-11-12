@@ -33,10 +33,11 @@ vi.mock('./hooks/useToast', () => ({
 }));
 
 vi.mock('./components/NowPage', () => ({
-  NowPage: ({ onSend }: { onSend: () => void }) => (
+  NowPage: ({ onSend, privacyControl }: { onSend: () => void; privacyControl: React.ReactNode }) => (
+    <>{privacyControl}
     <button type="button" onClick={onSend}>
       save-result
-    </button>
+    </button></>
   ),
 }));
 
@@ -68,6 +69,8 @@ vi.mock('../../services/neuralSemanticRecall', () => ({
 
 describe('NowFlow pure capture', () => {
   beforeEach(() => {
+    vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function () { this.open = true; });
+    vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function () { this.open = false; });
     draftControls.submissionId = undefined;
     draftControls.reset.mockReset().mockResolvedValue(true);
   });
@@ -110,6 +113,7 @@ describe('NowFlow pure capture', () => {
       />,
     );
     fireEvent.click(screen.getByText('save-result'));
+    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(draftControls.reset).toHaveBeenCalled());
     await waitFor(() =>
       expect(onReviewSavedRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'saved' })),
@@ -184,9 +188,13 @@ describe('NowFlow pure capture', () => {
     await waitFor(() => expect(persist).toHaveBeenCalledOnce());
     expect(draftControls.reset).not.toHaveBeenCalled();
     expect(review).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('内容可见性'), { target: { value: 'allowed' } });
     fireEvent.click(screen.getByText('save-result'));
+    expect(persist).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: /^允许 AI 可见/ }));
     await waitFor(() => expect(review).toHaveBeenCalledOnce());
-    expect(persist.mock.calls[0][0]).toEqual(persist.mock.calls[1][0]);
+    expect(persist.mock.calls[0][0].id).toBe(persist.mock.calls[1][0].id);
+    expect(persist.mock.calls[1][0].aiVisibility).toBe('allowed');
     vi.restoreAllMocks();
   });
   it('ignores repeated save clicks while persistence is pending', async () => {

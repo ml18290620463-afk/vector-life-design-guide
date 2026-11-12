@@ -8,6 +8,7 @@ export type GuidanceTemporalStatus =
   | 'time_limited';
 
 export interface GuidanceSource {
+  aiPrivacyToken?: string;
   id: string;
   kind: '模式' | '原则' | '行动' | '愿景' | '目标' | '偏好' | '边界' | '驱动' | '触点' | '背景';
   text: string;

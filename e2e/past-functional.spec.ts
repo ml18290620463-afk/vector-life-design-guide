@@ -74,7 +74,8 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole('dialog', { name: '放弃未保存的修改？' })).toBeVisible();
     await page.getByRole('button', { name: '继续编辑', exact: true }).click();
     await expect(input).toHaveValue('先澄清目标再行动');
-    await page.getByRole('button', { name: '留下这句话', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await page.getByRole('button', { name: /^仅自己可见/ }).click();
     await expect(page.getByText('先澄清目标再行动', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '写原则', exact: true })).toBeFocused();
 
@@ -88,6 +89,7 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: '编辑原则：先澄清目标再行动', exact: true }).click();
     await editor.fill('先明确目标，再选择行动');
     await page.getByRole('button', { name: '保存修改', exact: true }).click();
+    await page.getByRole('button', { name: /^仅自己可见/ }).click();
     await expect(page.getByText('先明确目标，再选择行动', { exact: true })).toBeVisible();
     await page.evaluate(async () => {
       await Promise.all(

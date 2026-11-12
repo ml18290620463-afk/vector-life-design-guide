@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { clear, get, set } from 'idb-keyval';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { DiaryEntry } from '../types';
@@ -35,7 +35,8 @@ it('keeps an encrypted draft intact until its password is available', async () =
   rerender(<PastSupplements entry={entry} language="zh" onAppend={onAppend} draftPassword="secret" />);
   await waitFor(() => expect(screen.getByRole('textbox', { name: '补充内容' })).toHaveProperty('value', '后来的想法'));
   fireEvent.click(screen.getByRole('button', { name: '保存' }));
-  await waitFor(() => expect(onAppend).toHaveBeenCalledWith(entry.id, '后来的想法', expect.any(String)));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '是否允许 AI 可见？' })).getByRole('button', { name: /^仅自己可见/ }));
+  await waitFor(() => expect(onAppend).toHaveBeenCalledWith(entry.id, '后来的想法', expect.any(String), 'private'));
   await waitFor(async () => expect(await get(key)).toBeUndefined());
 });
 
@@ -47,6 +48,7 @@ it('recovers a plain draft after remount and preserves it on failed save', async
   fireEvent.change(screen.getByRole('textbox', { name: '补充内容' }), { target: { value: '待补充的事实' } });
   await waitFor(async () => expect(await get(key)).toMatchObject({ content: '待补充的事实' }));
   fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: '是否允许 AI 可见？' })).getByRole('button', { name: /^仅自己可见/ }));
   await waitFor(() => expect(screen.getByRole('alert')).toHaveProperty('textContent', '保存失败'));
   first.unmount();
   render(<PastSupplements entry={entry} language="zh" onAppend={onAppend} />);

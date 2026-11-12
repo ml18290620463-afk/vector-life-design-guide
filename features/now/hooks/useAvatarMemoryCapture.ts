@@ -1,3 +1,6 @@
+import { useAIVisibilityChoice } from '../../../components/AIVisibilityDialog';
+import { saveReviewedAvatarMemory } from '../../../services/avatarMemoryAtoms';
+import { assertAIPrivacyUnchanged } from '../../../services/aiPrivacy';
 import {
   isSameDurableMemoryAssertion,
   memoryStatementKey,
@@ -7,7 +10,6 @@ import { saveArchiveDirection } from '../../../services/futureRepository';
 import {
   readAvatarAtomicMemories,
   supersedeAvatarAtomicMemory,
-  writeAvatarAtomicMemory,
 } from '../../../services/avatarMemory';
 import { readAvatarNameStatement } from '../../../services/avatarMemoryPolicy';
 import { generateSecureId } from '../../../services/idGenerator';
@@ -72,6 +74,7 @@ export const useAvatarMemoryCapture = ({
   showToast,
   refreshAvatarMemories,
 }: UseAvatarMemoryCaptureOptions) => {
+  const visibilityChoice = useAIVisibilityChoice('zh', 'memory');
   const [companionSummary, setCompanionSummary] = useState<RecordPreviewPayload | null>(null);
   const [memoryNature, setMemoryNature] = useState<AvatarMemoryNature>('inferred');
   const [candidateKind, setCandidateKind] = useState<AvatarFactCandidate['kind'] | null>(null);
@@ -89,6 +92,7 @@ export const useAvatarMemoryCapture = ({
   const extractionMounted = useRef(true);
   const summaryOpen = useRef(false);
   const memorySavingRef = useRef(false);
+  const candidatePrivacyToken = useRef<string | null>(null);
   const directionProposalId = useRef<string | null>(null);
   summaryOpen.current = !!companionSummary;
 
@@ -125,6 +129,7 @@ export const useAvatarMemoryCapture = ({
     }));
 
   const showCandidate = (candidate: CapturedCandidate) => {
+    candidatePrivacyToken.current = candidate.sources[0]?.aiPrivacyToken ?? '';
     const metadata = factMemoryMetadata(candidate.kind);
     setMemoryNature(metadata.nature);
     setCandidateKind(candidate.kind);
@@ -164,6 +169,7 @@ export const useAvatarMemoryCapture = ({
   };
 
   const addMemory = () => {
+    candidatePrivacyToken.current = null;
     setCandidateQueue([]);
     setCandidatePosition(0);
     setMemoryNature('explicit');
@@ -183,6 +189,7 @@ export const useAvatarMemoryCapture = ({
   };
 
   const considerAvatarName = (name: string, source: ChatMessage) => {
+    candidatePrivacyToken.current = source.aiPrivacyToken ?? '';
     setCandidateQueue([]);
     setCandidatePosition(0);
     setMemoryNature('explicit');
@@ -238,10 +245,7 @@ export const useAvatarMemoryCapture = ({
           candidates.findIndex(
             (item) =>
               memoryStatementKey(item.statement) === memoryStatementKey(candidate.statement) ||
-              isSameDurableMemoryAssertion(
-                durableAssertion(item),
-                durableAssertion(candidate),
-              ),
+              isSameDurableMemoryAssertion(durableAssertion(item), durableAssertion(candidate)),
           ) === index,
       );
       if (!uniqueCandidates.length) {
@@ -280,13 +284,26 @@ export const useAvatarMemoryCapture = ({
       return;
     }
     if (memorySavingRef.current) return;
+    memorySavingRef.current = true;
+    setMemorySaving(true);
+    try {
+    const aiVisibility = await visibilityChoice.request();
+    if (!aiVisibility) return;
+    try {
+      if (candidatePrivacyToken.current !== null)
+        await assertAIPrivacyUnchanged(candidatePrivacyToken.current);
+    } catch {
+      showToast('记录的 AI 权限已变化，请重新提炼后确认');
+      setCandidateQueue([]);
+      setCompanionSummary(null);
+      return;
+    }
     if (directionKind) {
-      memorySavingRef.current = true;
-      setMemorySaving(true);
       try {
         directionProposalId.current ??= generateSecureId('proposal');
         await saveArchiveDirection({
           proposalId: directionProposalId.current,
+          aiVisibility,
           kind: directionKind,
           text: companionSummary.text,
           tags,
@@ -296,9 +313,6 @@ export const useAvatarMemoryCapture = ({
         showToast('已存入方向与行动');
       } catch {
         showToast('保存失败，请重试');
-      } finally {
-        memorySavingRef.current = false;
-        setMemorySaving(false);
       }
       return;
     }
@@ -310,6 +324,7 @@ export const useAvatarMemoryCapture = ({
         return;
       }
       const updated = supersedeAvatarAtomicMemory(replacementId, companionSummary.text, {
+        aiVisibility,
         sourceRefs: candidateSources,
         nature: confirmedNature,
         category,
@@ -328,7 +343,8 @@ export const useAvatarMemoryCapture = ({
     }
     const now = Date.now();
     const isPatternCandidate = candidateKind === 'pattern_candidate';
-    const saved = writeAvatarAtomicMemory({
+    const saved = saveReviewedAvatarMemory({
+      aiVisibility,
       id:
         confirmedNature === 'explicit' && readAvatarNameStatement(companionSummary.text)
           ? 'avatar-name'
@@ -358,9 +374,14 @@ export const useAvatarMemoryCapture = ({
       advanceCandidate();
       showToast(isPatternCandidate ? '已保留为观察线索，更多表达支持后再请你确认' : '已存入记忆');
     } else showToast('保存失败，请重试');
+    } finally {
+      memorySavingRef.current = false;
+      setMemorySaving(false);
+    }
   };
 
   return {
+    dialog: visibilityChoice.dialog,
     companionSummary,
     setCompanionSummary,
     dismissMemory,

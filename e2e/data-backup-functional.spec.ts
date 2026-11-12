@@ -33,21 +33,22 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await page.getByRole('tab', { name: '沉淀', exact: true }).click();
   await page.getByRole('button', { name: '写原则', exact: true }).click();
   await page.getByRole('textbox', { name: '刻录新原则' }).fill(principle);
-  await page.getByRole('button', { name: '留下这句话', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(page.getByText(principle, { exact: true })).toBeVisible();
   await navigate(page, /^未来/);
   await page.getByRole('button', { name: '添加愿景', exact: true }).click();
   await page.getByLabel('愿景内容').fill(vision);
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: '添加目标', exact: true }).click();
   await page.getByLabel('目标内容').fill(goal);
+  await page.getByText('时间与关联（可选）', { exact: true }).click();
   await page.getByLabel('所属愿景（可选）').selectOption({ label: vision });
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: '添加行动', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   await page.getByText('可选设置', { exact: true }).click();
   await page.getByLabel('所属目标（可选）').selectOption({ label: goal });
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('tab', { name: '反馈', exact: true }).click();
   await page.getByRole('list', { name: '行动列表' }).getByRole('button', { name: action }).click();
   const progress = page.getByRole('dialog', { name: action });
@@ -59,7 +60,12 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await page.getByRole('button', { name: '备份', exact: true }).click();
   const panel = page.getByRole('region', { name: '备份与恢复' });
   await expect(panel.getByRole('heading', { name: '备份与恢复' })).toBeVisible();
-  await expect(panel.getByText('带走完整资料，回到任何一台设备后继续使用。')).toBeVisible();
+  await expect(panel.getByText('导出备份文件，在另一台设备上导入后继续使用。')).toBeVisible();
+  await expect(
+    panel.getByText('资料保存在当前设备的浏览器中，不会自动同步到其他设备。'),
+  ).toBeVisible();
+  await panel.getByText('什么时候备份？如何换设备？', { exact: true }).click();
+  await expect(panel.getByText(/服务器无法找回你的密令/)).toBeVisible();
   const downloadPromise = page.waitForEvent('download');
   await panel.getByRole('button', { name: '生成备份', exact: true }).click();
   const download = await downloadPromise;
@@ -119,6 +125,7 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
     ).toBeVisible();
     await fresh.getByRole('button', { name: new RegExp(`查看目标：.*${goal}`) }).click();
     await fresh.getByRole('button', { name: '编辑', exact: true }).click();
+    await fresh.getByText('时间与关联（可选）', { exact: true }).click();
     await expect(fresh.getByLabel('所属愿景（可选）').locator('option:checked')).toHaveText(vision);
     await fresh.getByRole('dialog').getByRole('button', { name: '返回', exact: true }).click();
     await fresh.getByRole('tab', { name: '反馈', exact: true }).click();

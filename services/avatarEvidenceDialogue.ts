@@ -1,3 +1,4 @@
+import { buildGuidanceSources } from './avatarGuidanceSources';
 import { isAccessibleDiaryEntry } from './avatarQueryPlan';
 import type { DiaryEntry, Principle } from '../types';
 import type { AvatarUnderstandingVersion } from '../features/avatar/types';
@@ -25,7 +26,9 @@ export function answerAvatarEvidence(
     !/(哪些|什么|为什么|怎样|怎么|告诉|看看|查看|了解|列出|依据|证据|适用|例外|[?？])/.test(query)
   )
     return null;
-  const active = patterns.filter((p) => p.status === 'confirmed');
+  const sources = buildGuidanceSources({ entries, patterns, principles, actions: [] });
+  const active = patterns.filter(p => sources.some(s => s.kind === '模式' && s.id === p.id));
+  principles = principles.filter(p => sources.some(s => s.kind === '原则' && s.id === p.id));
   const available = entries.filter((e) => isAccessibleDiaryEntry(e));
   const evidence = (ids: string[]) => {
     const linked = [...new Set(ids)].flatMap((id) => available.find((e) => e.id === id) ?? []);

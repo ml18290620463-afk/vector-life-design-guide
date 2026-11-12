@@ -7,6 +7,9 @@ export type Measurement =
   | { kind: 'narrative' }
   | { kind: 'quantity'; target: number; unit: string; precision: number; distinctItems: boolean };
 export interface Vision {
+  aiVisibility?: 'private' | 'allowed';
+  aiConsentAt?: number;
+
   id: string;
   text: string;
   status: 'active' | 'paused' | 'archived';
@@ -15,6 +18,9 @@ export interface Vision {
   updatedAt: number;
 }
 export interface Goal {
+  aiVisibility?: 'private' | 'allowed';
+  aiConsentAt?: number;
+
   id: string;
   title: string;
   visionId?: string;
@@ -178,6 +184,7 @@ export interface OutcomeInput extends OutcomeTarget {
   actionStatus?: ActionItemStatus;
 }
 export interface ActionPracticeInput {
+  aiVisibility?: 'private' | 'allowed';
   completionDestination?: 'long_term' | 'past';
   goalFeedback?: Omit<GoalFeedbackInput, 'occurredOn'>;
   nextAction?: string;
@@ -193,6 +200,7 @@ export interface ActionPracticeInput {
   };
 }
 export interface GoalFeedbackInput {
+  aiVisibility?: 'private' | 'allowed';
   goalId: string;
   expectedGoalRevision: number;
   decision: GoalFeedbackDecision;

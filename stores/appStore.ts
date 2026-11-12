@@ -1,3 +1,4 @@
+import { currentAccountId } from '../services/accountScope';
 import { create } from 'zustand';
 import { AppState, DiaryEntry, Language, Theme } from '../types';
 import { AppStorageKeys } from '../services/appSettings';
@@ -44,7 +45,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   language: 'zh',
   theme: getInitialTheme(),
   currentUser: '用户名',
-  userId: 'local-user',
+  userId: currentAccountId() ?? 'local-user',
   masterPassword: null,
   isUnlocked: false,
   selectedEntry: null,

@@ -33,7 +33,7 @@ const entry = (overrides: Partial<DiaryEntry>): DiaryEntry => ({
   createdAt: Date.parse('2026-07-06T13:45:00+08:00'),
   updatedAt: Date.parse('2026-07-06T13:45:00+08:00'),
   tags: ['心情:难过', '事件:职业发展'],
-  isLocked: false,
+  aiVisibility: 'allowed' as const, isLocked: false,
   ...overrides,
 });
 

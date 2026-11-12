@@ -66,7 +66,7 @@ describe('avatarIntelligence', () => {
       {
         entries: [
           {
-            id: 'entry-old',
+            id: 'entry-old', aiVisibility: 'allowed',
             title: '一次关系复盘',
             content: '我总是承担朋友的情绪，后来觉得压力很大。',
             tags: ['事件:人际关系', '心情:疲惫'],

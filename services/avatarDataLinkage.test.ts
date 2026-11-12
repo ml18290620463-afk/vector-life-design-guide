@@ -24,15 +24,21 @@ beforeEach(async () => {
 });
 
 it('uses current sources after edits, goal completion, archiving, abandoning and unlinking', async () => {
-  const vision = await saveVision({ text: '自然', status: 'active' });
+  const vision = await saveVision({ aiVisibility: 'allowed', text: '自然', status: 'active' });
   const goal = await saveGoal({
+    aiVisibility: 'allowed',
     title: '登山',
     status: 'active',
     visionId: vision.id,
     tags: [],
     measurement: { kind: 'narrative' },
   });
-  const action = await saveFutureAction({ title: '准备', status: 'pending', goalId: goal.id });
+  const action = await saveFutureAction({
+    aiVisibility: 'allowed',
+    title: '准备',
+    status: 'pending',
+    goalId: goal.id,
+  });
   const stale = projectGoalToAvatarMemory(goal);
   expect(readAvatarAtomicMemories()).toEqual([]);
   let snapshot = await readFutureSnapshot();

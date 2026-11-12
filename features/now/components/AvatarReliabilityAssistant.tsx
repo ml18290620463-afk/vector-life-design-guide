@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import { accountLocalStorage } from '../../../services/accountScope';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { NowDraft } from '../types/now';
 import type { AvatarReliabilityTask } from '../state/avatarReliabilityTasks';
 import { useAppStore } from '../../../stores/appStore';
@@ -36,6 +37,45 @@ const hasDraftContent = (draft: NowDraft) =>
 export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { isUnlocked, masterPassword, userId } = useAppStore();
+  const statusKey = `vector:backup-status:v1:${userId ?? 'local'}`;
+  const readStatus = useCallback(() => {
+    try {
+      const value = JSON.parse(accountLocalStorage.getItem(statusKey) || '{}');
+      if (!value || typeof value !== 'object') return {};
+      return {
+        generatedAt:
+          Number.isFinite(value.generatedAt) && value.generatedAt > 0
+            ? (value.generatedAt as number)
+            : undefined,
+        drilledAt:
+          Number.isFinite(value.drilledAt) && value.drilledAt > 0
+            ? (value.drilledAt as number)
+            : undefined,
+        canRestore:
+          typeof value.canRestore === 'boolean' ? (value.canRestore as boolean) : undefined,
+      };
+    } catch {
+      return {};
+    }
+  }, [statusKey]);
+  const [backupStatus, setBackupStatus] = useState<{
+    generatedAt?: number;
+    drilledAt?: number;
+    canRestore?: boolean;
+  }>(readStatus);
+  useEffect(() => {
+    setBackupStatus(readStatus());
+  }, [readStatus]);
+  const remember = (patch: typeof backupStatus) => {
+    const next = { ...backupStatus, ...patch };
+    setBackupStatus(next);
+    try {
+      accountLocalStorage.setItem(statusKey, JSON.stringify(next));
+    } catch {
+      /* Status is advisory; the file operation remains valid. */
+    }
+  };
+  const [reminderHidden, setReminderHidden] = useState(false);
   const [busy, setBusy] = useState(false);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [restorePassword, setRestorePassword] = useState('');
@@ -60,6 +100,7 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
         `vector-backup-${date}.json`,
         'application/json',
       );
+      remember({ generatedAt: Date.now() });
       showToast(isUnlocked ? '已生成加密备份文件' : '已生成备份文件');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '生成备份失败，请重试');
@@ -156,7 +197,9 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       const backup = isEncryptedVaultBackup(raw)
         ? await decryptVaultBackupFile(raw, restorePassword || masterPassword || '')
         : raw;
-      setDrill(await drillVaultBackupRestore(backup as VaultBackup, restoreMode, userId));
+      const result = await drillVaultBackupRestore(backup as VaultBackup, restoreMode, userId);
+      setDrill(result);
+      remember({ drilledAt: Date.now(), canRestore: result.canRestore });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '演练失败，请检查备份文件或密令');
     } finally {
@@ -203,7 +246,47 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       aria-label="备份与恢复"
     >
       <span className="avatar-reliability-card__eyebrow">备份与恢复</span>
-      <p>将记录、规划、已确认记忆和草稿留在一份可带走的文件里。</p>
+      <p>资料保存在当前设备的浏览器中，不会自动同步到其他设备。</p>
+      <div role="status">
+        <p>
+          {backupStatus.generatedAt
+            ? `最近生成完整备份：${new Date(backupStatus.generatedAt).toLocaleString()}`
+            : '尚无本机完整备份生成记录。'}
+        </p>
+        <p>
+          {backupStatus.drilledAt
+            ? `最近对所选文件的演练：${new Date(backupStatus.drilledAt).toLocaleString()} · ${backupStatus.canRestore ? '可恢复' : '存在冲突'}`
+            : '尚无所选文件的恢复演练记录。'}
+        </p>
+        <p>
+          生成记录不能确认文件已妥善保存；演练只验证当次所选文件，不代表最新备份已验证，也不代表已完成实际恢复。
+        </p>
+        {!reminderHidden &&
+          (!backupStatus.generatedAt || Date.now() - backupStatus.generatedAt > 7 * 86400000) && (
+            <div>
+              <p>建议生成一份近期备份，另存后选择该文件进行恢复演练。</p>
+              <button type="button" onClick={() => setReminderHidden(true)}>
+                本次不再提醒
+              </button>
+            </div>
+          )}
+      </div>
+      <details className="avatar-reliability-card__recovery">
+        <summary>什么时候备份？如何换设备？</summary>
+        <p>
+          记录重要内容后，以及清理浏览器数据、更换浏览器或设备前，请生成备份，并把文件另存到可靠的位置。
+        </p>
+        <p>
+          备份包含记录、原则、规划、已确认记忆和草稿。网页链接只保存地址，不能保证恢复链接中的内容。
+        </p>
+        <p>
+          在新设备打开 VECTOR，进入「分身 →
+          备份」，选择「恢复备份」，输入创建备份时的密令，检查后选择「合并恢复」。资料不会自动在两台设备之间更新。
+        </p>
+        <p>
+          请妥善保存备份文件和备份密令。服务器无法找回你的密令；没有对应密令，加密备份无法解锁。首次备份后，建议在另一个浏览器中实际恢复并核对内容。
+        </p>
+      </details>
       <div className="avatar-reliability-card__actions">
         <button
           type="button"

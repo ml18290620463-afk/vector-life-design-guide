@@ -14,12 +14,14 @@ const entry: DiaryEntry = {
   content: '任务范围不清楚，先沟通再安排',
   createdAt: 1,
   tags: [],
+  aiVisibility: 'allowed' as const,
   isLocked: false,
 };
 const pattern: AvatarUnderstandingVersion = {
   id: 'p',
   statement: '范围不清时先沟通',
   status: 'confirmed',
+  aiVisibility: 'allowed',
   sourceEntryIds: ['e'],
   createdAt: 1,
   trigger: '任务范围不清',
@@ -31,10 +33,12 @@ const principle: Principle = {
   year: 2026,
   createdAt: 1,
   showOnHome: false,
+  aiVisibility: 'allowed',
   sourcePatternIds: ['p'],
   application: { trigger: '任务范围不清', action: '向负责人确认' },
 };
 const action: ActionItem = {
+  aiVisibility: 'allowed',
   id: 'a',
   title: '沟通范围',
   status: 'completed',
@@ -113,8 +117,8 @@ describe('guidance evidence and outcome boundaries', () => {
     };
     const data = { ...input(), entries: [], avatarMemories: [memory] };
     const saved = buildGuidanceSources(data).find((s) => s.id === 'm');
-    expect(saved?.evidence).toEqual([]);
-    expect(JSON.stringify(saved)).not.toContain('deleted secret');
+    expect(saved).toBeUndefined();
+    expect(JSON.stringify(buildGuidanceSources(data))).not.toContain('deleted secret');
   });
   it('keeps a principle tied to its exact practice record, even when actions share a title', () => {
     const data = input();
@@ -206,6 +210,7 @@ describe('guidance evidence and outcome boundaries', () => {
     const data = input();
     data.future.goals = [
       {
+        aiVisibility: 'allowed',
         id: 'g',
         title: '沟通',
         status: 'paused',
@@ -281,6 +286,7 @@ describe('principle revision guidance', () => {
       year: 2026,
       createdAt: 1,
       showOnHome: false,
+      aiVisibility: 'allowed',
     };
     const correction: Principle = {
       ...original,
@@ -307,6 +313,7 @@ describe('principle revision guidance', () => {
       year: 2026,
       createdAt: 1,
       showOnHome: false,
+      aiVisibility: 'allowed',
     };
     const evolution: Principle = {
       ...original,

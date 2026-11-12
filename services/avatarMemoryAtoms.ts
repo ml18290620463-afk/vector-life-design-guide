@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Atomic memory migration and persistence share one storage boundary. */
 import type {
   AvatarAtomicMemory,
   AvatarMemoryFacet,
@@ -94,6 +95,8 @@ export const sanitizeAvatarAtomicMemories = (value: unknown): AvatarAtomicMemory
     return [
       {
         id: item.id,
+        aiVisibility: item.aiVisibility === 'allowed' ? 'allowed' : 'private',
+        aiConsentAt: typeof item.aiConsentAt === 'number' && Number.isFinite(item.aiConsentAt) && item.aiConsentAt >= 0 ? item.aiConsentAt : undefined,
         ...(typeof item.previousVersionId === 'string'
           ? { previousVersionId: item.previousVersionId }
           : {}),
@@ -420,6 +423,8 @@ const mergeSameStatementMemory = (
       : incoming.sensitivity;
   return {
     ...preferred,
+    aiVisibility: existing.aiVisibility === 'allowed' && incoming.aiVisibility === 'allowed' ? 'allowed' : 'private',
+    aiConsentAt: Math.max(existing.aiConsentAt ?? 0, incoming.aiConsentAt ?? 0),
     // Keep the established identifier so existing relations and user actions stay valid.
     facets: unique([...existing.facets, ...incoming.facets], (facet) => facet),
     tags: unique([...existing.tags, ...incoming.tags], (tag) => tag),
@@ -521,6 +526,20 @@ export const writeAvatarAtomicMemory = (memory: AvatarAtomicMemory): boolean => 
   return saved;
 };
 
+export const saveReviewedAvatarMemory = (memory: AvatarAtomicMemory): boolean => {
+  const [sanitized] = sanitizeAvatarAtomicMemories([memory]);
+  if (!sanitized) return false;
+  const current = readAvatarAtomicMemories();
+  const previous = current.find(item => item.id === memory.id);
+  if (previous && (previous.updatedAt ?? 0) > (memory.updatedAt ?? 0)) return false;
+  sanitized.aiConsentAt = Math.max(Date.now(), (previous?.aiConsentAt ?? 0) + 1);
+  const saved = setStoredJson(ATOMIC_MEMORY_KEY, previous
+    ? current.map(item => item.id === sanitized.id ? sanitized : item)
+    : [sanitized, ...current]);
+  if (saved) writeAvatarMemoryTags(upsertTagCatalogEntries(sanitized.tags));
+  return saved;
+};
+
 export const upsertAvatarAtomicMemories = (memories: AvatarAtomicMemory[]): boolean => {
   const sanitized = sanitizeAvatarAtomicMemories(memories).map(stampCandidate);
   if (!sanitized.length) return true;
@@ -566,10 +585,10 @@ export const updateAvatarAtomicMemoryStatus = (
 export const supersedeAvatarAtomicMemory = (
   id: string,
   statement: string,
-  revision?: Pick<
+  revision?: Partial<Pick<
     AvatarAtomicMemory,
-    'sourceRefs' | 'nature' | 'category' | 'facets' | 'tags' | 'contexts'
-  >,
+    'sourceRefs' | 'nature' | 'category' | 'facets' | 'tags' | 'contexts' | 'aiVisibility' | 'aiConsentAt'
+  >>,
 ): AvatarAtomicMemory | null => {
   const text = statement.trim();
   const current = readAvatarAtomicMemories();
@@ -577,11 +596,17 @@ export const supersedeAvatarAtomicMemory = (
   if (!target || !text || target.status !== 'confirmed') return null;
   // Do not make “我的变化” noisy when the user only adjusted punctuation or
   // spacing. The current wording is already sufficient in that case.
-  if (!hasMeaningfulStatementChange(target.statement, text)) return target;
+  if (!hasMeaningfulStatementChange(target.statement, text)) {
+    if (!revision) return target;
+    const updated = { ...target, ...revision, updatedAt: Date.now() };
+    return saveReviewedAvatarMemory(updated) ? updated : null;
+  }
   const now = Date.now();
   const next: AvatarAtomicMemory = {
     ...target,
+    aiVisibility: 'private',
     ...revision,
+    aiConsentAt: Math.max(Date.now(), (target.aiConsentAt ?? 0) + 1),
     validTo: undefined,
     proposedAt: undefined,
     id: generateSecureId('avatar-memory'),
@@ -633,7 +658,9 @@ export const pruneAvatarAtomicMemoriesBySourceIds = (
         return [
           {
             ...memory,
-            sourceRefs: [],
+            sourceRefs: memory.sourceRefs,
+            aiVisibility: 'private' as const,
+            aiConsentAt: Math.max(now, (memory.aiConsentAt ?? 0) + 1),
             status: memory.status === 'confirmed' ? ('retained' as const) : memory.status,
             retainedAfterSourceDeletion: true,
             updatedAt: now,
@@ -643,7 +670,7 @@ export const pruneAvatarAtomicMemoriesBySourceIds = (
       removedMemoryIds.push(memory.id);
       return [];
     }
-    return [{ ...memory, sourceRefs: remainingRefs, updatedAt: now }];
+    return [{ ...memory, aiVisibility: 'private' as const, aiConsentAt: Math.max(now, (memory.aiConsentAt ?? 0) + 1), updatedAt: now }];
   });
   if (persist && !setStoredJson(ATOMIC_MEMORY_KEY, memories))
     throw new Error('分身记忆关联保存失败，请重试');

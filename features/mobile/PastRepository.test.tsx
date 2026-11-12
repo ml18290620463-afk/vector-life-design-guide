@@ -207,7 +207,7 @@ describe('PastRepository', () => {
     ).toBeTruthy();
   });
 
-  it('keeps principle editing independent from avatar patterns', () => {
+  it('keeps principle editing independent from avatar patterns', async () => {
     const onAddPrinciple = vi.fn();
     renderRepository({ onAddPrinciple });
 
@@ -221,7 +221,9 @@ describe('PastRepository', () => {
     fireEvent.change(screen.getByLabelText('刻录新原则'), {
       target: { value: '先确认事实，再作判断' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '留下这句话' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+    fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
+    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalled());
     expect(onAddPrinciple).toHaveBeenCalledWith(
       '先确认事实，再作判断',
       expect.any(Number),
@@ -231,10 +233,11 @@ describe('PastRepository', () => {
       undefined,
       [],
       [],
+      'private',
     );
   });
 
-  it('shows saved principles and lets the user update them', () => {
+  it('shows saved principles and lets the user update them', async () => {
     const onUpdatePrinciple = vi.fn();
     const principle: Principle = {
       id: 'principle-1',
@@ -252,9 +255,12 @@ describe('PastRepository', () => {
       target: { value: '先核对事实，再作判断' },
     });
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
-    expect(onUpdatePrinciple).toHaveBeenCalledWith({
+    fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
+    await waitFor(() => expect(onUpdatePrinciple).toHaveBeenCalled());
+    expect(onUpdatePrinciple).toHaveBeenCalledWith(expect.objectContaining({
       ...principle,
       text: '先核对事实，再作判断',
-    });
+      aiVisibility: 'private',
+    }));
   });
 });

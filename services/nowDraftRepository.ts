@@ -1,3 +1,4 @@
+import { accountLocalStorage } from './accountScope';
 import { vaultTransaction } from './vaultTransaction';
 import { PRIVATE_DRAFT_KEY } from './privateDraftKey';
 import { createEmptyDraft } from '../features/now/state/nowRules';
@@ -49,7 +50,7 @@ export function normalizeNowDraft(value: unknown): NowDraft {
 }
 export async function loadNowDraft(): Promise<DraftSnapshot> {
   // A legacy copy is removed only after a protected transaction has committed.
-  const raw = localStorage.getItem(legacyKey);
+  const raw = accountLocalStorage.getItem(legacyKey);
 
   const row = await vaultTransaction([PRIVATE_DRAFT_KEY], (values) => {
     const stored = values[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined;
@@ -66,7 +67,7 @@ export async function loadNowDraft(): Promise<DraftSnapshot> {
     if (legacy) values[PRIVATE_DRAFT_KEY] = initial;
     return initial;
   });
-  if (raw) localStorage.removeItem(legacyKey);
+  if (raw) accountLocalStorage.removeItem(legacyKey);
   return { ...row, draft: row.draft ? normalizeNowDraft(row.draft) : null };
 }
 export async function saveNowDraft(

@@ -42,6 +42,8 @@ export const sanitizeAvatarUnderstandings = (value: unknown): AvatarUnderstandin
     return [
       {
         id: item.id,
+        aiVisibility: item.aiVisibility === 'allowed' ? 'allowed' as const : 'private' as const,
+        ...(typeof item.aiConsentAt === 'number' ? { aiConsentAt: item.aiConsentAt } : {}),
         statement: item.statement,
         status: item.status as AvatarUnderstandingStatus,
         sourceEntryIds: Array.isArray(item.sourceEntryIds)
@@ -183,6 +185,7 @@ export const updateAvatarUnderstandingStatus = (
   id: string,
   status: AvatarUnderstandingStatus,
   statement?: string,
+  aiVisibility?: 'private' | 'allowed',
 ): AvatarUnderstandingVersion | null => {
   const current = readAvatarUnderstandings();
   const existing = current.find((item) => item.id === id);
@@ -199,7 +202,7 @@ export const updateAvatarUnderstandingStatus = (
     status === 'confirmed' &&
     existing.statement !== target.statement
   ) {
-    return supersedeAvatarUnderstanding(id, target.statement);
+    return supersedeAvatarUnderstanding(id, target.statement, aiVisibility);
   }
 
   const now = Date.now();
@@ -207,6 +210,7 @@ export const updateAvatarUnderstandingStatus = (
     status === 'confirmed'
       ? {
           ...target,
+          ...(aiVisibility ? { aiVisibility, aiConsentAt: now } : {}),
           status,
           updatedAt: now,
           confirmedAt: target.confirmedAt ?? now,
@@ -229,6 +233,7 @@ export const updateAvatarUnderstandingStatus = (
 export const supersedeAvatarUnderstanding = (
   id: string,
   statement: string,
+  aiVisibility?: 'private' | 'allowed',
 ): AvatarUnderstandingVersion | null => {
   const text = statement.trim();
   if (!text) return null;
@@ -236,11 +241,13 @@ export const supersedeAvatarUnderstanding = (
   const current = readAvatarUnderstandings();
   const existing = current.find((item) => item.id === id);
   if (!existing || existing.status !== 'confirmed') return null;
-  if (!hasMeaningfulStatementChange(existing.statement, text)) return existing;
+  if (!hasMeaningfulStatementChange(existing.statement, text) && aiVisibility === undefined) return existing;
 
   const now = Date.now();
   const replacement: AvatarUnderstandingVersion = {
     ...existing,
+    aiVisibility: aiVisibility ?? 'private',
+    aiConsentAt: now,
     id: stableAvatarId('pattern_version', [existing.id, text, now]),
     statement: text,
     status: 'confirmed',

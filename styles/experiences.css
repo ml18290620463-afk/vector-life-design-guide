@@ -3805,3 +3805,26 @@ dialog.principle-editor-screen::backdrop {
     font-size: 1.05rem;
   }
 }
+
+/* Consent is a brief decision, keeping the writing screen beneath it. */
+html:is(.vector-force-mobile, .vector-force-web) .past-action-dialog.ai-visibility-dialog {
+  inset: 0;
+  width: min(420px, calc(100vw - 32px));
+  max-width: 420px;
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 24px;
+  transform: none;
+  display: block;
+  border: 1px solid var(--experience-line);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 18%);
+}
+html .past-action-dialog.ai-visibility-dialog::backdrop {
+  background: rgb(12 24 32 / 45%);
+}
+
+html:is(.vector-force-mobile, .vector-force-web) .ai-visibility-dialog :is(p, strong, span) {
+  color: inherit;
+}

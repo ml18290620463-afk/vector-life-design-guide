@@ -2,7 +2,7 @@ import type { DiaryEntry } from '../types';
 import { sanitizeDiaryEntry } from './diaryDataRead';
 import { preparedVaultTransaction } from './vaultTransaction';
 import { SecurityService } from './securityService';
-import { get } from 'idb-keyval';
+import { get } from './accountIdb';
 
 /** Normal updates may change organization and derived links, never recorded evidence. */
 export function assertEntryUnchanged(previous: DiaryEntry, next: DiaryEntry) {
@@ -27,6 +27,7 @@ export async function appendEntrySupplement(
   content: string,
   supplementId: string,
   password?: string | null,
+  aiVisibility: 'private' | 'allowed' = 'private',
 ) {
   const text = content.trim();
   if (!text || !supplementId) throw new Error('请填写补充内容');
@@ -64,6 +65,8 @@ export async function appendEntrySupplement(
       item.id === entryId
         ? {
             ...item,
+            aiVisibility,
+            aiConsentAt: Math.max(Date.now(), (item.aiConsentAt ?? 0) + 1),
             supplements: [
               ...(item.supplements ?? []),
               { id: supplementId, content: storedContent, createdAt: Date.now(), isEncrypted: encrypted },

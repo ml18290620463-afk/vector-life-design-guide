@@ -1,3 +1,4 @@
+import { isAIMessageAllowed } from './aiPrivacy';
 import type { DiaryEntry } from '../types';
 import type { AvatarMemorySourceRef, AvatarSession } from '../features/avatar/types';
 import { isAccessibleDiaryEntry } from './avatarQueryPlan';
@@ -8,6 +9,7 @@ export function resolveAvatarSourceEvidence(
   entries: DiaryEntry[],
   sessions: AvatarSession[],
   now = Date.now(),
+  privacyToken?: string,
 ): AvatarMemorySourceRef[] {
   return refs.filter((ref) => {
     if (!ref.excerpt?.trim()) return false;
@@ -32,6 +34,7 @@ export function resolveAvatarSourceEvidence(
           session.messages.some(
             (message) =>
               message.id === ref.id &&
+              isAIMessageAllowed(message, entries, privacyToken) &&
               message.role === 'user' &&
               message.type === 'text' &&
               message.content.includes(ref.excerpt!),

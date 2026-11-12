@@ -76,15 +76,7 @@ export const StatisticsLanguageSwitch: React.FC<StatisticsLanguageSwitchProps> =
                   role="radio"
                   aria-checked={language === lang.id}
                   onClick={() => onSetLanguage(lang.id)}
-                  className={`flex items-center justify-center py-1.5 px-1 rounded-lg border transition-all text-[9px] font-mono cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
-                    language === lang.id
-                      ? theme === 'light'
-                        ? 'bg-cyan-50 border-cyan-400 text-cyan-600 shadow-sm'
-                        : 'bg-cyan-500/20 border-cyan-500/60 text-cyan-200 font-bold'
-                      : theme === 'light'
-                        ? 'bg-white border-slate-100 text-slate-400 hover:border-cyan-200 hover:text-cyan-500'
-                        : 'bg-white/[0.02] border-white/[0.05] text-vector-slate-chrome hover:border-cyan-800 hover:text-cyan-400'
-                  }`}
+                  className="statistics-language-option"
                 >
                   {lang.label}
                 </button>

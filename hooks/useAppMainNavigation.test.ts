@@ -96,10 +96,10 @@ it.each([false, true])(
     const setNowRoute = vi.fn();
     const { result } = renderHook(() => useAppMainNavigation({ setAppState, setNowRoute }));
     act(() => result.current.handleMainModuleNavigate('past'));
-    expect(setAppState).not.toHaveBeenCalled();
+    expect(setAppState).toHaveBeenLastCalledWith(AppState.PAST);
     await act(async () => result.current.handleMainModuleNavigate('future'));
-    expect(setAppState).toHaveBeenCalledExactlyOnceWith(AppState.FUTURE);
+    expect(setAppState).toHaveBeenLastCalledWith(AppState.FUTURE);
     await act(async () => resolvePast());
-    expect(setAppState).toHaveBeenCalledExactlyOnceWith(AppState.FUTURE);
+    expect(setAppState).toHaveBeenLastCalledWith(AppState.FUTURE);
   },
 );

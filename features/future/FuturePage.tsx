@@ -1,3 +1,4 @@
+import { useAIVisibilityChoice } from '../../components/AIVisibilityDialog';
 import { ActionFeedbackList } from './ActionFeedbackList';
 import { ActionFeedbackReading } from './ActionFeedbackReading';
 import { FeedbackEditor } from './FeedbackEditor';
@@ -38,8 +39,9 @@ import {
   visionSimilarity,
 } from './futureTextRules';
 import './future.css';
-type FutureSection = 'design' | 'practice';
-type PendingVision = Pick<Vision, 'text' | 'status'> & Partial<Pick<Vision, 'id' | 'revision'>>;
+type FutureSection = 'design' | 'practice' | 'history';
+type PendingVision = Pick<Vision, 'text' | 'status'> &
+  Partial<Pick<Vision, 'id' | 'revision' | 'aiVisibility'>>;
 
 interface FuturePageProps {
   archiveMode?: boolean;
@@ -54,15 +56,16 @@ interface FuturePageProps {
 const field = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
 export function FuturePage({
   onNavigateModule: _onNavigateModule,
-  onReflectInPast: _onReflectInPast,
+  onReflectInPast,
   initialActionContext,
-  entries: _entries,
+  entries,
   principles = [],
-  onSelectEntry: _onSelectEntry,
+  onSelectEntry,
   archiveMode: _archiveMode,
-  initialGoalId: _initialGoalId,
+  initialGoalId,
 }: FuturePageProps) {
   const { state, actions: allActions, ready, error, refresh, protectedVault } = useFuture();
+  const visibility = useAIVisibilityChoice('zh', true);
   const [section, setSection] = useState<FutureSection>('design');
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState('');
@@ -85,7 +88,26 @@ export function FuturePage({
   const practicePanel = useRef<HTMLDialogElement | null>(null);
   const practiceWasOpen = useRef(false);
   const practiceScrollY = useRef(0);
-  const sectionScrollY = useRef<Record<FutureSection, number>>({ design: 0, practice: 0 });
+  const sectionScrollY = useRef<Record<FutureSection, number>>({
+    design: 0,
+    practice: 0,
+    history: 0,
+  });
+  const [historyQuery, setHistoryQuery] = useState('');
+  const openedGoal = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready || !initialGoalId || openedGoal.current === initialGoalId) return;
+    const value = state.goals.find((goal) => goal.id === initialGoalId);
+    if (value) {
+      openedGoal.current = initialGoalId;
+      editorOpener.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setNotice('');
+      setDuplicateVision(null);
+      setPendingVision(null);
+      setEditor({ kind: 'goal', value });
+    }
+  }, [ready, initialGoalId, state.goals]);
   const openedActionContext = useRef<ActionDraftContext | null>(null);
   // `openEditor` intentionally changes identity on render; the context is a
   // one-shot cross-module handoff and must not reopen after it has been closed.
@@ -181,7 +203,9 @@ export function FuturePage({
     latestPracticeByAction,
     localDate(),
   );
-  const selectedFeedbackAction = actions.find((action) => action.id === selectedFeedbackActionId);
+  const selectedFeedbackAction = allActions.find(
+    (action) => action.id === selectedFeedbackActionId,
+  );
   const feedbackGoal = state.goals.find((goal) => goal.id === selectedFeedbackAction?.goalId);
   const feedbackVision = state.visions.find((vision) => vision.id === feedbackGoal?.visionId);
   const goalRecords = (state.goalFeedbackRecords ?? [])
@@ -199,19 +223,19 @@ export function FuturePage({
     .filter((record) => record.actionId === selectedFeedbackActionId)
     .sort((left, right) => right.createdAt - left.createdAt);
 
-  const savePendingVision = () => {
+  const savePendingVision = async () => {
     if (!pendingVision) return;
-    void run(() => saveVision(pendingVision));
+    const aiVisibility =
+      pendingVision.aiVisibility === 'allowed' ? await visibility.request() : 'private';
+    if (aiVisibility) return run(() => saveVision({ ...pendingVision, aiVisibility }), false);
   };
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submit = async (data: FormData) => {
     if (!editor) return;
-    const data = new FormData(event.currentTarget);
-
     if (editor.kind === 'vision') {
       const nextVision: PendingVision = {
         ...editor.value,
+        aiVisibility: field(data, 'aiVisibility') === 'allowed' ? 'allowed' : 'private',
         text: field(data, 'text'),
         status: (field(data, 'status') || 'active') as Vision['status'],
       };
@@ -226,15 +250,21 @@ export function FuturePage({
         setNotice('');
         return;
       }
-      void run(() => saveVision(nextVision));
-      return;
+      const aiVisibility =
+        field(data, 'aiVisibility') === 'allowed' ? await visibility.request() : 'private';
+      if (!aiVisibility) return;
+      return run(() => saveVision({ ...nextVision, aiVisibility }), false);
     }
+
+    const aiVisibility =
+      field(data, 'aiVisibility') === 'allowed' ? await visibility.request() : 'private';
+    if (!aiVisibility) return;
 
     if (editor.kind === 'goal') {
       const desiredStatus = (field(data, 'status') ||
         editor.value?.status ||
         'active') as Goal['status'];
-      void run(async () => {
+      return run(async () => {
         let current = editor.value;
         // A completed or ended goal must be reopened before it can be edited.
         // Do that transition first so the following content save always operates
@@ -247,6 +277,7 @@ export function FuturePage({
           current = (await setGoalStatus(current.id, desiredStatus, current.revision)).goal;
         const saved = await saveGoal({
           ...current,
+          aiVisibility,
           title: field(data, 'title'),
           status: current?.status ?? 'active',
           visionId: field(data, 'visionId') || undefined,
@@ -257,28 +288,33 @@ export function FuturePage({
         });
         if (saved.status !== desiredStatus)
           await setGoalStatus(saved.id, desiredStatus, saved.revision);
-      });
-      return;
+      }, false);
     }
 
     if (editor.kind === 'action') {
       const goalId = field(data, 'goalId') || undefined;
-      void run(() =>
-        saveFutureAction({
-          ...editor.context,
-          ...editor.value,
-          title: field(data, 'title'),
-          status: editor.value?.status ?? 'pending',
-          scheduledOn: field(data, 'scheduledOn') || undefined,
-          goalId,
-          resultIntent: goalId ? 'outcome' : 'preparation',
-        }),
+      return run(
+        () =>
+          saveFutureAction({
+            ...editor.context,
+            ...editor.value,
+            principleId: field(data, 'principleId') || undefined,
+            sourceEntryId: field(data, 'sourceEntryId') || undefined,
+            evidenceEntryIds: JSON.parse(field(data, 'evidenceEntryIds') || '[]'),
+            rationale: field(data, 'rationale') || undefined,
+            aiVisibility,
+            title: field(data, 'title'),
+            status: editor.value?.status ?? 'pending',
+            scheduledOn: field(data, 'scheduledOn') || undefined,
+            goalId,
+            resultIntent: goalId ? 'outcome' : 'preparation',
+          }),
+        false,
       );
-      return;
     }
   };
 
-  const submitFeedback = (event: FormEvent<HTMLFormElement>) => {
+  const submitFeedback = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedFeedbackAction) return;
     const data = new FormData(event.currentTarget);
@@ -292,6 +328,10 @@ export function FuturePage({
           }
         : undefined;
     if (feedbackEnded && !goalFeedback) return;
+    const aiVisibility =
+      field(data, 'aiVisibility') === 'allowed' ? await visibility.request() : 'private';
+    if (!aiVisibility) return;
+    if (goalFeedback) Object.assign(goalFeedback, { aiVisibility });
     const feedbackStatus = practiceStatus;
     const nextStep =
       feedbackStatus === 'completed' || feedbackStatus === 'cancelled' ? 'end' : practiceNextStep;
@@ -300,6 +340,7 @@ export function FuturePage({
         feedbackEnded && goalFeedback
           ? recordGoalFeedback({ ...goalFeedback, occurredOn: localDate() })
           : recordActionPractice({
+              aiVisibility,
               goalFeedback,
               occurredOn: localDate(),
               actionId: selectedFeedbackAction.id,
@@ -356,6 +397,41 @@ export function FuturePage({
     <p role="alert">{error}</p>
   ) : !ready ? (
     <p className="future-empty">正在读取…</p>
+  ) : section === 'history' ? (
+    <section className="future-history" aria-label="规划历史">
+      <h2>规划历史</h2>
+      <p>已完成、已结束的目标与归档愿景。打开后可查看进展或编辑状态重新开启。</p>
+      <label>
+        搜索历史
+        <input
+          type="search"
+          value={historyQuery}
+          onChange={(event) => setHistoryQuery(event.target.value)}
+        />
+      </label>
+      <FutureDesignResults
+        visions={newestFirst(
+          state.visions.filter(
+            (v) => v.status === 'archived' && v.text.includes(historyQuery.trim()),
+          ),
+        )}
+        goals={newestFirst(
+          state.goals.filter(
+            (g) =>
+              ['completed', 'ended'].includes(g.status) && g.title.includes(historyQuery.trim()),
+          ),
+        )}
+        actions={allActions.filter(
+          (a) =>
+            (a.archivedToPast || ['completed', 'abandoned'].includes(a.status)) &&
+            a.title.includes(historyQuery.trim()),
+        )}
+        onAdd={(kind) => openEditor({ kind })}
+        onEditVision={(value) => openEditor({ kind: 'vision', value })}
+        onEditGoal={(value) => openEditor({ kind: 'goal', value })}
+        onEditAction={(value) => openActionFeedback(value.id)}
+      />
+    </section>
   ) : section === 'design' ? (
     <FutureDesignResults
       visions={activeVisions}
@@ -390,7 +466,26 @@ export function FuturePage({
           }
         />
       </section>
+    </div>
+  );
 
+  return (
+    <main className="future-page">
+      {visibility.dialog}
+      <div className="future-primary-tabs" role="tablist" aria-label="未来分区">
+        {(['design', 'practice', 'history'] as const).map((value) => (
+          <button
+            type="button"
+            role="tab"
+            key={value}
+            aria-selected={section === value}
+            onClick={() => switchSection(value)}
+          >
+            {value === 'design' ? '设计' : value === 'practice' ? '反馈' : '历史'}
+          </button>
+        ))}
+      </div>
+      {content}
       {practicePanelOpen && selectedFeedbackAction && (
         <dialog
           ref={practicePanel}
@@ -433,6 +528,21 @@ export function FuturePage({
                 Boolean(feedbackGoal && ['active', 'paused'].includes(feedbackGoal.status))
               }
               onUpdate={() => setPracticeEditing(true)}
+              onReflect={
+                onReflectInPast
+                  ? (record) => {
+                      closePracticePanel();
+                      onReflectInPast({
+                        actionId: record.actionId,
+                        practiceRecordId: record.id,
+                        occurredOn: record.occurredOn,
+                        actionTitle: record.actionTitle || selectedFeedbackAction.title,
+                        result: record.note,
+                        nextStep: record.nextStep,
+                      });
+                    }
+                  : undefined
+              }
               onDeletePractice={(id) => void run(() => deleteActionPractice(id), false)}
               onDeleteGoalFeedback={(id) => void run(() => deleteGoalFeedback(id), false)}
             />
@@ -493,29 +603,22 @@ export function FuturePage({
           )}
         </dialog>
       )}
-    </div>
-  );
-
-  return (
-    <main className="future-page">
-      <div className="future-primary-tabs" role="tablist" aria-label="未来分区">
-        {(['design', 'practice'] as const).map((value) => (
-          <button
-            type="button"
-            role="tab"
-            key={value}
-            aria-selected={section === value}
-            onClick={() => switchSection(value)}
-          >
-            {value === 'design' ? '设计' : '反馈'}
-          </button>
-        ))}
-      </div>
-      {content}
       {!practicePanelOpen && !editor && notice && <p role="status">{notice}</p>}
       {editor && !protectedVault && (
         <FutureEditor
-          actions={actions}
+          actions={allActions}
+          entries={entries}
+          principles={principles}
+          onSelectEntry={(entry) => {
+            closeEditor();
+            onSelectEntry(entry);
+          }}
+          onArchive={() => {
+            if (editor.kind === 'vision' && editor.value)
+              void run(() => saveVision({ ...editor.value!, status: 'archived' }));
+            if (editor.kind === 'goal' && editor.value)
+              void run(() => setGoalStatus(editor.value!.id, 'ended', editor.value!.revision));
+          }}
           key={`${editor.kind}:${editor.value?.id ?? 'new'}`}
           editor={editor}
           state={state}
@@ -533,9 +636,11 @@ export function FuturePage({
           onDelete={() => {
             if (!editor.value) return;
             if (editor.kind === 'vision')
-              void run(() => deleteVision(editor.value!.id, editor.value!.revision));
+              void run(() =>
+                deleteVision(editor.value!.id, editor.value!.revision, state.revision),
+              );
             else if (editor.kind === 'goal')
-              void run(() => deleteGoal(editor.value!.id, editor.value!.revision));
+              void run(() => deleteGoal(editor.value!.id, editor.value!.revision, state.revision));
             else void run(() => deleteFutureAction(editor.value!.id, editor.value!.revision ?? 0));
           }}
         />

@@ -121,11 +121,8 @@ export const parseAvatarTimeRange = (
   return undefined;
 };
 
-export const isAccessibleDiaryEntry = (entry: DiaryEntry, now = Date.now()) =>
-  !entry.isSample &&
-  !entry.isLocked &&
-  !entry.isEncrypted &&
-  (!entry.unlockAt || entry.unlockAt <= now);
+export { canAIReadEntry as isAccessibleDiaryEntry } from './aiPrivacy';
+import { canAIReadEntry as isAccessibleDiaryEntry } from './aiPrivacy';
 
 const isCountOnlyQuestion = (question: string) =>
   /(多少|几)(篇|条|个)?(日记|记录)|写了(多少|几)(篇|条)?(日记|记录)|(?:日记|记录).*(多少|几)(篇|条|个)?/.test(

@@ -1,3 +1,4 @@
+import { accountLocalStorage, accountSessionStorage } from '../../../services/accountScope';
 export type AvatarModelEndpoint = 'chat' | 'responses';
 export interface AvatarModelConfig {
   baseUrl: string;
@@ -43,21 +44,21 @@ const parseAvatarModelPreference = (raw: string | null): StoredAvatarModelPrefer
 
 export function readAvatarModel(): AvatarModelConfig | null {
   return (
-    parseAvatarModel(sessionStorage.getItem(SESSION_KEY)) ||
-    parseAvatarModel(localStorage.getItem(REMEMBERED_KEY))
+    parseAvatarModel(accountSessionStorage.getItem(SESSION_KEY)) ||
+    parseAvatarModel(accountLocalStorage.getItem(REMEMBERED_KEY))
   );
 }
 export function hasRememberedAvatarModel(): boolean {
-  return parseAvatarModel(localStorage.getItem(REMEMBERED_KEY)) !== null;
+  return parseAvatarModel(accountLocalStorage.getItem(REMEMBERED_KEY)) !== null;
 }
 export function readAvatarModelPreference(): AvatarModelPreference | null {
   const config =
-    parseAvatarModel(sessionStorage.getItem(SESSION_KEY)) ||
-    parseAvatarModel(localStorage.getItem(REMEMBERED_KEY));
+    parseAvatarModel(accountSessionStorage.getItem(SESSION_KEY)) ||
+    parseAvatarModel(accountLocalStorage.getItem(REMEMBERED_KEY));
   return config
     ? { baseUrl: config.baseUrl, model: config.model, endpoint: config.endpoint }
     : (() => {
-        const preference = parseAvatarModelPreference(localStorage.getItem(PREFERENCE_KEY));
+        const preference = parseAvatarModelPreference(accountLocalStorage.getItem(PREFERENCE_KEY));
         return preference
           ? {
               baseUrl: preference.baseUrl,
@@ -73,14 +74,14 @@ export function readAvatarModelPreference(): AvatarModelPreference | null {
  * an explicit opt-out across a fresh browser session.
  */
 export function readAvatarModelRememberPreference(): boolean {
-  const preference = parseAvatarModelPreference(localStorage.getItem(PREFERENCE_KEY));
+  const preference = parseAvatarModelPreference(accountLocalStorage.getItem(PREFERENCE_KEY));
   return preference?.rememberKey ?? true;
 }
 export function saveAvatarModel(value: AvatarModelConfig | null, remember = true) {
   if (value) {
     const payload = JSON.stringify(value);
-    sessionStorage.setItem(SESSION_KEY, payload);
-    localStorage.setItem(
+    accountSessionStorage.setItem(SESSION_KEY, payload);
+    accountLocalStorage.setItem(
       PREFERENCE_KEY,
       JSON.stringify({
         baseUrl: value.baseUrl,
@@ -89,12 +90,12 @@ export function saveAvatarModel(value: AvatarModelConfig | null, remember = true
         rememberKey: remember,
       }),
     );
-    if (remember) localStorage.setItem(REMEMBERED_KEY, payload);
-    else localStorage.removeItem(REMEMBERED_KEY);
+    if (remember) accountLocalStorage.setItem(REMEMBERED_KEY, payload);
+    else accountLocalStorage.removeItem(REMEMBERED_KEY);
   } else {
-    sessionStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(REMEMBERED_KEY);
-    localStorage.removeItem(PREFERENCE_KEY);
+    accountSessionStorage.removeItem(SESSION_KEY);
+    accountLocalStorage.removeItem(REMEMBERED_KEY);
+    accountLocalStorage.removeItem(PREFERENCE_KEY);
   }
   window.dispatchEvent(new Event(AVATAR_MODEL_CHANGED_EVENT));
 }

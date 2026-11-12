@@ -4,11 +4,11 @@
   --ds-font-mono: 'JetBrains Mono', 'PingFang SC', 'Noto Sans SC', monospace;
   --ds-size-meta: 12px;
   --ds-size-support: 14px;
-  --ds-size-control: 15px;
-  --ds-size-body: 17px;
+  --ds-size-control: 14px;
+  --ds-size-body: 16px;
   --ds-size-section: 18px;
-  --ds-size-title: 30px;
-  --ds-line-body: 1.8;
+  --ds-size-title: 22px;
+  --ds-line-body: 1.65;
   --ds-line-ui: 1.5;
   --ds-space-2: 8px;
   --ds-space-3: 12px;
@@ -25,21 +25,21 @@
 
 html.light {
   color-scheme: light;
-  --ds-page: #f5f8f8;
+  --ds-page: #f4f7f9;
   --ds-page-raised: #eaf0f1;
   --ds-sidebar: #eaf0f1;
   --ds-surface: #ffffff;
   --ds-surface-raised: #f8fbfb;
   --ds-hover: #eaf0f1;
   --ds-selected: #dce9ec;
-  --ds-text: #203641;
+  --ds-text: #405560;
   --ds-text-muted: #526873;
   --ds-text-subtle: #526873;
   --ds-disabled: #9aa9af;
   --ds-accent: #426c7d;
   --ds-accent-hover: #365d6d;
   --ds-accent-pressed: #2c4e5d;
-  --ds-on-accent: #f5f8f8;
+  --ds-on-accent: #f4f7f9;
   --ds-selection: #c9dde2;
   --ds-line: #d9e1e3;
   --ds-border: #c9d5d8;
@@ -48,7 +48,7 @@ html.light {
   --ds-success-bg: #e5f1ec;
   --ds-warning: #86652e;
   --ds-warning-bg: #f6efdf;
-  --ds-danger: #a6575c;
+  --ds-danger: #984c52;
   --ds-danger-bg: #f6e9ea;
   --ds-insight: #66749b;
   --ds-insight-bg: #e9ebf4;
@@ -150,5 +150,11 @@ html:not(.light) {
   --color-archive-success: var(--ds-success);
 }
 
-html.light ::selection { background: var(--ds-selection); color: var(--ds-text); }
-html:not(.light) ::selection { background: var(--ds-selection); color: var(--ds-text); }
+html.light ::selection {
+  background: var(--ds-selection);
+  color: var(--ds-text);
+}
+html:not(.light) ::selection {
+  background: var(--ds-selection);
+  color: var(--ds-text);
+}

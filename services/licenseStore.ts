@@ -1,4 +1,5 @@
-import { get, set, del } from 'idb-keyval';
+import { accountLocalStorage } from './accountScope';
+import { get, set, del } from './accountIdb';
 import { DiaryStorageKeys } from './diaryStorage';
 import {
   LICENSE_KEYRING,
@@ -81,10 +82,10 @@ const looksLikeStored = (value: unknown): value is StoredLicense => {
 export const getOrCreateInstallId = (): string => {
   if (typeof window === 'undefined') return 'server-side';
   try {
-    const existing = window.localStorage.getItem(INSTALL_ID_STORAGE_KEY);
+    const existing = accountLocalStorage.getItem(INSTALL_ID_STORAGE_KEY);
     if (existing && existing.length > 0) return existing;
     const fresh = generateSecureId('install');
-    window.localStorage.setItem(INSTALL_ID_STORAGE_KEY, fresh);
+    accountLocalStorage.setItem(INSTALL_ID_STORAGE_KEY, fresh);
     return fresh;
   } catch {
     // Private mode / Safari ITP fallback — generate a per-session
@@ -100,7 +101,7 @@ export const getOrCreateInstallId = (): string => {
 export const __resetInstallIdForTests = (): void => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.removeItem(INSTALL_ID_STORAGE_KEY);
+    accountLocalStorage.removeItem(INSTALL_ID_STORAGE_KEY);
   } catch {
     // ignore
   }
