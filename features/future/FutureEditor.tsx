@@ -284,16 +284,6 @@ export function FutureEditor({
         )}
         <p role="status">{draft.message || (!draft.ready ? '正在读取加密草稿…' : '')}</p>
         <fieldset disabled={busy || !draft.ready || draft.saved}>
-          <label className="future-ai-visibility">
-            内容可见性
-            <select name="aiVisibility" defaultValue={editor.value?.aiVisibility ?? 'private'}>
-              <option value="private">仅自己可见</option>
-              <option value="allowed">允许 AI 使用</option>
-            </select>
-          </label>
-          <p className="future-ai-visibility">
-            允许 AI 使用时会再次确认；关联来源仍按各自权限读取。
-          </p>
           {editor.kind === 'action' && (
             <>
               <input

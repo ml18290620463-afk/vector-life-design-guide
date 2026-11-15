@@ -75,7 +75,7 @@ export function answerAvatarEvidence(
                 return (
                   `${i + 1}. ${p.text}` +
                   (detail
-                    ? `\n${evidence([...(p.derivedFromEntryIds ?? []), ...active.filter((pattern) => p.sourcePatternIds?.includes(pattern.id)).flatMap((pattern) => pattern.sourceEntryIds)])}\n${p.application ? `你设置的适用情境：${p.application.trigger}；尝试：${p.application.action}。` : '尚未明确适用情境。'}\n${feedback.length ? feedback.slice(0, 5).join('\n') : '还没有记录这条原则实际应用后的反馈。'}`
+                    ? `\n${evidence([...(p.derivedFromEntryIds ?? []), ...active.filter((pattern) => p.sourcePatternIds?.includes(pattern.id)).flatMap((pattern) => pattern.sourceEntryIds)])}\n${p.application ? `你设置的适用情境：${p.application.trigger}；尝试：${p.application.action}${p.application.exception ? `；不适用情况：${p.application.exception}` : ''}。` : '尚未明确适用情境。'}\n${feedback.length ? feedback.slice(0, 5).join('\n') : '还没有记录这条原则实际应用后的反馈。'}`
                     : '')
                 );
               })

@@ -1,3 +1,4 @@
+import { PrivateVisibilityIcon } from '../../../components/PrivateVisibilityIcon';
 import { readAIPrivacy } from '../../../services/aiPrivacy';
 import { resolveAvatarSourceEvidence } from '../../../services/avatarSourceEvidence';
 import { readAvatarSessions } from '../../../services/avatarMemorySessions';
@@ -141,7 +142,7 @@ export function AvatarMemoryDetail({
         </>
       ) : (
         <>
-          <p className="avatar-memory-detail__privacy">{memory.aiVisibility === 'allowed' ? '允许 AI 可见 · 仍受来源权限限制' : '仅自己可见'}</p>
+          <p className="avatar-memory-detail__privacy">{memory.aiVisibility !== 'allowed' && <PrivateVisibilityIcon />}{memory.aiVisibility === 'allowed' ? '允许 AI 可见 · 仍受来源权限限制' : '仅自己可见'}</p>
           <p className="avatar-memory-detail__statement">{selfMemoryVoice(memory.statement)}</p>
         </>
       )}

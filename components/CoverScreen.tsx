@@ -1,8 +1,7 @@
-import React from 'react';
-import { ArrowRight } from 'lucide-react';
 import type { Language, Principle, Theme } from '../types';
-import './CoverScreen.brush.css';
-import { CoverParticleArrow } from './CoverParticleArrow';
+import './cover/cover.css';
+import { RibbonFabric } from './cover/RibbonFabric';
+import { RibbonCurrent } from './cover/RibbonCurrent';
 
 interface CoverScreenProps {
   onStart: () => void;
@@ -11,112 +10,43 @@ interface CoverScreenProps {
   theme?: Theme;
   onMigrate?: () => void;
 }
-
-/** The cover delegates entry and recovery to the existing application gates. */
-export const CoverScreen: React.FC<CoverScreenProps> = ({ onStart, language, onMigrate }) => {
-  const zh = language === 'zh';
-  const [entering, setEntering] = React.useState(false);
-  const [paused, setPaused] = React.useState(() => document.hidden);
-  React.useEffect(() => {
-    const syncVisibility = () => setPaused(document.hidden);
-    document.addEventListener('visibilitychange', syncVisibility);
-    return () => document.removeEventListener('visibilitychange', syncVisibility);
-  }, []);
-  const entryPending = React.useRef(false);
-  const entryTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  React.useEffect(
-    () => () => {
-      if (entryTimer.current !== null) clearTimeout(entryTimer.current);
-    },
-    [],
-  );
-  const handleEnter = () => {
-    if (entryPending.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      onStart();
-      return;
-    }
-    entryPending.current = true;
-    setEntering(true);
-    entryTimer.current = setTimeout(() => {
-      onStart();
-      entryPending.current = false;
-      setEntering(false);
-    }, 250);
-  };
+export const CoverScreen = ({ onStart }: CoverScreenProps) => {
   return (
     <main
-      className="vector-brush-cover"
-      data-entering={entering || undefined}
-      data-paused={paused || undefined}
+      className="vector-light-home"
+      data-testid="vector-home"
     >
-      <header className="vector-brush-cover__header">
-        <span className="vector-brush-cover__header-record">{zh ? '记录' : 'Record'}</span>
-        <span className="vector-brush-cover__divider">||</span>
-        <span className="vector-brush-cover__header-time">{zh ? '过去·此刻' : 'Past · Now'}</span>
-        <span className="vector-brush-cover__symbol">⇌</span>
-        <span className="vector-brush-cover__header-time">{zh ? '未来' : 'Future'}</span>
-      </header>
-      <section className="vector-brush-cover__hero" aria-label="VECTOR">
-        <h1 className="vector-brush-cover__wordmark" aria-label="VECTOR">
-          <span aria-hidden="true">V</span>
-          <svg className="vector-brush-cover__e" viewBox="0 0 67 84" aria-hidden="true">
-            <defs>
-              <linearGradient
-                id="vector-e-word-flow"
-                x1="3"
-                y1="12"
-                x2="62"
-                y2="72"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop stopColor="#203641" />
-                <stop offset="0.5" stopColor="#2b4a55" />
-                <stop offset="1" stopColor="#203641" />
-              </linearGradient>
-            </defs>
-            <g
-              fill="none"
-              stroke="url(#vector-e-word-flow)"
-              strokeWidth="14"
-              strokeLinecap="round"
-            >
-              <path d="M9 7H54 M9 77H54" />
-              <path d="M9 42H18.6" />
-            </g>
-          </svg>
-          <span aria-hidden="true">CTOR</span>
-        </h1>
-        <p className="vector-brush-cover__tagline">
-          {zh
-            ? '记录此刻，让经历创造方向。'
-            : 'Record the present. Let experience shape direction.'}
-        </p>
-        <button
-          className="vector-brush-cover__entry"
-          type="button"
-          onClick={handleEnter}
-          data-entering={entering || undefined}
-          aria-disabled={entering || undefined}
-          data-testid="cover-initialize"
-          aria-label={zh ? '点击进入下一个界面' : 'Click to enter the next screen'}
-        >
-          <span className="vector-brush-cover__entry-label">{zh ? '进入' : 'Enter'}</span>
-          <span className="vector-brush-cover__entry-mark" aria-hidden="true">
-            <ArrowRight />
-          </span>
-        </button>
-      </section>
-      <div className="vector-brush-cover__art" aria-hidden="true">
-        <CoverParticleArrow />
-      </div>
-      <footer className="vector-brush-cover__footer">
-        {onMigrate && (
-          <button type="button" onClick={onMigrate} className="vector-brush-cover__migrate">
-            {zh ? '恢复备份' : 'Restore backup'}
+      <div className="vector-home-stage">
+        <p className="vector-home-time">{'记录 ‖ 过去·此刻 ⇌ 未来'}</p>
+        <div className="vector-home-copy">
+          <h1 className="vector-home-brand" aria-label="VECTOR">
+            <img src="/assets/vector-home/vector-wordmark-clear.png" alt="" aria-hidden="true" width="648" height="119" />
+          </h1>
+          <p className="vector-home-message">记录此刻，让经历创造方向。</p>
+          <button
+            className="vector-home-enter"
+            data-testid="cover-initialize"
+            type="button"
+            onClick={onStart}
+          >
+            <span>进入</span>
+            <svg viewBox="0 0 28 24" fill="none" aria-hidden="true">
+              <path
+                d="M2 12H24M16 4L24 12 16 20"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
-        )}
-      </footer>
+        </div>
+        <div className="vector-home-art">
+          <img src="/assets/vector-home/ribbon-clear.png" alt="" aria-hidden="true" width="1672" height="941" />
+          <RibbonCurrent />
+          <RibbonFabric />
+        </div>
+      </div>
     </main>
   );
 };

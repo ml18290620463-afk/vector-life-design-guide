@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ capture: vi.fn(), fingerprint: vi.fn(), base: vi.fn(), save: vi.fn(), seal: vi.fn(), read: vi.fn(), write: vi.fn(), state: { isUnlocked: true, masterPassword: 'pw' }, generation: 0 }));
+const mocks = vi.hoisted(() => ({ capture: vi.fn(), fingerprint: vi.fn(), base: vi.fn(), save: vi.fn(), seal: vi.fn(), read: vi.fn(), write: vi.fn(), erase: vi.fn(), state: { isUnlocked: true, masterPassword: 'pw' }, generation: 0 }));
 vi.mock('./snapshot', () => ({ captureSnapshot: mocks.capture, fingerprint: mocks.fingerprint, readSyncBase: mocks.base, saveSyncBase: mocks.save, sealSnapshot: mocks.seal, hasVault: () => true }));
-vi.mock('./cloud', () => ({ readCloudRevision: mocks.read, writeCloudRevision: mocks.write, SyncConflictError: class extends Error { constructor(public revision?: number) { super('conflict'); } } }));
+vi.mock('./cloud', () => ({ eraseCloudRevision: mocks.erase, readCloudRevision: mocks.read, writeCloudRevision: mocks.write, SyncConflictError: class extends Error { constructor(public revision?: number) { super('conflict'); } } }));
 vi.mock('./auth', () => ({ accountSessionGeneration: () => mocks.generation }));
 vi.mock('../../stores/appStore', () => ({ useAppStore: { getState: () => mocks.state } }));
 beforeEach(() => {
-  vi.resetModules(); vi.clearAllMocks();
+  vi.resetModules(); vi.clearAllMocks(); localStorage.clear();
   mocks.state = { isUnlocked: true, masterPassword: 'pw' }; mocks.generation = 0;
   mocks.capture.mockResolvedValue({ content: 'local' }); mocks.fingerprint.mockResolvedValue('local-hash');
   mocks.base.mockReturnValue({ revision: 1, fingerprint: 'old-hash' });
@@ -63,4 +63,57 @@ it('coalesces overlapping synchronization requests', async () => {
   const sync = await import('./sync');
   await Promise.all([sync.synchronizeAccount('pw'), sync.synchronizeAccount('pw')]);
   expect(mocks.write).toHaveBeenCalledTimes(1);
+});
+
+it('does not upload a restored snapshot until the user resumes sync', async () => {
+  const { pauseSync } = await import('./syncPause');
+  pauseSync();
+  const sync = await import('./sync');
+  expect(await sync.synchronizeAccount('pw')).toBe('paused');
+  expect(mocks.read).not.toHaveBeenCalled();
+  expect(mocks.write).not.toHaveBeenCalled();
+});
+it('cloud deletion pauses further uploads even when deletion fails', async () => {
+  mocks.erase.mockRejectedValueOnce(new Error('offline'));
+  const sync = await import('./sync');
+  await expect(sync.eraseAccountCloud()).rejects.toThrow('offline');
+  expect(await sync.synchronizeAccount('pw')).toBe('paused');
+  expect(mocks.erase).toHaveBeenCalledWith(1);
+  expect(mocks.write).not.toHaveBeenCalled();
+});
+
+it('stops an in-flight encrypted upload before cloud erasure', async () => {
+  let finish!: (value: object) => void;
+  let entered!: () => void;
+  const waiting = new Promise<void>(resolve => { entered = resolve; });
+  mocks.seal.mockImplementation(() => { entered(); return new Promise(resolve => { finish = resolve; }); });
+  mocks.erase.mockResolvedValue(undefined);
+  const sync = await import('./sync');
+  const upload = sync.synchronizeAccount('pw');
+  const rejected = expect(upload).rejects.toThrow('同步已暂停');
+  await waiting;
+  const deletion = sync.eraseAccountCloud();
+  finish({ encrypted: true });
+  await rejected;
+  await deletion;
+  expect(mocks.write).not.toHaveBeenCalled();
+  expect(mocks.erase).toHaveBeenCalledWith(1);
+});
+
+it('cancels cloud erasure when the account changes while waiting for sync', async () => {
+  let finish!: (value: object) => void;
+  let entered!: () => void;
+  const waiting = new Promise<void>(resolve => { entered = resolve; });
+  mocks.seal.mockImplementation(() => { entered(); return new Promise(resolve => { finish = resolve; }); });
+  const sync = await import('./sync');
+  const upload = sync.synchronizeAccount('pw');
+  const rejectedUpload = expect(upload).rejects.toThrow();
+  await waiting;
+  const deletion = sync.eraseAccountCloud();
+  const rejectedDeletion = expect(deletion).rejects.toThrow('账号已变化');
+  mocks.generation++;
+  finish({ encrypted: true });
+  await rejectedUpload;
+  await rejectedDeletion;
+  expect(mocks.erase).not.toHaveBeenCalled();
 });

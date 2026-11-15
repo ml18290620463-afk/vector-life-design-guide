@@ -10,6 +10,7 @@ async function rpc(name: string, body: unknown) {
     method: 'POST', headers: { apikey: accountConfig.key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body), signal: AbortSignal.timeout(30000),
   });
+  if (response.status === 410) throw new Error('云端资料已删除，此账号已阻止自动重新上传；本机资料仍保留');
   if (response.status === 409) throw new SyncConflictError();
   if (response.status === 401 || response.status === 403) throw new Error('账号会话已失效，请退出后重新登录');
   if (!response.ok) throw new Error('云端暂不可用，本机修改已保留，稍后会重试');
@@ -28,4 +29,9 @@ export async function writeCloudRevision(expected: number, payload: EncryptedVau
   const revision = await rpc('vector_write_vault', { expected_revision: expected, encrypted_payload: payload });
   if (!Number.isSafeInteger(revision) || revision !== expected + 1) throw new Error('云端版本确认失败，请重新同步');
   return revision;
+}
+
+export async function eraseCloudRevision(expected: number): Promise<void> {
+  if (!Number.isSafeInteger(expected) || expected < 0) throw new Error('云端版本无效');
+  if (await rpc('vector_erase_vault', { expected_revision: expected }) !== true) throw new Error('云端未确认删除，请保留本机资料并重试');
 }

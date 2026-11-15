@@ -21,7 +21,6 @@ export function FeedbackEditor({
       <fieldset disabled={busy}>
         {actionFields && <PracticeFeedbackFields {...actionFields} />}
         {children}
-        <label>内容可见性<select name="aiVisibility" defaultValue="private"><option value="private">仅自己可见</option><option value="allowed">允许 AI 使用</option></select></label>
         {notice && <p role="alert">{notice}</p>}
         <div className="future-feedback-submit">
           <button type="submit" className="future-primary" disabled={saveDisabled}>

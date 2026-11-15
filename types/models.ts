@@ -28,6 +28,8 @@ export interface PrincipleApplication {
   trigger: string;
   /** Small, observable behaviour to try when the trigger occurs. */
   action: string;
+  /** Situations where this principle should not be applied. */
+  exception?: string;
 }
 
 export type PrincipleRevisionKind = 'correction' | 'evolution';

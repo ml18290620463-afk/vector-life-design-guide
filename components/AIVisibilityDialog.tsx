@@ -1,3 +1,4 @@
+import { PrivateVisibilityIcon } from './PrivateVisibilityIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PastActionDialog } from './PastActionDialog';
@@ -49,7 +50,7 @@ export function useAIVisibilityChoice(language: string = 'zh', futureContent: bo
       </p>
       <div className="ai-visibility-options">
         <button type="button" onClick={() => finish('private')}>
-          <strong>{zh ? '仅自己可见' : 'Only me'}</strong>
+          <strong><PrivateVisibilityIcon />{zh ? '仅自己可见' : 'Only me'}</strong>
           <span>
             {zh
               ? '保存内容，AI 不读取、不分析、不用于后续回答。'

@@ -226,7 +226,7 @@ export function FuturePage({
   const savePendingVision = async () => {
     if (!pendingVision) return;
     const aiVisibility =
-      pendingVision.aiVisibility === 'allowed' ? await visibility.request() : 'private';
+      await visibility.request();
     if (aiVisibility) return run(() => saveVision({ ...pendingVision, aiVisibility }), false);
   };
 
@@ -235,7 +235,6 @@ export function FuturePage({
     if (editor.kind === 'vision') {
       const nextVision: PendingVision = {
         ...editor.value,
-        aiVisibility: field(data, 'aiVisibility') === 'allowed' ? 'allowed' : 'private',
         text: field(data, 'text'),
         status: (field(data, 'status') || 'active') as Vision['status'],
       };
@@ -251,13 +250,13 @@ export function FuturePage({
         return;
       }
       const aiVisibility =
-        field(data, 'aiVisibility') === 'allowed' ? await visibility.request() : 'private';
+        await visibility.request();
       if (!aiVisibility) return;
       return run(() => saveVision({ ...nextVision, aiVisibility }), false);
     }
 
     const aiVisibility =
-      field(data, 'aiVisibility') === 'allowed' ? await visibility.request() : 'private';
+      await visibility.request();
     if (!aiVisibility) return;
 
     if (editor.kind === 'goal') {
@@ -329,7 +328,7 @@ export function FuturePage({
         : undefined;
     if (feedbackEnded && !goalFeedback) return;
     const aiVisibility =
-      field(data, 'aiVisibility') === 'allowed' ? await visibility.request() : 'private';
+      await visibility.request();
     if (!aiVisibility) return;
     if (goalFeedback) Object.assign(goalFeedback, { aiVisibility });
     const feedbackStatus = practiceStatus;

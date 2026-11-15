@@ -82,7 +82,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   } = useNowDraft();
   const { toastMessage, showToast } = useToast();
   const [sending, setSending] = useState(false);
-  const [recordVisibility, setRecordVisibility] = useState<'private' | 'allowed'>('private');
   const privacy = useAIVisibilityChoice(_language);
   const editorContainer = useRef<HTMLDivElement>(null);
   const scrollPositions = useRef<{ element: HTMLElement; top: number }[]>([]);
@@ -167,7 +166,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       };
     const attempt = retry.current;
     try {
-      const aiVisibility = source === 'manual' && recordVisibility === 'private' ? 'private' : await privacy.request();
+      const aiVisibility = await privacy.request();
       if (!aiVisibility) return false;
       if (!(await saveDraft({ ...overrideDraft, submission_id: attempt.id })))
         throw new Error('草稿尚未安全保存，请重试');
@@ -183,6 +182,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       else if (onRecordComplete) onRecordComplete();
       else onExit();
       await cleanup;
+      showToast(_language === 'zh' ? '已保存到本机，可在「过去」查看；本机保存不等于已备份' : 'Saved on this device. View in Past; a local save is not a backup.');
       return true;
     } catch (error) {
       console.error('NowFlow: failed to persist local record', error);
@@ -235,7 +235,6 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       {(route === 'now' || route === 'tags') && (
         <div ref={editorContainer} hidden={route === 'tags'}>
           <NowPage
-            privacyControl={<label className="now-privacy-choice">内容可见性 <select value={recordVisibility} disabled={sending} onChange={event => setRecordVisibility(event.target.value as 'private' | 'allowed')}><option value="private">仅自己可见</option><option value="allowed">允许 AI 使用（保存时确认）</option></select></label>}
             draft={draft}
             setDraft={setDraft}
             sending={sending}

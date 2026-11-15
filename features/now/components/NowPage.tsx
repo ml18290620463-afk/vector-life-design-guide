@@ -8,7 +8,6 @@ import { MaterialPreview } from './MaterialPreview';
 import { normalizeWebMaterialUrl } from '../../../lib/materialPersistence';
 
 interface NowPageProps {
-  privacyControl?: React.ReactNode;
   draft: NowDraft;
   setDraft: (updater: NowDraft | ((draft: NowDraft) => NowDraft)) => void;
   sending: boolean;
@@ -22,7 +21,6 @@ interface NowPageProps {
 }
 
 export const NowPage: React.FC<NowPageProps> = ({
-  privacyControl,
   draft,
   setDraft,
   sending,
@@ -260,7 +258,6 @@ export const NowPage: React.FC<NowPageProps> = ({
           </div>
         </form>
       </dialog>
-      {privacyControl}
       <header className="now-header">
         <button
           type="button"

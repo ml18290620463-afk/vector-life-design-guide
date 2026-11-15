@@ -1,3 +1,4 @@
+import { isSyncPaused, pauseSync } from '../services/account/syncPause';
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { accountsEnabled, accountsRequired, clearSavedSession, logoutAccount, resumeAccount, sendEmailCode, verifyEmailCode, type AccountSession } from '../services/account/auth';
 import { initializeAccountScope, accountLocalStorage } from '../services/accountScope';
@@ -35,6 +36,7 @@ export function AccountBoundary() {
       setExpectedHash(hash);
       return;
     }
+    if (isSyncPaused() && hasVault(local)) { setReady(true); return; }
     const cloud = await readCloudRevision();
     if (cloud && (!hasVault(local) || (cloud.revision !== base.revision && (base.fingerprint === hash || accountLocalStorage.getItem('vector-accept-cloud-once') === 'true')))) {
       setRemote(cloud); setExpectedHash(hash);
@@ -67,8 +69,10 @@ export function AccountBoundary() {
     try {
       if (remote) {
         const snapshot = await openSnapshot(remote.payload, password);
+        if (accountLocalStorage.getItem(RECOVERY_SELECTION)) pauseSync();
         await applySnapshot(snapshot, remote.revision, expectedHash, password);
         if (accountLocalStorage.getItem(RECOVERY_SELECTION)) {
+          pauseSync();
           saveSyncBase({ revision: remote.revision, fingerprint: '' });
           accountLocalStorage.removeItem(RECOVERY_SELECTION);
         }

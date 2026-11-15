@@ -2938,14 +2938,16 @@ html.vector-force-web
   .now-page:not(.avatar-guide-page) {
   align-items: stretch;
   grid-template-rows: auto minmax(0, 1fr);
-  min-height: calc(100dvh - 88px);
+  align-content: start;
+  min-height: 0;
+  padding-bottom: 32px;
 }
 
 html.vector-force-web
   .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
   .now-page:not(.avatar-guide-page)
   .now-card {
-  min-height: max(420px, calc(100dvh - 160px));
+  min-height: max(360px, calc(100dvh - 300px));
   max-height: none;
   grid-template-rows: minmax(240px, 1fr) auto auto;
   gap: 16px 24px;

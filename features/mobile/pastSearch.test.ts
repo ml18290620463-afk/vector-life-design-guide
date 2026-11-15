@@ -162,3 +162,23 @@ describe('archive filters', () => {
     ).toEqual([]);
   });
 });
+
+// Retrieval acceptance: literal precision remains separate from thematic recall.
+it('bounds thematic recall and retains exact results first', () => {
+  const exact = { ...entry('exact', 1), content: '焦虑' };
+  const related = Array.from({ length: 30 }, (_, i) => ({ ...entry(`stress-${i}`, i + 2), content: '工作压力' }));
+  const result = searchPastEntriesWithMatchKind([exact, ...related], '焦虑');
+  expect(result).toHaveLength(6);
+  expect(result[0]).toEqual({ entry: exact, match: 'exact' });
+  expect(result.slice(1).every(r => r.match === 'related')).toBe(true);
+  expect(result[1].entry.id).toBe('stress-29');
+});
+it('disambiguates the same event by date and participant without thematic expansion', () => {
+  const records = [
+    { ...entry('wanted', new Date(2026, 10, 10).getTime()), content: '与小林讨论项目复盘' },
+    { ...entry('wrong-person', new Date(2026, 10, 10).getTime()), content: '与小王讨论项目复盘' },
+    { ...entry('wrong-day', new Date(2026, 9, 10).getTime()), content: '与小林讨论项目复盘' },
+  ];
+  const filtered = filterPastEntries(records, { from: '2026-11-01', to: '2026-11-30', tag: '', material: '' });
+  expect(searchPastEntries(filtered, '小林 复盘').map(r => r.id)).toEqual(['wanted']);
+});

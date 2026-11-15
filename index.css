@@ -11752,7 +11752,35 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
 .past-search-filters summary { cursor: pointer; padding: 8px 0; }
 .past-search-filters__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 0; }
 .past-search-filters__fields label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.past-search-filters__fields input, .past-search-filters__fields select { width: 100%; min-width: 0; padding: 8px; border: 1px solid currentColor; border-radius: 6px; background: var(--bg-primary, #171b20); color: inherit; }
+.past-search-filters__fields input,
+.past-search-filters__fields select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--ds-text-muted);
+  border-radius: 8px;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: inherit;
+  color-scheme: dark;
+}
+html.light .past-search-filters__fields input,
+html.light .past-search-filters__fields select { color-scheme: light; }
+.past-search-filters__fields select option {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+}
+.past-search-filters__fields input:focus-visible,
+.past-search-filters__fields select:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+.past-search-filters__fields input::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  cursor: pointer;
+}
 
 .now-privacy-choice { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:8px 16px; font-size:12px; color:var(--text-secondary, #858b94); }
 .now-privacy-choice select { min-width:0; max-width:65%; padding:6px 8px; border:1px solid var(--border-color, #5558); border-radius:8px; color:inherit; background:transparent; }

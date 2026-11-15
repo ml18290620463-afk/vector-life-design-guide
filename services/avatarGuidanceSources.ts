@@ -274,7 +274,7 @@ export function buildGuidanceSources(input: {
       nature: 'explicit' as const,
       temporalStatus: 'current_understanding' as const,
       detail: p.application
-        ? `适用情境：${p.application.trigger}；尝试方式：${p.application.action}`
+        ? `适用情境：${p.application.trigger}；尝试方式：${p.application.action}${p.application.exception ? `；不适用情况：${p.application.exception}` : ''}`
         : undefined,
       evidence: evidence([
         ...(p.derivedFromEntryIds ?? []),

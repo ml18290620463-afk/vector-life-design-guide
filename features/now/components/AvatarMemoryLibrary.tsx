@@ -1,3 +1,4 @@
+import { PrivateVisibilityIcon } from '../../../components/PrivateVisibilityIcon';
 import { useAIVisibilityChoice } from '../../../components/AIVisibilityDialog';
 import type { DiaryEntry } from '../../../types';
 import { selfMemoryVoice } from '../../../services/avatarMemoryVoice';
@@ -395,7 +396,7 @@ export function AvatarMemoryLibrary({
               >
                 <span className="avatar-library__row-content">
                   <span>{selfMemoryVoice(memory.statement)}</span>
-                  <small className="avatar-library__privacy">{memory.aiVisibility === 'allowed' ? '允许 AI 可见' : '仅自己可见'}</small>
+                  <small className="avatar-library__privacy">{memory.aiVisibility !== 'allowed' && <PrivateVisibilityIcon />}{memory.aiVisibility === 'allowed' ? '允许 AI 可见' : '仅自己可见'}</small>
                   {memory.retainedAfterSourceDeletion ? (
                     <small className="avatar-library__retained">已保留 · 原始经历已删除</small>
                   ) : null}

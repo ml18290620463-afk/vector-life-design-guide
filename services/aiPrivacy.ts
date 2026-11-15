@@ -45,7 +45,7 @@ export const isAIMessageAllowed = (
   entries: DiaryEntry[],
   token = aiPrivacyToken(entries),
 ) =>
-  message.aiPrivacyToken === token &&
+  isPrivacyContextCompatible(message.aiPrivacyToken, token) &&
   !(message.references ?? []).some(
     (ref) => !entries.some((e) => e.id === ref.entryId && canAIReadEntry(e)),
   );
@@ -63,4 +63,26 @@ export async function readAIPrivacy() {
 export async function assertAIPrivacyUnchanged(token: string) {
   if ((await readAIPrivacy()).token !== token)
     throw new Error('记录的 AI 权限已变化，请重新发起请求');
+}
+
+/** Keep prior authorized sources as conservative dependencies; additions and private-only
+ * edits cannot have influenced an earlier reply. Legacy/malformed tokens fail closed.
+ * Future revision remains strict until all derived-source dependencies are tracked. */
+export function isPrivacyContextCompatible(previous: string | undefined, current: string): boolean {
+  if (!previous) return false;
+  if (previous === current) return true;
+  try {
+    const before = JSON.parse(previous);
+    const after = JSON.parse(current);
+    if (!Array.isArray(before) || !Array.isArray(after) || before.length !== 7 || after.length !== 7 ||
+      before[0] !== 'ai-consent-v3' || after[0] !== before[0] || before[4] !== after[4]) return false;
+    return [1, 2, 3, 5, 6].every(index => {
+      if (!Array.isArray(before[index]) || !Array.isArray(after[index])) return false;
+      return before[index].every((row: unknown) => {
+        if (!Array.isArray(row) || typeof row[0] !== 'string' || typeof row[1] !== 'boolean') return false;
+        if (!row[1]) return true;
+        return after[index].some((next: unknown) => JSON.stringify(next) === JSON.stringify(row));
+      });
+    });
+  } catch { return false; }
 }

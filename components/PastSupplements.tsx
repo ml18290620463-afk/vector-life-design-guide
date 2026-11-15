@@ -1,3 +1,4 @@
+import { PrivateVisibilityIcon } from './PrivateVisibilityIcon';
 import { useAIVisibilityChoice } from './AIVisibilityDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { get, set, del } from '../services/accountIdb';
@@ -153,6 +154,7 @@ export function PastSupplements({
           }
         }}
       >
+        {entry.aiVisibility !== 'allowed' && <PrivateVisibilityIcon />}
         {entry.aiVisibility === 'allowed'
           ? zh
             ? '允许 AI 可见'

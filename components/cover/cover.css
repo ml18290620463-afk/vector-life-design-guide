@@ -1,0 +1,353 @@
+.vector-light-home {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 100svh;
+  color: #062236;
+  background: linear-gradient(112deg, #f1f6ff 0%, #e8f1ff 46%, #d2e4fc 100%);
+  --cover-font: 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+  --cover-caption-size: clamp(13px, 1.3vw, 22px);
+  --cover-message-size: clamp(21px, 1.9vw, 32px);
+  --cover-action-size: clamp(17px, 1.55vw, 27px);
+  font-family: var(--cover-font);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  overflow: clip;
+}
+.vector-home-stage {
+  position: relative;
+  min-height: 100svh;
+  height: max(56.28vw, 100svh);
+  max-height: 1440px;
+  margin: auto;
+  max-width: 2560px;
+}
+.vector-home-time {
+  position: absolute;
+  z-index: 2;
+  top: 7.5%;
+  left: 6.25%;
+  margin: 0;
+  font-size: var(--cover-caption-size);
+  font-weight: 400;
+  letter-spacing: 0.115em;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.vector-home-copy {
+  position: absolute;
+  z-index: 2;
+  left: 6.25%;
+  top: 24%;
+}
+.vector-home-brand {
+  width: min(38.4vw, 850px);
+  margin: 0;
+  line-height: 0;
+  color: #032236;
+}
+.vector-home-brand svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.vector-home-message {
+  margin: clamp(28px, 2.6vw, 60px) 0 0;
+  font-size: var(--cover-message-size);
+  font-weight: 500;
+  letter-spacing: 0.075em;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+.vector-home-enter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: clamp(158px, 12vw, 228px);
+  min-height: 48px;
+  height: clamp(50px, 3.65vw, 64px);
+  padding: 0 1.6vw;
+  margin-top: clamp(22px, 1.9vw, 40px);
+  color: #09283d;
+  border: 1.5px solid #88aadc;
+  border-radius: 10px;
+  background: #e9f3ff55;
+  font: inherit;
+  font-size: var(--cover-action-size);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition:
+    background 200ms,
+    border-color 200ms,
+    transform 200ms;
+}
+.vector-home-enter svg {
+  width: 29px;
+  height: 24px;
+  transition: transform 200ms;
+}
+.vector-home-enter:hover {
+  background: #cde3fa70;
+  border-color: #5e8dc6;
+}
+.vector-home-enter:hover svg {
+  transform: translateX(3px);
+}
+.vector-home-enter:active {
+  transform: scale(0.985);
+}
+.vector-home-enter:focus-visible {
+  outline: 3px solid #426f9b;
+  outline-offset: 5px;
+}
+.vector-home-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.vector-ribbon {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.ribbon-fiber {
+  stroke-opacity: var(--fiber-opacity);
+  animation: fiber-depth var(--material-duration) ease-in-out infinite;
+}
+.ribbon-material {
+  opacity: 0.16;
+  animation: material-flow var(--material-duration) ease-in-out infinite;
+}
+.ribbon-material-1 {
+  animation-delay: -8s;
+}
+.ribbon-material-2 {
+  animation-delay: -16s;
+}
+.vector-ribbon[data-paused='true'] * {
+  animation-play-state: paused;
+}
+.vector-light-home--intro .vector-home-time,
+.vector-light-home--intro .vector-home-brand {
+  animation: home-arrive 400ms ease-out both;
+}
+.vector-light-home--intro .vector-home-message {
+  animation: home-arrive 480ms 150ms ease-out both;
+}
+.vector-light-home--intro .vector-home-enter {
+  animation: home-arrive 480ms 250ms ease-out both;
+}
+@keyframes home-arrive {
+  from {
+    opacity: 0.45;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes material-flow {
+  0%,
+  100% {
+    stroke-opacity: 0.54;
+  }
+  50% {
+    stroke-opacity: 0.66;
+  }
+}
+@keyframes fiber-depth {
+  0%,
+  100% {
+    stroke-opacity: calc(var(--fiber-opacity) * 0.65);
+  }
+  50% {
+    stroke-opacity: var(--fiber-opacity);
+  }
+}
+@media (min-width: 768px) and (max-aspect-ratio: 4/3) {
+  .vector-home-copy {
+    top: 23%;
+  }
+  .vector-home-brand {
+    width: 58vw;
+  }
+  .vector-home-message {
+    font-size: 23px;
+  }
+  .vector-home-art {
+    top: 410px;
+    bottom: auto;
+    left: 4%;
+    right: 4%;
+    aspect-ratio: 1672 / 941;
+  }
+  .vector-ribbon {
+    transform: rotate(-12deg) scale(1.16);
+    transform-origin: 50% 50%;
+    overflow: visible;
+  }
+}
+@media (max-width: 767px) {
+  .vector-home-stage {
+    min-height: max(760px, calc(400px + 110vw));
+    height: 100svh;
+    height: max(760px, 100dvh);
+    max-height: none;
+  }
+  .vector-home-time {
+    top: max(42px, env(safe-area-inset-top));
+    left: 7%;
+    font-size: 13px;
+    letter-spacing: 0.045em;
+  }
+  .vector-home-copy {
+    top: 120px;
+    left: 7%;
+    right: 7%;
+  }
+  .vector-home-brand {
+    width: 100%;
+    max-width: 470px;
+  }
+  .vector-home-message {
+    margin-top: 34px;
+    font-size: clamp(17px, 4.6vw, 23px);
+    letter-spacing: 0.02em;
+  }
+  .vector-home-enter {
+    margin-top: 32px;
+    width: 164px;
+    height: 50px;
+    padding: 0 20px;
+    font-size: 17px;
+    border-radius: 8px;
+  }
+  .vector-home-art {
+    top: clamp(390px, 106vw, 485px);
+    bottom: auto;
+    left: 4%;
+    right: 4%;
+    aspect-ratio: 1672 / 941;
+  }
+  .vector-ribbon {
+    /* Open the portrait composition while keeping both ends inside the canvas. */
+    transform: rotate(-19deg) scale(1.36);
+    transform-origin: 50% 50%;
+    overflow: visible;
+  }
+  .ribbon-fiber-1,
+  .ribbon-fiber-3,
+  .ribbon-fiber-5,
+  .ribbon-fiber-7,
+  .ribbon-fiber-9 {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vector-light-home *,
+  .vector-light-home--intro * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .vector-home-enter:hover svg {
+    transform: none;
+  }
+}
+
+/* Keep brand ink independent of application-wide heading / paragraph themes. */
+.vector-light-home .vector-home-brand,
+.vector-light-home .vector-home-message,
+.vector-light-home .vector-home-time {
+  color: #062236;
+}
+.vector-light-home .vector-home-message {
+  font-family: var(--cover-font);
+  font-weight: 500;
+}
+.vector-light-home .vector-home-time,
+.vector-light-home .vector-home-enter {
+  font-family: var(--cover-font);
+}
+
+/* Fine internal current: no grey under-stroke, haze or flashing. */
+.ribbon-fiber--current {
+  animation: none;
+  stroke-opacity: var(--fiber-opacity);
+}
+
+/* Static reference mode; animated rendering remains an explicit opt-in. */
+.vector-ribbon[data-static="true"] * {
+  animation: none !important;
+}
+
+/* Reference-locked static artwork. Coordinates use the supplied 1672 × 941 canvas. */
+.vector-light-home { background: #e6efff; }
+.vector-home-art { z-index: -1; }
+.vector-home-art > img { display: block; width: 100%; height: 100%; object-fit: fill; }
+.vector-home-brand img { display: block; width: 100%; height: auto; }
+@media (min-width: 1025px) {
+  .vector-home-stage { height: auto; min-height: 0; aspect-ratio: 1672 / 941; }
+  .vector-home-time { top: 7.97%; left: 6.22%; font-size: clamp(16px, 1.256vw, 32px); letter-spacing: .12em; font-weight: 500; }
+  .vector-home-copy { inset: 0; pointer-events: none; }
+  .vector-home-brand { position: absolute; top: 23.91%; left: 5.98%; width: 38.756%; }
+  .vector-light-home .vector-home-message { position: absolute; top: 41.5%; left: 6.22%; margin: 0; font-size: clamp(24px, 1.854vw, 47px); font-weight: 500; letter-spacing: .105em; line-height: 1.5; }
+  .vector-home-enter { position: absolute; top: 51.01%; left: 6.22%; margin: 0; width: 11.96%; height: 6.38%; min-height: 44px; padding: 0 1.67%; border: 2px solid #8faed8; border-radius: 11px; background: transparent; font-size: clamp(20px, 1.555vw, 40px); font-weight: 500; pointer-events: auto; }
+  .vector-home-enter svg { width: 28px; height: 24px; }
+}
+@media (max-width: 1024px) {
+  .vector-home-art { top: 350px; bottom: auto; left: 0; right: 0; aspect-ratio: 1672 / 941; }
+  .vector-home-art > img { object-fit: contain; }
+}
+@media (min-width: 1025px) {
+  .vector-home-time { top: 7.55%; letter-spacing: .24em; font-weight: 400; }
+  .vector-light-home .vector-home-message { top: 41.4%; font-size: clamp(24px, 1.914vw, 49px); letter-spacing: .17em; }
+  .vector-home-enter svg { transform: translateX(8px); }
+  .vector-home-enter:hover svg { transform: translateX(11px); }
+}
+@media (max-width: 1024px) {
+  .vector-light-home { background: linear-gradient(112deg, #f1f6ff, #d2e4fc); }
+  .vector-home-brand img { mix-blend-mode: multiply; }
+  .vector-home-art { mask-image: linear-gradient(to bottom, transparent, #000 17%, #000 83%, transparent); }
+}
+
+/* Silver connections sit inside the original translucent surface. */
+.ribbon-current {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+@media (max-width: 767px) {
+  .ribbon-current g:nth-of-type(3) { display: none; }
+}
+
+/* The fabric has an alpha channel: one continuous backdrop across all sizes. */
+.vector-light-home {
+  background: linear-gradient(112deg, #f1f6ff 0%, #e8f1ff 46%, #d2e4fc 100%);
+}
+.vector-home-art { mask-image: none; }
+.ribbon-current-ambient {
+  animation: ribbon-ambient-flow 8s linear infinite;
+}
+.ribbon-current-ambient-1 { animation-delay: -2.6s; }
+.ribbon-current-ambient-2 { animation-delay: -5.2s; }
+@keyframes ribbon-ambient-flow {
+  from { stroke-dashoffset: 160; }
+  to { stroke-dashoffset: -1000; }
+}
+.ribbon-current[data-paused='true'] * { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .ribbon-current-ambient { animation: none; opacity: .08; }
+}
+
+/* Mesh deformation is confined to the transparent fabric, never the page. */
+.ribbon-fabric { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
+.vector-home-art[data-fabric-ready='true'] > img { visibility: hidden; }
+.vector-home-art[data-fabric-ready='true'] .ribbon-fabric { opacity: 1; }
+.ribbon-current { z-index: 1; }
+

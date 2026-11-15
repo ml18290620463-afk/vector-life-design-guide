@@ -192,3 +192,14 @@ describe('AI consent boundary', () => {
     await rejected;
   });
 });
+
+it('preserves old chat when unrelated records are added or private records are changed', () => {
+  const old = message([entry(), entry({ id: 'private', aiVisibility: 'private' })]);
+  expect(isAIMessageAllowed(old, [entry(), entry({ id: 'new' })])).toBe(true);
+  expect(isAIMessageAllowed(old, [entry(), entry({ id: 'private', aiVisibility: 'private', aiConsentAt: 99 })])).toBe(true);
+});
+it('still blocks removal and locking of an old authorized source even without explicit citations', () => {
+  const old = message([entry()]);
+  expect(isAIMessageAllowed(old, [])).toBe(false);
+  expect(isAIMessageAllowed(old, [entry({ isLocked: true })])).toBe(false);
+});

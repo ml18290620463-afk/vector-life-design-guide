@@ -25,6 +25,7 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await record.getByRole('button', { name: '补充', exact: true }).click();
   await page.getByLabel('补充内容').fill('备份补充：保留当时的判断和图片。');
   await page.getByRole('dialog').getByRole('button', { name: '保存', exact: true }).click();
+  await page.getByRole('dialog', { name: '是否允许 AI 可见？' }).getByRole('button', { name: /^仅自己可见/ }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const principle = '先澄清目标，再采取行动';
   const vision = '保持清晰的判断';
@@ -34,6 +35,7 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await page.getByRole('button', { name: '写原则', exact: true }).click();
   await page.getByRole('textbox', { name: '刻录新原则' }).fill(principle);
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await page.getByRole('dialog', { name: '是否允许 AI 可见？' }).getByRole('button', { name: /^仅自己可见/ }).click();
   await expect(page.getByText(principle, { exact: true })).toBeVisible();
   await navigate(page, /^未来/);
   await page.getByRole('button', { name: '添加愿景', exact: true }).click();

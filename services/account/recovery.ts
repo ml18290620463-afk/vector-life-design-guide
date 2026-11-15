@@ -1,4 +1,5 @@
-import { accountStore, get } from '../accountIdb';
+import { openSnapshot } from './snapshot';
+import { accountStore, get, set } from '../accountIdb';
 import { isEncryptedVaultBackup, type EncryptedVaultBackup } from '../vaultBackupFile';
 export const RECOVERY_SELECTION = 'vector-selected-recovery';
 const isRecovery = (key: string) => /^(vector-sync-conflict-copy:|vector-sync-recovery:)\d+$/.test(key);
@@ -23,4 +24,18 @@ export async function exportRecoveryCopy(key: string) {
   anchor.download = `VECTOR-account-recovery-${key.split(':').pop()}.json`;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Validate size, encryption, password and owner before retaining a file in this account. */
+export async function importRecoveryCopy(file: Pick<File, 'size' | 'text'>, password: string): Promise<string> {
+  if (file.size > 20_000_000) throw new Error('恢复文件超过 20 MB 上限');
+  if (!password) throw new Error('请输入该副本的资料库密码');
+  let payload: unknown;
+  try { payload = JSON.parse(await file.text()); }
+  catch { throw new Error('恢复文件不是有效的 JSON 文件'); }
+  if (!isEncryptedVaultBackup(payload)) throw new Error('请选择 VECTOR 加密账号恢复副本');
+  await openSnapshot(payload, password);
+  const key = `vector-sync-recovery:${Date.now()}`;
+  await set(key, payload);
+  return key;
 }

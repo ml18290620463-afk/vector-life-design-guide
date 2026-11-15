@@ -1,3 +1,4 @@
+import { PrivateVisibilityIcon } from './PrivateVisibilityIcon';
 import type { ActionDraftContext } from '../types/future';
 import { useAIVisibilityChoice } from './AIVisibilityDialog';
 import { useEditorViewport } from '../hooks/useEditorViewport';
@@ -118,7 +119,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
 }) => {
   const [newPrincipleText, setNewPrincipleText] = useState('');
   const [annotationOpen, setAnnotationOpen] = useState(false);
-  const [annotation, setAnnotation] = useState({ trigger: '', action: '' });
+  const [annotation, setAnnotation] = useState<PrincipleApplication>({ trigger: '', action: '' });
   const [selectedSection, setSelectedSection] = useState<PrincipleSection>(
     displayFirst ? ALL_SECTION : 'extract',
   );
@@ -140,6 +141,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
     newPrincipleText.trim() ||
     annotation.trigger !==
       (principles.find((p) => p.id === editingPrincipleId)?.application?.trigger ?? '') ||
+    (annotation.exception ?? '') !== (principles.find((p) => p.id === editingPrincipleId)?.application?.exception ?? '') ||
     annotation.action !==
       (principles.find((p) => p.id === editingPrincipleId)?.application?.action ?? '') ||
     (editingPrincipleId &&
@@ -470,7 +472,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                           const aiVisibility = await visibilityChoice.request();
                           if (!aiVisibility) return;
                           const consent = { aiVisibility, aiConsentAt: Math.max(Date.now(), (editingPrinciple?.aiConsentAt ?? 0) + 1) };
-                          const application = annotation.trigger || annotation.action || editingPrinciple?.application ? annotation : undefined;
+                          const application = annotation.trigger || annotation.action || annotation.exception || editingPrinciple?.application ? annotation : undefined;
                           if (editingPrinciple) {
                             if (editorText.trim() !== editingPrinciple.text.trim() && onRevisePrinciple) {
                               await onRevisePrinciple(editingPrinciple, editorText.trim(), revisionKind, { ...consent, application });
@@ -600,7 +602,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                 >
                   <Plus size={16} aria-hidden="true" />
                   {language === 'zh' ? '补充说明' : 'Add details'}
-                  <span>{annotation.trigger.trim() || annotation.action.trim()
+                  <span>{annotation.trigger.trim() || annotation.action.trim() || annotation.exception?.trim()
                     ? language === 'zh' ? '已补充' : 'Added'
                     : language === 'zh' ? '选填' : 'Optional'}</span>
                 </button>
@@ -639,6 +641,12 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                         setAnnotation((value) => ({ ...value, action: event.target.value }))
                       }
                     />
+                  </label>
+                  <label>
+                    {language === 'zh' ? '不适用的情况 · 可选' : 'Exceptions · optional'}
+                    <textarea aria-label={language === 'zh' ? '不适用的情况' : 'Exceptions'}
+                      rows={2} maxLength={240} disabled={busy} value={annotation.exception ?? ''}
+                      onChange={(event) => setAnnotation((value) => ({ ...value, exception: event.target.value }))} />
                   </label>
                 </div>
                     <button type="button" data-cancel className="principle-details-dialog__done" onClick={() => setAnnotationOpen(false)}>
@@ -744,7 +752,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                   >
                                     {principle.text}
                                   </p>
-                                  <small>{principle.aiVisibility === 'allowed' ? '允许 AI 可见 · 仍受来源权限限制' : '仅自己可见'}</small>
+                                  <small>{principle.aiVisibility !== 'allowed' && <PrivateVisibilityIcon />}{principle.aiVisibility === 'allowed' ? '允许 AI 可见 · 仍受来源权限限制' : '仅自己可见'}</small>
                                   {displayFirst && (
                                     <time className="principle-card__formed-year">
                                       {language === 'zh'
@@ -761,6 +769,10 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                       <div>
                                         <dt>{language === 'zh' ? '就' : 'Do'}</dt>
                                         <dd>{principle.application.action}</dd>
+                                      </div>
+                                      <div>
+                                        <dt>{language === 'zh' ? '例外' : 'Except'}</dt>
+                                        <dd>{principle.application.exception || (language === 'zh' ? '尚未补充' : 'Not specified')}</dd>
                                       </div>
                                     </dl>
                                   )}

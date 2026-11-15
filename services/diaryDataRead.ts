@@ -190,12 +190,14 @@ export const sanitizePrinciple = (principle: Principle): Principle => ({
   application:
     principle.application &&
     typeof principle.application.trigger === 'string' &&
-    principle.application.trigger.trim() &&
     typeof principle.application.action === 'string' &&
-    principle.application.action.trim()
+    (principle.application.trigger.trim() || principle.application.action.trim() ||
+      (typeof principle.application.exception === 'string' && principle.application.exception.trim()))
       ? {
           trigger: principle.application.trigger.trim().slice(0, 120),
           action: principle.application.action.trim().slice(0, 160),
+          ...(typeof principle.application.exception === 'string' && principle.application.exception.trim()
+            ? { exception: principle.application.exception.trim().slice(0, 240) } : {}),
         }
       : undefined,
   derivedFromEntryIds: sanitizeStringArray(principle.derivedFromEntryIds),

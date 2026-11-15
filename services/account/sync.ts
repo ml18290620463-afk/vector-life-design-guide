@@ -1,10 +1,12 @@
+import { isSyncPaused, pauseSync } from './syncPause';
 import { useAppStore } from '../../stores/appStore';
 import { accountSessionGeneration } from './auth';
 import { captureSnapshot, fingerprint, readSyncBase, saveSyncBase, sealSnapshot, hasVault } from './snapshot';
-import { readCloudRevision, writeCloudRevision, SyncConflictError } from './cloud';
-export type SyncResult = 'locked' | 'current' | 'uploaded' | 'remote';
+import { readCloudRevision, writeCloudRevision, eraseCloudRevision, SyncConflictError } from './cloud';
+export type SyncResult = 'paused' | 'locked' | 'current' | 'uploaded' | 'remote';
 let running: Promise<SyncResult> | null = null;
 export function synchronizeAccount(password: string | null): Promise<SyncResult> {
+  if (isSyncPaused()) return Promise.resolve('paused');
   if (!password) return Promise.resolve('locked');
   running ??= synchronize(password).finally(() => { running = null; });
   return running;
@@ -31,6 +33,7 @@ async function synchronize(password: string): Promise<SyncResult> {
 }
 function assertSession(password: string, generation: number) {
   const state = useAppStore.getState();
+  if (isSyncPaused()) throw new Error('同步已暂停，本机资料保留');
   if (generation !== accountSessionGeneration() || !state.isUnlocked || state.masterPassword !== password) throw new Error('资料库已锁定或密码已变化，请解锁后重新同步');
 }
 export async function publishLocalConflict(password: string, expectedRevision: number) {
@@ -46,4 +49,14 @@ export async function publishLocalConflict(password: string, expectedRevision: n
     return 'uploaded';
   })().finally(() => { running = null; });
   await running;
+}
+
+/** Pause before waiting for in-flight work. Server serializes writes and deletion,
+ * and keeps a tombstone that also rejects uploads from older/offline devices. */
+export async function eraseAccountCloud(): Promise<void> {
+  const generation = accountSessionGeneration();
+  pauseSync();
+  if (running) await running.catch(() => undefined);
+  if (generation !== accountSessionGeneration()) throw new Error('账号已变化，已取消云端删除，请重新确认');
+  await eraseCloudRevision(readSyncBase().revision);
 }

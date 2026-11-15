@@ -134,6 +134,7 @@ describe('Future page', () => {
     });
     await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^仅自己可见/ }));
 
     await waitFor(async () => {
       const snapshot = await readFutureSnapshot();
@@ -299,6 +300,7 @@ describe('Future page', () => {
     expect(within(row).queryByLabelText('关联经历（可选）')).toBeNull();
     fireEvent.change(note, { target: { value: '路线已经确认，可以按计划出发' } });
     fireEvent.click(within(row).getByRole('button', { name: '保存' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^仅自己可见/ }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
@@ -343,6 +345,7 @@ describe('Future page', () => {
     fireEvent.change(within(dialog).getByLabelText('我的判断'), { target: { value: 'unhelpful' } });
     await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^仅自己可见/ }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const snapshot = await readFutureSnapshot();
@@ -370,6 +373,7 @@ describe('Future page', () => {
     fireEvent.click(within(row).getByText('下一步（默认继续完成）'));
     fireEvent.change(within(row).getByLabelText('下一步'), { target: { value: 'continue' } });
     fireEvent.click(within(row).getByRole('button', { name: '保存' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^仅自己可见/ }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('button', { name: action.title })).toBeTruthy();
@@ -486,6 +490,7 @@ describe('Action detail goal context', () => {
     });
     await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^仅自己可见/ }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const { state } = await readFutureSnapshot();
@@ -518,6 +523,7 @@ describe('Action detail goal context', () => {
     });
     await waitFor(() => expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^仅自己可见/ }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const snapshot = await readFutureSnapshot();
@@ -548,6 +554,7 @@ it('allows retained long-term actions to append progress and later archive', asy
   });
   fireEvent.change(within(dialog).getByLabelText('完成后'), { target: { value: 'past' } });
   fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^仅自己可见/ }));
 
   await waitFor(async () => {
     const snapshot = await readFutureSnapshot();

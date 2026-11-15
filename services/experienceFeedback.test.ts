@@ -29,7 +29,7 @@ const buildPrinciple = (overrides: Partial<Principle> = {}): Principle => ({
 });
 
 describe('experienceFeedback', () => {
-  it('sanitizes complete trigger-action structures and drops partial ones', () => {
+  it('sanitizes complete and partial optional application notes', () => {
     expect(
       sanitizePrinciple(
         buildPrinciple({ application: { trigger: '  会议开始前  ', action: '  写下目标  ' } }),
@@ -38,7 +38,13 @@ describe('experienceFeedback', () => {
     expect(
       sanitizePrinciple(buildPrinciple({ application: { trigger: '会议开始前', action: '   ' } }))
         .application,
-    ).toBeUndefined();
+    ).toEqual({ trigger: '会议开始前', action: '' });
+  });
+  it('preserves an exception-only note through serialization and sanitation', () => {
+    const source = buildPrinciple({ application: { trigger: '', action: '', exception: '  紧急安全问题先处理  ' } });
+    expect(sanitizePrinciple(JSON.parse(JSON.stringify(source))).application).toEqual({
+      trigger: '', action: '', exception: '紧急安全问题先处理',
+    });
   });
   it('uses a neutral confidence for legacy principles', () => {
     expect(getPrincipleConfidence(buildPrinciple())).toBe(0.5);

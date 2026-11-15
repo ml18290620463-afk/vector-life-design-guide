@@ -113,6 +113,7 @@ describe('NowFlow pure capture', () => {
       />,
     );
     fireEvent.click(screen.getByText('save-result'));
+    fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(draftControls.reset).toHaveBeenCalled());
     await waitFor(() =>
@@ -160,6 +161,7 @@ describe('NowFlow pure capture', () => {
       />,
     );
     fireEvent.click(screen.getByText('save-result'));
+    fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
     await waitFor(() => expect(onReviewSavedRecord).toHaveBeenCalledOnce());
     expect(screen.queryByText('记录已保存，草稿待清理。')).toBeNull();
     expect(onPersistRecord).toHaveBeenCalledOnce();
@@ -185,10 +187,10 @@ describe('NowFlow pure capture', () => {
       />,
     );
     fireEvent.click(screen.getByText('save-result'));
+    fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
     await waitFor(() => expect(persist).toHaveBeenCalledOnce());
     expect(draftControls.reset).not.toHaveBeenCalled();
     expect(review).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('内容可见性'), { target: { value: 'allowed' } });
     fireEvent.click(screen.getByText('save-result'));
     expect(persist).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole('button', { name: /^允许 AI 可见/ }));
@@ -217,6 +219,7 @@ describe('NowFlow pure capture', () => {
     );
     fireEvent.click(screen.getByText('save-result'));
     fireEvent.click(screen.getByText('save-result'));
+    fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
     await waitFor(() => expect(persist).toHaveBeenCalledOnce());
     complete({
       id: 'saved',

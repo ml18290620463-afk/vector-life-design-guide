@@ -61,7 +61,7 @@ export const searchPastEntriesWithMatchKind = (
   }).sort((left, right) => right.createdAt - left.createdAt);
   return [
     ...exact.map((entry) => ({ entry, match: 'exact' as const })),
-    ...related.map((entry) => ({ entry, match: 'related' as const })),
+    ...related.slice(0, 5).map((entry) => ({ entry, match: 'related' as const })),
   ];
 };
 
