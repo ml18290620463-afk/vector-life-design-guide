@@ -1,3 +1,4 @@
+import { useMotionPreference } from './hooks/useMotionPreference';
 import React, { Suspense, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { AppState, type DiaryEntry } from './types';
@@ -30,6 +31,7 @@ import { readAvatarAtomicMemories } from './services/avatarMemoryAtoms';
 import { readAvatarUnderstandings } from './services/avatarMemoryUnderstandings';
 
 const App: React.FC = () => {
+  const reducedMotion = useMotionPreference();
   useEffect(removeObsoletePreviewQuery, []);
   useEffect(() => {
     const cleanCandidates = () => {
@@ -273,7 +275,7 @@ const App: React.FC = () => {
             theme === 'light' ? 'vector-app-shell--light' : ''
           }`}
         >
-          {showGlobalBackground && (
+          {showGlobalBackground && !reducedMotion && (
             <Suspense fallback={null}>
               <SpaceTimeBackground theme={theme} />
             </Suspense>

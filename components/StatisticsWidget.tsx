@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMotionDisabled, setMotionDisabled } from '../hooks/useMotionPreference';
 import { Activity } from 'lucide-react';
 import { Language, Theme } from '../types';
 import { TRANSLATIONS } from '../constants';
@@ -45,6 +46,7 @@ export const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({
   passwordHash,
 }) => {
   const t = TRANSLATIONS[language];
+  const motionDisabled = useMotionDisabled();
 
   return (
     <div
@@ -108,6 +110,17 @@ export const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({
           />
         </div>
       </div>
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={motionDisabled}
+          onChange={(e) => setMotionDisabled(e.target.checked)}
+        />
+        {language === 'zh'
+          ? '关闭视觉动效（移动端自动关闭）'
+          : 'Disable visual effects (automatic on mobile)'}
+      </label>
 
       <StatisticsRecoveryRow
         theme={theme}

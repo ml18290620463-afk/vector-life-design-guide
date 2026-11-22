@@ -143,7 +143,7 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,woff,woff2}'],
           // Don't precache .map files (we already strip them post-build
           // for production but local dev shouldn't pre-cache them either).
-          globIgnores: ['**/*.map'],
+          globIgnores: ['**/*.map', '**/RibbonFabric-*.js', '**/RibbonCurrent-*.js', '**/SpaceTimeBackground-*.js'],
           // Default 2 MiB is too small for the pdf.js + react chunks.
           // Bump to 4 MiB so warmstart actually works without warnings.
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
