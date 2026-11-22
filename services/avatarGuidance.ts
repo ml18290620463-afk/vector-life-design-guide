@@ -56,7 +56,8 @@ export const sourceMatchesTemporalScope = (source: GuidanceSource, question: str
   return (
     temporalStatus === 'current_understanding' ||
     temporalStatus === 'time_limited' ||
-    isHistoricalAvatarQuestion(question)
+    isHistoricalAvatarQuestion(question) ||
+    (temporalStatus === 'historical_fact' && Boolean(source.results?.length))
   );
 };
 const keyOf = (source: GuidanceSource) => source.sourceKey ?? `${source.kind}:${source.id}`;
@@ -185,7 +186,7 @@ type AvatarConversationIntent =
 
 export const detectAvatarConversationIntent = (question: string): AvatarConversationIntent => {
   const compact = stripModalParticles(question);
-  if (/^(你叫什?么名字|你叫什么|你是谁|你叫啥|你有名字)$/.test(compact)) return 'identity';
+  if (/^(?:(?:你好|您好|嗨|哈喽|hello|hi))?(你叫什?么名字|你叫什么|你是谁|你叫啥|你有名字)$/i.test(compact)) return 'identity';
   if (extractAvatarName(question)) return 'name_avatar';
   if (
     /^(你能做什么|你可以做什么|你会做什么|你有什么用|你能帮我什么|你可以帮我什么|你能陪我做什么|你能怎么帮我|你能干什么|你可以干什么|你会干什么|你是干什么的|你能干嘛|你可以干嘛|你会干嘛)$/.test(
@@ -246,8 +247,8 @@ export const buildNaturalAvatarReply = (
     )
       return '我找到同一时间确认的不同称呼，需要你重新确认要使用哪一个。';
     return latest
-      ? `我是你的分身「${latest.avatarName}」。这是你确认保存的称呼。`
-      : '我是你的分身，还没有可用的已确认称呼。你可以给我取一个名字，确认后我会保存。';
+      ? `我是 VECTOR，你可以叫我「${latest.avatarName}」。这是你确认保存的称呼。`
+      : '你好，我是 VECTOR，你的 AI 伙伴。可以陪你梳理经历、想法和下一步。';
   }
 
   const avatarName = extractAvatarName(question);

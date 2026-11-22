@@ -1,6 +1,8 @@
+import { AVATAR_WORK_PROTOCOL } from '../services/avatarWorkProtocol';
 import { selfMemoryVoice } from '../services/avatarMemoryVoice';
 
-export const AVATAR_FACT_RULES = `根据完整对话的前后文，提炼最多三条彼此独立、对理解用户有长期价值的信息。不是聊天摘要，不保存问题或对话原文拼接。分身对经验、情绪、信息、环境、习惯或认知局限的提醒属于当次分析，不能据此生成个人记忆；用户礼貌认可或说“知道了”不构成事实证据，不生成“我有某种思维局限”的标签。assistant 消息只用于理解用户是在确认、修正还是拒绝某个说法，绝不能作为用户事实或证据。
+export const AVATAR_FACT_RULES = `${AVATAR_WORK_PROTOCOL}
+根据完整对话的前后文，提炼最多三条彼此独立、对理解用户有长期价值的信息。不是聊天摘要，不保存问题或对话原文拼接。分身对经验、情绪、信息、环境、习惯或认知局限的提醒属于当次分析，不能据此生成个人记忆；用户礼貌认可或说“知道了”不构成事实证据，不生成“我有某种思维局限”的标签。assistant 消息只用于理解用户是在确认、修正还是拒绝某个说法，绝不能作为用户事实或证据。
 可提炼：明确事实(profile)、当前目标(goal)、重要经历(experience)、稳定原则(value)、偏好与边界(preference/boundary)、明确的习惯(habit)、表达偏好(expression)。profile/goal/experience/expression 必须来自用户明确说法；experience 仅在用户主动要记住、或清楚说明它对长期选择有影响时才提炼。排除助手介绍、对助手的提问、他人信息、假设、引用、临时情绪、一次性的待办和已过期状态。保留否定、条件与适用范围。
 如果从至少两条不同的用户表达中观察到一个可能的规律，可用 pattern_candidate 提出“观察线索”。它不能断言人格，不能由一次行为得出；statement 使用“可能”或“往往”等审慎表述。其余类型必须是用户明确表达，不得推断。
 参考记忆带有状态：confirmed/retained 是用户已确认或主动保留的信息，绝不重复提议、替换、修正、否定或覆盖；candidate 只是待验证线索，只有 patternKey 明确一致时才可补充同一线索的证据。用户明确表达“以前…现在…”、“我不再…”或“我改为…”时，最多提出一条新的、待用户确认的信息；仅当它取代一条 status=confirmed 且带 id 的参考记忆时，可额外返回 replacesReferenceId（该 id 必须逐字来自参考记忆）。不适用于模式候选、临时状态或目标；绝不直接覆盖参考记忆。优先最新信息；已存在于参考记忆的信息不重复提议。没有合适信息返回 {"candidates":[]}。
@@ -37,7 +39,8 @@ export const AVATAR_CHAT_FACT_KINDS = [
   'pattern_candidate',
 ] as const satisfies readonly AvatarFactKind[];
 
-export const AVATAR_CHAT_FACT_RULES = `你正在从聊天中提出“关于用户的理解”候选，而不是归档经历。只可提炼用户明确表达、具有长期价值且相对稳定的自述；候选必须等待用户确认，确认后才会加入记忆库。
+export const AVATAR_CHAT_FACT_RULES = `${AVATAR_WORK_PROTOCOL}
+你正在从聊天中提出“关于用户的理解”候选，而不是归档经历。只可提炼用户明确表达、具有长期价值且相对稳定的自述；候选必须等待用户确认，确认后才会加入记忆库。
 聊天里提到过去发生的事，仍只是聊天材料，绝不输出 experience，绝不把它改写、归档或保存为“过去”中的经历。若用户希望正式保存一段经历，应让其在「现在」中记录。
 可提炼的 kind 只能是 profile/preference/boundary/value/habit/goal/expression/pattern_candidate。profile、preference、boundary、value、habit、goal、expression 必须来自用户明确说法，不能猜测。pattern_candidate 只能基于至少两条不同的用户表达提出审慎的观察线索，statement 必须包含“可能”或“往往”，不能断言人格、诊断或价值判断。
 role=user 的文字是唯一可作为候选证据的材料；role=assistant 仅用于理解语境，不能成为事实或证据。参考记忆仅用于避免重复，不能成为新候选的证据。问题、请求、假设、引用、转述、他人信息、临时情绪、一次性状态、对助手的评价和聊天摘要默认不提炼。用户礼貌认可或说“知道了”不构成事实证据。

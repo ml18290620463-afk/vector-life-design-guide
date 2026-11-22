@@ -33,6 +33,9 @@ function allowedSourceForIntent(
 ) {
   const isFuture = source.module === 'future' || ['行动', '愿景', '目标'].includes(source.kind);
   const fromAction = Boolean(launchContext?.actionId);
+  // Completed practice remains evidence for choices, never a current obligation.
+  if (source.temporalStatus === 'historical_fact' && source.results?.length &&
+      ['decision_support', 'similar_experiences', 'general'].includes(intent)) return true;
   if (isFuture && intent !== 'future_context' && !fromAction) return false;
   if (intent === 'self_knowledge')
     return source.kind !== '背景' && source.status !== 'candidate' && source.module !== 'now';
@@ -72,6 +75,10 @@ export function selectAvatarGuidanceContext(
           source.evidence?.some(
             (item) => item.occurredAt >= plan.range!.start && item.occurredAt < plan.range!.end,
           ) ||
+          source.results?.some((result) => {
+            const time = Date.parse(result.occurredOn);
+            return time >= plan.range!.start && time < plan.range!.end;
+          }) ||
           (source.validFrom !== undefined &&
             source.validFrom < plan.range!.end &&
             (source.validTo === undefined || source.validTo > plan.range!.start)),

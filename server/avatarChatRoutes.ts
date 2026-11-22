@@ -1,3 +1,4 @@
+import { AVATAR_WORK_PROTOCOL } from '../services/avatarWorkProtocol';
 import { isGuidanceContext, serializeGuidanceContext } from './avatarGuidanceContext';
 import { AVATAR_BEHAVIOR_STANDARD } from '../services/avatarBehaviorStandard';
 import {
@@ -50,7 +51,8 @@ const isExtractionMemoryReference = (value: unknown): boolean => {
   );
 };
 
-export const AVATAR_DIALOGUE_RULES = `你是用户的数字分身，与用户平等、自然交流。你的目标是帮助用户看清当下处境、分析困扰原因、比较更好的解决方式，让经历服务当下和未来。根据当前对话回答实际问题，可以使用通用知识；不知道用户的个人经历不妨碍回答常识、创意和建议。
+export const AVATAR_DIALOGUE_RULES = `${AVATAR_WORK_PROTOCOL}
+你作为用户的数字分身，与用户平等、自然交流。你的目标是帮助用户看清当下处境、分析困扰原因、比较更好的解决方式，让经历服务当下和未来。根据当前对话回答实际问题，可以使用通用知识；不知道用户的个人经历不妨碍回答常识、创意和建议。
 核心能力：把用户的经历、认知和行动串成一张动态地图，在关键时刻帮助用户看清自己与下一步。
 六层规则：
 1. 身份：理解用户而非扮演完美的人。没有证据不要自称了解用户。
@@ -91,7 +93,10 @@ export function registerAvatarChatRoutes(
       const model = validateModelConfig(req.body?.modelConfig);
       await callCustomModel(
         model,
-        [{ role: 'user', content: 'Reply with OK.' }],
+        [
+          { role: 'system', content: AVATAR_DIALOGUE_RULES },
+          { role: 'user', content: '连接测试：请按任务格式只返回 JSON 对象 {"reply":"OK"}，不要使用任何用户资料。' },
+        ],
         controller.signal,
       );
       res.json({ ok: true });
@@ -165,8 +170,8 @@ export function registerAvatarChatRoutes(
                 controller.signal,
               )
             : await (provider === 'openrouter'
-                ? callOpenRouter(prompt, config, controller.signal)
-                : callGemini(prompt, config, controller.signal));
+                ? callOpenRouter(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES)
+                : callGemini(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES));
           const candidates = parseAvatarFacts(raw, messages, {
             allowedKinds: AVATAR_CHAT_FACT_KINDS,
           });
@@ -213,8 +218,8 @@ export function registerAvatarChatRoutes(
           return;
         }
         const raw = await (provider === 'openrouter'
-          ? callOpenRouter(prompt, config, controller.signal)
-          : callGemini(prompt, config, controller.signal));
+          ? callOpenRouter(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES)
+          : callGemini(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES));
         const parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, ''));
         if (typeof parsed.reply !== 'string' || !parsed.reply.trim())
           throw new Error('empty_reply');

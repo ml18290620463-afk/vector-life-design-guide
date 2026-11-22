@@ -94,6 +94,18 @@ describe('callOpenRouter', () => {
     );
   });
 
+  it('sends work rules as a system message before task data', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })),
+    );
+    await callOpenRouter('task data', baseCfg(), undefined, 'VECTOR work rules');
+    const body = JSON.parse(String(vi.mocked(globalThis.fetch).mock.calls[0][1]?.body));
+    expect(body.messages).toEqual([
+      { role: 'system', content: 'VECTOR work rules' },
+      { role: 'user', content: 'task data' },
+    ]);
+  });
+
   it('returns the assistant content on success', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ choices: [{ message: { content: 'hello world' } }] }), {

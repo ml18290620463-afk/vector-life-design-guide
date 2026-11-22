@@ -143,3 +143,15 @@ describe('intent-scoped retrieval', () => {
     expect(ids).not.toContain('candidate');
   });
 });
+
+describe('practice informs new choices', () => {
+  it('retrieves completed practice with feedback for a current decision', () => {
+    const practice: GuidanceSource = {
+      id: 'practice-action', sourceKey: '行动:practice-action', kind: '背景', module: 'now',
+      text: '正式汇报提前准备提纲', temporalStatus: 'historical_fact', status: 'completed',
+      results: [{ text: '正式汇报准备了提纲，评判标准临时改变仍然焦虑', status: 'completed', occurredOn: '2026-11-01' }],
+    };
+    expect(selectAvatarGuidanceContext(messages('正式汇报该不该提前准备提纲'), [practice])).toContainEqual(practice);
+    expect(selectAvatarGuidanceContext(messages('正式汇报该不该提前准备提纲'), [{ ...practice, results: [] }])).toEqual([]);
+  });
+});

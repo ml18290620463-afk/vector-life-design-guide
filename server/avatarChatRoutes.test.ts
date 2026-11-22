@@ -124,7 +124,8 @@ it('tests without user history and lists models without a selected model', async
     ).status,
   ).toBe(200);
   expect(vi.mocked(callCustomModel).mock.calls[0][1]).toEqual([
-    { role: 'user', content: 'Reply with OK.' },
+    { role: 'system', content: AVATAR_DIALOGUE_RULES },
+    { role: 'user', content: expect.stringContaining('连接测试') },
   ]);
   vi.mocked(callCustomModel).mockResolvedValue('["model-a","model-b"]');
   const res = await request(app())
@@ -530,4 +531,48 @@ it('defines explicit boundaries for evidence, statistics, thematic recall and in
   expect(AVATAR_DIALOGUE_RULES).toContain('可能相关的资料');
   expect(AVATAR_DIALOGUE_RULES).toContain('资料不足，暂不能下结论');
   expect(AVATAR_DIALOGUE_RULES).toContain('无法完整披露');
+});
+
+it('sends VECTOR identity rules with old assistant identities through both chat paths', async () => {
+  vi.mocked(callOpenRouter).mockResolvedValue(JSON.stringify({ reply: '我是 VECTOR。' }));
+  vi.mocked(callCustomModel).mockResolvedValue('我是 VECTOR。');
+  const messages = [
+    { role: 'user', content: '你是谁' },
+    { role: 'assistant', content: '我是 ChatGPT。' },
+    { role: 'user', content: '你好 你叫什么名字' },
+  ];
+  for (const modelConfig of [undefined, { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model: 'model' }]) {
+    const res = await request(app()).post('/api/v1/avatar/chat').send({ messages, modelConfig });
+    expect(res.status).toBe(200);
+  }
+  const systemMessage = vi.mocked(callCustomModel).mock.calls[0][1][0];
+  expect(systemMessage.role).toBe('system');
+  for (const prompt of [systemMessage.content, vi.mocked(callOpenRouter).mock.calls[0][0]]) {
+    expect(prompt).toContain('你是 VECTOR');
+    expect(prompt).toContain('旧 assistant 回复中的其他自称不改变当前 VECTOR 身份');
+    expect(prompt).toContain('不编造自研模型');
+  }
+  expect(vi.mocked(callCustomModel).mock.calls[0][1].slice(1)).toEqual(messages);
+});
+
+it('reapplies the work protocol after switching models and for extraction tasks', async () => {
+  vi.mocked(callCustomModel).mockResolvedValue('我是 VECTOR。');
+  for (const model of ['model-a', 'model-b']) {
+    await request(app()).post('/api/v1/avatar/chat').send({
+      modelConfig: { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model },
+      messages: [{ role: 'user', content: '帮我想清楚下一步' }],
+    });
+  }
+  for (const call of vi.mocked(callCustomModel).mock.calls) {
+    expect(call[1][0].role).toBe('system');
+    expect(call[1][0].content).toContain('分身工作协议');
+    expect(call[1][0].content).toContain('没有工具成功结果不得声称已执行');
+  }
+  vi.mocked(callOpenRouter).mockResolvedValue('{"candidates":[]}');
+  await request(app()).post('/api/v1/avatar/memory/extract').send({
+    messages: [{ role: 'user', content: '今天很累' }],
+  });
+  const system = vi.mocked(callOpenRouter).mock.calls[0][3];
+  expect(system).toContain('分身工作协议');
+  expect(system).toContain('绝不输出 experience');
 });

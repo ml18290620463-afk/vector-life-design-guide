@@ -8,6 +8,7 @@ import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../features
 import { readAvatarNameStatement } from './avatarMemoryPolicy';
 import { goalProgress } from './futureRepository';
 import type { GuidanceSource } from './avatarGuidance';
+import { selectGuidanceResults } from './guidanceResults';
 import { describeActionPractice } from './actionPracticeSemantics';
 import { currentPrinciples, historicalEvolutionPrinciples } from './principleRevision';
 
@@ -282,7 +283,7 @@ export function buildGuidanceSources(input: {
           .filter((pattern) => p.sourcePatternIds?.includes(pattern.id))
           .flatMap((pattern) => pattern.sourceEntryIds),
       ]),
-      results: [
+      results: selectGuidanceResults([
         ...accessible.flatMap((entry) =>
           (entry.principleFeedback ?? [])
             .filter(
@@ -311,8 +312,7 @@ export function buildGuidanceSources(input: {
             ) === index,
         )
         .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
-        .slice(0, 4)
-        .map(({ text, occurredOn, status }) => ({ text, occurredOn, status })),
+        .map(({ text, occurredOn, status }) => ({ text, occurredOn, status }))),
     })),
     ...historicalEvolutionPrinciples(input.principles)
       .filter(

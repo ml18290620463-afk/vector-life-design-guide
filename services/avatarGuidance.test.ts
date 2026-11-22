@@ -124,7 +124,7 @@ describe('read-only avatar guidance', () => {
   });
   it('responds to identity, naming, and action intent like a conversational avatar', () => {
     expect(buildGroundedGuidance('你叫什么名字', buildGuidanceSources(fixture())).text).toContain(
-      '我是你的分身',
+      '我是 VECTOR',
     );
     expect(buildGroundedGuidance('以后叫你小鹿', buildGuidanceSources(fixture())).text).toContain(
       '确认保存',
@@ -329,7 +329,7 @@ describe('six-layer recall boundaries', () => {
         atomic({ id: 'new-name', statement: '用户为分身取名为「小鹿」', confirmedAt: 2 }),
       ],
     });
-    expect(buildGroundedGuidance('你叫什么名字', sources).text).toContain('分身「小鹿」');
+    expect(buildGroundedGuidance('你叫什么名字', sources).text).toContain('我是 VECTOR，你可以叫我「小鹿」');
   });
   it('does not use unreviewed, expired, future, or inferred names', () => {
     const now = Date.now();
@@ -368,4 +368,9 @@ describe('six-layer recall boundaries', () => {
       expect(buildGroundedGuidance('散步让我更平静', sources).text).toContain(wording);
     }
   });
+});
+
+it('introduces VECTOR for a greeting followed by a name question', () => {
+  expect(detectAvatarConversationIntent('你好 你叫什么名字')).toBe('identity');
+  expect(buildGroundedGuidance('你好 你叫什么名字', []).text).toContain('我是 VECTOR');
 });

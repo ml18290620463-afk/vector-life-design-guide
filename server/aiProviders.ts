@@ -59,10 +59,11 @@ export const callOpenRouter = async (
   prompt: string,
   cfg: ProviderConfig,
   signal?: AbortSignal,
+  systemInstruction?: string,
 ): Promise<string> => {
   const body: Record<string, unknown> = {
     model: cfg.openrouterModel,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []), { role: 'user', content: prompt }],
   };
   if (cfg.openrouterJsonMode) {
     body.response_format = { type: 'json_object' };
@@ -103,12 +104,13 @@ export const callGemini = async (
   prompt: string,
   cfg: ProviderConfig,
   signal?: AbortSignal,
+  systemInstruction?: string,
 ): Promise<string> => {
   const client = new GoogleGenAI({ apiKey: cfg.geminiKey });
   const generation = client.models.generateContent({
     model: cfg.geminiModel,
     contents: prompt,
-    config: { responseMimeType: 'application/json' },
+    config: { responseMimeType: 'application/json', ...(systemInstruction ? { systemInstruction } : {}) },
   });
 
   if (!signal) {
