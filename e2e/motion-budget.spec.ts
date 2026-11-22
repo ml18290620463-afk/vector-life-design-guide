@@ -9,7 +9,7 @@ for (const mode of ['mobile', 'disabled'] as const) {
     const heavy: string[] = [];
     page.on('request', (request) => {
       if (
-        /RibbonFabric|RibbonCurrent|SpaceTimeBackground|KleinBottleFoldSpace|ValleyParticleLandscape|CoverParticleArrow|CoverIceFlow/.test(
+        /RibbonFabric|RibbonCurrent|SpaceTimeBackground|CoverParticleArrow|CoverIceFlow/.test(
           request.url(),
         )
       )

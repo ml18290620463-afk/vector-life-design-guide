@@ -7,10 +7,7 @@
  * their literal palettes here, in one centralised module, instead of
  * scattering hex / rgba literals across every animation file.
  *
- * Two consumers:
- *   - `components/DeepArchiveAnimation.tsx` — particle constellation
- *     fired during the "Archive" success animation.
- *   - (future) any other Canvas-driven decoration.
+ * Shared palette utilities for Canvas-driven decoration.
  *
  * Goals of centralising here:
  *   - `npm run lint:tokens` only scans `components/**`, so moving

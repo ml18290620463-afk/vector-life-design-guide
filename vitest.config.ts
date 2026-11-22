@@ -57,7 +57,6 @@ export default defineConfig({
         // browser, low risk.
         'components/SpaceTimeBackground.tsx',
         'components/MemoryFragments.tsx',
-        'components/DeepArchiveAnimation.tsx',
         'components/GeometricBoat.tsx',
         'components/CoverScreen.tsx',
         'lib/markdownSchemes.ts',
