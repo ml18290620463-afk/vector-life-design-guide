@@ -1,6 +1,9 @@
 import { TranslationDictionary } from '../translations';
 
 export const en = {
+  starLimitWarning: 'Choose up to 3 perspectives to stay focused.',
+  starLimitError: 'You can select up to 3 perspectives. Remove one before adding another.',
+  letterGreeting: 'Dear you,',
   appTitle: 'VECTOR // TRACE',
   commander: 'OPERATOR',
   settings: 'CALIBRATION',
@@ -255,7 +258,7 @@ export const en = {
   customAnchorDesc: 'Record moments that defy categorization',
   engraving: 'NEW_DATA_ENTRY',
   abortProgram: 'ABORT PROGRAM',
-  subjectTitle: '',
+  subjectTitle: 'Title',
   dataStream: 'DATA STREAM (CONTENTS)',
   morningStarAnalysis: 'REVIEW NOTES',
   reflectAndAnalyze: 'Echoes & Awareness',

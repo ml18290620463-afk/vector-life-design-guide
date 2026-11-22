@@ -1,3 +1,4 @@
+import { normalizeLanguage } from '../i18n/translations';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Globe } from 'lucide-react';
@@ -14,15 +15,10 @@ interface StatisticsLanguageSwitchProps {
 const LANGUAGES: ReadonlyArray<{ id: Language; label: string }> = [
   { id: 'zh', label: '中文' },
   { id: 'en', label: 'English' },
-  { id: 'ja', label: '日本語' },
-  { id: 'ko', label: '한국어' },
-  { id: 'fr', label: 'Français' },
-  { id: 'de', label: 'Deutsch' },
-  { id: 'es', label: 'Español' },
 ];
 
 /**
- * Collapsible language switch (7 supported locales) inside the
+ * Collapsible language switch (2 supported locales) inside the
  * statistics widget. The toggle row is now a real `<button>` with
  * `aria-expanded`; the language buttons are `role="radio"` inside a
  * `role="radiogroup"` so screen readers announce the active language.
@@ -67,14 +63,14 @@ export const StatisticsLanguageSwitch: React.FC<StatisticsLanguageSwitchProps> =
             <div
               role="radiogroup"
               aria-label={t.interfaceLanguage}
-              className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-3 gap-1.5 pt-1 border-t border-dashed border-cyan-500/10"
+              className="grid grid-cols-2 gap-1.5 pt-1 border-t border-dashed border-cyan-500/10"
             >
               {LANGUAGES.map((lang) => (
                 <button
                   key={lang.id}
                   type="button"
                   role="radio"
-                  aria-checked={language === lang.id}
+                  aria-checked={normalizeLanguage(language) === lang.id}
                   onClick={() => onSetLanguage(lang.id)}
                   className="statistics-language-option"
                 >

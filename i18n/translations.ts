@@ -4,18 +4,18 @@ export type TranslationDictionary = Record<string, string>;
 
 import { zh } from './locales/zh';
 import { en } from './locales/en';
-import { ja } from './locales/ja';
-import { ko } from './locales/ko';
-import { fr } from './locales/fr';
-import { es } from './locales/es';
-import { de } from './locales/de';
 
 export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
   zh,
   en,
-  ja,
-  ko,
-  fr,
-  es,
-  de,
+  ja: en, // Legacy values normalize to English; archive is not bundled.
+  ko: en, // Legacy values normalize to English; archive is not bundled.
+  fr: en, // Legacy values normalize to English; archive is not bundled.
+  es: en, // Legacy values normalize to English; archive is not bundled.
+  de: en, // Legacy values normalize to English; archive is not bundled.
 };
+
+export const SUPPORTED_LANGUAGES = ['zh', 'en'] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+export const normalizeLanguage = (language: string): SupportedLanguage =>
+  language === 'zh' ? 'zh' : 'en';

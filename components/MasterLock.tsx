@@ -1,3 +1,4 @@
+import { SUPPORTED_LANGUAGES } from '../i18n/translations';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Check, Globe } from 'lucide-react';
@@ -97,69 +98,60 @@ export const MasterLock: React.FC<MasterLockProps> = ({
   void biometric.authenticate;
 
   return (
-    <div
-      className="master-lock-screen master-lock-refined fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 md:p-8"
-    >
+    <div className="master-lock-screen master-lock-refined fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 md:p-8">
       <MasterLockBackdrop theme={theme} />
 
       <div className="master-lock-frame relative z-10 my-auto w-full max-w-[560px]">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={
-            verify.isSuccess
-              ? { opacity: 0, y: -4, scale: 0.985 }
-              : { opacity: 1, scale: 1, y: 0 }
+            verify.isSuccess ? { opacity: 0, y: -4, scale: 0.985 } : { opacity: 1, scale: 1, y: 0 }
           }
-          transition={
-            { duration: 0.28, ease: 'easeOut' }
-          }
+          transition={{ duration: 0.28, ease: 'easeOut' }}
           className={`master-lock-card relative min-h-0 w-full ${verify.isSuccess ? 'pointer-events-none' : ''}`}
         >
           <div className="master-lock-toolbar">
-          <MasterLockHeader
-            theme={theme}
-            language={language}
-            t={t}
-            isRecoveryMode={recovery.isRecoveryMode}
-            onBackFromRecovery={() => recovery.setIsRecoveryMode(false)}
-            onCancel={onCancel}
-            isConfirmingCancel={cancelConfirm.isConfirming}
-            onCancelClick={cancelConfirm.trigger}
-          />
-          <div className="master-lock-language relative z-50">
-            <button
-              type="button"
-              onClick={() => setShowLanguageMenu((prev) => !prev)}
-              aria-expanded={showLanguageMenu}
-              aria-label={language === 'zh' ? '选择语言' : 'Select language'}
-              className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-raised)] px-3 text-xs text-[var(--ds-text-muted)] transition-colors hover:border-[var(--ds-border-strong)] hover:bg-[var(--ds-hover)] hover:text-[var(--ds-text)]"
-            >
-              <Globe className="h-3.5 w-3.5" />
-              <span>{language === 'zh' ? '中文' : language.toUpperCase()}</span>
-            </button>
-
-            {showLanguageMenu && (
-              <div
-                className="absolute right-0 mt-2 w-36 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-1 text-xs shadow-[var(--ds-shadow-float)]"
+            <MasterLockHeader
+              theme={theme}
+              language={language}
+              t={t}
+              isRecoveryMode={recovery.isRecoveryMode}
+              onBackFromRecovery={() => recovery.setIsRecoveryMode(false)}
+              onCancel={onCancel}
+              isConfirmingCancel={cancelConfirm.isConfirming}
+              onCancelClick={cancelConfirm.trigger}
+            />
+            <div className="master-lock-language relative z-50">
+              <button
+                type="button"
+                onClick={() => setShowLanguageMenu((prev) => !prev)}
+                aria-expanded={showLanguageMenu}
+                aria-label={language === 'zh' ? '选择语言' : 'Select language'}
+                className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-raised)] px-3 text-xs text-[var(--ds-text-muted)] transition-colors hover:border-[var(--ds-border-strong)] hover:bg-[var(--ds-hover)] hover:text-[var(--ds-text)]"
               >
-                {(Object.keys(NATIVE_LANG_NAMES) as Language[]).map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => {
-                      onSetLanguage(lang);
-                      setShowLanguageMenu(false);
-                    }}
-                    className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left transition-colors ${language === lang ? 'bg-[var(--ds-selected)] text-[var(--ds-accent)]' : 'text-[var(--ds-text-muted)] hover:bg-[var(--ds-hover)] hover:text-[var(--ds-text)]'}`}
-                  >
-                    <span>{NATIVE_LANG_NAMES[lang]}</span>
-                    {language === lang && <Check className="h-3 w-3" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+                <Globe className="h-3.5 w-3.5" />
+                <span>{language === 'zh' ? '中文' : language.toUpperCase()}</span>
+              </button>
 
+              {showLanguageMenu && (
+                <div className="absolute right-0 mt-2 w-36 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-1 text-xs shadow-[var(--ds-shadow-float)]">
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => {
+                        onSetLanguage(lang);
+                        setShowLanguageMenu(false);
+                      }}
+                      className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left transition-colors ${language === lang ? 'bg-[var(--ds-selected)] text-[var(--ds-accent)]' : 'text-[var(--ds-text-muted)] hover:bg-[var(--ds-hover)] hover:text-[var(--ds-text)]'}`}
+                    >
+                      <span>{NATIVE_LANG_NAMES[lang]}</span>
+                      {language === lang && <Check className="h-3 w-3" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="master-lock-content flex flex-col items-center text-center space-y-4">
@@ -190,11 +182,13 @@ export const MasterLock: React.FC<MasterLockProps> = ({
             )}
           </div>
           {!recovery.isRecoveryMode && (
-            <div
-              className="master-lock-security pointer-events-none mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs leading-5 text-[var(--ds-text-muted)]"
-            >
+            <div className="master-lock-security pointer-events-none mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs leading-5 text-[var(--ds-text-muted)]">
               <span>{language === 'zh' ? '本地加密存储' : 'Encrypted on this device'}</span>
-              <span>{language === 'zh' ? '使用 AI 时，相关内容将交由所选模型处理。' : 'When using AI, relevant content is sent to your selected model.'}</span>
+              <span>
+                {language === 'zh'
+                  ? '使用 AI 时，相关内容将交由所选模型处理。'
+                  : 'When using AI, relevant content is sent to your selected model.'}
+              </span>
             </div>
           )}
         </motion.div>

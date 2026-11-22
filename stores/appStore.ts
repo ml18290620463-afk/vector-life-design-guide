@@ -1,3 +1,4 @@
+import { normalizeLanguage } from '../i18n/translations';
 import { currentAccountId } from '../services/accountScope';
 import { create } from 'zustand';
 import { AppState, DiaryEntry, Language, Theme } from '../types';
@@ -31,12 +32,14 @@ interface AppStore {
 const getInitialTheme = (): Theme => {
   const revision = 'cold-white-v1';
   const migrated = getStoredString(AppStorageKeys.themeRevision) === revision;
-  const theme: Theme = migrated && getStoredString(AppStorageKeys.theme) === 'dark' ? 'dark' : 'light';
+  const theme: Theme =
+    migrated && getStoredString(AppStorageKeys.theme) === 'dark' ? 'dark' : 'light';
   if (!migrated) {
     setStoredString(AppStorageKeys.theme, theme);
     setStoredString(AppStorageKeys.themeRevision, revision);
   }
-  if (typeof document !== 'undefined') document.documentElement.classList.toggle('light', theme === 'light');
+  if (typeof document !== 'undefined')
+    document.documentElement.classList.toggle('light', theme === 'light');
   return theme;
 };
 
@@ -58,7 +61,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     set({ appState: state });
   },
-  setLanguage: (lang) => set({ language: lang }),
+  setLanguage: (lang) => set({ language: normalizeLanguage(lang) }),
   setTheme: (theme) => {
     setStoredString(AppStorageKeys.theme, theme);
     if (theme === 'light') {

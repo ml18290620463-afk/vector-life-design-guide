@@ -22,22 +22,22 @@ describe('StatisticsLanguageSwitch', () => {
     expect(toggle!.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('expanding renders all 7 supported languages inside a radiogroup', () => {
+  it('expanding renders only 2 supported languages inside a radiogroup', () => {
     render(<StatisticsLanguageSwitch {...baseProps} />);
     fireEvent.click(
       screen.getAllByRole('button').find((b) => b.textContent?.includes(t.interfaceLanguage))!,
     );
     expect(screen.getByRole('radiogroup')).toBeTruthy();
-    expect(screen.getAllByRole('radio')).toHaveLength(7);
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
   });
 
   it('the active language button carries aria-checked=true', () => {
-    render(<StatisticsLanguageSwitch {...baseProps} language="ja" />);
+    render(<StatisticsLanguageSwitch {...baseProps} language="en" />);
     fireEvent.click(
       screen.getAllByRole('button').find((b) => b.textContent?.includes(t.interfaceLanguage))!,
     );
-    const ja = screen.getByText('日本語');
-    expect(ja.getAttribute('aria-checked')).toBe('true');
+    const en = screen.getByText('English');
+    expect(en.getAttribute('aria-checked')).toBe('true');
     const zh = screen.getByText('中文');
     expect(zh.getAttribute('aria-checked')).toBe('false');
   });

@@ -1,3 +1,4 @@
+import { SUPPORTED_LANGUAGES } from '../i18n/translations';
 import { currentAccountId } from '../services/accountScope';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Command } from 'cmdk';
@@ -123,7 +124,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       t.toggleTheme || (theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'),
     switchLanguage: t.switchLanguage || 'Switch language…',
     lockVault: t.lockVault || 'Lock the vault',
-    wipeData: currentAccountId() ? '清除此设备资料（云端保留）' : t.wipeData || 'Wipe all local data',
+    wipeData: currentAccountId()
+      ? '清除此设备资料（云端保留）'
+      : t.wipeData || 'Wipe all local data',
   };
 
   return (
@@ -270,7 +273,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
           {page === 'language' && (
             <Command.Group heading={labels.languagePage}>
-              {(Object.keys(LANGUAGE_LABELS) as Language[]).map((lang) => (
+              {SUPPORTED_LANGUAGES.map((lang) => (
                 <PaletteItem
                   key={lang}
                   theme={theme}
