@@ -9,28 +9,10 @@ import {
   type AvatarModelConfig,
 } from '../api/avatarModel';
 import './avatarModelSettings.css';
+import { modelOptionsFor, preferredModelFor } from './avatarModelOptions';
 import { presets, normalizeModelName, normalizeApiKey } from './avatarModelPresets';
 type ModelEndpoint = NonNullable<AvatarModelConfig['endpoint']>;
 const customPresetIndex = presets.length - 1;
-const modelOptionsFor = (presetIndex: number, liveModels: string[], selectedModel: string) => {
-  const presetModels = presets[presetIndex]?.models || [];
-  const options = liveModels.length
-    ? presetModels.filter((item) => liveModels.includes(item.id))
-    : [...presetModels];
-  liveModels.forEach((id) => {
-    if (!options.some((item) => item.id === id)) options.push({ id, label: id });
-  });
-  if (!liveModels.length && selectedModel && !options.some((item) => item.id === selectedModel)) {
-    options.push({ id: selectedModel, label: `${selectedModel} · 当前填写` });
-  }
-  return options;
-};
-const preferredModelFor = (available: string[], presetIndex: number, current: string) =>
-  available.includes(current)
-    ? current
-    : presets[presetIndex]?.models.find((item) => available.includes(item.id))?.id ||
-      available[0] ||
-      current;
 export function AvatarModelSettings({
   onClose,
   onSaved,
@@ -61,9 +43,7 @@ export function AvatarModelSettings({
   const [models, setModels] = useState<string[]>([]);
   const [showKey, setShowKey] = useState(false);
   const [rememberKey, setRememberKey] = useState(readAvatarModelRememberPreference);
-  const [showAdvanced, setShowAdvanced] = useState(
-    savedConfig ? !presets.slice(0, -1).some((p) => p.baseUrl === savedConfig.baseUrl) : false,
-  );
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -86,9 +66,7 @@ export function AvatarModelSettings({
     if (!first) return;
     window.setTimeout(() => {
       const field = refs[first].current;
-      // Preset providers intentionally lock their endpoint. When their endpoint
-      // needs attention, lead to the disclosed setting rather than attempting
-      // to focus a disabled input.
+      // Disabled preset endpoints focus the disclosure instead.
       (field && !field.disabled ? field : advancedToggleRef.current)?.focus();
     }, 0);
   }, []);
@@ -158,7 +136,7 @@ export function AvatarModelSettings({
     }
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
-      if (errors.baseUrl) setShowAdvanced(true);
+      setShowAdvanced(true);
       setError('请先修正红色标记的内容。');
       focusFirstError(errors);
       return null;
@@ -176,6 +154,7 @@ export function AvatarModelSettings({
       errors.baseUrl = modelError(code);
       setShowAdvanced(true);
     }
+    if (Object.keys(errors).length) setShowAdvanced(true);
     setFieldErrors(errors);
     focusFirstError(errors);
   };
@@ -283,9 +262,7 @@ export function AvatarModelSettings({
   // previously saved model is no longer among our presets.
   const canChoosePresetModel = !isCustom && !manualModel;
   const discoverOnBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-    // Keep the form responsive while the user moves between its controls. In
-    // particular, discovering models here must not disable the “remember”
-    // checkbox before its click is applied.
+    // Discovery must not disable the remember checkbox during its click.
     if ((event.relatedTarget as HTMLElement | null)?.closest('button, input, select, textarea, a'))
       return;
     const value = normalized();
@@ -312,7 +289,7 @@ export function AvatarModelSettings({
       },
     );
     setManualModel(Boolean(index === customPresetIndex));
-    setShowAdvanced(index === customPresetIndex);
+    if (index === customPresetIndex) setShowAdvanced(true);
     setShowKey(false);
     setFieldErrors({});
   };
@@ -356,184 +333,191 @@ export function AvatarModelSettings({
             ))}
           </select>
         </div>
-        <div
-          className={`avatar-model-field ${fieldErrors.apiKey ? 'avatar-model-field--error' : ''}`}
-        >
-          <div className="avatar-model-label-row">
-            <label htmlFor="avatar-api-key">API Key</label>
-            {presets[currentPreset].keyUrl && (
-              <a href={presets[currentPreset].keyUrl} target="_blank" rel="noreferrer">
-                获取 Key ↗
-              </a>
-            )}
-          </div>
-          {presets[currentPreset].keyHint && (
-            <p className="avatar-model-required-hint" role="note">
-              {presets[currentPreset].keyHint}
-            </p>
-          )}
-          <div className="avatar-model-key">
-            <input
-              ref={apiKeyRef}
-              required
-              disabled={busy}
-              id="avatar-api-key"
-              type={showKey ? 'text' : 'password'}
-              autoComplete="off"
-              spellCheck={false}
-              autoCapitalize="none"
-              autoCorrect="off"
-              value={config.apiKey}
-              aria-invalid={Boolean(fieldErrors.apiKey)}
-              aria-describedby={fieldErrors.apiKey ? 'avatar-api-key-error' : undefined}
-              placeholder={`粘贴 ${isCustom ? '服务商' : presets[currentPreset].name} API Key`}
-              onChange={(e) => change({ apiKey: normalizeApiKey(e.target.value) })}
-              onBlur={discoverOnBlur}
-            />
-            <button type="button" aria-pressed={showKey} onClick={() => setShowKey(!showKey)}>
-              {showKey ? '隐藏' : '显示'}
-            </button>
-          </div>
-          <label className="avatar-model-remember">
-            <input
-              id="avatar-remember-key"
-              type="checkbox"
-              disabled={busy}
-              checked={rememberKey}
-              onChange={(e) => setRememberKey(e.target.checked)}
-            />
-            <span>在此设备浏览器中记住 API Key，下次自动使用</span>
-          </label>
-          <small className="avatar-model-hint">
-            默认在此设备保存已验证的连接。关闭后仍会保留服务商和模型，Key 仅保留到本次浏览器会话结束。
-          </small>
-          {fieldErrors.apiKey && (
-            <small id="avatar-api-key-error" className="avatar-model-error">
-              {fieldErrors.apiKey}
-            </small>
-          )}
-        </div>
-        {(!isCustom || models.length > 0) && (
-          <div className="avatar-model-label-row" role="group" aria-label="模型填写方式">
-            <button
-              type="button"
-              disabled={busy}
-              hidden={!manualModel}
-              aria-pressed={!manualModel}
-              onClick={() => {
-                setManualModel(false);
-                if (manualModel || !config.model.trim()) {
-                  const next = presets[currentPreset];
-                  const model = preferredModelFor(models, currentPreset, next.model);
-                  const option = next.models.find((item) => item.id === model);
-                  change({ model, endpoint: option?.endpoint || 'chat' });
-                }
-              }}
-            >
-              推荐
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              hidden={manualModel}
-              aria-pressed={manualModel}
-              onClick={() => {
-                setManualModel(true);
-                window.setTimeout(() => modelRef.current?.focus(), 0);
-              }}
-            >
-              手动输入
-            </button>
-          </div>
-        )}
-        {canChoosePresetModel && (
-          <div
-            className={`avatar-model-field ${fieldErrors.model ? 'avatar-model-field--error' : ''}`}
-          >
-            <div className="avatar-model-label-row">
-              <label htmlFor="avatar-model-choice">模型</label>
-              <button
-                type="button"
-                disabled={busy || !config.apiKey.trim()}
-                onClick={() => void requestModel(true)}
-              >
-                {busy ? '识别中…' : '识别可用模型'}
-              </button>
-            </div>
-            <select
-              ref={modelRef as React.RefObject<HTMLSelectElement>}
-              disabled={busy}
-              id="avatar-model-choice"
-              value={currentConfig.model}
-              aria-invalid={Boolean(fieldErrors.model)}
-              aria-describedby={fieldErrors.model ? 'avatar-model-choice-error' : undefined}
-              onChange={(e) => {
-                const nextModel = e.target.value;
-                const option = modelOptions.find((item) => item.id === nextModel);
-                change({ model: nextModel, endpoint: option?.endpoint || 'chat' });
-              }}
-            >
-              {modelOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.model && (
-              <small id="avatar-model-choice-error" className="avatar-model-error">
-                {fieldErrors.model}
-              </small>
-            )}
-          </div>
-        )}
-        {!canChoosePresetModel && (
-          <div
-            className={`avatar-model-field ${fieldErrors.model ? 'avatar-model-field--error' : ''}`}
-          >
-            <div className="avatar-model-label-row">
-              <label htmlFor="avatar-model-id">模型名称</label>
-              <button
-                type="button"
-                disabled={busy || !config.apiKey.trim() || !config.baseUrl.trim()}
-                onClick={() => void requestModel(true)}
-              >
-                识别可用模型
-              </button>
-            </div>
-            <input
-              ref={modelRef as React.RefObject<HTMLInputElement>}
-              id="avatar-model-id"
-              disabled={busy}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              value={config.model}
-              placeholder={isGemini ? '例如 Gemini 2.5 Flash' : '输入或粘贴模型名称'}
-              aria-invalid={Boolean(fieldErrors.model)}
-              aria-describedby={fieldErrors.model ? 'avatar-model-id-error' : undefined}
-              onChange={(e) => {
-                change({ model: e.target.value });
-              }}
-            />
-            {isGemini && <small>大小写、空格会自动整理，也可以直接识别后选择。</small>}
-            {fieldErrors.model && (
-              <small id="avatar-model-id-error" className="avatar-model-error">
-                {fieldErrors.model}
-              </small>
-            )}
-          </div>
-        )}
+        <p className="avatar-model-hint">
+          {savedConfig
+            ? '连接已配置，可直接返回分身对话。'
+            : '选择服务商后，在高级设置中连接你的账号。'}
+        </p>
         <button
           ref={advancedToggleRef}
           type="button"
           className="avatar-model-advanced-toggle"
           aria-expanded={showAdvanced}
+          aria-controls="avatar-advanced-panel"
           onClick={() => setShowAdvanced((v) => !v)}
         >
           {showAdvanced ? '收起高级设置' : '高级设置（可选）'}
         </button>
         {showAdvanced && (
-          <div className="avatar-model-advanced-panel">
+          <div id="avatar-advanced-panel" className="avatar-model-advanced-panel">
+            <div
+              className={`avatar-model-field ${fieldErrors.apiKey ? 'avatar-model-field--error' : ''}`}
+            >
+              <div className="avatar-model-label-row">
+                <label htmlFor="avatar-api-key">API Key</label>
+                {presets[currentPreset].keyUrl && (
+                  <a href={presets[currentPreset].keyUrl} target="_blank" rel="noreferrer">
+                    获取 Key ↗
+                  </a>
+                )}
+              </div>
+              {presets[currentPreset].keyHint && (
+                <p className="avatar-model-required-hint" role="note">
+                  {presets[currentPreset].keyHint}
+                </p>
+              )}
+              <div className="avatar-model-key">
+                <input
+                  ref={apiKeyRef}
+                  required
+                  disabled={busy}
+                  id="avatar-api-key"
+                  type={showKey ? 'text' : 'password'}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  value={config.apiKey}
+                  aria-invalid={Boolean(fieldErrors.apiKey)}
+                  aria-describedby={fieldErrors.apiKey ? 'avatar-api-key-error' : undefined}
+                  placeholder={`粘贴 ${isCustom ? '服务商' : presets[currentPreset].name} API Key`}
+                  onChange={(e) => change({ apiKey: normalizeApiKey(e.target.value) })}
+                  onBlur={discoverOnBlur}
+                />
+                <button type="button" aria-pressed={showKey} onClick={() => setShowKey(!showKey)}>
+                  {showKey ? '隐藏' : '显示'}
+                </button>
+              </div>
+              <label className="avatar-model-remember">
+                <input
+                  id="avatar-remember-key"
+                  type="checkbox"
+                  disabled={busy}
+                  checked={rememberKey}
+                  onChange={(e) => setRememberKey(e.target.checked)}
+                />
+                <span>在此设备浏览器中记住 API Key，下次自动使用</span>
+              </label>
+              <small className="avatar-model-hint">
+                默认在此设备保存已验证的连接。关闭后仍会保留服务商和模型，Key
+                仅保留到本次浏览器会话结束。
+              </small>
+              {fieldErrors.apiKey && (
+                <small id="avatar-api-key-error" className="avatar-model-error">
+                  {fieldErrors.apiKey}
+                </small>
+              )}
+            </div>
+            {(!isCustom || models.length > 0) && (
+              <div className="avatar-model-label-row" role="group" aria-label="模型填写方式">
+                <button
+                  type="button"
+                  disabled={busy}
+                  hidden={!manualModel}
+                  aria-pressed={!manualModel}
+                  onClick={() => {
+                    setManualModel(false);
+                    if (manualModel || !config.model.trim()) {
+                      const next = presets[currentPreset];
+                      const model = preferredModelFor(models, currentPreset, next.model);
+                      const option = next.models.find((item) => item.id === model);
+                      change({ model, endpoint: option?.endpoint || 'chat' });
+                    }
+                  }}
+                >
+                  推荐
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  hidden={manualModel}
+                  aria-pressed={manualModel}
+                  onClick={() => {
+                    setManualModel(true);
+                    window.setTimeout(() => modelRef.current?.focus(), 0);
+                  }}
+                >
+                  手动输入
+                </button>
+              </div>
+            )}
+            {canChoosePresetModel && (
+              <div
+                className={`avatar-model-field ${fieldErrors.model ? 'avatar-model-field--error' : ''}`}
+              >
+                <div className="avatar-model-label-row">
+                  <label htmlFor="avatar-model-choice">模型</label>
+                  <button
+                    type="button"
+                    disabled={busy || !config.apiKey.trim()}
+                    onClick={() => void requestModel(true)}
+                  >
+                    {busy ? '识别中…' : '识别可用模型'}
+                  </button>
+                </div>
+                <select
+                  ref={modelRef as React.RefObject<HTMLSelectElement>}
+                  disabled={busy}
+                  id="avatar-model-choice"
+                  value={currentConfig.model}
+                  aria-invalid={Boolean(fieldErrors.model)}
+                  aria-describedby={fieldErrors.model ? 'avatar-model-choice-error' : undefined}
+                  onChange={(e) => {
+                    const nextModel = e.target.value;
+                    const option = modelOptions.find((item) => item.id === nextModel);
+                    change({ model: nextModel, endpoint: option?.endpoint || 'chat' });
+                  }}
+                >
+                  {modelOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.model && (
+                  <small id="avatar-model-choice-error" className="avatar-model-error">
+                    {fieldErrors.model}
+                  </small>
+                )}
+              </div>
+            )}
+            {!canChoosePresetModel && (
+              <div
+                className={`avatar-model-field ${fieldErrors.model ? 'avatar-model-field--error' : ''}`}
+              >
+                <div className="avatar-model-label-row">
+                  <label htmlFor="avatar-model-id">模型名称</label>
+                  <button
+                    type="button"
+                    disabled={busy || !config.apiKey.trim() || !config.baseUrl.trim()}
+                    onClick={() => void requestModel(true)}
+                  >
+                    识别可用模型
+                  </button>
+                </div>
+                <input
+                  ref={modelRef as React.RefObject<HTMLInputElement>}
+                  id="avatar-model-id"
+                  disabled={busy}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={config.model}
+                  placeholder={isGemini ? '例如 Gemini 2.5 Flash' : '输入或粘贴模型名称'}
+                  aria-invalid={Boolean(fieldErrors.model)}
+                  aria-describedby={fieldErrors.model ? 'avatar-model-id-error' : undefined}
+                  onChange={(e) => {
+                    change({ model: e.target.value });
+                  }}
+                />
+                {isGemini && <small>大小写、空格会自动整理，也可以直接识别后选择。</small>}
+                {fieldErrors.model && (
+                  <small id="avatar-model-id-error" className="avatar-model-error">
+                    {fieldErrors.model}
+                  </small>
+                )}
+              </div>
+            )}
             {!isCustom && (
               <div className="avatar-model-field">
                 <small>

@@ -3130,51 +3130,6 @@ html.vector-force-mobile .cover-klein-boat-thumb {
     drop-shadow(0 0 12px rgba(169, 212, 255, 0.22));
 }
 
-html.vector-force-mobile .onboarding-screen {
-  left: 50%;
-  right: auto;
-  width: 390px;
-  height: 844px;
-  min-height: 844px;
-  padding: 0;
-  overflow: hidden;
-  align-items: flex-start;
-  justify-content: center;
-  transform: translateX(-50%);
-}
-
-html.vector-force-mobile .onboarding-frame {
-  width: 390px;
-  height: 844px;
-  max-width: 390px;
-  border: 0;
-  border-radius: 0;
-  background:
-    radial-gradient(circle at 48% 9%, rgba(72, 230, 255, 0.2), transparent 24%),
-    radial-gradient(circle at 15% 32%, rgba(34, 211, 238, 0.15), transparent 34%),
-    radial-gradient(circle at 82% 47%, rgba(139, 92, 246, 0.22), transparent 38%),
-    radial-gradient(circle at 55% 82%, rgba(20, 184, 166, 0.12), transparent 38%),
-    linear-gradient(180deg, #061d2b 0%, #07162a 48%, #031020 100%) !important;
-  box-shadow: inset 0 0 70px rgba(88, 230, 255, 0.08);
-}
-
-html.vector-force-mobile .onboarding-step-stack {
-  width: 390px;
-  min-width: 390px;
-  margin: 0;
-  transform: none !important;
-}
-
-html.vector-force-mobile .onboarding-step {
-  width: 390px;
-  height: 844px;
-  min-height: 844px;
-  max-height: 844px;
-  padding: 18px 18px 86px;
-  overflow: hidden;
-  transform: none !important;
-}
-
 html.vector-force-mobile .onboarding-step:has([data-recovery-issued='true']) {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -3183,177 +3138,6 @@ html.vector-force-mobile .onboarding-step:has([data-recovery-issued='true']) {
 html.vector-force-mobile .onboarding-step:has([data-backup-ready='true']) {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-html.vector-force-mobile .onboarding-step[data-release-phase='backup'] {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-html.vector-force-mobile .onboarding-content[data-release-phase='calibration'] {
-  justify-content: flex-start;
-  gap: clamp(44px, 6svh, 56px);
-}
-
-html.vector-force-mobile .onboarding-content[data-release-phase='calibration'] .onboarding-panel {
-  transform: none;
-}
-
-html.vector-force-mobile .onboarding-content[data-release-phase='backup'] {
-  justify-content: flex-start;
-  gap: 16px;
-  padding-bottom: 28px;
-}
-
-html.vector-force-mobile .onboarding-content[data-release-phase='backup'] .onboarding-hero {
-  padding-top: 88px;
-  gap: 7px;
-}
-
-html.vector-force-mobile .onboarding-content[data-release-phase='backup'] .onboarding-hero h2 {
-  max-width: 340px;
-  font-size: 22px;
-  line-height: 1.22;
-  letter-spacing: 0.12em;
-}
-
-html.vector-force-mobile .onboarding-content[data-release-phase='backup'] .onboarding-hero p {
-  max-width: 280px;
-  font-size: 11px;
-  line-height: 1.45;
-  opacity: 0.82;
-}
-
-html.vector-force-mobile .onboarding-backup-phase {
-  position: relative;
-  z-index: 30;
-  width: 100%;
-}
-
-html.vector-force-mobile .onboarding-backup-phase .rounded-\[28px\] {
-  padding: 18px 18px 16px;
-  border-radius: 26px;
-  border-color: rgba(126, 239, 255, 0.34) !important;
-  background:
-    radial-gradient(circle at 10% 2%, rgba(126, 239, 255, 0.2), transparent 34%),
-    radial-gradient(circle at 92% 90%, rgba(168, 85, 247, 0.18), transparent 40%),
-    linear-gradient(180deg, rgba(9, 35, 54, 0.94), rgba(5, 16, 34, 0.96)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(214, 252, 255, 0.18),
-    inset 0 0 46px rgba(126, 239, 255, 0.07),
-    0 24px 58px rgba(0, 0, 0, 0.38),
-    0 0 34px rgba(34, 211, 238, 0.16) !important;
-}
-
-html.vector-force-mobile .onboarding-backup-phase .break-all {
-  padding-inline: 10px 22px;
-  font-size: 13px;
-  line-height: 1.5;
-  letter-spacing: 0.09em;
-  color: rgba(221, 253, 255, 0.96);
-}
-
-html.vector-force-mobile .onboarding-backup-phase [data-testid='onboarding-save-png'],
-html.vector-force-mobile .onboarding-backup-phase .onboarding-enter-button {
-  min-height: 48px;
-  cursor: pointer;
-  pointer-events: auto !important;
-  position: relative;
-  z-index: 60;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-html.vector-force-mobile .onboarding-recovery-area {
-  position: relative;
-  z-index: 30;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  ~ .onboarding-recovery-area {
-  z-index: 40;
-}
-
-html.vector-force-mobile .onboarding-enter-button,
-html.vector-force-mobile .onboarding-recovery-area [data-testid='onboarding-recovery-saved'] {
-  min-height: 48px;
-  cursor: pointer;
-  pointer-events: auto !important;
-  position: relative;
-  z-index: 60;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.onboarding-credential-export {
-  width: 960px;
-  height: auto;
-  max-height: none;
-}
-
-html.vector-force-mobile .onboarding-step > .absolute.opacity-\[0\.52\] {
-  opacity: 0.66;
-  filter: brightness(1.42) saturate(1.24) drop-shadow(0 0 14px rgba(126, 239, 255, 0.18));
-  mix-blend-mode: screen;
-}
-
-html.vector-force-mobile .onboarding-step > .absolute.opacity-\[0\.52\] svg {
-  opacity: 0.92;
-}
-
-html.vector-force-mobile
-  .onboarding-step
-  > .absolute.bg-\[linear-gradient\(rgba\(126\,239\,255\,0\.014\)_1px\,transparent_1px\)\,linear-gradient\(90deg\,rgba\(168\,85\,247\,0\.012\)_1px\,transparent_1px\)\] {
-  opacity: 0.72;
-  background-size: 54px 54px;
-  filter: brightness(1.65) saturate(1.18);
-}
-
-html.vector-force-mobile .onboarding-step::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 58%, rgba(126, 239, 255, 0.1), transparent 26%),
-    radial-gradient(circle at 24% 72%, rgba(45, 212, 191, 0.08), transparent 22%),
-    linear-gradient(180deg, rgba(12, 38, 57, 0.22), transparent 28%, rgba(2, 9, 20, 0.2) 100%);
-  mix-blend-mode: screen;
-}
-
-html.vector-force-mobile .onboarding-content {
-  height: 100%;
-  max-width: 354px;
-  gap: 12px;
-  padding-bottom: 0;
-}
-
-html.vector-force-mobile .onboarding-hero {
-  padding-top: 62px;
-  gap: 8px;
-}
-
-html.vector-force-mobile .onboarding-hero .h-px {
-  width: 76px;
-}
-
-html.vector-force-mobile .onboarding-hero h2 {
-  max-width: 318px;
-  font-size: 24px;
-  line-height: 1.18;
-  letter-spacing: 0.14em;
-  text-shadow:
-    0 0 18px rgba(126, 239, 255, 0.22),
-    0 0 36px rgba(99, 102, 241, 0.16);
-}
-
-html.vector-force-mobile .onboarding-hero p {
-  max-width: 270px;
-  font-size: 12px;
-  line-height: 1.45;
-  letter-spacing: 0.08em;
 }
 
 html.vector-force-mobile .onboarding-content:has(.onboarding-panel[data-recovery-issued='true']) {
@@ -3386,493 +3170,10 @@ html.vector-force-mobile
   opacity: 0.78;
 }
 
-html.vector-force-mobile .onboarding-screen [aria-label='返回首页'],
-html.vector-force-mobile .onboarding-screen [aria-label='Back to cover'] {
-  left: 18px;
-  top: 22px;
-  width: 44px;
-  height: 44px;
-}
-
-html.vector-force-mobile .onboarding-screen > div,
-html.vector-force-mobile .onboarding-screen .onboarding-frame {
-  transform: none !important;
-}
-
-html.vector-force-mobile .onboarding-screen > div[aria-hidden='true'] {
-  left: -1200px !important;
-  top: 0 !important;
-  width: 960px !important;
-  transform: none !important;
-}
-
-html.vector-force-mobile .onboarding-screen .absolute.right-4.top-4 {
-  right: 18px;
-  top: 24px;
-}
-
-html.vector-force-mobile .onboarding-panel {
-  flex: 0 0 auto;
-  height: 438px;
-  margin-top: 4px;
-  padding: 18px 18px 16px !important;
-  border-radius: 24px;
-  overflow: hidden;
-  border-color: rgba(126, 239, 255, 0.3) !important;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(126, 239, 255, 0.14), transparent 32%),
-    radial-gradient(circle at 82% 72%, rgba(139, 92, 246, 0.16), transparent 36%),
-    linear-gradient(180deg, rgba(10, 34, 54, 0.78), rgba(5, 17, 33, 0.86)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(205, 250, 255, 0.12),
-    inset 0 0 46px rgba(126, 239, 255, 0.055),
-    0 18px 46px rgba(0, 0, 0, 0.28),
-    0 0 34px rgba(34, 211, 238, 0.11) !important;
-}
-
-html.vector-force-mobile .onboarding-panel[data-recovery-issued='true'] {
-  height: 0;
-  min-height: 0;
-  margin-top: 0;
-  padding: 0 !important;
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  overflow: hidden;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  ~ .onboarding-recovery-area {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  top: 262px;
-  z-index: 24;
-  min-height: 0;
-  max-height: none;
-  margin-top: 0;
-  overflow: visible;
-}
-
-html.vector-force-mobile .onboarding-panel .mb-3 {
-  display: none;
-  margin-bottom: 0;
-}
-
-html.vector-force-mobile .onboarding-panel .mb-3 span {
-  font-size: 11px;
-  letter-spacing: 0.22em;
-}
-
-html.vector-force-mobile
-  .onboarding-panel
-  .relative.overflow-hidden.bg-\[radial-gradient\(circle_at_18\%_0\%\,rgba\(126\,239\,255\,0\.05\)\,transparent_34\%\)\,radial-gradient\(circle_at_88\%_96\%\,rgba\(168\,85\,247\,0\.08\)\,transparent_38\%\)\,rgba\(0\,3\,12\,0\.08\)\] {
-  padding: 0 !important;
-  background: transparent !important;
-  box-shadow: none;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  .onboarding-calibration-module {
-  display: none;
-}
-
-html.vector-force-mobile .onboarding-panel[data-recovery-issued='true'] > .grid {
-  display: none;
-}
-
-html.vector-force-mobile .onboarding-input-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
-
-html.vector-force-mobile .onboarding-input-grid label {
-  padding-left: 2px;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-}
-
-html.vector-force-mobile .onboarding-input-grid input {
-  height: 54px;
-  padding-left: 20px;
-  padding-right: 58px;
-  font-size: 15px;
-  letter-spacing: 0.18em;
-  border-color: rgba(126, 239, 255, 0.3) !important;
-  background: rgba(5, 23, 39, 0.7) !important;
-  box-shadow:
-    inset 0 0 22px rgba(126, 239, 255, 0.055),
-    0 0 18px rgba(34, 211, 238, 0.06);
-}
-
-html.vector-force-mobile .onboarding-input-grid > div:nth-child(2) {
-  display: none;
-}
-
-html.vector-force-mobile .onboarding-requirements {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  position: relative;
-  gap: 22px 10px;
-  padding: 18px 4px 12px;
-  isolation: isolate;
-}
-
-html.vector-force-mobile .onboarding-requirements::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 2px;
-  z-index: 0;
-  pointer-events: none;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  opacity: 1;
-  filter: brightness(1.22) saturate(1.12) drop-shadow(0 0 12px rgba(126, 239, 255, 0.26));
-  background-image: url('data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20308%20124%27%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%3E%3Cpath%20d%3D%27M51%2024%20C79%206%20112%2043%20154%2024%20C186%2010%20222%2042%20257%2024%20C283%2037%20272%2058%20263%2069%20C254%2079%20268%2088%20257%2082%20C219%2062%20194%20104%20154%2082%20C113%2061%2088%20104%2051%2082%20C43%2086%2053%2076%2046%2069%20C35%2057%2025%2034%2051%2024%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.48%29%27%20stroke-width%3D%270.86%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M51%2024%20C79%206%20112%2043%20154%2024%20C186%2010%20222%2042%20257%2024%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.58%29%27%20stroke-width%3D%271.08%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M51%2082%20C88%20104%20113%2061%20154%2082%20C194%20104%20219%2062%20257%2082%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.56%29%27%20stroke-width%3D%271.06%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M51%2024%20C25%2034%2035%2057%2046%2069%20C53%2076%2043%2086%2051%2082%27%20fill%3D%27none%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.62%29%27%20stroke-width%3D%271.04%27%20stroke-linecap%3D%27round%27%20stroke-dasharray%3D%278%20100%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27108%27%20to%3D%270%27%20dur%3D%272.6s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3Cpath%20d%3D%27M257%2024%20C283%2037%20272%2058%20263%2069%20C254%2079%20268%2088%20257%2082%27%20fill%3D%27none%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.62%29%27%20stroke-width%3D%271.04%27%20stroke-linecap%3D%27round%27%20stroke-dasharray%3D%278%20100%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27108%27%20to%3D%270%27%20dur%3D%272.75s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3Cpath%20d%3D%27M51%2024%20C79%206%20112%2043%20154%2024%20C186%2010%20222%2042%20257%2024%27%20fill%3D%27none%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.84%29%27%20stroke-width%3D%271.08%27%20stroke-linecap%3D%27round%27%20stroke-dasharray%3D%2710%20208%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27218%27%20to%3D%270%27%20dur%3D%272.35s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3Cpath%20d%3D%27M51%2082%20C88%20104%20113%2061%20154%2082%20C194%20104%20219%2062%20257%2082%27%20fill%3D%27none%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.74%29%27%20stroke-width%3D%271.02%27%20stroke-linecap%3D%27round%27%20stroke-dasharray%3D%279%20209%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27218%27%20to%3D%270%27%20dur%3D%272.7s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3Cpath%20d%3D%27M86%2031%20C110%2050%20131%2047%20154%2038%20C184%2028%20208%2048%20231%2044%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.15%29%27%20stroke-width%3D%270.42%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M112%2017%20C124%204%20139%207%20154%2024%27%20fill%3D%27none%27%20stroke%3D%27rgba%28168%2C85%2C247%2C0.22%29%27%20stroke-width%3D%270.44%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M78%2073%20C107%2059%20131%2070%20154%2082%20C183%2097%20209%2075%20241%2071%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.17%29%27%20stroke-width%3D%270.42%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M51%2082%20C72%20108%2098%20110%20122%2094%27%20fill%3D%27none%27%20stroke%3D%27rgba%28168%2C85%2C247%2C0.20%29%27%20stroke-width%3D%270.42%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M91%2089%20C78%20108%2056%20105%2036%20118%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.13%29%27%20stroke-width%3D%270.38%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M122%2073%20C113%20101%2094%20113%2073%20109%27%20fill%3D%27none%27%20stroke%3D%27rgba%28168%2C85%2C247%2C0.17%29%27%20stroke-width%3D%270.38%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M154%2082%20C166%20108%20187%20113%20206%2098%27%20fill%3D%27none%27%20stroke%3D%27rgba%28168%2C85%2C247%2C0.20%29%27%20stroke-width%3D%270.42%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M218%2075%20C238%20101%20266%20104%20282%20116%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.13%29%27%20stroke-width%3D%270.38%27%20stroke-linecap%3D%27round%27/%3E%3C/svg%3E');
-}
-
-html.vector-force-mobile .onboarding-requirements::after {
-  content: '';
-  position: absolute;
-  inset: -3px -2px 0;
-  z-index: 0;
-  pointer-events: none;
-  border: 1px solid rgba(126, 239, 255, 0);
-  border-radius: 28px;
-  background-image: url('data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20308%20124%27%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%3E%3Cpath%20d%3D%27M51%2024%20C79%206%20112%2043%20154%2024%20C186%2010%20222%2042%20257%2024%20C285%2039%20272%2059%20263%2069%20C252%2082%20269%2089%20257%2082%20C219%2062%20194%20104%20154%2082%20C113%2061%2088%20104%2051%2082%20C30%2070%2040%2059%2031%2045%20C24%2033%2037%2027%2051%2024%27%20fill%3D%27none%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.58%29%27%20stroke-width%3D%270.9%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M51%2024%20C79%206%20112%2043%20154%2024%20C186%2010%20222%2042%20257%2024%20C285%2039%20272%2059%20263%2069%20C252%2082%20269%2089%20257%2082%20C219%2062%20194%20104%20154%2082%20C113%2061%2088%20104%2051%2082%20C30%2070%2040%2059%2031%2045%20C24%2033%2037%2027%2051%2024%27%20fill%3D%27none%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.84%29%27%20stroke-width%3D%271.08%27%20stroke-linecap%3D%27round%27%20stroke-dasharray%3D%2712%20330%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27342%27%20to%3D%270%27%20dur%3D%273.65s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3C/svg%3E');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  opacity: 0;
-  transition:
-    opacity 420ms ease,
-    border-color 420ms ease,
-    box-shadow 420ms ease;
-}
-
-html.vector-force-mobile .onboarding-requirements::before {
-  background-image: url('data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20308%20124%27%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27flow%27%20x1%3D%270%27%20x2%3D%271%27%20y1%3D%270%27%20y2%3D%270%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27rgba%2834%2C211%2C238%2C0.24%29%27/%3E%3Cstop%20offset%3D%2748%25%27%20stop-color%3D%27rgba%28184%2C251%2C255%2C0.86%29%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27rgba%28168%2C85%2C247%2C0.38%29%27/%3E%3C/linearGradient%3E%3ClinearGradient%20id%3D%27branch%27%20x1%3D%270%27%20x2%3D%271%27%20y1%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27rgba%28126%2C239%2C255%2C0.15%29%27/%3E%3Cstop%20offset%3D%2760%25%27%20stop-color%3D%27rgba%28168%2C85%2C247%2C0.34%29%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27rgba%28165%2C243%2C252%2C0.22%29%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M51%2024%20C82%2011%20116%2038%20154%2024%20C191%2010%20222%2038%20257%2024%27%20stroke%3D%27url%28%23flow%29%27%20stroke-width%3D%271.18%27/%3E%3Cpath%20d%3D%27M51%2082%20C87%2097%20116%2068%20154%2082%20C192%2097%20222%2069%20257%2082%27%20stroke%3D%27url%28%23flow%29%27%20stroke-width%3D%271.12%27/%3E%3Cpath%20d%3D%27M51%2024%20C29%2042%2030%2064%2051%2082%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.42%29%27%20stroke-width%3D%270.94%27/%3E%3Cpath%20d%3D%27M257%2024%20C280%2041%20278%2064%20257%2082%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.42%29%27%20stroke-width%3D%270.94%27/%3E%3Cpath%20d%3D%27M51%2024%20C34%2017%2023%2021%2012%2018%27%20stroke%3D%27url%28%23branch%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M154%2024%20C166%2012%20188%2012%20212%2017%27%20stroke%3D%27url%28%23branch%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M257%2024%20C276%2015%20289%2015%20300%2010%27%20stroke%3D%27url%28%23branch%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M51%2082%20C74%20102%2097%20104%20118%2094%27%20stroke%3D%27url%28%23branch%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M154%2082%20C174%20100%20196%20102%20214%2094%27%20stroke%3D%27url%28%23branch%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M257%2082%20C276%2094%20291%2088%20300%2098%27%20stroke%3D%27url%28%23branch%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M51%2024%20C82%2011%20116%2038%20154%2024%20C191%2010%20222%2038%20257%2024%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.72%29%27%20stroke-width%3D%270.96%27%20stroke-dasharray%3D%279%20218%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27227%27%20to%3D%270%27%20dur%3D%272.6s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3Cpath%20d%3D%27M51%2082%20C87%2097%20116%2068%20154%2082%20C192%2097%20222%2069%20257%2082%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.58%29%27%20stroke-width%3D%270.9%27%20stroke-dasharray%3D%278%20216%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27224%27%20to%3D%270%27%20dur%3D%273s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3C/g%3E%3C/svg%3E');
-}
-
-html.vector-force-mobile .onboarding-requirements::after {
-  background-image: url('data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20308%20124%27%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27loop%27%20x1%3D%270%27%20x2%3D%271%27%20y1%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27rgba%2834%2C211%2C238%2C0.38%29%27/%3E%3Cstop%20offset%3D%2752%25%27%20stop-color%3D%27rgba%28213%2C252%2C255%2C0.88%29%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27rgba%28168%2C85%2C247%2C0.50%29%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%27M51%2024%20C82%208%20117%2043%20154%2024%20C192%207%20221%2043%20257%2024%20C280%2038%20275%2064%20257%2082%20C221%2064%20191%20104%20154%2082%20C116%2063%2088%20104%2051%2082%20C30%2066%2029%2041%2051%2024%27%20fill%3D%27none%27%20stroke%3D%27url%28%23loop%29%27%20stroke-width%3D%271.06%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27/%3E%3Cpath%20d%3D%27M51%2024%20C82%208%20117%2043%20154%2024%20C192%207%20221%2043%20257%2024%20C280%2038%20275%2064%20257%2082%20C221%2064%20191%20104%20154%2082%20C116%2063%2088%20104%2051%2082%20C30%2066%2029%2041%2051%2024%27%20fill%3D%27none%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.86%29%27%20stroke-width%3D%271.08%27%20stroke-linecap%3D%27round%27%20stroke-dasharray%3D%2711%20336%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27347%27%20to%3D%270%27%20dur%3D%273.7s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3C/svg%3E');
-}
-
-html.vector-force-mobile .onboarding-requirements--complete {
-  border-radius: 24px;
-}
-
-html.vector-force-mobile .onboarding-requirements--complete::after {
-  opacity: 1;
-  border-color: rgba(126, 239, 255, 0.42);
-  box-shadow:
-    inset 0 0 0 1px rgba(126, 239, 255, 0.12),
-    inset 0 0 26px rgba(126, 239, 255, 0.08),
-    0 0 28px rgba(34, 211, 238, 0.18),
-    0 0 38px rgba(168, 85, 247, 0.1);
-}
-
-html.vector-force-mobile .onboarding-requirements--complete {
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.06);
-}
-
-html.vector-force-mobile .onboarding-requirements::before {
-  background-image: url('data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20308%20124%27%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27top%27%20x1%3D%270%27%20x2%3D%271%27%20y1%3D%270%27%20y2%3D%270%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27rgba%2834%2C211%2C238%2C0.24%29%27/%3E%3Cstop%20offset%3D%2750%25%27%20stop-color%3D%27rgba%28213%2C252%2C255%2C0.90%29%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27rgba%28134%2C239%2C172%2C0.38%29%27/%3E%3C/linearGradient%3E%3ClinearGradient%20id%3D%27bottom%27%20x1%3D%270%27%20x2%3D%271%27%20y1%3D%270%27%20y2%3D%270%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27rgba%28168%2C85%2C247%2C0.34%29%27/%3E%3Cstop%20offset%3D%2754%25%27%20stop-color%3D%27rgba%2896%2C165%2C250%2C0.76%29%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27rgba%2834%2C211%2C238%2C0.44%29%27/%3E%3C/linearGradient%3E%3ClinearGradient%20id%3D%27branchTop%27%20x1%3D%270%27%20x2%3D%271%27%20y1%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27rgba%28126%2C239%2C255%2C0.18%29%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27rgba%28134%2C239%2C172%2C0.20%29%27/%3E%3C/linearGradient%3E%3ClinearGradient%20id%3D%27branchBottom%27%20x1%3D%270%27%20x2%3D%271%27%20y1%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27rgba%28168%2C85%2C247%2C0.26%29%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27rgba%2834%2C211%2C238%2C0.18%29%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M51%2024%20C82%2011%20116%2038%20154%2024%20C191%2010%20222%2038%20257%2024%27%20stroke%3D%27url%28%23top%29%27%20stroke-width%3D%271.18%27/%3E%3Cpath%20d%3D%27M51%2082%20C87%2097%20116%2068%20154%2082%20C192%2097%20222%2069%20257%2082%27%20stroke%3D%27url%28%23bottom%29%27%20stroke-width%3D%271.12%27/%3E%3Cpath%20d%3D%27M51%2024%20C29%2042%2030%2064%2051%2082%27%20stroke%3D%27rgba%28126%2C239%2C255%2C0.36%29%27%20stroke-width%3D%270.9%27/%3E%3Cpath%20d%3D%27M257%2024%20C280%2041%20278%2064%20257%2082%27%20stroke%3D%27rgba%28168%2C85%2C247%2C0.38%29%27%20stroke-width%3D%270.9%27/%3E%3Cpath%20d%3D%27M51%2024%20C34%2017%2023%2021%2012%2018%27%20stroke%3D%27url%28%23branchTop%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M154%2024%20C166%2012%20188%2012%20212%2017%27%20stroke%3D%27url%28%23branchTop%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M257%2024%20C276%2015%20289%2015%20300%2010%27%20stroke%3D%27url%28%23branchTop%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M51%2082%20C74%20102%2097%20104%20118%2094%27%20stroke%3D%27url%28%23branchBottom%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M154%2082%20C174%20100%20196%20102%20214%2094%27%20stroke%3D%27url%28%23branchBottom%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M257%2082%20C276%2094%20291%2088%20300%2098%27%20stroke%3D%27url%28%23branchBottom%29%27%20stroke-width%3D%270.44%27/%3E%3Cpath%20d%3D%27M51%2024%20C82%2011%20116%2038%20154%2024%20C191%2010%20222%2038%20257%2024%27%20stroke%3D%27rgba%28213%2C252%2C255%2C0.68%29%27%20stroke-width%3D%270.92%27%20stroke-dasharray%3D%279%20218%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27227%27%20to%3D%270%27%20dur%3D%272.6s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3Cpath%20d%3D%27M51%2082%20C87%2097%20116%2068%20154%2082%20C192%2097%20222%2069%20257%2082%27%20stroke%3D%27rgba%28196%2C181%2C253%2C0.58%29%27%20stroke-width%3D%270.9%27%20stroke-dasharray%3D%278%20216%27%3E%3Canimate%20attributeName%3D%27stroke-dashoffset%27%20from%3D%27224%27%20to%3D%270%27%20dur%3D%273s%27%20repeatCount%3D%27indefinite%27/%3E%3C/path%3E%3C/g%3E%3C/svg%3E');
-}
-
-html.vector-force-mobile .onboarding-requirements > div {
-  position: relative;
-  z-index: 1;
-  min-height: 36px;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 10px;
-  text-align: center;
-  color: rgba(207, 244, 250, 0.88);
-  font-size: 10px;
-  font-weight: 750;
-  text-shadow: 0 0 12px rgba(126, 239, 255, 0.12);
-}
-
-html.vector-force-mobile .onboarding-requirements > div > span:first-child {
-  width: 12px;
-  height: 12px;
-  flex: 0 0 auto;
-  background: radial-gradient(
-    circle,
-    rgba(7, 22, 42, 0.1) 0 26%,
-    rgba(126, 239, 255, 0.22) 30% 48%,
-    rgba(5, 18, 34, 0.62) 54% 100%
-  ) !important;
-  border-color: rgba(198, 249, 255, 0.82) !important;
-  box-shadow:
-    0 0 0 4px rgba(126, 239, 255, 0.075),
-    0 0 20px rgba(126, 239, 255, 0.48),
-    inset 0 0 8px rgba(126, 239, 255, 0.18);
-}
-
-html.vector-force-mobile .onboarding-requirements > div[data-met='false'] > span:first-child {
-  opacity: 0.58;
-  background: radial-gradient(
-    circle,
-    rgba(4, 16, 29, 0.72) 0 30%,
-    rgba(58, 124, 143, 0.2) 34% 52%,
-    rgba(5, 18, 34, 0.7) 58% 100%
-  ) !important;
-  border-color: rgba(126, 239, 255, 0.34) !important;
-  box-shadow:
-    0 0 0 4px rgba(126, 239, 255, 0.025),
-    0 0 10px rgba(126, 239, 255, 0.12),
-    inset 0 0 8px rgba(3, 13, 24, 0.64);
-}
-
-html.vector-force-mobile
-  .onboarding-requirements
-  > div[data-current='true'][data-met='false']
-  > span:first-child {
-  opacity: 0.86;
-  border-color: rgba(126, 239, 255, 0.68) !important;
-  box-shadow:
-    0 0 0 5px rgba(126, 239, 255, 0.05),
-    0 0 18px rgba(34, 211, 238, 0.3),
-    inset 0 0 9px rgba(126, 239, 255, 0.12);
-}
-
-html.vector-force-mobile .onboarding-requirements > div[data-met='true'] > span:first-child {
-  opacity: 1;
-  background: radial-gradient(
-    circle,
-    rgba(225, 253, 255, 0.98) 0 28%,
-    rgba(126, 239, 255, 0.78) 34% 52%,
-    rgba(21, 94, 117, 0.46) 58% 100%
-  ) !important;
-  border-color: rgba(229, 253, 255, 0.96) !important;
-  box-shadow:
-    0 0 0 6px rgba(126, 239, 255, 0.1),
-    0 0 16px rgba(126, 239, 255, 0.74),
-    0 0 32px rgba(34, 211, 238, 0.38),
-    inset 0 0 10px rgba(255, 255, 255, 0.48);
-}
-
-html.vector-force-mobile .onboarding-requirements > div[data-met='true'] > span:last-child {
-  color: rgba(230, 253, 255, 0.98);
-  text-shadow:
-    0 0 12px rgba(126, 239, 255, 0.44),
-    0 0 22px rgba(34, 211, 238, 0.24);
-}
-
-html.vector-force-mobile .onboarding-requirements > div > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: 0.08em;
-}
-
-html.vector-force-mobile .onboarding-panel button.group.relative.mt-4 {
-  width: 238px;
-  max-width: 100%;
-  height: 52px;
-  margin-top: 10px;
-  padding: 0 18px;
-  justify-content: center;
-  border-radius: 999px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-}
-
-html.vector-force-mobile .onboarding-panel button.group.relative.mt-4 span {
-  min-width: 0;
-  overflow: visible;
-  text-overflow: clip;
-}
-
-html.vector-force-mobile .onboarding-recovery-area {
-  min-height: 116px;
-  max-height: 128px;
-  overflow: hidden;
-}
-
-html.vector-force-mobile .onboarding-panel[data-recovery-issued='true'] .onboarding-recovery-area {
-  min-height: 342px;
-  max-height: 366px;
-  overflow: visible;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area {
-  min-height: 0;
-  max-height: none;
-  margin-top: 0;
-  overflow: visible;
-}
-
-html.vector-force-mobile .onboarding-recovery-area > div {
-  max-width: 354px;
-}
-
-html.vector-force-mobile .onboarding-recovery-area .rounded-\[28px\] {
-  padding: 12px;
-  border-radius: 18px;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  .onboarding-recovery-area
-  .rounded-\[28px\] {
-  padding: 14px;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  .rounded-\[28px\] {
-  padding: 18px 18px 16px;
-  border-radius: 26px;
-  border-color: rgba(126, 239, 255, 0.34) !important;
-  background:
-    radial-gradient(circle at 10% 2%, rgba(126, 239, 255, 0.2), transparent 34%),
-    radial-gradient(circle at 92% 90%, rgba(168, 85, 247, 0.18), transparent 40%),
-    linear-gradient(180deg, rgba(9, 35, 54, 0.94), rgba(5, 16, 34, 0.96)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(214, 252, 255, 0.18),
-    inset 0 0 46px rgba(126, 239, 255, 0.07),
-    0 24px 58px rgba(0, 0, 0, 0.38),
-    0 0 34px rgba(34, 211, 238, 0.16) !important;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  .flex.items-start {
-  align-items: center;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  .flex.items-start
-  > div:first-child {
-  width: 42px;
-  height: 42px;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  .flex.items-start
-  .text-\[10px\] {
-  font-size: 11px;
-  letter-spacing: 0.24em;
-  color: rgba(94, 234, 212, 0.92);
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  .flex.items-start
-  .text-xs {
-  font-size: 11px;
-  line-height: 1.45;
-  max-width: 230px;
-}
-
-html.vector-force-mobile .onboarding-recovery-area .mt-3.grid {
-  display: none;
-}
-
-html.vector-force-mobile .onboarding-recovery-area .break-all {
-  padding-inline: 8px;
-  font-size: 11px;
-  line-height: 1.35;
-  letter-spacing: 0.08em;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  .onboarding-recovery-area
-  .break-all {
-  font-size: 12px;
-  line-height: 1.42;
-  letter-spacing: 0.1em;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  .break-all {
-  padding-inline: 10px 22px;
-  font-size: 13px;
-  line-height: 1.5;
-  letter-spacing: 0.09em;
-  color: rgba(221, 253, 255, 0.96);
-}
-
-html.vector-force-mobile .onboarding-recovery-area button.relative.mt-3 {
-  min-height: 38px;
-  padding: 0 14px;
-  font-size: 10px;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  button.relative.mt-3 {
-  min-height: 46px;
-  margin-top: 14px;
-  padding: 0 16px;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  border-color: rgba(34, 211, 238, 0.48);
-  background: rgba(34, 211, 238, 0.14);
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  [data-testid='onboarding-recovery-saved'] {
-  min-height: 44px;
-  margin-top: 12px;
-  padding: 10px 12px;
-  cursor: pointer;
-  pointer-events: auto;
-  position: relative;
-  z-index: 40;
-  touch-action: manipulation;
-}
-
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  [data-testid='onboarding-recovery-saved']
-  span {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-}
-
 html.vector-force-mobile
   .onboarding-content:has([data-testid='onboarding-recovery-saved'])
   .onboarding-next-bar {
   display: none;
-}
-
-html.vector-force-mobile .onboarding-next-bar {
-  display: none;
-}
-
-html.vector-force-mobile .onboarding-next-bar [data-testid='onboarding-next'] {
-  width: 100%;
-  min-height: 52px;
-  justify-content: center;
-  border-radius: 0;
-  font-size: 12px;
-  letter-spacing: 0.14em;
 }
 
 html.vector-force-mobile .onboarding-next-bar [data-testid='onboarding-next']:not(:disabled) {
@@ -7458,7 +6759,6 @@ html.vector-force-mobile body {
 html.vector-force-mobile #root,
 html.vector-force-mobile .vector-app-shell,
 html.vector-force-mobile .cover-screen,
-html.vector-force-mobile .onboarding-screen,
 html.vector-force-mobile .archive-past-screen {
   width: 100vw;
   height: 100dvh;
@@ -7468,9 +6768,6 @@ html.vector-force-mobile .archive-past-screen {
 
 html.vector-force-mobile .vector-dashboard-shell,
 html.vector-force-mobile .vector-editor-shell,
-html.vector-force-mobile .onboarding-frame,
-html.vector-force-mobile .onboarding-step-stack,
-html.vector-force-mobile .onboarding-step,
 html.vector-force-mobile .archive-past-frame {
   width: 100%;
   min-width: 0;
@@ -7560,7 +6857,6 @@ html.vector-force-mobile body,
 html.vector-force-mobile #root,
 html.vector-force-mobile .vector-app-shell,
 html.vector-force-mobile .cover-screen,
-html.vector-force-mobile .onboarding-screen,
 html.vector-force-mobile .master-lock-screen,
 html.vector-force-mobile .archive-past-screen,
 html.vector-force-mobile .archive-past-frame,
@@ -7575,9 +6871,6 @@ html.vector-force-mobile .vector-editor-shell,
   color: var(--mobile-ink, var(--vector-mobile-ink)) !important;
 }
 
-html.vector-force-mobile .onboarding-panel,
-html.vector-force-mobile .onboarding-backup-phase .rounded-\[28px\],
-html.vector-force-mobile .onboarding-recovery-area .rounded-\[28px\],
 html.vector-force-mobile .master-lock-card,
 html.vector-force-mobile .master-unlock-panel,
 html.vector-force-mobile .vector-quick-capture,
@@ -7698,7 +6991,6 @@ html.vector-force-mobile body,
 html.vector-force-mobile #root,
 html.vector-force-mobile .vector-app-shell,
 html.vector-force-mobile .cover-screen,
-html.vector-force-mobile .onboarding-screen,
 html.vector-force-mobile .master-lock-screen,
 html.vector-force-mobile .archive-past-screen,
 html.vector-force-mobile .archive-past-frame,
@@ -7716,9 +7008,6 @@ html.vector-force-mobile .vector-editor-shell,
   color: var(--mobile-ink, var(--vector-mobile-ink)) !important;
 }
 
-html.vector-force-mobile .onboarding-panel,
-html.vector-force-mobile .onboarding-backup-phase .rounded-\[28px\],
-html.vector-force-mobile .onboarding-recovery-area .rounded-\[28px\],
 html.vector-force-mobile .master-lock-card,
 html.vector-force-mobile .master-unlock-panel,
 html.vector-force-mobile .vector-quick-capture,
@@ -7778,7 +7067,6 @@ html.vector-force-mobile body {
 html.vector-force-mobile #root,
 html.vector-force-mobile .vector-app-shell,
 html.vector-force-mobile .cover-screen,
-html.vector-force-mobile .onboarding-screen,
 html.vector-force-mobile .archive-past-screen {
   width: 100vw;
   height: 100dvh;
@@ -7788,9 +7076,6 @@ html.vector-force-mobile .archive-past-screen {
 
 html.vector-force-mobile .vector-dashboard-shell,
 html.vector-force-mobile .vector-editor-shell,
-html.vector-force-mobile .onboarding-frame,
-html.vector-force-mobile .onboarding-step-stack,
-html.vector-force-mobile .onboarding-step,
 html.vector-force-mobile .archive-past-frame {
   width: 100%;
   min-width: 0;
@@ -7808,11 +7093,6 @@ html.vector-force-mobile .vector-dashboard-shell {
 html.vector-force-mobile .vector-editor-shell {
   padding-top: calc(18px + env(safe-area-inset-top, 0px));
   padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-}
-
-html.vector-force-mobile .onboarding-step {
-  padding-top: calc(18px + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
 }
 
 html.vector-force-mobile .archive-past-frame {
@@ -7924,27 +7204,6 @@ html.vector-force-mobile.vector-force-mobile .master-lock-backdrop__footer {
   background: linear-gradient(to top, rgba(244, 255, 255, 0.72), transparent) !important;
 }
 
-html.vector-force-mobile.vector-force-mobile .onboarding-step__base {
-  background: transparent !important;
-}
-
-html.vector-force-mobile.vector-force-mobile .onboarding-step__atmosphere {
-  background:
-    radial-gradient(circle at 18% 24%, rgba(133, 230, 196, 0.24), transparent 42%),
-    radial-gradient(circle at 78% 28%, rgba(157, 223, 242, 0.3), transparent 44%),
-    radial-gradient(circle at 54% 78%, rgba(173, 233, 226, 0.18), transparent 48%) !important;
-}
-
-html.vector-force-mobile.vector-force-mobile .onboarding-step__footer {
-  background: linear-gradient(to top, rgba(229, 250, 247, 0.62), transparent) !important;
-}
-
-html.vector-force-mobile.vector-force-mobile .onboarding-panel span,
-html.vector-force-mobile.vector-force-mobile .onboarding-panel label {
-  color: var(--vector-mobile-ink) !important;
-  text-shadow: none !important;
-}
-
 /* Final mobile theme authority: mint + ice-blue glass across every product state. */
 html.vector-force-mobile {
   --vector-mobile-bg:
@@ -7974,7 +7233,6 @@ html.vector-force-mobile body,
 html.vector-force-mobile #root,
 html.vector-force-mobile .vector-app-shell,
 html.vector-force-mobile .cover-screen,
-html.vector-force-mobile .onboarding-screen,
 html.vector-force-mobile .master-lock-screen,
 html.vector-force-mobile .archive-past-screen,
 html.vector-force-mobile .archive-past-frame,
@@ -8365,29 +7623,6 @@ html.vector-force-mobile .cover-launch-label {
   text-shadow: none !important;
 }
 
-html.vector-force-mobile .onboarding-frame,
-html.vector-force-mobile .onboarding-step {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-html.vector-force-mobile .onboarding-step::before {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.2),
-    transparent 40%,
-    rgba(116, 216, 198, 0.1)
-  ) !important;
-  mix-blend-mode: normal;
-}
-
-html.vector-force-mobile .onboarding-panel,
-html.vector-force-mobile .onboarding-backup-phase .rounded-\[28px\],
-html.vector-force-mobile .onboarding-recovery-area .rounded-\[28px\],
-html.vector-force-mobile
-  .onboarding-panel[data-recovery-issued='true']
-  + .onboarding-recovery-area
-  .rounded-\[28px\],
 html.vector-force-mobile .master-lock-card,
 html.vector-force-mobile .master-unlock-panel,
 html.vector-force-mobile .vector-quick-capture,
@@ -8407,12 +7642,6 @@ html.vector-force-mobile .vector-editor-ai-popover {
   -webkit-backdrop-filter: blur(22px) saturate(120%) !important;
 }
 
-html.vector-force-mobile .onboarding-hero h2,
-html.vector-force-mobile .onboarding-hero p,
-html.vector-force-mobile .onboarding-panel,
-html.vector-force-mobile .onboarding-panel label,
-html.vector-force-mobile .onboarding-recovery-area,
-html.vector-force-mobile .onboarding-recovery-area .break-all,
 html.vector-force-mobile .master-lock-card,
 html.vector-force-mobile .master-unlock-title,
 html.vector-force-mobile .master-unlock-subtitle,
@@ -8428,14 +7657,12 @@ html.vector-force-mobile .vector-editor-ai-popover label {
   text-shadow: none !important;
 }
 
-html.vector-force-mobile .onboarding-hero p,
 html.vector-force-mobile .master-unlock-subtitle,
 html.vector-force-mobile .archive-past-titleblock p,
 html.vector-force-mobile .vector-editor-panel label {
   color: var(--vector-mobile-muted) !important;
 }
 
-html.vector-force-mobile .onboarding-input-grid input,
 html.vector-force-mobile .access-code-input,
 html.vector-force-mobile .vector-editor-content-input,
 html.vector-force-mobile .vector-editor-ai-popover input,
@@ -8447,7 +7674,6 @@ html.vector-force-mobile .archive-past-search-row {
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.78) !important;
 }
 
-html.vector-force-mobile .onboarding-input-grid input::placeholder,
 html.vector-force-mobile .access-code-input::placeholder,
 html.vector-force-mobile .vector-editor-content-input::placeholder,
 html.vector-force-mobile .vector-editor-ai-popover input::placeholder,
@@ -8457,7 +7683,6 @@ html.vector-force-mobile .archive-past-screen input::placeholder {
 }
 
 html.vector-force-mobile .master-connect-button,
-html.vector-force-mobile .onboarding-enter-button,
 html.vector-force-mobile [data-testid='onboarding-next'],
 html.vector-force-mobile [data-testid='onboarding-recovery-saved'] {
   border-color: rgba(25, 117, 138, 0.32) !important;
@@ -9239,7 +8464,6 @@ html.vector-force-mobile body {
 html.vector-force-mobile #root,
 html.vector-force-mobile .vector-app-shell,
 html.vector-force-mobile .cover-screen,
-html.vector-force-mobile .onboarding-screen,
 html.vector-force-mobile .archive-past-screen {
   width: 100vw;
   height: 100dvh;
@@ -9249,9 +8473,6 @@ html.vector-force-mobile .archive-past-screen {
 
 html.vector-force-mobile .vector-dashboard-shell,
 html.vector-force-mobile .vector-editor-shell,
-html.vector-force-mobile .onboarding-frame,
-html.vector-force-mobile .onboarding-step-stack,
-html.vector-force-mobile .onboarding-step,
 html.vector-force-mobile .archive-past-frame {
   width: 100%;
   min-width: 0;
@@ -9336,7 +8557,6 @@ html.vector-force-mobile body,
 html.vector-force-mobile #root,
 html.vector-force-mobile .vector-app-shell,
 html.vector-force-mobile .cover-screen,
-html.vector-force-mobile .onboarding-screen,
 html.vector-force-mobile .master-lock-screen,
 html.vector-force-mobile .archive-past-screen,
 html.vector-force-mobile .archive-past-frame,
@@ -9351,7 +8571,6 @@ html.vector-force-mobile .vector-editor-shell,
   color: var(--mobile-ink, var(--vector-mobile-ink)) !important;
 }
 
-html.vector-force-mobile .onboarding-panel,
 html.vector-force-mobile .master-lock-card,
 html.vector-force-mobile .master-unlock-panel,
 html.vector-force-mobile .vector-quick-capture,
@@ -11571,18 +10790,6 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
 }
 
 /* Keep the credential stages compact and aligned beneath the onboarding heading. */
-@media (min-width: 768px) {
-  .onboarding-content[data-release-phase='calibration'],
-  .onboarding-content[data-release-phase='backup'] {
-    justify-content: flex-start;
-    gap: clamp(4.5rem, 9vh, 8.5rem);
-  }
-
-  .onboarding-content[data-release-phase='calibration'] .onboarding-panel,
-  .onboarding-content[data-release-phase='backup'] .onboarding-backup-phase {
-    flex: 0 0 auto;
-  }
-}
 
 .mobile-past-date-group h3 {
   margin: 1.5rem 0 0.75rem;

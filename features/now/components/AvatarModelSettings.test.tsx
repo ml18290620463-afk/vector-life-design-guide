@@ -30,6 +30,7 @@ it('lets the user choose a model from the default dropdown and sends the saved c
   const saved = vi.fn();
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'secret-test' } });
   fireEvent.change(screen.getByLabelText('模型'), { target: { value: 'gpt-4.1-mini' } });
@@ -66,6 +67,7 @@ it('connects with only an API Key by applying the default provider and model', a
   const saved = vi.fn();
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   expect(screen.getByLabelText('模型')).toBeTruthy();
   expect(screen.queryByLabelText('模型 ID')).toBeNull();
@@ -85,6 +87,7 @@ it('connects with only an API Key by applying the default provider and model', a
 
 it('explains the device-local storage boundary before a key can be remembered', () => {
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   expect(
     screen.getByText(
       '默认在此设备保存已验证的连接。关闭后仍会保留服务商和模型，Key 仅保留到本次浏览器会话结束。',
@@ -101,6 +104,7 @@ it('remembers the API Key on this device by default', async () => {
   const saved = vi.fn();
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'remembered-key' } });
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
@@ -147,6 +151,7 @@ it('adds fetched account models to the default dropdown without requiring manual
   const saved = vi.fn();
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'secret-test' } });
   fireEvent.click(screen.getByText('识别可用模型'));
@@ -170,6 +175,7 @@ it('clears configuration and reports failed connections without saving', async (
   );
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
   expect((await screen.findByRole('alert')).textContent).toContain('API Key 无效');
@@ -183,6 +189,7 @@ it('highlights invalid fields in red before connecting', async () => {
   vi.stubGlobal('fetch', fetcher);
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
   expect(await screen.findByText('请填写 API Key。')).toBeTruthy();
@@ -194,10 +201,9 @@ it('highlights invalid fields in red before connecting', async () => {
 
 it('shows API address and custom model ID only for custom compatible providers', async () => {
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
-  expect(screen.queryByLabelText('API 地址')).toBeNull();
   expect(screen.queryByLabelText('模型 ID')).toBeNull();
-  fireEvent.click(screen.getByText('高级设置（可选）'));
   fireEvent.change(screen.getByLabelText('服务商'), { target: { value: '4' } });
   expect(screen.getByLabelText('API 地址')).toBeTruthy();
   expect(screen.getByLabelText('模型名称')).toBeTruthy();
@@ -220,10 +226,10 @@ it('points built-in provider failures at the model dropdown instead of the defau
   );
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'secret-test' } });
   fireEvent.change(screen.getByLabelText('模型'), { target: { value: 'gpt-4.1-mini' } });
-  fireEvent.click(screen.getByText('高级设置（可选）'));
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
 
   await waitFor(() =>
@@ -246,6 +252,7 @@ it('shows endpoint diagnostics without blaming the selected model', async () => 
     }),
   );
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'secret-test' } });
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
   const alert = await screen.findByRole('alert');
@@ -262,10 +269,10 @@ it('keeps default provider URL unmarked for generic connection failures', async 
   );
 
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'secret-test' } });
   fireEvent.change(screen.getByLabelText('模型'), { target: { value: 'gpt-4.1-mini' } });
-  fireEvent.click(screen.getByText('高级设置（可选）'));
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
 
   await waitFor(() =>
@@ -281,6 +288,7 @@ it('saves a manually entered model for a built-in provider with the same key and
   vi.stubGlobal('fetch', fetcher);
   const saved = vi.fn();
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: '  secret-test  ' } });
   fireEvent.click(screen.getByRole('button', { name: '手动输入' }));
   fireEvent.change(screen.getByLabelText('模型名称'), { target: { value: 'account-model' } });
@@ -298,6 +306,7 @@ it('does not silently substitute a default for an empty manually entered model',
   const fetcher = vi.fn();
   vi.stubGlobal('fetch', fetcher);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'key' } });
   fireEvent.click(screen.getByRole('button', { name: '手动输入' }));
   fireEvent.change(screen.getByLabelText('模型名称'), { target: { value: '' } });
@@ -310,6 +319,7 @@ it('normalizes Gemini display names without changing the requested version', asy
   const fetcher = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
   vi.stubGlobal('fetch', fetcher);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.change(screen.getByLabelText('服务商'), { target: { value: '3' } });
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'secret-test' } });
@@ -325,6 +335,7 @@ it('normalizes Gemini display names without changing the requested version', asy
 
 it('restores the Gemini recommended model when leaving manual input', () => {
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.change(screen.getByLabelText('服务商'), { target: { value: '3' } });
   fireEvent.click(screen.getByRole('button', { name: '手动输入' }));
@@ -339,6 +350,7 @@ it('restores the Gemini recommended model when leaving manual input', () => {
 
 it('keeps keys separate across providers and restores drafts when switching back', () => {
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'openai-key' } });
   fireEvent.click(screen.getByRole('button', { name: '手动输入' }));
   fireEvent.change(screen.getByLabelText('模型名称'), { target: { value: 'my-model' } });
@@ -360,6 +372,7 @@ it('explains blocked DNS without marking the model or key invalid', async () => 
       .mockResolvedValue({ ok: false, json: async () => ({ error: 'model_network_blocked' }) }),
   );
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('服务商'), { target: { value: '3' } });
   expect(screen.getByText(/Gemini App 订阅不等同于 Gemini API Key 或 API 额度/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'test-key' } });
@@ -376,6 +389,7 @@ it('discovers models when leaving the key field and cleans pasted authorization 
     .mockResolvedValue({ ok: true, json: async () => ({ models: ['gpt-4.1-mini'] }) });
   vi.stubGlobal('fetch', fetcher);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   const key = screen.getByLabelText('API Key');
   fireEvent.change(key, { target: { value: '  Bearer "test-key"  ' } });
   fireEvent.blur(key);
@@ -395,6 +409,7 @@ it('keeps an unmatched manual version and allows choosing from the discovered li
     .mockResolvedValue({ ok: true, json: async () => ({ models: ['gemini-2.5-flash'] }) });
   vi.stubGlobal('fetch', fetcher);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('服务商'), { target: { value: '3' } });
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'test-key' } });
   fireEvent.click(screen.getByRole('button', { name: '手动输入' }));
@@ -413,6 +428,7 @@ it('matches a friendly Gemini name against the live list without changing its ve
     .mockResolvedValue({ ok: true, json: async () => ({ models: ['gemini-2.5-flash'] }) });
   vi.stubGlobal('fetch', fetcher);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('服务商'), { target: { value: '3' } });
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'test-key' } });
   fireEvent.click(screen.getByRole('button', { name: '手动输入' }));
@@ -436,6 +452,7 @@ it('restores remembered Gemini settings without revalidation or automatic model 
   const fetcher = vi.fn();
   vi.stubGlobal('fetch', fetcher);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   expect((screen.getByLabelText('服务商') as HTMLSelectElement).value).toBe('3');
   expect((screen.getByLabelText('API Key') as HTMLInputElement).value).toBe(workingGemini.apiKey);
   expect((screen.getByLabelText('模型') as HTMLSelectElement).value).toBe(workingGemini.model);
@@ -449,6 +466,7 @@ it('restores remembered Gemini settings without revalidation or automatic model 
 it('keeps the Gemini picker visible for a previously saved unlisted model', () => {
   saveAvatarModel({ ...workingGemini, model: 'gemini-3.6-flash' }, false);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   const picker = screen.getByLabelText('模型') as HTMLSelectElement;
   expect(picker.tagName).toBe('SELECT');
@@ -464,6 +482,7 @@ it('keeps compatible Gemini choices after discovery fails and explains the actua
     vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'model_dns_failed' }) }),
   );
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
 
   fireEvent.click(screen.getByRole('button', { name: '识别可用模型' }));
   const alert = await screen.findByRole('alert');
@@ -481,6 +500,7 @@ it.each(['model_auth_failed', 'model_rate_limited', 'model_timeout'])(
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error }) }));
     const saved = vi.fn();
     render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
+    fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
     fireEvent.change(screen.getByLabelText('API Key'), {
       target: { value: 'test-replacement-key' },
     });
@@ -502,6 +522,7 @@ it('keeps settings after failed discovery and allows another attempt', async () 
     .mockResolvedValueOnce({ ok: true, json: async () => ({ models: ['gemini-2.5-flash'] }) });
   vi.stubGlobal('fetch', fetcher);
   render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.click(screen.getByText('识别可用模型'));
   expect((await screen.findByRole('alert')).textContent).toContain('填写内容仍保留');
   fireEvent.click(screen.getByText('识别可用模型'));
@@ -522,6 +543,7 @@ it('aborts validation on close and ignores a late successful response', async ()
   vi.stubGlobal('fetch', fetcher);
   const saved = vi.fn();
   const view = render(<AvatarModelSettings onClose={vi.fn()} onSaved={saved} />);
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
   fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'test-unsaved-key' } });
   fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
   view.unmount();
@@ -531,4 +553,26 @@ it('aborts validation on close and ignores a late successful response', async ()
   });
   expect(saved).not.toHaveBeenCalled();
   expect(readAvatarModel()).toEqual(workingGemini);
+});
+
+it('starts collapsed and reveals invalid required fields on save', async () => {
+  render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  expect(screen.queryByLabelText('API Key')).toBeNull();
+  expect(
+    screen.getByRole('button', { name: '高级设置（可选）' }).getAttribute('aria-expanded'),
+  ).toBe('false');
+  fireEvent.click(screen.getByRole('button', { name: '验证并保存' }));
+  await waitFor(() => expect(screen.getByLabelText('API Key')).toBe(document.activeElement));
+});
+it('starts collapsed even for an existing custom provider', () => {
+  saveAvatarModel(
+    { baseUrl: 'https://example.com/v1', apiKey: 'test-key', model: 'custom', endpoint: 'chat' },
+    false,
+  );
+  render(<AvatarModelSettings onClose={vi.fn()} onSaved={vi.fn()} />);
+  expect(screen.queryByLabelText('API Key')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '高级设置（可选）' }));
+  expect((screen.getByLabelText('API 地址') as HTMLInputElement).value).toBe(
+    'https://example.com/v1',
+  );
 });

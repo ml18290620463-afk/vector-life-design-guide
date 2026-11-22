@@ -36,6 +36,8 @@ test('user chooses a model in the mobile chat settings', async ({ page }, info) 
   );
   await page.goto('/__avatar-spec');
   await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByLabel('API Key', { exact: true }).fill('test-placeholder');
   await page.getByLabel('模型', { exact: true }).selectOption('gpt-4.1');
@@ -45,6 +47,8 @@ test('user chooses a model in the mobile chat settings', async ({ page }, info) 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await expect(page.getByLabel('模型', { exact: true })).toHaveValue('gpt-4.1');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -60,6 +64,8 @@ test('invalid model settings are highlighted inline', async ({ page }) => {
   );
   await page.goto('/__avatar-spec');
   await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await page.getByRole('button', { name: '验证并保存' }).click();
   await expect(page.getByText('请填写 API Key。')).toBeVisible();
   await expect(page.getByLabel('API Key', { exact: true })).toHaveAttribute('aria-invalid', 'true');
@@ -82,6 +88,8 @@ test('custom model input keeps the provider and key on a small screen', async ({
   );
   await page.goto('/__avatar-spec');
   await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await page.getByLabel('服务商', { exact: true }).selectOption('1');
   await page.getByLabel('API Key', { exact: true }).fill('test-deepseek-key');
   await page.getByRole('button', { name: '手动输入', exact: true }).click();
@@ -100,7 +108,9 @@ test('custom model input keeps the provider and key on a small screen', async ({
     model: 'my-account-model',
   });
   await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
-  await expect(page.getByLabel('模型名称')).toHaveValue('my-account-model');
+  await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
+  await expect(page.getByLabel('模型', { exact: true })).toHaveValue('my-account-model');
   await expect(page.getByLabel('API Key', { exact: true })).toHaveValue('test-deepseek-key');
 });
 
@@ -119,7 +129,7 @@ for (const width of [375, 768, 1440]) {
     expect(navBox.y + navBox.height).toBeLessThan(composerBox.y);
     expect(composerBox.y + composerBox.height).toBeLessThan(900 - 70);
     await page.screenshot({ path: info.outputPath(`chat-${width}.png`) });
-    await page.getByRole('button', { name: '记忆档案', exact: true }).click();
+    await page.getByRole('button', { name: '记忆库', exact: true }).click();
     const cards = page.locator('.avatar-library__dimension-card');
     await expect(cards).toHaveCount(4);
     const first = (await cards.nth(0).boundingBox())!;
@@ -132,6 +142,8 @@ for (const width of [375, 768, 1440]) {
     );
     await page.screenshot({ path: info.outputPath(`archive-${width}.png`) });
     await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+    await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: '高级设置（可选）' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     const box = (await page.getByRole('dialog').boundingBox())!;
     if (width < 600) expect(Math.round(box.y + box.height)).toBe(900);
@@ -171,13 +183,14 @@ for (const [width, height] of [
       true,
     );
     await page.screenshot({ path: info.outputPath('chat.png') });
-    await page.getByRole('button', { name: '记忆档案', exact: true }).click();
+    await page.getByRole('button', { name: '记忆库', exact: true }).click();
     const cards = page.locator('.avatar-library__dimension-card');
     await expect(cards).toHaveCount(4);
     await cards.last().scrollIntoViewIfNeeded();
     const card = (await cards.last().boundingBox())!;
     expect(card.y + card.height).toBeLessThanOrEqual(nav.y + 1);
     await settings.click();
+    await page.getByRole('button', { name: '高级设置（可选）' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByLabel('API Key', { exact: true }).fill('mobile-layout-placeholder');
     await page.getByRole('button', { name: '验证并保存', exact: true }).scrollIntoViewIfNeeded();
@@ -199,13 +212,13 @@ const modelFailureCases = [
   {
     name: '授权失败会保留配置并聚焦 API Key',
     response: { status: 401, json: { error: 'model_auth_failed' } },
-    message: 'API Key 无效、已过期，或没有调用这个模型的权限。',
+    message: 'API Key 无效、已过期，或未被该服务商接受。请在服务商控制台重新创建或检查该 Key。',
     field: 'API Key',
   },
   {
     name: '额度不足会保留配置并给出账户恢复路径',
     response: { status: 429, json: { error: 'model_rate_limited' } },
-    message: '模型服务额度不足或请求过于频繁，请检查账户后重试。',
+    message: '服务商拒绝了请求：额度不足、配额已用尽或请求过于频繁。请检查账户额度后重试。',
     field: undefined,
   },
   {
@@ -238,6 +251,8 @@ for (const failure of modelFailureCases) {
     await page.route('**/api/v1/avatar/model/test', (route) => route.fulfill(failure.response));
     await page.goto('/__avatar-spec');
     await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+    await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: '高级设置（可选）' }).click();
     await page.getByLabel('API Key', { exact: true }).fill('still-here-key');
     await page.getByLabel('模型', { exact: true }).selectOption('gpt-4.1');
     await page.getByRole('button', { name: '验证并保存', exact: true }).click();
@@ -275,10 +290,12 @@ test('模型验证网络失败不会清空已填写内容', async ({ page }) => 
   await page.route('**/api/v1/avatar/model/test', (route) => route.abort('failed'));
   await page.goto('/__avatar-spec');
   await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await page.getByLabel('API Key', { exact: true }).fill('network-draft-key');
   await page.getByRole('button', { name: '验证并保存', exact: true }).click();
   await expect(page.locator('.avatar-model-alert')).toHaveText(
-    '自动连接未成功，请稍后重试。已保存的设置无需重填。',
+    '连接在到达服务商前中断。请稍后重试；填写内容仍保留。',
   );
   await expect(page.getByLabel('API Key', { exact: true })).toHaveValue('network-draft-key');
 });

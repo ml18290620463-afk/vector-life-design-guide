@@ -7,7 +7,16 @@ for (const mode of ['web', 'mobile']) {
         mode === 'web' ? { width: 1440, height: 1000 } : { width: 390, height: 844 },
       );
       const errors: string[] = [];
-      page.on('pageerror', (error) => errors.push(error.message));
+      page.on('pageerror', (error) => {
+        // Isolated module harnesses do not own Vite's HMR socket. Keep all
+        // application errors visible while excluding this dev-client failure.
+        if (
+          error.message === 'WebSocket closed without opened.' &&
+          error.stack?.includes('/@vite/client')
+        )
+          return;
+        errors.push(error.message);
+      });
       await page.route('**/__layout*', (route) =>
         route.fulfill({
           contentType: 'text/html',

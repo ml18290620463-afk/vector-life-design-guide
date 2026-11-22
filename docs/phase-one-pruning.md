@@ -23,3 +23,12 @@
 - Heavy chunks are excluded from service-worker precaching: RibbonFabric 4.93 KB, RibbonCurrent 4.01 KB, SpaceTimeBackground 4.09 KB (uncompressed). Precache 6902.71 → 6891.63 KiB. The small policy hook grows intentionally to replace runtime visual costs.
 - Changed: App.tsx, components/{CoverScreen,StatisticsWidget}.tsx, hooks/useMotionPreference.ts, vite.config.ts; tests: hooks/useMotionPreference.test.ts, e2e/{motion-budget,main-navigation-smoothness}.spec.ts.
 - Validation: 5 policy unit tests, typecheck/build/targeted ESLint, 4 Chrome E2E passed. Mobile and disabled cover request no visual chunks and mount no canvas; navigation works at 390 and 1440 widths. This does not constitute universal dropped-frame measurements.
+
+## 4. Progressive model settings and CSS cleanup
+
+- API key, model picker/manual model, endpoint and protocol are inside a default-collapsed Advanced panel, including when reopening saved custom connections. Validation expands it and focuses the invalid field. Provider preset selection stays visible.
+- AvatarModelSettings.tsx: 23,902 → 23,788 bytes; extracted model option helpers: 936 bytes. Combined source grows by 822 bytes for disclosure/status handling; this task reduces visible complexity, not model feature coverage.
+- index.css: 314,248 → 278,501 bytes (−35,747, −11.38%), removing 137 proven obsolete selector branches. See css-pruning-audit.md for evidence rules, exclusions and seven module extraction candidates.
+- Changed: features/now/components/{AvatarModelSettings.tsx,avatarModelOptions.ts,AvatarModelSettings.test.tsx}, index.css, e2e/{avatar-model-settings,theme-v1}.spec.ts, docs/{phase-one-pruning,css-pruning-audit}.md.
+- Validation: 83 unit tests across onboarding, MasterLock, encrypted drafts, AI memory policy/scope, languages, motion and settings passed; settings rerun after helper extraction: 30/30. Typecheck, targeted ESLint and production build passed. Model settings E2E: 19/19; actual app/encrypted save/AI privacy E2E: 6/6. Theme harness excludes only the exact Vite-client WebSocket error by message AND stack; application errors remain failures.
+- Final theme layout run: 8/8 passed (Past/Now/Future/Avatar at desktop and mobile sizes). Mobile Now and model settings screenshots reviewed.
