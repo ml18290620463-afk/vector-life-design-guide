@@ -13,39 +13,38 @@ test('renders the cover experience', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: 'VECTOR' })).toBeVisible();
-  await expect(page.getByText(/让经历创造方向|Let experience shape direction/i).first()).toBeVisible();
   await expect(
-    page.getByText(/记录 \|\| 过去·此刻 ⇌ 未来|Record \|\| Past · Now ⇌ Future/i).first(),
+    page.getByText(/让经历创造方向|Let experience shape direction/i).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/记录 ‖ 过去·此刻 ⇌ 未来|Record ‖ Past · Now ⇌ Future/i).first(),
   ).toBeVisible();
   await expect(page.getByTestId('cover-initialize')).toBeVisible();
-  await expect(page.getByLabel(/点击进入下一个界面|Click to enter the next screen/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: /^(进入|Enter)$/i })).toBeVisible();
 });
 
-test('completes mobile onboarding and reaches the main shell', async ({ page }) => {
-  test.setTimeout(60_000);
-  await page.goto('/?preview=mobile', { waitUntil: 'domcontentloaded' });
-
-  // W4.1 — every selector below is testid-anchored. Visible labels
-  // can change (i18n / copy edits) without breaking the spec; only
-  // an intentional change to a data-testid does.
-  await page.getByTestId('cover-initialize').click();
-  await expect(page.getByTestId('onboarding-password')).toBeVisible();
-
-  await page.getByTestId('onboarding-password').fill('Vector123!');
-  await page.getByTestId('onboarding-password-confirm').fill('Vector123!');
-  await page.getByTestId('onboarding-issue-key').click();
-  await page.getByTestId('onboarding-backup-phase').waitFor({ state: 'visible' });
-
-  await page.getByTestId('onboarding-save-png').click();
-  await page.getByTestId('onboarding-recovery-saved').waitFor({ state: 'visible' });
-  await expect(page.getByTestId('onboarding-recovery-saved')).toContainText('进入主界面');
-  await page.getByTestId('onboarding-recovery-saved').click();
-
-  await expect(page.getByRole('navigation', { name: '主页面导航' })).toBeVisible();
-  await expect(page.getByTestId('past-page')).toBeVisible();
-  await expect(page.getByRole('heading', { name: '过去' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '过去', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '现在', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '未来', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '分身', exact: true })).toBeVisible();
-});
+for (const width of [390, 1440]) {
+  test(`first entry is available before password setup (${width})`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await page.getByTestId('cover-initialize').click();
+    const start = Date.now();
+    await page.getByTestId('onboarding-skip').click();
+    await page.getByLabel('此刻发生了什么？').fill('首次私密草稿');
+    expect(Date.now() - start).toBeLessThan(10_000);
+    await expect(page.getByTestId('onboarding-password')).toHaveCount(0);
+    expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('首次私密草稿');
+    await page.screenshot({ path: testInfo.outputPath('onboarding-editor.png') });
+    await page.getByLabel('保存到过去').click();
+    await page.getByTestId('onboarding-password').fill('Vector123!');
+    await page.getByTestId('onboarding-password-confirm').fill('Vector123!');
+    await page.getByTestId('onboarding-protect').click();
+    await expect(page.getByRole('navigation', { name: '主页面导航' })).toBeVisible();
+    await expect(page.getByLabel('此刻发生了什么？')).toHaveValue('首次私密草稿');
+    await page.getByLabel('保存到过去').click();
+    await expect(page.getByRole('dialog', { name: '是否允许 AI 可见？' })).toBeVisible();
+    await page.getByRole('button', { name: /仅自己可见/ }).click();
+    await expect(page.getByTestId('past-page')).toBeVisible();
+    await expect(page.getByText('首次私密草稿', { exact: false }).first()).toBeVisible();
+  });
+}

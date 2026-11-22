@@ -6,6 +6,7 @@ import { readCustomAnchors, writeCustomAnchors } from '../state/nowStorage';
 import type { NowDraft } from '../types/now';
 
 interface TagSelectPageProps {
+  allowCustomTags?: boolean;
   draft: NowDraft;
   setDraft: (updater: NowDraft | ((draft: NowDraft) => NowDraft)) => void;
   onBack: () => void;
@@ -13,6 +14,7 @@ interface TagSelectPageProps {
 }
 
 export const TagSelectPage: React.FC<TagSelectPageProps> = ({
+  allowCustomTags = true,
   draft,
   setDraft,
   onBack,
@@ -54,7 +56,7 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
     customAnchors.includes(tag) && !MOOD_TAGS.includes(tag) && !EVENT_TAGS.includes(tag);
 
   const deleteCustomTag = (tag: string) => {
-    if (!isCustomTag(tag)) return;
+    if (!allowCustomTags || !isCustomTag(tag)) return;
     const next = customAnchors.filter((item) => item !== tag);
     writeCustomAnchors(next);
     setCustomAnchors(next);
@@ -80,6 +82,10 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
     ) : null;
 
   const addCustomAnchor = (target: 'mood' | 'event') => {
+    if (!allowCustomTags) {
+      showToast('保存草稿后可添加自定义标签');
+      return;
+    }
     const value = window.prompt('输入自定义锚点，2～12 字')?.trim();
     if (!value) return;
     if (value.length < 2 || value.length > 12) {

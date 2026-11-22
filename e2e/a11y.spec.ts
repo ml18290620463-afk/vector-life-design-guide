@@ -35,7 +35,7 @@ test.describe('axe accessibility', () => {
     // Use a real user interaction: the cover transition is deliberately
     // guarded by the component's pointer/click flow rather than a raw event.
     await page.getByTestId('cover-initialize').click();
-    await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
+    await page.getByTestId('onboarding-skip').waitFor({ state: 'visible' });
 
     const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
     const blockers = summarise(result.violations);

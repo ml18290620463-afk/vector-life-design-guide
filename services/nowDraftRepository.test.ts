@@ -63,3 +63,22 @@ describe('protected drafts and backup recovery', () => {
     await expect(saveNowDraft(draft(), changed.revision)).rejects.toThrow('另一页面');
   });
 });
+
+it('atomically encrypts a first-run draft and refuses another initialization', async () => {
+  const { initializeVaultWithDraft } = await import('./vaultTransaction');
+  const { SecurityService } = await import('./securityService');
+  const password = 'Vector123!';
+  const salt = 'first-run-test-salt';
+  const hash = await SecurityService.hashPassword(password, salt);
+  useAppStore.setState({ isUnlocked: false, masterPassword: null });
+  const first = draft();
+  await initializeVaultWithDraft(password, hash, salt, first);
+  const raw = await get(PRIVATE_DRAFT_KEY);
+  expect(raw.format).toBe('vector-private-v1');
+  expect(JSON.stringify(raw)).not.toContain(first.text);
+  await expect(loadNowDraft()).rejects.toThrow('解锁');
+  useAppStore.setState({ isUnlocked: true, masterPassword: password });
+  expect((await loadNowDraft()).draft?.text).toBe(first.text);
+  await expect(initializeVaultWithDraft(password, hash, salt, draft())).rejects.toThrow();
+  expect((await loadNowDraft()).draft?.submission_id).toBe(first.submission_id);
+});

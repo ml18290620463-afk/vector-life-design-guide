@@ -176,11 +176,14 @@ export const useAppEntryRouting = ({
     return () => window.removeEventListener('popstate', onPopState);
   }, [restoreCurrentOrStableRoute]);
 
-  const enterPendingOrPastMain = useCallback(() => {
-    const target = pendingPathAfterUnlockRef.current;
-    pendingPathAfterUnlockRef.current = null;
-    applyEntryRouteAction(getPostUnlockRouteAction(target));
-  }, [applyEntryRouteAction]);
+  const enterPendingOrPastMain = useCallback(
+    (overridePath?: string) => {
+      const target = overridePath ?? pendingPathAfterUnlockRef.current;
+      pendingPathAfterUnlockRef.current = null;
+      applyEntryRouteAction(getPostUnlockRouteAction(target));
+    },
+    [applyEntryRouteAction],
+  );
 
   return { enterPendingOrPastMain, nowRoute, setNowRoute };
 };

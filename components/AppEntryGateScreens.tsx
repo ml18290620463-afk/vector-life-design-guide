@@ -1,3 +1,4 @@
+import type { NowDraft } from '../features/now/types/now';
 import type { FC } from 'react';
 import { Suspense } from 'react';
 import type { Language, Principle, Theme } from '../types';
@@ -16,6 +17,7 @@ type AppEntryGateScreensProps = {
     password: string,
     directory: string[],
     selection: string[],
+    draft?: NowDraft,
   ) => void | Promise<void>;
   onRecoveryPasswordReset: (password: string) => void | Promise<void>;
   onReturningUserUnlock: (password: string) => void;

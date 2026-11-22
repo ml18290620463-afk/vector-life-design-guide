@@ -89,7 +89,13 @@ export class VaultLockedError extends Error {
   }
 }
 export const BACKUP_RESTORE_JOB = 'vector_backup_restore_job_v1';
-const privateKeys = [K.future, K.actions, PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY, BACKUP_RESTORE_JOB] as string[];
+const privateKeys = [
+  K.future,
+  K.actions,
+  PRIVATE_DRAFT_KEY,
+  FUTURE_DRAFT_KEY,
+  BACKUP_RESTORE_JOB,
+] as string[];
 type Envelope = { format: 'vector-private-v1'; ciphertext: string };
 const encrypted = (value: unknown): value is Envelope =>
   !!value && typeof value === 'object' && 'format' in value && value.format === 'vector-private-v1';
@@ -198,6 +204,25 @@ export function preparedVaultTransaction<T>(
 /** Rotate future/actions and credentials together; never require a second password. */
 export function changeFutureProtection(password: string | null, hash?: string, salt?: string) {
   return privateTransaction(privateKeys, () => undefined, false, { password, hash, salt });
+}
+
+/** Commit first-run protection and the in-memory draft atomically. */
+export function initializeVaultWithDraft(
+  password: string,
+  hash: string,
+  salt: string,
+  draft: import('../features/now/types/now').NowDraft,
+) {
+  return privateTransaction(
+    privateKeys,
+    (values) => {
+      const current = values[PRIVATE_DRAFT_KEY] as { revision: number; draft: unknown } | undefined;
+      if (current?.draft) throw new Error('Existing draft detected; initialization cancelled.');
+      values[PRIVATE_DRAFT_KEY] = { revision: (current?.revision ?? 0) + 1, draft };
+    },
+    false,
+    { password, hash, salt, onlyIfUnprotected: true },
+  );
 }
 
 /** Apply an editor's delta to latest storage; never overwrite unrelated concurrent rows. */

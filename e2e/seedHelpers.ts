@@ -57,34 +57,18 @@ export const seedOnboardedApp = async (
 
   await resetPersistentAppState(page);
 
-  // Cover screen → Onboarding intro.
-  // W4.1 — keep the cover entry anchored on the initialize testid so
-  // copy changes on the homepage do not break all onboarding specs.
-  const coverEntry = page.getByTestId('cover-initialize');
-  const passwordEntry = page.getByTestId('onboarding-password');
-  await coverEntry.or(passwordEntry).first().waitFor({ state: 'visible' });
-  // The cover entry starts a decorative launch animation. Dispatch the
-  // activation directly so E2E setup exercises the same handler without
-  // intermittently waiting for a moving visual layer to become actionable.
-  if (await coverEntry.isVisible()) await coverEntry.dispatchEvent('click');
-  await page.getByTestId('onboarding-password').waitFor({ state: 'visible' });
-
-  // Calibration: master password (twice) then issue recovery key.
+  await page.getByTestId('cover-initialize').click();
+  await page.getByTestId('onboarding-skip').click();
+  await page.getByLabel('此刻发生了什么？').fill('初始化草稿');
+  await page.getByLabel('保存到过去').click();
   await page.getByTestId('onboarding-password').fill(password);
   await page.getByTestId('onboarding-password-confirm').fill(password);
-  await page.getByTestId('onboarding-issue-key').click();
-  await page.getByTestId('onboarding-backup-phase').waitFor({ state: 'visible' });
-
-  // Backup: save offline PNG, then enter the app directly.
-  // PNG rendering can synchronously disable this control while the browser
-  // serializes the credential card. Dispatch the same activation directly so
-  // setup does not race Playwright's actionability retry with that transient
-  // disabled state.
-  await page.getByTestId('onboarding-save-png').dispatchEvent('click');
-  await page.getByTestId('onboarding-recovery-saved').waitFor({ state: 'visible' });
-  await page.getByTestId('onboarding-recovery-saved').click();
-  // Completing onboarding persists an encrypted vault asynchronously.  Do not
-  // navigate away before the main shell is visible, otherwise the route change
-  // can interrupt the persistence and leave the test on the setup screen.
+  await page.getByTestId('onboarding-protect').click();
   await page.getByRole('navigation', { name: '主页面导航' }).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: '清空草稿' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /清空/ }).click();
+  await page
+    .getByRole('navigation', { name: '主页面导航' })
+    .getByRole('button', { name: /^过去/ })
+    .click();
 };
