@@ -12,12 +12,17 @@ test('one login allows future editing and all module navigation without another 
   await navigation.getByRole('button', { name: /未来/ }).click();
   await page.getByRole('button', { name: '添加愿景', exact: true }).click();
   await page.getByLabel('愿景内容').fill('保持探索的生活');
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('dialog', { name: '愿景', exact: true }).getByRole('button', { name: '保存', exact: true }).click();
+  await page.getByRole('dialog', { name: '是否允许 AI 可见？' }).getByRole('button', { name: /仅自己可见/ }).click();
   await expect(page.getByText('保持探索的生活', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '查看愿景：保持探索的生活', exact: true }).click();
-  await page.getByRole('dialog', { name: '愿景', exact: true }).getByRole('button', { name: '编辑', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: '愿景', exact: true })
+    .getByRole('button', { name: '编辑', exact: true })
+    .click();
   await page.getByLabel('愿景内容').fill('保持探索、亲近自然的生活');
-  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await page.getByRole('dialog', { name: '愿景', exact: true }).getByRole('button', { name: '保存', exact: true }).click();
+  await page.getByRole('dialog', { name: '是否允许 AI 可见？' }).getByRole('button', { name: /仅自己可见/ }).click();
   await expect(page.getByText('保持探索、亲近自然的生活', { exact: true })).toBeVisible();
   // Existing encrypted vault: refresh must show unified login, not a fatal
   // action-read error that makes authentication impossible.

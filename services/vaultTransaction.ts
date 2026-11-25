@@ -1,6 +1,11 @@
+import {
+  AVATAR_ONTOLOGY_KEY,
+  AVATAR_MIGRATION_SNAPSHOT_KEY,
+  AVATAR_MIGRATION_RESULT_KEY,
+} from './avatarOntologyKey';
 import { PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY } from './privateDraftKey';
 import { accountStore } from './accountIdb';
-import { accountChannelName } from './accountScope';
+import { accountChannelName, currentAccountId } from './accountScope';
 import { DiaryStorageKeys as K, readDiaryString } from './diaryStorage';
 import { SecurityService } from './securityService';
 import { useAppStore } from '../stores/appStore';
@@ -95,17 +100,27 @@ const privateKeys = [
   PRIVATE_DRAFT_KEY,
   FUTURE_DRAFT_KEY,
   BACKUP_RESTORE_JOB,
+  AVATAR_ONTOLOGY_KEY,
 ] as string[];
 type Envelope = { format: 'vector-private-v1'; ciphertext: string };
 const encrypted = (value: unknown): value is Envelope =>
   !!value && typeof value === 'object' && 'format' in value && value.format === 'vector-private-v1';
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-const conflict = new Error('资料库同时发生了更新，请重试');
+export class VaultConflictError extends Error {
+  constructor() {
+    super('资料库同时发生了更新，请重试');
+  }
+}
+const conflict = new VaultConflictError();
+
+let sessionRevision = 0;
 
 // Only session state is observed; the password is never persisted in this layer.
 useAppStore.subscribe((next, previous) => {
-  if (next.isUnlocked !== previous.isUnlocked || next.masterPassword !== previous.masterPassword)
+  if (next.isUnlocked !== previous.isUnlocked || next.masterPassword !== previous.masterPassword) {
+    sessionRevision++;
     notifyListeners();
+  }
 });
 
 /** Crypto must run outside IDB transactions. Compare every input again at commit. */
@@ -119,9 +134,11 @@ async function privateTransaction<T>(
     salt?: string;
     onlyIfUnprotected?: boolean;
   },
+  beforeCommit?: () => void,
 ): Promise<T> {
   const all = [...new Set([...keys, K.passwordHash, K.passwordSalt])];
   for (let attempt = 0; attempt < 5; attempt++) {
+    const startedSessionRevision = sessionRevision;
     const session = useAppStore.getState();
     const snapshot = await rawVaultTransaction(all, (v) => v, true);
     const hash = snapshot[K.passwordHash] ?? readDiaryString(K.passwordHash);
@@ -146,13 +163,26 @@ async function privateTransaction<T>(
     const assertSession = () => {
       const current = useAppStore.getState();
       if (
+        startedSessionRevision !== sessionRevision ||
         session.isUnlocked !== current.isUnlocked ||
         session.masterPassword !== current.masterPassword
       )
         throw new VaultLockedError();
     };
     assertSession();
-    if (readonly) return output;
+    if (readonly) {
+      // Async decryption/validation must not return a snapshot invalidated meanwhile.
+      await rawVaultTransaction(
+        all,
+        (latest) => {
+          assertSession();
+          beforeCommit?.();
+          if (all.some((key) => !same(snapshot[key], latest[key]))) throw conflict;
+        },
+        true,
+      );
+      return output;
+    }
     const nextPassword = replacement ? replacement.password : hash ? password : null;
     for (const key of privateKeys.filter((k) => keys.includes(k))) {
       if (decoded[key] === undefined) continue;
@@ -170,6 +200,7 @@ async function privateTransaction<T>(
     try {
       await rawVaultTransaction(all, (latest) => {
         assertSession();
+        beforeCommit?.();
         if (all.some((key) => !same(snapshot[key], latest[key]))) throw conflict;
         for (const key of all) latest[key] = decoded[key];
       });
@@ -197,13 +228,46 @@ export function preparedVaultTransaction<T>(
   mutate: (values: Record<string, unknown>) => T | Promise<T>,
   readonly = false,
   protection?: { password: string; hash: string; salt: string; onlyIfUnprotected: true },
+  beforeCommit?: () => void,
 ) {
-  return privateTransaction(keys, mutate, readonly, protection);
+  return privateTransaction(keys, mutate, readonly, protection, beforeCommit);
 }
 
 /** Rotate future/actions and credentials together; never require a second password. */
 export function changeFutureProtection(password: string | null, hash?: string, salt?: string) {
-  return privateTransaction(privateKeys, () => undefined, false, { password, hash, salt });
+  const checkpointKeys = [AVATAR_MIGRATION_SNAPSHOT_KEY, AVATAR_MIGRATION_RESULT_KEY];
+  return privateTransaction(
+    [...privateKeys, ...checkpointKeys],
+    async (values) => {
+      const graph = values[AVATAR_ONTOLOGY_KEY] as
+        | { migrationCheckpointRequired?: boolean }
+        | undefined;
+      if (
+        !graph?.migrationCheckpointRequired &&
+        checkpointKeys.every((key) => values[key] === undefined)
+      )
+        return;
+      const sourcePassword = useAppStore.getState().masterPassword;
+      if (!password || !sourcePassword) throw new Error('迁移归档需要密码保护，不能移除密码');
+      const {
+        avatarMigrationCheckpointFrom,
+        decodeAvatarMigrationCheckpoint,
+        reencryptAvatarMigrationCheckpoint,
+      } = await import('./avatarOntologyMigrationCheckpoint');
+      const checkpoint = avatarMigrationCheckpointFrom(values);
+      await decodeAvatarMigrationCheckpoint(checkpoint, sourcePassword, currentAccountId());
+      const next = await reencryptAvatarMigrationCheckpoint(
+        checkpoint,
+        sourcePassword,
+        password,
+        currentAccountId(),
+      );
+      values[AVATAR_MIGRATION_SNAPSHOT_KEY] = next.snapshot;
+      values[AVATAR_MIGRATION_RESULT_KEY] = next.result;
+    },
+    false,
+    { password, hash, salt },
+  );
 }
 
 /** Commit first-run protection and the in-memory draft atomically. */

@@ -38,27 +38,30 @@ export const searchPastEntriesWithMatchKind = (
     );
   // Keep the single search field precise. Only a one-word query with too few literal
   // matches gets a bounded thematic recall appended after exact results.
-  if (tokens.length !== 1 || exact.length >= 3) return exact.map((entry) => ({ entry, match: 'exact' }));
+  if (tokens.length !== 1 || exact.length >= 3)
+    return exact.map((entry) => ({ entry, match: 'exact' }));
   const queryConcepts = semanticConceptsForText(tokens[0]!);
   if (!queryConcepts.length) return exact.map((entry) => ({ entry, match: 'exact' }));
   const exactIds = new Set(exact.map((entry) => entry.id));
-  const related = entries.filter((entry) => {
-    if (exactIds.has(entry.id)) return false;
-    const entryText = [
-      entry.title,
-      entry.content,
-      ...(entry.tags ?? []),
-      ...(entry.supplements ?? []).map((item) => item.content),
-      ...(entry.nowMaterials ?? []).flatMap((material) => [
-        material.description,
-        material.meta?.title,
-        material.type === 'link' ? material.url : '',
-      ]),
-    ]
-      .filter((value) => typeof value === 'string')
-      .join(' ');
-    return semanticConceptsForText(entryText).some((concept) => queryConcepts.includes(concept));
-  }).sort((left, right) => right.createdAt - left.createdAt);
+  const related = entries
+    .filter((entry) => {
+      if (exactIds.has(entry.id)) return false;
+      const entryText = [
+        entry.title,
+        entry.content,
+        ...(entry.tags ?? []),
+        ...(entry.supplements ?? []).map((item) => item.content),
+        ...(entry.nowMaterials ?? []).flatMap((material) => [
+          material.description,
+          material.meta?.title,
+          material.type === 'link' ? material.url : '',
+        ]),
+      ]
+        .filter((value) => typeof value === 'string')
+        .join(' ');
+      return semanticConceptsForText(entryText).some((concept) => queryConcepts.includes(concept));
+    })
+    .sort((left, right) => right.createdAt - left.createdAt);
   return [
     ...exact.map((entry) => ({ entry, match: 'exact' as const })),
     ...related.slice(0, 5).map((entry) => ({ entry, match: 'related' as const })),
@@ -139,13 +142,25 @@ export function getPastSearchMatch(entry: DiaryEntry, query: string) {
   };
 }
 
-export interface PastFilters { from: string; to: string; tag: string; material: string }
+export interface PastFilters {
+  from: string;
+  to: string;
+  tag: string;
+  material: string;
+}
 export function filterPastEntries(entries: DiaryEntry[], filters: PastFilters): DiaryEntry[] {
-  return entries.filter(entry => {
+  return entries.filter((entry) => {
     const date = new Date(entry.createdAt);
     const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return (!filters.from || day >= filters.from) && (!filters.to || day <= filters.to) &&
+    return (
+      (!filters.from || day >= filters.from) &&
+      (!filters.to || day <= filters.to) &&
       (!filters.tag || entry.tags?.includes(filters.tag)) &&
-      (!filters.material || (filters.material === 'text' ? !entry.nowMaterials?.length && !entry.attachment : entry.nowMaterials?.some(m => m.type === filters.material) || entry.attachment?.type === filters.material));
+      (!filters.material ||
+        (filters.material === 'text'
+          ? !entry.nowMaterials?.length && !entry.attachment
+          : entry.nowMaterials?.some((m) => m.type === filters.material) ||
+            entry.attachment?.type === filters.material))
+    );
   });
 }

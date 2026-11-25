@@ -2041,7 +2041,10 @@ html .future-dialog textarea {
   background: transparent;
   color: var(--color-archive-text-muted);
   cursor: pointer;
-  transition: opacity 140ms ease, background-color 140ms ease, color 140ms ease;
+  transition:
+    opacity 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
 }
 .future-action-latest .future-entry-delete {
   top: 0.5rem;

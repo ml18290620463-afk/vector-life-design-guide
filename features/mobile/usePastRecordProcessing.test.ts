@@ -1,3 +1,5 @@
+import { clear } from 'idb-keyval';
+import { useAppStore } from '../../stores/appStore';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { DiaryEntry } from '../../types';
@@ -6,7 +8,6 @@ import { saveAvatarModel } from '../now/api/avatarModel';
 const mocks = vi.hoisted(() => ({
   preview: vi.fn(),
   write: vi.fn(),
-  read: vi.fn(),
   model: vi.fn(),
 }));
 vi.mock('../now/api/avatar', () => ({ previewAvatarGrowth: mocks.preview }));
@@ -14,20 +15,21 @@ vi.mock('../now/api/avatarModel', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../now/api/avatarModel')>()),
   readAvatarModel: mocks.model,
 }));
-vi.mock('../../services/avatarMemory', () => ({
-  readAvatarUnderstandings: () => [],
-  readAvatarAtomicMemories: mocks.read,
-  upsertAvatarAtomicMemories: mocks.write,
+vi.mock('../../services/avatarExperienceCandidates', () => ({
+  stageExperienceCandidates: mocks.write,
 }));
 const entry: DiaryEntry = {
   id: 'saved',
   title: '会议',
   content: '会议先确认目标',
   createdAt: 1,
-  aiVisibility: 'allowed' as const, isLocked: false,
+  aiVisibility: 'allowed' as const,
+  isLocked: false,
   tags: [],
 };
-beforeEach(() => {
+beforeEach(async () => {
+  await clear();
+  useAppStore.setState({ masterPassword: null, isUnlocked: true });
   localStorage.clear();
   mocks.preview.mockReset().mockResolvedValue({
     atomicMemoryCandidates: [
@@ -39,8 +41,7 @@ beforeEach(() => {
       },
     ],
   });
-  mocks.read.mockReset().mockReturnValue([]);
-  mocks.write.mockReset().mockReturnValue(true);
+  mocks.write.mockReset().mockResolvedValue(undefined);
   mocks.model.mockReset().mockReturnValue({ provider: 'openrouter', model: 'test' });
 });
 it('keeps records usable without a model and extracts after one is configured', async () => {
@@ -103,10 +104,9 @@ it('processes saved records in Past with source references, excluding locked and
       facets: [],
       sourceRefs: [{ source: 'entry', id: 'saved' }],
     },
-  ]);
+  ], 0, expect.any(Function));
 });
 it('submits only candidate status to the memory merge on re-entry', async () => {
-  mocks.read.mockReturnValue([{ id: 'candidate', status: 'rejected' }]);
   renderHook(() => usePastRecordProcessing([entry]));
   await waitFor(() => expect(mocks.write).toHaveBeenCalledOnce());
   expect(mocks.write.mock.calls[0][0]).toEqual([
@@ -128,11 +128,11 @@ it('cancels writes if the page closes while extraction is pending', async () => 
   expect(mocks.write).not.toHaveBeenCalled();
 });
 it('supports retry after failed candidate storage', async () => {
-  mocks.write.mockReturnValueOnce(false).mockReturnValue(true);
+  mocks.write.mockRejectedValueOnce(new Error('storage failed')).mockResolvedValue(undefined);
   const entries = [entry];
   const { result } = renderHook(() => usePastRecordProcessing(entries));
   await waitFor(() => expect(result.current.error).toBeTruthy());
-  result.current.retry();
+  act(() => result.current.retry());
   await waitFor(() => expect(result.current.error).toBe(''));
   expect(mocks.write).toHaveBeenCalledTimes(2);
 });

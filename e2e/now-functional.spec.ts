@@ -30,6 +30,10 @@ for (const viewport of [
     await expect(page.getByLabel('保存到过去')).toBeInViewport();
     expect(await emptyCard.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     await page.getByLabel('保存到过去').click();
+    await page
+      .getByRole('dialog', { name: '是否允许 AI 可见？' })
+      .getByRole('button', { name: /^仅自己可见/ })
+      .click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(message, { exact: false }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: '写下第一条记录' })).toHaveCount(0);
@@ -86,6 +90,10 @@ for (const viewport of [
       .toBe(true);
     await page.screenshot({ path: testInfo.outputPath('now-filled.png'), fullPage: true });
     await page.getByLabel('保存到过去').click();
+    await page
+      .getByRole('dialog', { name: '是否允许 AI 可见？' })
+      .getByRole('button', { name: /^仅自己可见/ })
+      .click();
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByRole('searchbox', { name: '搜索记录' })).toHaveValue('');
     await expect(page.getByText(message, { exact: true })).toBeVisible();

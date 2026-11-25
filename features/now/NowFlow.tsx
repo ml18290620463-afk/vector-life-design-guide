@@ -1,3 +1,5 @@
+import { AvatarUpgradeBoundary } from './components/AvatarUpgradeBoundary';
+import { useAvatarLanguage } from './components/avatarLanguage';
 import { useAIVisibilityChoice } from '../../components/AIVisibilityDialog';
 import React, { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useFuture } from '../../hooks/useFuture';
@@ -14,6 +16,7 @@ import { useNowDraft } from './hooks/useNowDraft';
 import { useToast } from './hooks/useToast';
 import { TagSelectPage } from './components/TagSelectPage';
 import { AvatarChatPage } from './avatarChatLazy';
+import { AvatarDataModelCenter } from './components/AvatarDataModelCenter';
 import { NowPage } from './components/NowPage';
 import {
   buildRecordFromDraft,
@@ -29,6 +32,8 @@ import { DEFAULT_AVATAR_CONTEXT } from '../avatar/types';
 import type { ActionDraftContext } from '../../types/future';
 
 interface NowFlowProps {
+  onSetPassword?: (password: string) => Promise<void>;
+  onUnlockAvatar?: () => void;
   route: NowRoute;
   theme: Theme;
   language: Language;
@@ -55,6 +60,8 @@ interface NowFlowProps {
 
 export const NowFlow: React.FC<NowFlowProps> = ({
   route,
+  onSetPassword,
+  onUnlockAvatar,
   theme,
   language: _language,
   mobileShell = false,
@@ -70,6 +77,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
   onSelectEntry,
   onNavigateModule,
 }) => {
+  const { t } = useAvatarLanguage();
   const {
     draft,
     setDraft,
@@ -151,7 +159,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
     }
     const reason = getDisabledSendReason(overrideDraft);
     if (reason) {
-      showToast(reason);
+      showToast(t(reason));
       return false;
     }
     setSending(true);
@@ -174,7 +182,14 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       const entryPayload = recordToDiaryEntry(record);
       entryPayload.updatedAt = attempt.updatedAt;
       const persistedEntry =
-        resumedEntry ?? (await onPersistRecord({ ...entryPayload, id: attempt.id, aiVisibility, aiConsentAt: Date.now(), aiSourceSessionId: avatarSessionId ?? undefined }));
+        resumedEntry ??
+        (await onPersistRecord({
+          ...entryPayload,
+          id: attempt.id,
+          aiVisibility,
+          aiConsentAt: Date.now(),
+          aiSourceSessionId: avatarSessionId ?? undefined,
+        }));
       // Start cleanup before navigation so unmount cannot flush the submitted draft again.
       const cleanup = resetAfterSend().catch(() => false);
       retry.current = null;
@@ -182,11 +197,21 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       else if (onRecordComplete) onRecordComplete();
       else onExit();
       await cleanup;
-      showToast(_language === 'zh' ? '已保存到本机，可在「过去」查看；本机保存不等于已备份' : 'Saved on this device. View in Past; a local save is not a backup.');
+      showToast(
+        _language === 'zh'
+          ? '已保存到本机，可在「过去」查看；本机保存不等于已备份'
+          : 'Saved on this device. View in Past; a local save is not a backup.',
+      );
       return true;
     } catch (error) {
       console.error('NowFlow: failed to persist local record', error);
-      showToast(error instanceof Error ? error.message : '保存失败，请重试');
+      showToast(
+        _language === 'zh'
+          ? error instanceof Error
+            ? error.message
+            : '保存失败，请重试'
+          : 'Could not save. Your draft is retained; please retry.',
+      );
       return false;
     } finally {
       setSending(false);
@@ -200,7 +225,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         {draftError}
         {draftError && (
           <button type="button" onClick={retryLoad}>
-            重新读取草稿
+            {t('重新读取草稿', 'Reload draft')}
           </button>
         )}
       </div>
@@ -211,7 +236,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
       <div className="now-shell" role="alert">
         {draftError}
         <button type="button" onClick={() => void resetAfterSend()}>
-          重试
+          {t('重试', 'Retry')}
         </button>
       </div>
     ) : null;
@@ -227,7 +252,7 @@ export const NowFlow: React.FC<NowFlowProps> = ({
           {draftError}
           {draftError && (
             <button type="button" onClick={() => void saveDraft()}>
-              重试保存
+              {t('重试保存', 'Retry saving')}
             </button>
           )}
         </div>
@@ -257,36 +282,51 @@ export const NowFlow: React.FC<NowFlowProps> = ({
         />
       )}
       {route === 'avatar-chat' && (
-        <Suspense
-          fallback={<div className="now-shell" aria-busy="true" aria-label="正在打开分身" />}
+        <AvatarUpgradeBoundary
+          language={_language}
+          onSetPassword={onSetPassword}
+          onUnlock={onUnlockAvatar}
+          onBack={() => onRouteChange('now')}
         >
-          <AvatarChatPage
-            principles={principles}
-            actions={actions}
-            future={future}
-            onNavigateModule={onNavigateModule}
-            draft={draft}
-            setDraft={setDraft}
-            pastEntries={pastEntries}
-            sending={sending}
-            mobileShell={mobileShell}
-            onBack={() => onRouteChange('now')}
-            onRouteChange={onRouteChange}
-            onSend={(preview, sessionId) => {
-              const next = {
-                ...draft,
-                text: preview.text,
-                mood_tags: preview.mood_tags,
-                event_tags: preview.event_tags,
-                updated_at: new Date().toISOString(),
-              };
-              return submitRecord('avatar_assisted', next, sessionId, preview.principle_outcome);
-            }}
-            showToast={showToast}
-            launchContext={avatarLaunchContext}
-            onSelectEntry={onSelectEntry}
-          />
-        </Suspense>
+          <Suspense
+            fallback={<div className="now-shell" aria-busy="true" aria-label="正在打开分身" />}
+          >
+            <AvatarChatPage
+              principles={principles}
+              actions={actions}
+              future={future}
+              onNavigateModule={onNavigateModule}
+              draft={draft}
+              setDraft={setDraft}
+              pastEntries={pastEntries}
+              sending={sending}
+              mobileShell={mobileShell}
+              onBack={() => onRouteChange('now')}
+              onRouteChange={onRouteChange}
+              onSend={(preview, sessionId) => {
+                const next = {
+                  ...draft,
+                  text: preview.text,
+                  mood_tags: preview.mood_tags,
+                  event_tags: preview.event_tags,
+                  updated_at: new Date().toISOString(),
+                };
+                return submitRecord('avatar_assisted', next, sessionId, preview.principle_outcome);
+              }}
+              showToast={showToast}
+              launchContext={avatarLaunchContext}
+              onSelectEntry={onSelectEntry}
+            />
+          </Suspense>
+        </AvatarUpgradeBoundary>
+      )}
+      {route === 'avatar-settings' && (
+        <AvatarDataModelCenter
+          draft={draft}
+          onBack={() => onRouteChange('avatar-chat')}
+          onOpenDraft={() => onRouteChange('now')}
+          showToast={showToast}
+        />
       )}
       {privacy.dialog}
       {toastMessage && <div className="now-toast">{toastMessage}</div>}

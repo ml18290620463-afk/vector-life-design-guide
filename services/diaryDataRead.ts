@@ -171,7 +171,12 @@ export const sanitizeDiaryEntry = (entry: unknown): DiaryEntry => {
 export const sanitizePrinciple = (principle: Principle): Principle => ({
   ...principle,
   aiVisibility: principle.aiVisibility === 'allowed' ? 'allowed' : 'private',
-  aiConsentAt: typeof principle.aiConsentAt === 'number' && Number.isFinite(principle.aiConsentAt) && principle.aiConsentAt >= 0 ? principle.aiConsentAt : undefined,
+  aiConsentAt:
+    typeof principle.aiConsentAt === 'number' &&
+    Number.isFinite(principle.aiConsentAt) &&
+    principle.aiConsentAt >= 0
+      ? principle.aiConsentAt
+      : undefined,
   tags: sanitizeStringArray(principle.tags),
   supersedesPrincipleId:
     typeof principle.supersedesPrincipleId === 'string' && principle.supersedesPrincipleId.trim()
@@ -191,13 +196,17 @@ export const sanitizePrinciple = (principle: Principle): Principle => ({
     principle.application &&
     typeof principle.application.trigger === 'string' &&
     typeof principle.application.action === 'string' &&
-    (principle.application.trigger.trim() || principle.application.action.trim() ||
-      (typeof principle.application.exception === 'string' && principle.application.exception.trim()))
+    (principle.application.trigger.trim() ||
+      principle.application.action.trim() ||
+      (typeof principle.application.exception === 'string' &&
+        principle.application.exception.trim()))
       ? {
           trigger: principle.application.trigger.trim().slice(0, 120),
           action: principle.application.action.trim().slice(0, 160),
-          ...(typeof principle.application.exception === 'string' && principle.application.exception.trim()
-            ? { exception: principle.application.exception.trim().slice(0, 240) } : {}),
+          ...(typeof principle.application.exception === 'string' &&
+          principle.application.exception.trim()
+            ? { exception: principle.application.exception.trim().slice(0, 240) }
+            : {}),
         }
       : undefined,
   derivedFromEntryIds: sanitizeStringArray(principle.derivedFromEntryIds),

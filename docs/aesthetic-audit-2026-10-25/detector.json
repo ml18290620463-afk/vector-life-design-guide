@@ -8,9 +8,7 @@
     "file": "/Users/leeyto/.codex/worktrees/24d1/T0 -vector（矢量人生经验进化系统）/components/CoverScreen.brush.css",
     "line": 10,
     "snippet": "font-family: 'Helvetica",
-    "importedBy": [
-      "CoverScreen.tsx"
-    ]
+    "importedBy": ["CoverScreen.tsx"]
   },
   {
     "antipattern": "overused-font",
@@ -21,9 +19,7 @@
     "file": "/Users/leeyto/.codex/worktrees/24d1/T0 -vector（矢量人生经验进化系统）/components/CoverScreen.brush.css",
     "line": 37,
     "snippet": "font-family: 'Helvetica",
-    "importedBy": [
-      "CoverScreen.tsx"
-    ]
+    "importedBy": ["CoverScreen.tsx"]
   },
   {
     "antipattern": "overused-font",

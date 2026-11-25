@@ -81,6 +81,7 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
   const [restorePassword, setRestorePassword] = useState('');
   const [restoreMode, setRestoreMode] = useState<'merge' | 'replace'>('merge');
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
+  const [resurrectionConfirmed, setResurrectionConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [inspection, setInspection] = useState<VaultBackupInspection | null>(null);
   const [drill, setDrill] = useState<VaultRecoveryDrill | null>(null);
@@ -144,6 +145,10 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       setError('请确认替换会使资料回到备份创建时刻。');
       return;
     }
+    if (drill?.resurrectionCount && !resurrectionConfirmed) {
+      setError('旧备份包含删除后留下的记录，请先查看演练结果并明确确认。');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -155,11 +160,13 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
         backup as VaultBackup,
         restoreMode,
         userId,
-        restorePassword || undefined,
+        restorePassword || masterPassword || undefined,
+        resurrectionConfirmed,
       );
       setRestoreFile(null);
       setRestorePassword('');
       setReplaceConfirmed(false);
+      setResurrectionConfirmed(false);
       setInspection(null);
       setDrill(null);
       setRestoreResult({ mode: summary.mode, restored: summary.restored });
@@ -178,7 +185,10 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
     setInspection(null);
     try {
       setInspection(
-        await inspectVaultBackup(JSON.parse(await restoreFile.text()), restorePassword),
+        await inspectVaultBackup(
+          JSON.parse(await restoreFile.text()),
+          restorePassword || masterPassword || '',
+        ),
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '检查失败，请确认备份文件或密令');
@@ -197,8 +207,14 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       const backup = isEncryptedVaultBackup(raw)
         ? await decryptVaultBackupFile(raw, restorePassword || masterPassword || '')
         : raw;
-      const result = await drillVaultBackupRestore(backup as VaultBackup, restoreMode, userId);
+      const result = await drillVaultBackupRestore(
+        backup as VaultBackup,
+        restoreMode,
+        userId,
+        restorePassword || masterPassword || undefined,
+      );
       setDrill(result);
+      setResurrectionConfirmed(false);
       remember({ drilledAt: Date.now(), canRestore: result.canRestore });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '演练失败，请检查备份文件或密令');
@@ -335,6 +351,9 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
       />
       {restoreFile && (
         <div className="avatar-reliability-restore">
+          <p role="note">
+            恢复只会修改本机权威存储。此前导出的备份文件不会被远程修改；已发送至第三方模型服务商的数据也无法撤回。请在恢复前检查预览与权限状态。
+          </p>
           <div className="avatar-reliability-restore__heading">
             <span>恢复备份</span>
             <p>已选择：{restoreFile.name}</p>
@@ -413,12 +432,26 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
           {drill && (
             <section className="avatar-reliability-inspection" aria-label="隔离恢复演练结果">
               <p>
-                {drill.canRestore ? '演练通过：可以执行恢复。' : '演练发现冲突：实际恢复会中止。'}
+                {drill.canRestore
+                  ? '演练通过：可以执行恢复。'
+                  : drill.resurrectionCount > 0
+                    ? '检测到旧备份中的已删除记录；默认保持删除，只有明确勾选恢复旧版本后才会继续。'
+                    : '演练发现冲突：实际恢复会中止。'}
               </p>
               <p>
                 将导入记录：{drill.importedCount}；演练后记录：{drill.totalAfter}
               </p>
               {drill.conflicts.length > 0 && <p>冲突：{drill.conflicts.join('；')}</p>}
+              {drill.resurrectionCount > 0 && (
+                <label className="avatar-reliability-restore__confirm">
+                  <input
+                    type="checkbox"
+                    checked={resurrectionConfirmed}
+                    onChange={(event) => setResurrectionConfirmed(event.target.checked)}
+                  />
+                  我确认恢复 {drill.resurrectionCount} 条此前已删除的旧记录
+                </label>
+              )}
               <p>演练不会写入当前资料库，也不会访问网页链接或网络资源。</p>
             </section>
           )}
@@ -439,7 +472,8 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
               busy ||
               !inspection ||
               inspection.needsPassword ||
-              (restoreMode === 'replace' && !replaceConfirmed)
+              (restoreMode === 'replace' && !replaceConfirmed) ||
+              (Boolean(drill?.resurrectionCount) && !resurrectionConfirmed)
             }
           >
             {busy ? '处理中…' : restoreMode === 'merge' ? '合并恢复' : '替换恢复'}

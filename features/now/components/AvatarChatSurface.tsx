@@ -1,5 +1,4 @@
 import type { DiaryEntry } from '../../../types';
-import { formatAvatarReply } from '../state/avatarReplyFormat';
 import React, { type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { ArrowLeft, Settings2, X } from 'lucide-react';
 import type {
@@ -12,74 +11,18 @@ import type { AvatarRecallMemory, AvatarStructuredInsight } from '../state/nowRu
 import type { ChatMessage, NowDraft, RecordPreviewPayload } from '../types/now';
 import { AvatarMemoryConfirm } from './AvatarMemoryConfirm';
 import { AvatarMemoryLibrary } from './AvatarMemoryLibrary';
-import { AvatarModelSettings } from './AvatarModelSettings';
-import { RecordPreviewCard } from './AvatarRecordPanels';
-import { MODE_COPY } from './avatarModeCopy';
+import { AvatarChatMessage } from './AvatarChatMessage';
+import { useAvatarLanguage } from './avatarLanguage';
+import { MODE_COPY, EN_MODE_COPY } from './avatarModeCopy';
 import { AvatarReliabilityAssistant } from './AvatarReliabilityAssistant';
 import type { AvatarReliabilityTask } from '../state/avatarReliabilityTasks';
 
-const AvatarChatMessage = React.memo(function AvatarChatMessage({
-  message,
-  pastEntries,
-  preview,
-  sending,
-  launchContext,
-  onSelectEntry,
-  onSetPreview,
-  onEditTags,
-  onSendPreview,
-}: {
-  message: ChatMessage;
-  pastEntries?: DiaryEntry[];
-  preview: RecordPreviewPayload | null;
-  sending: boolean;
-  launchContext: AvatarLaunchContext;
-  onSelectEntry?: (entryId: string) => void;
-  onSetPreview: (payload: RecordPreviewPayload | null) => void;
-  onEditTags: () => void;
-  onSendPreview: (payload: RecordPreviewPayload) => void;
-}) {
-  if (message.type === 'record_preview' && message.payload) {
-    const payload = preview ?? message.payload;
-    return (
-      <RecordPreviewCard
-        payload={payload}
-        sending={sending}
-        onChange={onSetPreview}
-        showPrincipleOutcome={launchContext.mode === 'review'}
-        onEditTags={onEditTags}
-        onSend={() => onSendPreview(payload)}
-      />
-    );
-  }
-  return (
-    <div className={`now-chat-bubble ${message.role === 'user' ? 'is-user' : ''}`}>
-      {message.role === 'assistant' ? formatAvatarReply(message.content) : message.content}
-      {message.role === 'assistant' && message.references?.length ? (
-        <details className="avatar-message-references">
-          <summary>查看 {message.references.length} 条经历</summary>
-          <ul>{message.references.map((reference, index) => {
-            const available = pastEntries?.some(entry => entry.id === reference.entryId && !entry.isEncrypted) ?? false;
-            return <li key={`${reference.entryId}:${index}`}>
-              <button type="button" disabled={!available || !onSelectEntry} onClick={() => onSelectEntry?.(reference.entryId)}>{reference.title || '未命名记录'}</button>
-              <time>{new Date(reference.date).toLocaleDateString('zh-CN')}</time>
-              <p>{reference.excerpt}</p>
-              {reference.reason && <p>{reference.reason}</p>}
-              {!available && <p>来源已删除、锁定或不可访问</p>}
-            </li>;
-          })}</ul>
-        </details>
-      ) : null}
-    </div>
-  );
-});
-
 interface AvatarChatSurfaceProps {
+  sourceReview?: React.ReactNode;
   pastEntries?: DiaryEntry[];
   focusedObjectText?: string;
-  avatarMemories: ReturnType<
-    typeof import('../../../services/avatarKnowledgeProjection').resolveAvatarKnowledge
-  >['memories'];
+  graph: Parameters<typeof AvatarMemoryLibrary>[0]['graph'];
+  onReviseMemory: Parameters<typeof AvatarMemoryLibrary>[0]['onRevise'];
   candidateSummary: RecordPreviewPayload | null;
   chatError: string;
   chatListRef: RefObject<HTMLElement | null>;
@@ -103,11 +46,9 @@ interface AvatarChatSurfaceProps {
   replacementStatement?: string | null;
   visibleMessages: ChatMessage[];
   mobileShell: boolean;
-  modelSettingsOpen: boolean;
   onAddMemory: () => void;
   onBack: () => void;
   onChangeInput: (value: string) => void;
-  onCloseModelSettings: () => void;
   onConfirmMemory: (
     tags: string[],
     category: Parameters<React.ComponentProps<typeof AvatarMemoryConfirm>['onConfirm']>[1],
@@ -119,7 +60,8 @@ interface AvatarChatSurfaceProps {
   onGenerateMemory: () => void;
   onMemoryTextChange: (text: string) => void;
   onSetLibraryView: (view: 'chat' | 'library') => void;
-  onOpenModelSettings: () => void;
+  onOpenSettings: () => void;
+  onOpenFuture?: () => void;
   onShowEarlierMessages: () => void;
   onJumpToLatest: () => void;
   onRefreshKnowledge: () => void;
@@ -129,14 +71,11 @@ interface AvatarChatSurfaceProps {
   onSendPreview: (payload: RecordPreviewPayload) => void;
   onSetPreview: (payload: RecordPreviewPayload | null) => void;
   onSubmitModeAction: () => void;
-  patterns: Parameters<typeof AvatarMemoryLibrary>[0]['patterns'];
-  pendingMemories: Parameters<typeof AvatarMemoryLibrary>[0]['pendingMemories'];
   preview: RecordPreviewPayload | null;
   sending: boolean;
   setChatError: Dispatch<SetStateAction<string>>;
   showToast: (message: string) => void;
   showJumpToLatest: boolean;
-  storedAvatarMemories: Parameters<typeof AvatarMemoryLibrary>[0]['historyMemories'];
   userMessageCount: number;
   validRecallMemories: AvatarRecallMemory[];
   liveInsight: AvatarStructuredInsight;
@@ -146,9 +85,11 @@ interface AvatarChatSurfaceProps {
 }
 
 export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
+  sourceReview,
   pastEntries,
   focusedObjectText,
-  avatarMemories,
+  graph,
+  onReviseMemory,
   candidateSummary,
   chatError,
   chatListRef,
@@ -172,18 +113,17 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   replacementStatement,
   visibleMessages,
   mobileShell,
-  modelSettingsOpen,
   onAddMemory,
   onBack,
   onChangeInput,
-  onCloseModelSettings,
   onConfirmMemory,
   onDismissMemory,
   onEditTags,
   onGenerateMemory,
   onMemoryTextChange,
   onSetLibraryView,
-  onOpenModelSettings,
+  onOpenSettings,
+  onOpenFuture,
   onShowEarlierMessages,
   onJumpToLatest,
   onRefreshKnowledge,
@@ -193,14 +133,11 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   onSendPreview,
   onSetPreview,
   onSubmitModeAction,
-  patterns,
-  pendingMemories,
   preview,
   sending,
   setChatError,
   showToast,
   showJumpToLatest,
-  storedAvatarMemories,
   userMessageCount,
   validRecallMemories,
   liveInsight,
@@ -208,8 +145,8 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
   onOpenDraft,
   draft,
 }) => {
-  const [backupWorkspaceOpen, setBackupWorkspaceOpen] = React.useState(false);
-  const modeCopy = MODE_COPY[launchContext.mode];
+  const { language, t } = useAvatarLanguage();
+  const modeCopy = (language === 'en' ? EN_MODE_COPY : MODE_COPY)[launchContext.mode];
   return (
     <main
       className={`now-page now-chat-page ${general ? 'avatar-guide-page' : ''}`}
@@ -221,47 +158,27 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             <button
               type="button"
               className="now-icon-button"
-              onClick={() =>
-                backupWorkspaceOpen
-                  ? setBackupWorkspaceOpen(false)
-                  : libraryView !== 'chat'
-                    ? onSetLibraryView('chat')
-                    : onBack()
-              }
-              aria-label={backupWorkspaceOpen || libraryView !== 'chat' ? '返回聊天' : '返回'}
+              onClick={() => libraryView !== 'chat' ? onSetLibraryView('chat') : onBack()}
+              aria-label={libraryView !== 'chat' ? t('返回聊天') : t('返回')}
             >
               <ArrowLeft size={20} />
             </button>
-            <nav className="avatar-section-tabs" aria-label="记忆分身导航">
+            <nav className="avatar-section-tabs" aria-label={t('记忆分身导航')}>
               <button
                 type="button"
-                className={!backupWorkspaceOpen && libraryView === 'chat' ? 'is-active' : ''}
-                aria-pressed={!backupWorkspaceOpen && libraryView === 'chat'}
-                onClick={() => {
-                  setBackupWorkspaceOpen(false);
-                  onSetLibraryView('chat');
-                }}
+                className={libraryView === 'chat' ? 'is-active' : ''}
+                aria-pressed={libraryView === 'chat'}
+                onClick={() => onSetLibraryView('chat')}
               >
-                聊天
+                {t('聊天')}
               </button>
               <button
                 type="button"
-                className={!backupWorkspaceOpen && libraryView === 'library' ? 'is-active' : ''}
-                aria-pressed={!backupWorkspaceOpen && libraryView === 'library'}
-                onClick={() => {
-                  setBackupWorkspaceOpen(false);
-                  onSetLibraryView('library');
-                }}
+                className={libraryView === 'library' ? 'is-active' : ''}
+                aria-pressed={libraryView === 'library'}
+                onClick={() => onSetLibraryView('library')}
               >
-                记忆库
-              </button>
-              <button
-                type="button"
-                className={backupWorkspaceOpen ? 'is-active' : ''}
-                aria-pressed={backupWorkspaceOpen}
-                onClick={() => setBackupWorkspaceOpen(true)}
-              >
-                备份
+                {t('记忆库')}
               </button>
             </nav>
           </div>
@@ -269,83 +186,70 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             type="button"
             className="avatar-settings-entry"
             disabled={chatPending}
-            onClick={onOpenModelSettings}
-            aria-label="打开分身设置"
+            onClick={onOpenSettings}
+            aria-label={t('打开数据与模型设置', 'Open data and model settings')}
           >
             <Settings2 size={18} aria-hidden="true" />
-            <span>分身设置</span>
+            <span>{t('数据与模型', 'Data and model')}</span>
           </button>
         </header>
       ) : (
         <header className="now-header">
-          <button type="button" className="now-icon-button" onClick={onBack} aria-label="返回">
+          <button type="button" className="now-icon-button" onClick={onBack} aria-label={t('返回')}>
             <ArrowLeft size={20} />
           </button>
           <div className="now-time">
-            {mobileShell && launchContext.mode === 'capture' ? '记录协助' : modeCopy.title}
+            {modeCopy.title}
           </div>
           {!mobileShell ? (
-            <button type="button" className="now-icon-button" onClick={onBack} aria-label="关闭">
+            <button
+              type="button"
+              className="now-icon-button"
+              onClick={onBack}
+              aria-label={t('关闭')}
+            >
               <X size={20} />
             </button>
           ) : (
-            <span className="now-header__badge">协助</span>
+            <span className="now-header__badge">{t('协助')}</span>
           )}
         </header>
-      )}
-      {modelSettingsOpen && (
-        <AvatarModelSettings
-          onClose={onCloseModelSettings}
-          onSaved={() =>
-            setChatError((current) => (current ? '模型配置已更新，可以重试刚才的消息。' : ''))
-          }
-        />
       )}
       {!general && (
         <section className="now-avatar-mode-intro">
           <div>
             <span>VECTOR</span>
-            <p>{focusedObjectText ? `当前讨论：${focusedObjectText}` : modeCopy.title}</p>
+            <p>
+              {focusedObjectText
+                ? `${t('当前讨论', 'Discussing')}: ${focusedObjectText}`
+                : modeCopy.title}
+            </p>
+            <small>{modeCopy.description}</small>
           </div>
         </section>
       )}
-      {general && !backupWorkspaceOpen && libraryView !== 'chat' && (
+      {general && libraryView !== 'chat' && (
         <AvatarMemoryLibrary
-          memories={avatarMemories}
+          graph={graph}
+          onRevise={onReviseMemory}
           entries={pastEntries}
-          historyMemories={storedAvatarMemories}
-          patterns={patterns}
-          pendingMemories={pendingMemories}
           onRefresh={onRefreshKnowledge}
           showToast={showToast}
           onAdd={onAddMemory}
+          onSelectEntry={onSelectEntry}
         />
       )}
-      {general && backupWorkspaceOpen && (
-        <section className="avatar-backup-workspace" aria-labelledby="avatar-backup-title">
-          <header className="avatar-backup-workspace__header">
-            <p>资料管理</p>
-            <h1 id="avatar-backup-title">备份与恢复</h1>
-            <span>导出备份文件，在另一台设备上导入后继续使用。</span>
-          </header>
-          <AvatarReliabilityAssistant
-            task="backup"
-            draft={draft}
-            onOpenDraft={onOpenDraft}
-            showToast={showToast}
-          />
-        </section>
-      )}
-      <div className="avatar-chat-content" hidden={backupWorkspaceOpen || libraryView !== 'chat'}>
+      <div className="avatar-chat-content" hidden={libraryView !== 'chat'}>
         <section
           ref={chatListRef}
           className="now-chat-list"
-          aria-label="对话记录"
+          aria-label={t('对话记录')}
           aria-live="polite"
         >
+          {sourceReview}
           {hiddenMessageCount > 0 && (
             <button type="button" className="avatar-load-earlier" onClick={onShowEarlierMessages}>
-              查看更早消息（{hiddenMessageCount}）
+              {t('查看更早消息', 'Earlier messages')} ({hiddenMessageCount})
             </button>
           )}
           {visibleMessages.map((message) => (
@@ -360,6 +264,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
               onSetPreview={onSetPreview}
               onEditTags={onEditTags}
               onSendPreview={onSendPreview}
+              onOpenFuture={onOpenFuture}
             />
           ))}
           {general && reliabilityTask && reliabilityTask !== 'backup' && (
@@ -370,28 +275,28 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
               showToast={showToast}
             />
           )}
-          {generating && <div className="now-chat-bubble">正在整理…</div>}
+          {generating && <div className="now-chat-bubble">{t('正在整理…')}</div>}
         </section>
         {showJumpToLatest && (
           <button
             type="button"
             className="avatar-jump-latest"
             onClick={onJumpToLatest}
-            aria-label="回到最新消息"
+            aria-label={t('回到最新消息')}
           >
-            回到最新
+            {t('回到最新')}
           </button>
         )}
-        {chatPending && <p role="status">分身正在回复…</p>}
+        {chatPending && <p role="status">{t('分身正在回复…')}</p>}
         {chatError && (
           <div role="alert">
             <p>{chatError}</p>
-            <p>本次没有生成替代回复；你的原始提问仍在对话记录中，可在修复连接后重试。</p>
-            <button type="button" disabled={chatPending} onClick={onOpenModelSettings}>
-              检查模型接入
+            <p>{t('本次没有生成替代回复；你的原始提问仍在对话记录中，可在修复连接后重试。')}</p>
+            <button type="button" disabled={chatPending} onClick={onOpenSettings}>
+              {t('检查模型接入')}
             </button>
             <button type="button" disabled={chatPending} onClick={onRetry}>
-              重试回复
+              {t('重试回复')}
             </button>
           </div>
         )}
@@ -400,14 +305,14 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             ref={inputRef}
             value={input}
             onChange={(event) => onChangeInput(event.target.value)}
-            aria-label="对话内容"
+            aria-label={t('对话内容')}
             onKeyDown={(event) =>
               event.key === 'Enter' && !event.nativeEvent.isComposing && onSend()
             }
-            placeholder={general ? '直接说，我在听' : modeCopy.placeholder}
+            placeholder={general ? t('直接说，我在听') : modeCopy.placeholder}
           />
           <button type="button" onClick={onSend} disabled={!input.trim() || chatPending}>
-            发送
+            {t('发送')}
           </button>
           {general && (
             <button
@@ -415,7 +320,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
               onClick={onGenerateMemory}
               disabled={generating || chatPending || userMessageCount === 0}
             >
-              提炼记忆
+              {t('提炼记忆')}
             </button>
           )}
           {!general && (

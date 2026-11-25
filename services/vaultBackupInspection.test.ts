@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clear, set } from 'idb-keyval';
-import { DiaryStorageKeys as K } from './diaryStorage';
-import { exportVaultBackup } from './vaultBackup';
+import { clear, set, get } from 'idb-keyval';
+import { DiaryStorageKeys as K, getMaterialsStorageKey } from './diaryStorage';
+import { exportVaultBackup, importVaultBackup, validateVaultBackup } from './vaultBackup';
 import { encryptVaultBackupFile } from './vaultBackupFile';
 import { inspectVaultBackup } from './vaultBackupInspection';
 
@@ -63,5 +63,34 @@ describe('inspectVaultBackup', () => {
       externalLink: 1,
       unstableReference: 1,
     });
+  });
+});
+
+describe('legacy standalone material backup', () => {
+  it('preserves duplicate attachments, stable IDs and idempotent merge', async () => {
+    const key = getMaterialsStorageKey(undefined);
+    const attachment = { type: 'image', name: 'legacy.png', data: 'data:image/png;base64,AAAA' };
+    await set(key, [attachment, attachment, { ...attachment, id: 'existing-id' }]);
+    const first = await exportVaultBackup('test');
+    const second = await exportVaultBackup('test');
+    expect(first.vault.data.materials).toEqual(second.vault.data.materials);
+    expect(new Set(first.vault.data.materials.map((r) => (r as { id: string }).id)).size).toBe(3);
+    expect(first.vault.data.materials[2]).toMatchObject({ id: 'existing-id' });
+    expect((await get(key))[0]).not.toHaveProperty('id');
+    await importVaultBackup(first, 'merge');
+    await importVaultBackup(first, 'merge');
+    expect(await get(key)).toEqual(first.vault.data.materials);
+    await clear();
+    await importVaultBackup(first, 'replace');
+    expect(await get(key)).toEqual(first.vault.data.materials);
+  });
+
+  it('continues to reject incoming missing and duplicate IDs', async () => {
+    const backup = await exportVaultBackup('test');
+    backup.vault.data.materials = [{ type: 'image', name: 'invalid' }];
+    expect(() => validateVaultBackup(backup)).toThrow('编号');
+    backup.vault.data.materials = [{ id: 'same' }, { id: 'same' }];
+    await expect(importVaultBackup(backup)).rejects.toThrow('编号');
+    expect(await get(getMaterialsStorageKey(undefined))).toBeUndefined();
   });
 });

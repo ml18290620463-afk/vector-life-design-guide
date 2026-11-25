@@ -1,0 +1,305 @@
+此清单包含继承的工作区改动，不能作为 Phase 1 独占变更清单。
+ M .github/workflows/ci.yml
+ M .prettierignore
+ M App.tsx
+ M MODEL_HANDOFF.md
+ M PRIVACY.md
+ M README.md
+ M SECURITY.md
+ M components/AIVisibilityDialog.tsx
+ M components/AccountBoundary.test.tsx
+ M components/AccountBoundary.tsx
+ M components/AccountSyncStatus.tsx
+ M components/AppEntryGateScreens.tsx
+ M components/AppMainModuleScreens.tsx
+ M components/AppPageFrame.tsx
+ M components/ArchivePrinciplesView.test.tsx
+ M components/ArchivePrinciplesView.tsx
+ M components/CoverIceFlow.tsx
+ M components/CoverParticleArrow.tsx
+ M components/CoverScreen.brush.css
+ M components/CoverScreen.stories.tsx
+ M components/CoverScreen.tsx
+ M components/MasterLockCardChrome.tsx
+ M components/MasterLockUnlockForm.tsx
+ M components/Onboarding.test.tsx
+ M components/Onboarding.tsx
+ M components/PastEntryMedia.tsx
+ M components/PastSupplements.test.tsx
+ D components/PatternReviewDialog.css
+ D components/PatternReviewDialog.test.tsx
+ D components/PatternReviewDialog.tsx
+ M components/PrivateVisibilityIcon.tsx
+ M components/account.css
+ M components/cover/RibbonCurrent.tsx
+ M components/cover/RibbonFabric.tsx
+ M components/cover/cover.css
+ M components/onboarding/ProtectionStep.tsx
+ M design-preview/index.html
+ M design-preview/styles.css
+ M docs/aesthetic-audit-2026-10-25/README.md
+ M docs/aesthetic-audit-2026-10-25/detector.json
+ M docs/aesthetic-audit-2026-10-25/technical-audit.md
+ M docs/archive/roadmap-historical.md
+ M docs/billing-smoke-test.md
+ M docs/internal-optimization-2026-10-30.md
+ M docs/product-evaluation-acceptance-2026-10-19.md
+ M docs/product-evaluation-baseline-2026-10-19.md
+ M docs/testing/past-avatar-boundaries-2026-10-13.md
+ M docs/testing/vector-three-rounds-2026-11-13.md
+ M e2e/a11y.spec.ts
+ M e2e/app.spec.ts
+ M e2e/avatar-functional.spec.ts
+ M e2e/avatar-guidance.spec.ts
+ M e2e/avatar-memory-archive.spec.ts
+ M e2e/contextual-pattern-review.spec.ts
+ M e2e/data-backup-functional.spec.ts
+ M e2e/experience-layout.spec.ts
+ M e2e/future-functional.spec.ts
+ M e2e/future-session.spec.ts
+ M e2e/now-functional.spec.ts
+ M e2e/past-functional.spec.ts
+ M e2e/past-large-archive-stability.spec.ts
+ M e2e/seedHelpers.ts
+ M e2e/theme-v1.spec.ts
+ M evals/avatar/corpus.ts
+ M features/avatar/types.ts
+ M features/future/ActionFeedbackReading.tsx
+ M features/future/FutureDesignResults.tsx
+ M features/future/FuturePage.tsx
+ M features/future/GoalFeedbackFields.tsx
+ M features/future/future.css
+ M features/mobile/MobilePastTimelineEntry.test.tsx
+ M features/mobile/MobilePastTimelineEntry.tsx
+ M features/mobile/PastRepository.test.tsx
+ M features/mobile/PastRepository.tsx
+ M features/mobile/mobileLazyComponents.ts
+ M features/mobile/pastSearch.test.ts
+ M features/mobile/pastSearch.ts
+ M features/mobile/usePastRecordProcessing.test.ts
+ M features/now/NowFlow.test.tsx
+ M features/now/NowFlow.tsx
+ M features/now/api/avatar.ts
+ M features/now/api/avatarModel.ts
+ M features/now/avatarChatLazy.ts
+ M features/now/components/AvatarChatPage.test.tsx
+ M features/now/components/AvatarChatPage.tsx
+ M features/now/components/AvatarChatSurface.tsx
+ M features/now/components/AvatarMemoryConfirm.tsx
+ M features/now/components/AvatarMemoryDetail.test.tsx
+ M features/now/components/AvatarMemoryDetail.tsx
+ M features/now/components/AvatarMemoryLibrary.test.tsx
+ M features/now/components/AvatarMemoryLibrary.tsx
+ D features/now/components/AvatarMemoryTagManager.tsx
+ M features/now/components/AvatarRecordPanels.tsx
+ M features/now/components/AvatarReliabilityAssistant.tsx
+ M features/now/components/DesktopNowFrame.tsx
+ M features/now/components/MaterialPreview.tsx
+ M features/now/components/NowPage.tsx
+ M features/now/components/TagSelectPage.tsx
+ M features/now/components/avatarModeCopy.ts
+ M features/now/constants/tags.ts
+ M features/now/hooks/useAvatarMemoryCapture.test.tsx
+ M features/now/hooks/useAvatarMemoryCapture.ts
+ M features/now/nowSimulation.test.tsx
+ M features/now/state/avatarChatRules.ts
+ M features/now/state/avatarGuidanceContext.test.ts
+ M features/now/state/avatarGuidanceContext.ts
+ M features/now/state/avatarMemoryReferences.ts
+ M features/now/state/avatarReliabilityTasks.ts
+ M features/now/state/avatarReplyFormat.test.ts
+ M features/now/state/avatarReplyFormat.ts
+ M features/now/state/nowRules.test.ts
+ M features/now/state/nowRules.ts
+ M hooks/useAppEntryRouting.test.ts
+ M hooks/useAppEntryRouting.ts
+ M hooks/useAppMainNavigation.ts
+ M hooks/useDiaryCollections.ts
+ M hooks/useDiaryData.test.ts
+ M hooks/useDiaryData.ts
+ M hooks/useReadableEntries.ts
+ M hooks/useVaultAuthActions.ts
+ M index.css
+ M index.html
+ M index.tsx
+ M lib/appEntryRoutes.test.ts
+ M lib/appEntryRoutes.ts
+ M lib/previewMode.test.ts
+ M package.json
+ M playwright.config.ts
+ D public/vector-brush-arrow-ink-depth.png
+ D public/vector-brush-arrow-natural.png
+ D public/vector-brush-arrow-refined.png
+ D public/vector-brush-arrow-soft-join.png
+ D public/vector-brush-arrow-soft-start.png
+ D public/vector-brush-arrow.png
+ D public/vector-core-klein-orbit-circle.png
+ D public/vector-core-klein-orbit-line.png
+ D public/vector-core-klein-orbit-silver.png
+ D public/vector-core-klein-orbit.png
+ M render-wordmark-preview.mjs
+ M scripts/design/refine_arrow_material.py
+ M server.ts
+ M server/aiProviders.ts
+ M server/avatarChatRoutes.test.ts
+ M server/avatarChatRoutes.ts
+ M server/avatarFactExtraction.ts
+ M server/avatarGrowthRoutes.test.ts
+ M server/avatarGrowthRoutes.ts
+ M services/account/accountIsolation.test.ts
+ M services/account/auth.test.ts
+ M services/account/auth.ts
+ M services/account/cloud.ts
+ M services/account/recovery.test.ts
+ M services/account/recovery.ts
+ M services/account/snapshot.test.ts
+ M services/account/snapshot.ts
+ M services/account/sync.test.ts
+ M services/account/sync.ts
+ M services/account/tabLock.ts
+ M services/accountIdb.ts
+ M services/accountScope.ts
+ M services/aiPrivacy.test.ts
+ M services/aiPrivacy.ts
+ M services/appSettings.ts
+ D services/avatarCandidateExpiry.test.ts
+ M services/avatarDataLinkage.test.ts
+ M services/avatarEvidenceDialogue.test.ts
+ M services/avatarEvidenceDialogue.ts
+ M services/avatarEvidenceMetrics.test.ts
+ M services/avatarEvidenceMetrics.ts
+ M services/avatarExperienceProcessing.test.ts
+ M services/avatarExperienceProcessing.ts
+ M services/avatarGuidance.test.ts
+ M services/avatarGuidance.ts
+ M services/avatarGuidanceEvaluation.test.ts
+ M services/avatarGuidanceReliability.test.ts
+ M services/avatarGuidanceSources.ts
+ M services/avatarIntelligence.test.ts
+ M services/avatarIntelligence.ts
+ D services/avatarKnowledgeProjection.test.ts
+ D services/avatarKnowledgeProjection.ts
+ D services/avatarMemory.test.ts
+ D services/avatarMemory.ts
+ D services/avatarMemoryArchive.test.ts
+ D services/avatarMemoryArchive.ts
+ D services/avatarMemoryAtoms.ts
+ M services/avatarMemoryCandidates.ts
+ M services/avatarMemoryCategories.test.ts
+ M services/avatarMemoryCategories.ts
+ M services/avatarMemoryPolicy.test.ts
+ M services/avatarMemoryPolicy.ts
+ D services/avatarMemoryRelations.ts
+ D services/avatarMemoryScope.test.ts
+ D services/avatarMemorySessions.ts
+ D services/avatarMemoryShared.ts
+ D services/avatarMemoryUnderstandings.ts
+ M services/avatarMemoryVoice.test.ts
+ M services/avatarQueryPlan.test.ts
+ M services/avatarSourceEvidence.test.ts
+ M services/avatarSourceEvidence.ts
+ M services/diaryDataRead.ts
+ M services/diaryMigration.ts
+ M services/entryIntegrity.test.ts
+ M services/entryIntegrity.ts
+ M services/experienceFeedback.test.ts
+ M services/futurePrivacy.test.ts
+ M services/futureRepository.test.ts
+ M services/futureRepository.ts
+ M services/guidanceResults.test.ts
+ M services/guidanceResults.ts
+ M services/localSemanticIndex.ts
+ M services/pastProcessingCache.test.ts
+ M services/sourceDeletion.ts
+ M services/vaultBackup.ts
+ M services/vaultBackupFile.test.ts
+ M services/vaultBackupInspection.test.ts
+ M services/vaultBackupSummary.ts
+ M services/vaultTransaction.ts
+ M services/vaultWipe.ts
+ M stores/appStore.ts
+ M styles/design-tokens.css
+ M styles/design-tokens.json
+ M styles/entrance-theme.css
+ M styles/experiences.css
+ M styles/global-type.css
+ M styles/theme-v1.css
+ M types/models.ts
+ M vite.config.ts
+?? components/SilkWorkspace.tsx
+?? components/cover/SilkVideo.tsx
+?? components/cover/VectorWordmark.tsx
+?? components/silk-workspace.css
+?? design-sources/
+?? docs/current/
+?? docs/testing/avatar-phase1-evidence/
+?? docs/testing/avatar-phase1-test-migration.md
+?? e2e/ai-request-boundary.spec.ts
+?? e2e/avatar-upgrade.spec.ts
+?? e2e/first-run-bilingual.spec.ts
+?? evals/avatar/englishHoldout.test.ts
+?? evals/avatar/englishHoldout.ts
+?? features/future/FutureSectionTabs.tsx
+?? features/now/api/avatarEvidence.test.ts
+?? features/now/api/avatarGrowthPrivacy.test.ts
+?? features/now/api/avatarRequest.test.ts
+?? features/now/api/avatarRequest.ts
+?? features/now/components/AvatarChatMessage.test.tsx
+?? features/now/components/AvatarChatMessage.tsx
+?? features/now/components/AvatarReliabilityAssistant.test.tsx
+?? features/now/components/AvatarUpgradeBoundary.test.tsx
+?? features/now/components/AvatarUpgradeBoundary.tsx
+?? features/now/components/avatarLanguage.ts
+?? public/assets/vector-home/silk-final-poster.webp
+?? public/assets/vector-home/silk-final.mp4
+?? public/sw-cache-cleanup.js
+?? resource-budget.json
+?? scripts/resource-budget.mjs
+?? services/account/snapshotOntology.test.ts
+?? services/account/snapshotOntology.ts
+?? services/aiEntryAccess.ts
+?? services/aiPrivacyProtectedRead.test.ts
+?? services/avatarExperienceCandidates.ts
+?? services/avatarExperienceReceipt.ts
+?? services/avatarExtractionReceipt.ts
+?? services/avatarLegacyTypes.ts
+?? services/avatarOntologyArchive.test.ts
+?? services/avatarOntologyArchive.ts
+?? services/avatarOntologyBackup.test.ts
+?? services/avatarOntologyBackup.ts
+?? services/avatarOntologyBackupCheckpoint.test.ts
+?? services/avatarOntologyBackupCheckpoint.ts
+?? services/avatarOntologyCandidates.test.ts
+?? services/avatarOntologyCandidates.ts
+?? services/avatarOntologyConfirmation.ts
+?? services/avatarOntologyContext.test.ts
+?? services/avatarOntologyContext.ts
+?? services/avatarOntologyKey.ts
+?? services/avatarOntologyMigration.test.ts
+?? services/avatarOntologyMigration.ts
+?? services/avatarOntologyMigrationBackup.test.ts
+?? services/avatarOntologyMigrationCheckpoint.test.ts
+?? services/avatarOntologyMigrationCheckpoint.ts
+?? services/avatarOntologyMigrationConversion.ts
+?? services/avatarOntologySessionGuard.test.ts
+?? services/avatarOntologySessionGuard.ts
+?? services/avatarOntologySessions.test.ts
+?? services/avatarOntologySessions.ts
+?? services/avatarOntologySourceDeletion.test.ts
+?? services/avatarOntologySourceDeletion.ts
+?? services/avatarOntologyStore.test.ts
+?? services/avatarOntologyStore.ts
+?? services/avatarOntologyTransaction.test.ts
+?? services/avatarOntologyTransaction.ts
+?? services/avatarOntologyValidation.ts
+?? services/avatarRevisionSelection.test.ts
+?? services/avatarRevisionSelection.ts
+?? services/avatarStatementComparison.ts
+?? services/storageBoundary.test.ts
+?? services/vaultBackupEntries.ts
+?? services/vaultBackupNormalization.ts
+?? services/vaultBackupRecovery.ts
+?? services/vaultTransaction.test.ts
+?? services/vaultWipeAvatar.test.ts
+?? styles/silk-palette.css
+?? tests/

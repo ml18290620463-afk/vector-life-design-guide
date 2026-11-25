@@ -752,7 +752,7 @@ Goal: make the design system and product story sustainable.
       signature verify, mints token on
       `checkout.session.completed`, stashes it in an in-
       memory session→token Map with 30-min TTL); `POST
-  /api/checkout/claim-token` (single-shot lookup the
+/api/checkout/claim-token` (single-shot lookup the
       client polls after the post-Stripe redirect). 13 tests
       including signature forgery rejection, 8 happy + sad
       paths, raw-body integrity (the global JSON parser is
@@ -842,7 +842,7 @@ Goal: make the design system and product story sustainable.
       deterministic 17% savings on annual SKUs and the explicit
       USD suffix in formatted output. Stripe price ids stay
       `null` until Phase 5.2 creates them. - **Quota bridge** (`services/quotaService.ts +
-  tierFromLicense`): one-line bridge between the license
+tierFromLicense`): one-line bridge between the license
       token's `LicenseTier` and the paywall predicates'
       `UserTier`. Existing predicates already accept an optional
       `tier` parameter — Phase 5.4 wires the live license tier
@@ -869,7 +869,7 @@ Goal: make the design system and product story sustainable.
       plan, currency policy, wire format, install id, master
       keyring + rotation, verification flow, quota integration,
       dev minter, out-of-scope items for 5.2 / 5.3 / 5.4). - **Quality gates**: `npx tsc --noEmit` clean; `npm run lint
-  --max-warnings=0` clean; `npm run build` clean (PWA
+--max-warnings=0` clean; `npm run build` clean (PWA
       precache 51 entries / 3562 KiB); `npx vitest run`
       1249/1249 (157 test files).
 - [x] **§Phase 4.5 §E follow-up (L1)** — Settings → Memoirs picker
@@ -909,7 +909,7 @@ Goal: make the design system and product story sustainable.
       existing Viewer path picks up the entry. - **i18n**: 6 new keys per locale (zh + en) covering the
       section heading, subtitle, both row CTAs, both ARIA
       templates with `{name}` interpolation. - **Quality gates**: `npx tsc --noEmit` clean; `npm run lint
-  --max-warnings=0` clean (the App.tsx growth fits inside
+--max-warnings=0` clean (the App.tsx growth fits inside
       the budget after refactoring through `AppMemoirPanels`);
       `npm run build` clean (PWA precache 51 entries / 3547
       KiB); `npx vitest run` 1201/1201.
@@ -951,7 +951,7 @@ Goal: make the design system and product story sustainable.
       "Phase 4 §4.b-3 follow-ups (K1 + K2)" section that walks
       through the new modules, design decisions (why `qrcode-svg`
       over `qrcode`, why ECC level `M`, why no QR scanner in v1). - **Quality gates**: `npx tsc --noEmit` clean; `npm run lint
-  --max-warnings=0` clean; `npm run build` clean (PWA
+--max-warnings=0` clean; `npm run build` clean (PWA
       precache 51 entries / 3524 KiB); `npx vitest run`
       1196/1196.
 - [x] **§Phase 4.5 follow-ups (F1-F4)** — clears the four
@@ -1006,7 +1006,7 @@ Goal: make the design system and product story sustainable.
       inherit zh fallback (long-standing drift). - **Test infra unchanged**: re-uses the `fake-indexeddb`
       setup added in §4.b-3 so every IDB-backed cascade /
       history test gets a real IDB to talk to. - **Quality gates**: `npx tsc --noEmit` clean; `npm run
-  lint --max-warnings=0` clean; `npm run build` clean (PWA
+lint --max-warnings=0` clean; `npm run build` clean (PWA
       precache 3495 KiB); `npx vitest run` 1170/1170.
 - [x] **§Phase 4 §4.b-3 / Ed25519 signed backups** — closes the
       "checksum is not a signature" caveat from Phase 4.5 §E.
@@ -1027,7 +1027,7 @@ Goal: make the design system and product story sustainable.
       compatible (v1-v4 importers ignore them; v5 importers
       reading older payloads default to `signature.kind = 'unsigned'`). - **TOFU trust store** (`services/trustedDevices.ts`):
       IDB-backed list of `{ publicKey, fingerprint, label,
-  trustedAt }`. The wizard pre-checks the store on
+trustedAt }`. The wizard pre-checks the store on
       `loadFromText` so the preview pane can show "✓ trusted
       device" inline; unknown public keys route through the
       `verify-trust` phase before apply. - **Wizard state machine** (`hooks/useMigrationWizard.ts`):
@@ -1061,8 +1061,8 @@ Goal: make the design system and product story sustainable.
       so the keypair / trustedDevices stores have a real IDB to
       talk to in `happy-dom` (same memory backing, full IDB
       spec). - **Quality gates**: `npx tsc --noEmit` clean; `npm run lint
-  --max-warnings=0` clean; `npm run build` clean; `npx
-  vitest run` 1145/1145.
+--max-warnings=0` clean; `npm run build` clean; `npx
+vitest run` 1145/1145.
 - [x] **§Phase 4.5-E / Cross-device migration wizard** — 跨设备
       迁移. Three-day sprint that turns "carry your VECTOR vault
       to a new phone" from a 4-step Settings ritual into a single

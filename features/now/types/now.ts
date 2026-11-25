@@ -56,6 +56,7 @@ export interface ChatMessageSourceReference {
  */
 export interface ChatMessageModelAssistance {
   sourceCount: number;
+  manifest?: import('../../avatar/types').GuidanceRetrievalManifest;
   earliestSourceDate?: number;
   latestSourceDate?: number;
 }
@@ -86,4 +87,4 @@ export interface RecordPreviewPayload {
   principle_outcome?: 'helpful' | 'partial' | 'unhelpful';
 }
 
-export type NowRoute = 'now' | 'tags' | 'avatar-chat';
+export type NowRoute = 'now' | 'tags' | 'avatar-chat' | 'avatar-settings';

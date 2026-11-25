@@ -12,9 +12,10 @@ it('tracks processing by fingerprint and invalidates the cache after external st
   expect(markPastRecordProcessed('one', 'first')).toBe(true);
   expect(wasPastRecordProcessed('one', 'first')).toBe(true);
   expect(wasPastRecordProcessed('one', 'second')).toBe(false);
-  localStorage.setItem(PAST_PROCESSING_KEY, JSON.stringify([
-    { id: 'two', fingerprint: 'second', version: 1 },
-  ]));
+  localStorage.setItem(
+    PAST_PROCESSING_KEY,
+    JSON.stringify([{ id: 'two', fingerprint: 'second', version: 1 }]),
+  );
   expect(wasPastRecordProcessed('one', 'first')).toBe(false);
   expect(wasPastRecordProcessed('two', 'second')).toBe(true);
 });

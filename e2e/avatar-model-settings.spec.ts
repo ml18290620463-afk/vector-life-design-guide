@@ -10,20 +10,56 @@ window.__vite_plugin_react_preamble_installed__=true;
 const {default:React}=await import('/node_modules/.vite/deps/react.js');
 const {default:ReactDOM}=await import('/node_modules/.vite/deps/react-dom_client.js');
 const {AvatarChatPage}=await import('/features/now/components/AvatarChatPage.tsx');
+const {AvatarDataModelCenter}=await import('/features/now/components/AvatarDataModelCenter.tsx');
 const {MobileShell}=await import('/features/mobile/MobileShell.tsx');
+const {set}=await import('/node_modules/.vite/deps/idb-keyval.js');
+const {DiaryStorageKeys}=await import('/services/diaryStorage.ts');
+const fixtureEntries=[{id:'entry-1',title:'今晚的安排',content:'今晚先做最重要的一件事',createdAt:Date.now(),updatedAt:Date.now(),aiVisibility:'allowed',tags:[]}];
+const fixturePrinciples=[{id:'p1',text:'重要选择先留出思考时间',year:2026,createdAt:1,showOnHome:false,aiVisibility:'allowed'},{id:'p2',text:'今晚先做最重要的一件事',year:2026,createdAt:2,showOnHome:false,aiVisibility:'allowed'}];
+const fixtureActions=[{id:'a1',title:'今晚留出十分钟复盘',status:'active',createdAt:1}];
+await set(DiaryStorageKeys.entries,fixtureEntries);
+await set(DiaryStorageKeys.principles,fixturePrinciples);
+await set(DiaryStorageKeys.actions,fixtureActions);
 const noop=()=>{};
-ReactDOM.createRoot(document.getElementById('root')).render(
+const root=ReactDOM.createRoot(document.getElementById('root'));
+const renderCenter=()=>root.render(React.createElement(AvatarDataModelCenter,{draft:{text:'',materials:[],mood_tags:[],event_tags:[],record_time:'2026-09-15',display_time:'2026年9月15日',updated_at:'2026-09-15'},onBack:renderChat,onOpenDraft:noop,showToast:noop}));
+const renderChat=()=>root.render(
 React.createElement(MobileShell,{activeTab:'avatar',language:'zh',onTabChange:noop},
 React.createElement('div',{className:'now-flow--mobile-shell'},
 React.createElement(AvatarChatPage,{
  draft:{text:'',materials:[],mood_tags:[],event_tags:[],record_time:'2026-09-15',display_time:'2026年9月15日',updated_at:'2026-09-15'},
- setDraft:noop,pastEntries:[],principles:[{id:'p1',text:'重要选择先留出思考时间',year:2026,createdAt:1,showOnHome:false}],
- actions:[{id:'a1',title:'今晚留出十分钟复盘',status:'active',createdAt:1}],
- sending:false,mobileShell:true,onBack:noop,onRouteChange:noop,onSend:async()=>true,showToast:noop,
+ setDraft:noop,pastEntries:fixtureEntries,principles:fixturePrinciples,
+ actions:fixtureActions,
+ sending:false,mobileShell:true,onBack:noop,onRouteChange:(route)=>{if(route==='avatar-settings')renderCenter()},onSend:async()=>true,showToast:noop,
  onNavigateModule:(module)=>{document.body.dataset.destination=module},
  launchContext:{mode:'general',source:'global'}
 }))));
+renderChat();
 </script></body></html>`;
+
+test('source review excludes unchecked material before the privacy-checked model request', async ({ page }) => {
+  await page.route('**/__avatar-spec', (route) =>
+    route.fulfill({ contentType: 'text/html', body: harness }),
+  );
+  let requestBody: Record<string, unknown> | undefined;
+  await page.route('**/api/v1/avatar/chat', (route) => {
+    requestBody = route.request().postDataJSON();
+    return route.fulfill({ json: { reply: '先留出思考时间，再安排今晚的重点。' } });
+  });
+  await page.goto('/__avatar-spec');
+  await page.getByLabel('对话内容', { exact: true }).fill('今晚如何安排重要选择？');
+  await page.getByText('本次携带资料快检').click();
+  const excluded = page.getByLabel(/今晚先做最重要的一件事/);
+  const retained = page.getByLabel(/重要选择先留出思考时间/);
+  await expect(excluded).toBeChecked();
+  await expect(retained).toBeChecked();
+  await excluded.uncheck();
+  await page.getByRole('button', { name: '确认资料并发送' }).click();
+  await expect.poll(() => requestBody).toBeTruthy();
+  const outbound = JSON.stringify(requestBody);
+  expect(outbound).not.toContain('今晚先做最重要的一件事');
+  expect(outbound).toContain('重要选择先留出思考时间');
+});
 
 test('user chooses a model in the mobile chat settings', async ({ page }, info) => {
   await page.setViewportSize({ width: 393, height: 852 });
@@ -35,9 +71,10 @@ test('user chooses a model in the mobile chat settings', async ({ page }, info) 
     route.fulfill({ json: { models: ['gpt-4.1', 'deepseek-chat'] } }),
   );
   await page.goto('/__avatar-spec');
-  await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await page.getByRole('button', { name: '打开数据与模型设置', exact: true }).click();
   await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: '高级设置（可选）' }).click();
+  await page.getByRole('button', { name: '配置模型' }).click();
+    await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByLabel('API Key', { exact: true }).fill('test-placeholder');
   await page.getByLabel('模型', { exact: true }).selectOption('gpt-4.1');
@@ -46,8 +83,8 @@ test('user chooses a model in the mobile chat settings', async ({ page }, info) 
   await page.getByRole('button', { name: '验证并保存' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
-  await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
   await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '配置模型' }).click();
   await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await expect(page.getByLabel('模型', { exact: true })).toHaveValue('gpt-4.1');
   await page.keyboard.press('Escape');
@@ -63,8 +100,9 @@ test('invalid model settings are highlighted inline', async ({ page }) => {
     route.fulfill({ json: { models: ['gpt-4.1', 'deepseek-chat'] } }),
   );
   await page.goto('/__avatar-spec');
-  await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await page.getByRole('button', { name: '打开数据与模型设置', exact: true }).click();
   await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '配置模型' }).click();
   await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await page.getByRole('button', { name: '验证并保存' }).click();
   await expect(page.getByText('请填写 API Key。')).toBeVisible();
@@ -87,8 +125,9 @@ test('custom model input keeps the provider and key on a small screen', async ({
     route.fulfill({ json: { models: ['gpt-4.1', 'deepseek-chat'] } }),
   );
   await page.goto('/__avatar-spec');
-  await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await page.getByRole('button', { name: '打开数据与模型设置', exact: true }).click();
   await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '配置模型' }).click();
   await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await page.getByLabel('服务商', { exact: true }).selectOption('1');
   await page.getByLabel('API Key', { exact: true }).fill('test-deepseek-key');
@@ -107,8 +146,8 @@ test('custom model input keeps the provider and key on a small screen', async ({
     apiKey: 'test-deepseek-key',
     model: 'my-account-model',
   });
-  await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
   await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '配置模型' }).click();
   await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await expect(page.getByLabel('模型', { exact: true })).toHaveValue('my-account-model');
   await expect(page.getByLabel('API Key', { exact: true })).toHaveValue('test-deepseek-key');
@@ -141,9 +180,10 @@ for (const width of [375, 768, 1440]) {
       true,
     );
     await page.screenshot({ path: info.outputPath(`archive-${width}.png`) });
-    await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+    await page.getByRole('button', { name: '打开数据与模型设置', exact: true }).click();
     await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: '高级设置（可选）' }).click();
+    await page.getByRole('button', { name: '配置模型' }).click();
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     const box = (await page.getByRole('dialog').boundingBox())!;
     if (width < 600) expect(Math.round(box.y + box.height)).toBe(900);
@@ -177,7 +217,7 @@ for (const [width, height] of [
     expect(nav.y + nav.height).toBeLessThanOrEqual(height + 1);
     expect(input.y + input.height).toBeLessThanOrEqual(nav.y);
     expect(input.width).toBeGreaterThan(100);
-    const settings = page.getByRole('button', { name: '打开分身设置', exact: true });
+    const settings = page.getByRole('button', { name: '打开数据与模型设置', exact: true });
     await expect(settings.locator('span')).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
@@ -190,7 +230,8 @@ for (const [width, height] of [
     const card = (await cards.last().boundingBox())!;
     expect(card.y + card.height).toBeLessThanOrEqual(nav.y + 1);
     await settings.click();
-    await page.getByRole('button', { name: '高级设置（可选）' }).click();
+    await page.getByRole('button', { name: '配置模型' }).click();
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByLabel('API Key', { exact: true }).fill('mobile-layout-placeholder');
     await page.getByRole('button', { name: '验证并保存', exact: true }).scrollIntoViewIfNeeded();
@@ -198,6 +239,7 @@ for (const [width, height] of [
       true,
     );
     await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '返回分身' }).click();
     await page.getByRole('button', { name: '聊天', exact: true }).click();
     await composer.fill('输入时保持可见');
     await page.setViewportSize({ width, height: Math.max(300, height - 260) });
@@ -250,9 +292,10 @@ for (const failure of modelFailureCases) {
     );
     await page.route('**/api/v1/avatar/model/test', (route) => route.fulfill(failure.response));
     await page.goto('/__avatar-spec');
-    await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+    await page.getByRole('button', { name: '打开数据与模型设置', exact: true }).click();
     await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: '高级设置（可选）' }).click();
+    await page.getByRole('button', { name: '配置模型' }).click();
+  await page.getByRole('button', { name: '高级设置（可选）' }).click();
     await page.getByLabel('API Key', { exact: true }).fill('still-here-key');
     await page.getByLabel('模型', { exact: true }).selectOption('gpt-4.1');
     await page.getByRole('button', { name: '验证并保存', exact: true }).click();
@@ -289,8 +332,9 @@ test('模型验证网络失败不会清空已填写内容', async ({ page }) => 
   );
   await page.route('**/api/v1/avatar/model/test', (route) => route.abort('failed'));
   await page.goto('/__avatar-spec');
-  await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
+  await page.getByRole('button', { name: '打开数据与模型设置', exact: true }).click();
   await expect(page.getByLabel('API Key', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '配置模型' }).click();
   await page.getByRole('button', { name: '高级设置（可选）' }).click();
   await page.getByLabel('API Key', { exact: true }).fill('network-draft-key');
   await page.getByRole('button', { name: '验证并保存', exact: true }).click();

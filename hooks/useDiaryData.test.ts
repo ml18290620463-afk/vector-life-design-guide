@@ -7,7 +7,10 @@ import { SecurityService } from '../services/securityService';
 import * as idb from 'idb-keyval';
 import { DiaryStorageKeys, getDiaryStorageKeys } from '../services/diaryStorage';
 import { getSampleEntries } from '../services/sampleEntries';
-import { readAvatarUnderstandings, writeAvatarUnderstanding } from '../services/avatarMemory';
+import { readAvatarOntology } from '../services/avatarOntologyStore';
+import { AVATAR_ONTOLOGY_KEY } from '../services/avatarOntologyKey';
+import { AVATAR_V1_KEYS } from '../services/avatarLegacyTypes';
+import { cognition, evidenceGraph } from '../tests/fixtures/avatarOntology';
 
 // Mock idb-keyval
 vi.mock('idb-keyval', async (importOriginal) => {
@@ -33,17 +36,18 @@ describe('useDiaryData', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
   });
 
-  it('should load mock data if no storage data exists', async () => {
+  it('starts empty without seeding records when no storage exists', async () => {
     const { result } = renderHook(() => useDiaryData(userId, 'zh'));
 
     // Wait for useEffect to finish
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.loading).toBe(false);
-    expect(result.current.entries.length).toBeGreaterThan(0);
+    expect(result.current.entries).toEqual([]);
   });
 
   it('should add an entry (and prune sample reflections — Phase 4 §4.a-1)', async () => {
+    await idb.set(getDiaryStorageKeys(userId).entries, getSampleEntries('zh'));
     const { result } = renderHook(() => useDiaryData(userId));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -89,10 +93,11 @@ describe('useDiaryData', () => {
       });
     });
 
-    expect(readAvatarUnderstandings()).toEqual([]);
+    expect(await idb.get(AVATAR_ONTOLOGY_KEY)).toBeUndefined();
   });
 
   it('keeps samples when the entry being added is itself a sample', async () => {
+    await idb.set(getDiaryStorageKeys(userId).entries, getSampleEntries('zh'));
     // Defensive: a future "send sample to a friend" path or an
     // accidental import of a sample backup must not trigger the
     // prune. Adding an isSample entry leaves the existing samples
@@ -147,6 +152,7 @@ describe('useDiaryData', () => {
   });
 
   it('rejects changing recorded content', async () => {
+    await idb.set(getDiaryStorageKeys(userId).entries, getSampleEntries('zh'));
     const { result } = renderHook(() => useDiaryData(userId));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -167,6 +173,7 @@ describe('useDiaryData', () => {
   });
 
   it('should delete an entry', async () => {
+    await idb.set(getDiaryStorageKeys(userId).entries, getSampleEntries('zh'));
     const { result } = renderHook(() => useDiaryData(userId));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -198,17 +205,14 @@ describe('useDiaryData', () => {
   });
 
   it('cascades record deletion to orphaned patterns, derived principles, and links', async () => {
+    await idb.set(getDiaryStorageKeys(userId).entries, getSampleEntries('zh'));
     const { result } = renderHook(() => useDiaryData(userId));
     await waitFor(() => expect(result.current.loading).toBe(false));
     const sourceEntryId = result.current.entries[0].id;
-    writeAvatarUnderstanding({
-      id: 'pattern-from-entry',
-      statement: '由该记录提取的模式',
-      status: 'confirmed',
-      sourceEntryIds: [sourceEntryId],
-      createdAt: Date.now(),
-      summaryKind: 'past-pattern',
-    });
+    await idb.set(AVATAR_ONTOLOGY_KEY, evidenceGraph(
+      [cognition({ id: 'pattern-from-entry', statement: '由该记录提取的模式', status: 'candidate', confirmedAt: undefined })],
+      [result.current.entries[0]],
+    ));
 
     await act(async () => {
       await result.current.addPrinciple(
@@ -226,7 +230,7 @@ describe('useDiaryData', () => {
       await result.current.deleteEntry(sourceEntryId);
     });
 
-    expect(readAvatarUnderstandings()).toEqual([]);
+    expect((await readAvatarOntology()).objects).toEqual([]);
     expect(result.current.principles.map((principle) => principle.text)).toEqual(['手写原则']);
     expect(result.current.patternPrincipleLinks).toEqual([]);
   });
@@ -254,17 +258,14 @@ describe('useDiaryData', () => {
   });
 
   it('retains patterns, principles, and links when requested during record deletion', async () => {
+    await idb.set(getDiaryStorageKeys(userId).entries, getSampleEntries('zh'));
     const { result } = renderHook(() => useDiaryData(userId));
     await waitFor(() => expect(result.current.loading).toBe(false));
     const sourceEntryId = result.current.entries[0].id;
-    writeAvatarUnderstanding({
-      id: 'retained-pattern',
-      statement: '需要继续保留的模式',
-      status: 'confirmed',
-      sourceEntryIds: [sourceEntryId],
-      createdAt: Date.now(),
-      summaryKind: 'past-pattern',
-    });
+    await idb.set(AVATAR_ONTOLOGY_KEY, evidenceGraph(
+      [cognition({ id: 'retained-pattern', statement: '需要继续保留的模式', status: 'candidate', confirmedAt: undefined })],
+      [result.current.entries[0]],
+    ));
 
     await act(async () => {
       await result.current.addPrinciple(
@@ -282,11 +283,11 @@ describe('useDiaryData', () => {
     });
 
     expect(result.current.entries.some((entry) => entry.id === sourceEntryId)).toBe(false);
-    expect(readAvatarUnderstandings()).toEqual([
+    expect((await readAvatarOntology()).objects).toEqual([
       expect.objectContaining({
         id: 'retained-pattern',
-        sourceEntryIds: [],
-        retainedAfterSourceDeletion: true,
+        status: 'retained_after_source_delete',
+        privacy: expect.objectContaining({ aiVisible: false, traceabilityDegraded: true }),
       }),
     ]);
     expect(result.current.principles).toEqual([
@@ -439,13 +440,13 @@ describe('useDiaryData', () => {
   it('keeps legacy knowledge without interpreting missing sources as consent to delete', async () => {
     const keys = getDiaryStorageKeys(userId);
     localStorage.setItem(keys.initializedFlag, 'true');
-    writeAvatarUnderstanding({
+    localStorage.setItem(AVATAR_V1_KEYS.understandings, JSON.stringify([{
       id: 'legacy-pattern',
       statement: '已失去来源的模式',
       status: 'confirmed',
       sourceEntryIds: ['deleted-entry'],
       createdAt: 1,
-    });
+    }]));
     await idb.set(keys.entries, []);
     await idb.set(keys.principles, [
       {
@@ -463,7 +464,8 @@ describe('useDiaryData', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(readAvatarUnderstandings()).toEqual([expect.objectContaining({ id: 'legacy-pattern' })]);
+    expect(JSON.parse(localStorage.getItem(AVATAR_V1_KEYS.understandings)!)).toEqual([expect.objectContaining({ id: 'legacy-pattern' })]);
+    expect(await idb.get(AVATAR_ONTOLOGY_KEY)).toBeUndefined();
     expect(result.current.principles).toEqual([
       expect.objectContaining({ id: 'legacy-principle' }),
     ]);
@@ -482,11 +484,26 @@ describe('useDiaryData', () => {
     expect(result.current.containers.length).toBe(1);
     expect(result.current.containers[0].name).toBe('New Category');
 
+    await waitFor(async () =>
+      expect(await idb.get(getDiaryStorageKeys(userId).containers)).toEqual(
+        result.current.containers,
+      ),
+    );
     const c = result.current.containers[0];
     await act(async () => {
       await result.current.deleteContainer(c.id);
     });
     expect(result.current.containers.length).toBe(0);
+    await waitFor(async () =>
+      expect(await idb.get(getDiaryStorageKeys(userId).containers)).toEqual([]),
+    );
+    act(() => {
+      result.current.addContainer('One');
+      result.current.addContainer('Two');
+    });
+    await waitFor(async () =>
+      expect(await idb.get(getDiaryStorageKeys(userId).containers)).toHaveLength(2),
+    );
   });
 
   it('should handle passwords', async () => {
@@ -513,6 +530,7 @@ describe('useDiaryData', () => {
   });
 
   it('should handle archive/unarchive', async () => {
+    await idb.set(getDiaryStorageKeys(userId).entries, getSampleEntries('zh'));
     const { result } = renderHook(() => useDiaryData(userId));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -549,18 +567,14 @@ describe('useDiaryData', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // Empty IDB now seeds the two sample reflections from
-    // `services/sampleEntries.ts` instead of the old MOCK_ENTRIES.
-    // The first entry is the newest sample in the descending UI.
-    const expectedFirstTitle = getSampleEntries('en')[0].title;
-    expect(result.current.entries[0]?.title).toBe(expectedFirstTitle);
+    expect(result.current.entries).toEqual([]);
 
     await act(async () => {
       resolveFirstGet?.(undefined);
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
-    expect(result.current.entries[0]?.title).toBe(expectedFirstTitle);
+    expect(result.current.entries).toEqual([]);
   });
 
   it('should hydrate persisted vault metadata from storage', async () => {
@@ -687,5 +701,6 @@ describe('useDiaryData', () => {
     const names = result.current.materials.map((m) => m.name);
     expect(names).toContain('a.png');
     expect(names).toContain('b.png');
+    expect(await idb.get(getDiaryStorageKeys(userId).materials)).toEqual(result.current.materials);
   });
 });

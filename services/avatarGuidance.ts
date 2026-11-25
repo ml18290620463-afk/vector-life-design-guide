@@ -1,4 +1,4 @@
-import type { AvatarAtomicMemory } from '../features/avatar/types';
+import { fillGuidanceSlots, type GuidanceSelectionOptions } from './avatarGuidancePolicy';
 export { buildGuidanceSources } from './avatarGuidanceSources';
 
 export type GuidanceTemporalStatus =
@@ -8,6 +8,9 @@ export type GuidanceTemporalStatus =
   | 'time_limited';
 
 export interface GuidanceSource {
+  domain?: 'about_me' | 'my_understanding';
+  tags?: string[];
+  guardrail?: import('../features/avatar/types').PersonalGuardrail;
   aiPrivacyToken?: string;
   id: string;
   kind: '模式' | '原则' | '行动' | '愿景' | '目标' | '偏好' | '边界' | '驱动' | '触点' | '背景';
@@ -23,12 +26,14 @@ export interface GuidanceSource {
   evidence?: {
     text: string;
     occurredAt: number;
+    /** Local-only stable link, stripped before transmission. */
+    entryId?: string;
     searchText?: string;
     /** Keep dialogue self-reports distinct from recorded experiences. */
     source?: 'entry' | 'message';
   }[];
   results?: { text: string; occurredOn: string; status: string }[];
-  nature?: AvatarAtomicMemory['nature'];
+  nature?: 'explicit' | 'inferred' | 'state' | 'experience' | 'commitment';
   validFrom?: number;
   validTo?: number;
   avatarName?: string;
@@ -37,7 +42,7 @@ export interface GuidanceSource {
   temporalStatus?: GuidanceTemporalStatus;
 }
 
-export interface GuidanceRetrievalOptions {
+export interface GuidanceRetrievalOptions extends GuidanceSelectionOptions {
   range?: { start: number; end: number };
   preferredSourceIds?: string[];
 }
@@ -77,7 +82,7 @@ const queryBigrams = (text: string) => {
  * Keep the context sent to the avatar small, while showing the part of a long record
  * that actually matched the current question instead of always its opening paragraph.
  */
-const focusedExcerpt = (text: string, question: string, max = 700) => {
+export const focusedExcerpt = (text: string, question: string, max = 700) => {
   const clean = text.replace(/\s+/g, ' ').trim();
   if (clean.length <= max) return clean;
   // `\w` is ASCII-oriented in JavaScript, so using it here accidentally drops
@@ -94,7 +99,7 @@ const focusedExcerpt = (text: string, question: string, max = 700) => {
   }
   if (bestIndex < 0) return clean.slice(0, max);
   const start = Math.max(0, bestIndex - Math.floor(max * 0.34));
-  const end = Math.min(clean.length, start + max);
+  const end = Math.min(clean.length, start + max - 2);
   return `${start > 0 ? '…' : ''}${clean.slice(start, end)}${end < clean.length ? '…' : ''}`;
 };
 
@@ -116,7 +121,8 @@ const naturalSourceLine = (source: GuidanceSource) => {
   if (source.nature === 'inferred')
     return `这是一条经你确认、仍需验证的理解，不一定适用于这次：${text}`;
   const isDialogueOnly =
-    (source.evidence?.length ?? 0) > 0 && source.evidence!.every((item) => item.source === 'message');
+    (source.evidence?.length ?? 0) > 0 &&
+    source.evidence!.every((item) => item.source === 'message');
   if (isDialogueOnly) return `你在一次对话中提到过：${text}`;
   if (source.nature === 'state') return `你曾记录过这样的状态，不能据此判断你现在的感受：${text}`;
   if (source.nature === 'commitment') return `你曾表达过这个计划，是否完成还需要核实：${text}`;
@@ -186,7 +192,12 @@ type AvatarConversationIntent =
 
 export const detectAvatarConversationIntent = (question: string): AvatarConversationIntent => {
   const compact = stripModalParticles(question);
-  if (/^(?:(?:你好|您好|嗨|哈喽|hello|hi))?(你叫什?么名字|你叫什么|你是谁|你叫啥|你有名字)$/i.test(compact)) return 'identity';
+  if (
+    /^(?:(?:你好|您好|嗨|哈喽|hello|hi))?(你叫什?么名字|你叫什么|你是谁|你叫啥|你有名字)$/i.test(
+      compact,
+    )
+  )
+    return 'identity';
   if (extractAvatarName(question)) return 'name_avatar';
   if (
     /^(你能做什么|你可以做什么|你会做什么|你有什么用|你能帮我什么|你可以帮我什么|你能陪我做什么|你能怎么帮我|你能干什么|你可以干什么|你会干什么|你是干什么的|你能干嘛|你可以干嘛|你会干嘛)$/.test(
@@ -357,23 +368,6 @@ const naturalClose = (selected: GuidanceSource[]) => {
   return '你可以继续说；值得保留的内容，需要你确认保存后才会成为正式记忆。';
 };
 
-/** Follow explicit links using identities that do not change when an object ends. */
-export function expandGuidanceAssociations(selected: GuidanceSource[], sources: GuidanceSource[]) {
-  for (let pass = 0; pass < 3 && selected.length < 4; pass++)
-    for (const source of sources) {
-      if (selected.length >= 4) break;
-      if (
-        !selected.some((item) => keyOf(item) === keyOf(source)) &&
-        selected.some(
-          (item) =>
-            item.relatedKeys?.includes(keyOf(source)) || source.relatedKeys?.includes(keyOf(item)),
-        )
-      )
-        selected.push(source);
-    }
-  return selected;
-}
-
 export function buildGroundedGuidance(
   question: string,
   sources: GuidanceSource[],
@@ -444,30 +438,32 @@ export function buildGroundedGuidance(
     }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
-  const selected: GuidanceSource[] = [];
-  const isChangeComparison = /(?:变化|相比|对比|前后)/.test(retrievalQuestion);
-  for (const { source } of ranked) {
-    if (!kinds && selected.length) {
+  // Associations influence ranking but never bypass relevance or scene quotas.
+  const seeds = ranked.filter(({ score }) => score > 0).map(({ source }) => keyOf(source));
+  const associatedKeys = new Set(seeds);
+  for (let depth = 0; depth < sources.length; depth += 1) {
+    const before = associatedKeys.size;
+    for (const source of sources) {
       if (
-        (selected[0].kind === '背景' && source.kind === '背景') ||
-        (isChangeComparison &&
-          selected[0].kind === source.kind &&
-          selected[0].temporalStatus !== source.temporalStatus)
-      )
-        selected.push(source);
-      break;
+        associatedKeys.has(keyOf(source)) ||
+        source.relatedKeys?.some((key) => associatedKeys.has(key))
+      ) {
+        associatedKeys.add(keyOf(source));
+        source.relatedKeys?.forEach((key) => associatedKeys.add(key));
+      }
     }
-    const duplicateKind = selected.some((item) => item.kind === source.kind);
-    // A period or semantic query may have more than one independent diary record.
-    // Keep two background records instead of presenting one record as the whole story.
-    if (
-      !duplicateKind ||
-      (source.kind === '背景' && selected.filter((item) => item.kind === '背景').length < 2)
-    )
-      selected.push(source);
-    if (selected.length === 2) break;
+    if (associatedKeys.size === before) break;
   }
-  expandGuidanceAssociations(selected, sources);
+  const candidates = sources
+    .map((source) => ({
+      source,
+      score: Math.max(
+        1 - Math.exp(-(ranked.find((item) => item.source === source)?.score ?? 0) * 0.7),
+        associatedKeys.has(keyOf(source)) ? 0.5 : 0,
+      ),
+    }))
+    .sort((a, b) => b.score - a.score);
+  const { sources: selected } = fillGuidanceSlots(candidates, retrievalQuestion, options);
   if (!selected.length && historicalMaterialWasExcluded && asksAboutCurrentSelf) {
     return {
       sources: [],

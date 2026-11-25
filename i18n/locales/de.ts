@@ -143,7 +143,6 @@ export const de = {
   setTimeLock: 'ENTSCHLÜSSELUNGSZEIT FESTLEGEN (ZEITKAPSEL)',
   immediate: 'SOFORT',
   oneMin: '1 MIN SPÄTER (TEST)',
-  oneDay: '24 STUNDEN SPÄTER',
   customDate: 'BENUTZERDEFINIERTES DATUM',
   career: 'KARRIERE',
   careerDesc: 'Erfolge, Position, Wettbewerbsfähigkeit',

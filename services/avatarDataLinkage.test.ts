@@ -1,7 +1,11 @@
 import { beforeEach, expect, it } from 'vitest';
-import { clear } from 'idb-keyval';
+import { clear, get } from 'idb-keyval';
+import { useAppStore } from '../stores/appStore';
+import type { DiaryEntry } from '../types';
+import { cognition, evidenceGraph } from '../tests/fixtures/avatarOntology';
+import { AVATAR_ONTOLOGY_KEY } from './avatarOntologyKey';
+import { decodeAvatarMigrationCheckpoint } from './avatarOntologyMigrationCheckpoint';
 import { buildGuidanceSources } from './avatarGuidance';
-import { projectGoalToAvatarMemory, resolveAvatarKnowledge } from './avatarKnowledgeProjection';
 import {
   saveGoal,
   saveVision,
@@ -10,20 +14,33 @@ import {
   setGoalStatus,
 } from './futureRepository';
 import {
-  readAvatarAtomicMemories,
-  readAvatarUnderstandings,
-  writeAvatarUnderstanding,
-  invalidateAvatarEvidence,
-  pruneAvatarUnderstandingsByEntryIds,
-} from './avatarMemory';
-import { exportVaultBackup, importVaultBackup, validateVaultBackup } from './vaultBackup';
+  exportVaultBackup,
+  exportVaultBackupFile,
+  importVaultBackup,
+  validateVaultBackup,
+} from './vaultBackup';
+import { decryptVaultBackupFile, isEncryptedVaultBackup } from './vaultBackupFile';
+import { deleteOntologySources } from './avatarOntologySourceDeletion';
 
 beforeEach(async () => {
   await clear();
   localStorage.clear();
+  useAppStore.setState({ masterPassword: null, isUnlocked: true });
 });
 
-it('uses current sources after edits, goal completion, archiving, abandoning and unlinking', async () => {
+const entries: DiaryEntry[] = [1, 2].map((n) => ({
+  id: `entry-${n}`,
+  title: '记录',
+  content: `独处之后更容易思考${n}`,
+  createdAt: n * 86400000,
+  tags: ['工作'],
+  isLocked: false,
+  aiVisibility: 'allowed',
+}));
+
+it('reads authoritative Future lifecycle without creating cognitive copies', async () => {
+  const graph = evidenceGraph([], []);
+  const original = structuredClone(graph);
   const vision = await saveVision({ aiVisibility: 'allowed', text: '自然', status: 'active' });
   const goal = await saveGoal({
     aiVisibility: 'allowed',
@@ -39,53 +56,21 @@ it('uses current sources after edits, goal completion, archiving, abandoning and
     status: 'pending',
     goalId: goal.id,
   });
-  const stale = projectGoalToAvatarMemory(goal);
-  expect(readAvatarAtomicMemories()).toEqual([]);
   let snapshot = await readFutureSnapshot();
-  let view = resolveAvatarKnowledge({
-    memories: stale,
-    principles: [],
-    actions: snapshot.actions,
-    future: snapshot.state,
-  });
-  expect(view.relations).toHaveLength(2);
-  expect(
+  const sources = () =>
     buildGuidanceSources({
       entries: [],
-      patterns: [],
       principles: [],
       actions: snapshot.actions,
       future: snapshot.state,
-      avatarMemories: view.memories,
-    }).filter((s) => s.text.includes('登山')),
-  ).toHaveLength(1);
-  // A goal cannot be closed while it still has an unfinished action.  This is
-  // the same closure order the future workspace presents to a user: first
-  // record the action outcome, then close the goal and archive its vision.
+      graph,
+    });
+  expect(sources().filter((s) => s.text.includes('登山'))).toHaveLength(1);
   await saveFutureAction({ ...action, status: 'abandoned' });
   await setGoalStatus(goal.id, 'completed', goal.revision);
   await saveVision({ ...vision, status: 'archived' });
   snapshot = await readFutureSnapshot();
-  view = resolveAvatarKnowledge({
-    memories: stale,
-    principles: [],
-    actions: snapshot.actions,
-    future: snapshot.state,
-    relations: view.relations,
-  });
-  expect(view.memories).toHaveLength(1);
-  expect(view.memories[0].statement).toContain('已完成');
-  expect(view.relations).toEqual([]);
-  expect(
-    buildGuidanceSources({
-      entries: [],
-      patterns: [],
-      principles: [],
-      actions: snapshot.actions,
-      future: snapshot.state,
-      avatarMemories: view.memories,
-    }),
-  ).toEqual(
+  expect(sources()).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         kind: '背景',
@@ -99,39 +84,96 @@ it('uses current sources after edits, goal completion, archiving, abandoning and
       }),
     ]),
   );
-  expect(
-    resolveAvatarKnowledge({
-      memories: stale,
-      principles: [],
-      actions: [],
-      future: { ...snapshot.state, goals: [] },
-    }).memories,
-  ).toEqual([]);
+  snapshot = { ...snapshot, actions: [], state: { ...snapshot.state, goals: [] } };
+  expect(sources().some((s) => s.text.includes('登山'))).toBe(false);
+  expect(graph).toEqual(original);
+  expect(await get(AVATAR_ONTOLOGY_KEY)).toBeUndefined();
 });
 
-it('invalidates interpretations when their evidence changes, requiring confirmation again', () => {
-  writeAvatarUnderstanding({
-    id: 'p',
-    statement: '习惯推迟',
-    status: 'confirmed',
-    sourceEntryIds: ['entry'],
-    createdAt: 1,
-    confirmedAt: 2,
-  });
-  invalidateAvatarEvidence('entry');
-  expect(readAvatarUnderstandings()[0]).toMatchObject({ status: 'pending' });
-  expect(readAvatarUnderstandings()[0].confirmedAt).toBeUndefined();
+it('excludes a previously confirmed inference after its original quote changes', () => {
+  const graph = evidenceGraph([cognition()], entries);
+  const original = structuredClone(graph);
+  const sources = (live: DiaryEntry[]) =>
+    buildGuidanceSources({ entries: live, principles: [], actions: [], graph });
+  expect(sources(entries).some((s) => s.text.includes('行动前会准备'))).toBe(true);
   expect(
-    resolveAvatarKnowledge({
-      memories: [],
-      principles: [],
-      actions: [],
-      patterns: readAvatarUnderstandings(),
-    }).memories,
-  ).toEqual([]);
+    sources([{ ...entries[0], content: '原文已修改' }, entries[1]]).some((s) =>
+      s.text.includes('行动前会准备'),
+    ),
+  ).toBe(false);
+  expect(graph).toEqual(original);
 });
 
-it('roundtrips independent memories, relations and name-keyed tags; accepts old v2 backups', async () => {
+it.each(['private', 'locked', 'deleted'] as const)(
+  'rechecks %s source access for cognition and derived principles',
+  (restriction) => {
+    const graph = evidenceGraph([cognition()], entries);
+    const principle = {
+      id: 'principle',
+      text: '先确认范围',
+      year: 2026,
+      createdAt: 2,
+      showOnHome: false,
+      aiVisibility: 'allowed' as const,
+      derivedFromEntryIds: [entries[0].id],
+    };
+    const sources = (live: DiaryEntry[]) =>
+      buildGuidanceSources({ entries: live, principles: [principle], actions: [], graph });
+    expect(sources(entries).some((s) => s.text.includes(principle.text))).toBe(true);
+    const live =
+      restriction === 'deleted'
+        ? [entries[1]]
+        : [
+            {
+              ...entries[0],
+              ...(restriction === 'private'
+                ? { aiVisibility: 'private' as const }
+                : { isLocked: true }),
+            },
+            entries[1],
+          ];
+    expect(
+      sources(live).some((s) => s.text.includes(principle.text) || s.text.includes('行动前会准备')),
+    ).toBe(false);
+  },
+);
+
+it.each([true, false])(
+  'honors explicit source-deletion retain=%s without preserving AI evidence',
+  (retain) => {
+    const graph = evidenceGraph(
+      [
+        cognition({
+          evidenceGate: {
+            requiresMultiSourceGate: true,
+            independentExperienceCount: 2,
+            distinctUserMessageCount: 0,
+            distinctDateCount: 2,
+            distinctSessionCount: 0,
+            isReadyForConfirmation: true,
+          },
+        }),
+      ],
+      entries,
+    );
+    const values = { [AVATAR_ONTOLOGY_KEY]: graph };
+    deleteOntologySources(values, [entries[0].id], retain);
+    expect(graph.objects).toHaveLength(retain ? 1 : 0);
+    if (retain)
+      expect(graph.objects[0]).toMatchObject({
+        status: 'retained_after_source_delete',
+        privacy: { aiVisible: false, traceabilityDegraded: true },
+      });
+    expect(graph.edges.some((e) => e.toId === entries[0].id)).toBe(false);
+    expect(
+      buildGuidanceSources({ entries: [entries[1]], principles: [], actions: [], graph }).some(
+        (s) => s.text.includes('行动前会准备'),
+      ),
+    ).toBe(false);
+  },
+);
+
+it('preserves legacy backup bytes behind encryption without restoring dual-track caches', async () => {
   const payloads = {
     'vector:avatar:atomic-memories:v1': [
       { id: 'm1', statement: '偏好', status: 'confirmed' },
@@ -140,112 +182,47 @@ it('roundtrips independent memories, relations and name-keyed tags; accepts old 
     'vector:avatar:memory-relations:v1': [{ id: 'r1', fromId: 'm1', toId: 'm2', kind: 'supports' }],
     'vector:avatar:memory-tags:v1': [{ name: '工作', aliases: ['事业'], status: 'active' }],
   };
-  for (const [key, value] of Object.entries(payloads))
-    localStorage.setItem(key, JSON.stringify(value));
   const backup = await exportVaultBackup('test');
-  expect(backup.schemaVersion).toBe(3);
-  localStorage.clear();
-  await importVaultBackup(backup, 'replace');
-  await importVaultBackup(backup);
-  for (const [key, value] of Object.entries(payloads))
-    expect(JSON.parse(localStorage.getItem(key)!)).toEqual(value);
-  const old = structuredClone(backup);
-  old.schemaVersion = 2;
-  for (const key of Object.keys(payloads)) delete old.vault.caches[key];
-  expect(() => validateVaultBackup(old)).not.toThrow();
-  await importVaultBackup(old);
-  expect(JSON.parse(localStorage.getItem('vector:avatar:memory-tags:v1')!)).toEqual(
-    payloads['vector:avatar:memory-tags:v1'],
+  backup.schemaVersion = 2;
+  Object.assign(backup.vault.caches, payloads);
+  const original = structuredClone(backup);
+  expect(() => validateVaultBackup(backup)).not.toThrow();
+  await expect(importVaultBackup(backup, 'replace')).rejects.toThrow();
+  expect(await get(AVATAR_ONTOLOGY_KEY)).toBeUndefined();
+  expect(backup).toEqual(original);
+
+  const password = 'legacy-linkage-backup-123';
+  await importVaultBackup(backup, 'replace', undefined, password);
+  expect((await get(AVATAR_ONTOLOGY_KEY)).format).toBe('vector-private-v1');
+  const envelope = await exportVaultBackupFile('test');
+  expect(isEncryptedVaultBackup(envelope)).toBe(true);
+  if (!isEncryptedVaultBackup(envelope)) throw new Error('Expected encrypted backup');
+  const exported = await decryptVaultBackupFile(envelope, password);
+  validateVaultBackup(exported);
+  expect(exported.schemaVersion).toBe(3);
+  expect(exported.vault.ontology?.ontologySchemaVersion).toBe(2);
+  expect(exported.vault.ontology?.migrationCheckpointRequired).toBe(true);
+  for (const key of Object.keys(payloads)) {
+    expect(localStorage.getItem(key)).toBeNull();
+    expect(exported.vault.caches).not.toHaveProperty(key);
+  }
+  const checkpoint = exported.vault.migrationCheckpoint!;
+  expect(JSON.stringify(checkpoint)).not.toContain('偏好');
+  const decoded = await decodeAvatarMigrationCheckpoint(checkpoint, password);
+  expect(JSON.parse(decoded.snapshot.raw.atoms!)).toEqual(
+    payloads['vector:avatar:atomic-memories:v1'],
   );
-  const invalid = structuredClone(backup);
-  delete invalid.vault.caches['vector:avatar:atomic-memories:v1'];
-  expect(() => validateVaultBackup(invalid)).toThrow();
-});
-
-it('reflects source edits without copies, links evidence, and excludes protected entries', () => {
-  const entry = {
-    id: 'e',
-    title: '记录',
-    content: '旧内容',
-    tags: ['工作'],
-    createdAt: 1,
-    isLocked: false,
-  };
-  const principle = {
-    id: 'p',
-    text: '先确认范围',
-    year: 2026,
-    createdAt: 2,
-    showOnHome: false,
-    derivedFromEntryIds: ['e'],
-  };
-  const input = { memories: [], actions: [], principles: [principle], entries: [entry] };
-  const before = resolveAvatarKnowledge(input);
-  expect(before.relations).toHaveLength(1);
-  const after = resolveAvatarKnowledge({
-    ...input,
-    memories: before.memories,
-    entries: [{ ...entry, content: '修改后的内容' }],
-    principles: [{ ...principle, text: '及时沟通' }],
-  });
-  expect(after.memories).toHaveLength(2);
-  expect(after.memories.some((m) => m.statement.includes('旧内容'))).toBe(false);
-  expect(after.memories.some((m) => m.statement.includes('及时沟通'))).toBe(true);
-  const protectedView = resolveAvatarKnowledge({
-    ...input,
-    memories: before.memories,
-    entries: [{ ...entry, isLocked: true }],
-  });
-  expect(protectedView.memories).toHaveLength(1);
-  expect(protectedView.relations).toEqual([]);
-  expect(readAvatarAtomicMemories()).toEqual([]);
-});
-
-it('keeps a user-retained pattern visible after deleting its only experience, and removes it when not retained', () => {
-  const pattern = {
-    id: 'source-owned-pattern',
-    statement: '复杂选择前先留出独处时间',
-    status: 'confirmed' as const,
-    sourceEntryIds: ['deleted-entry'],
-    createdAt: 1,
-    confirmedAt: 1,
-    patternDomain: 'cognitive' as const,
-  };
-  expect(writeAvatarUnderstanding(pattern)).toBe(true);
-  pruneAvatarUnderstandingsByEntryIds(['deleted-entry'], true);
-  const retained = readAvatarUnderstandings();
-  expect(retained).toHaveLength(1);
-  expect(retained[0]).toMatchObject({
-    sourceEntryIds: [],
-    retainedAfterSourceDeletion: true,
-  });
-  expect(
-    resolveAvatarKnowledge({
-      memories: [],
-      principles: [],
-      actions: [],
-      patterns: retained,
-    }).memories,
-  ).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        statement: pattern.statement,
-        retainedAfterSourceDeletion: true,
-        sourceRefs: [expect.objectContaining({ source: 'pattern' })],
-      }),
-    ]),
+  expect(JSON.parse(decoded.snapshot.raw.relations!)).toEqual(
+    payloads['vector:avatar:memory-relations:v1'],
   );
-
-  localStorage.clear();
-  expect(writeAvatarUnderstanding(pattern)).toBe(true);
-  pruneAvatarUnderstandingsByEntryIds(['deleted-entry'], false);
-  expect(readAvatarUnderstandings()).toEqual([]);
-  expect(
-    resolveAvatarKnowledge({
-      memories: [],
-      principles: [],
-      actions: [],
-      patterns: readAvatarUnderstandings(),
-    }).memories,
-  ).toEqual([]);
-});
+  expect(JSON.parse(decoded.snapshot.raw.tags!)).toEqual(payloads['vector:avatar:memory-tags:v1']);
+  expect(exported.vault.ontology?.objects.every((object) => object.status !== 'confirmed')).toBe(
+    true,
+  );
+  await expect(importVaultBackup(exported, 'replace')).rejects.toThrow(
+    '恢复迁移归档需要来源密码及目标密钥',
+  );
+  await importVaultBackup(exported, 'replace', undefined, password);
+  expect(backup).toEqual(original);
+  for (const key of Object.keys(payloads)) expect(localStorage.getItem(key)).toBeNull();
+}, 30000);

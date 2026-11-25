@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { seedOnboardedApp } from './seedHelpers';
+import { seedOnboardedApp, choosePrivateVisibility } from './seedHelpers';
 
 const navigate = (page: Page, name: RegExp) =>
   page.getByRole('navigation', { name: '主页面导航' }).getByRole('button', { name }).click();
@@ -18,6 +18,10 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await page.getByLabel('此刻发生了什么？').fill(content);
   await page.locator('input[type=file][accept="image/*"]').setInputFiles('public/icon-192.png');
   await page.getByLabel('保存到过去').click();
+  await page
+    .getByRole('dialog', { name: '是否允许 AI 可见？' })
+    .getByRole('button', { name: /^仅自己可见/ })
+    .click();
   await expect(page.getByTestId('past-page')).toBeVisible();
   const record = page.locator('.past-record').filter({ hasText: content });
   await expect(record.locator('img')).toHaveCount(1);
@@ -25,7 +29,10 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await record.getByRole('button', { name: '补充', exact: true }).click();
   await page.getByLabel('补充内容').fill('备份补充：保留当时的判断和图片。');
   await page.getByRole('dialog').getByRole('button', { name: '保存', exact: true }).click();
-  await page.getByRole('dialog', { name: '是否允许 AI 可见？' }).getByRole('button', { name: /^仅自己可见/ }).click();
+  await page
+    .getByRole('dialog', { name: '是否允许 AI 可见？' })
+    .getByRole('button', { name: /^仅自己可见/ })
+    .click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const principle = '先澄清目标，再采取行动';
   const vision = '保持清晰的判断';
@@ -35,22 +42,28 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await page.getByRole('button', { name: '写原则', exact: true }).click();
   await page.getByRole('textbox', { name: '刻录新原则' }).fill(principle);
   await page.getByRole('button', { name: '保存', exact: true }).click();
-  await page.getByRole('dialog', { name: '是否允许 AI 可见？' }).getByRole('button', { name: /^仅自己可见/ }).click();
+  await page
+    .getByRole('dialog', { name: '是否允许 AI 可见？' })
+    .getByRole('button', { name: /^仅自己可见/ })
+    .click();
   await expect(page.getByText(principle, { exact: true })).toBeVisible();
   await navigate(page, /^未来/);
   await page.getByRole('button', { name: '添加愿景', exact: true }).click();
   await page.getByLabel('愿景内容').fill(vision);
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
   await page.getByRole('button', { name: '添加目标', exact: true }).click();
   await page.getByLabel('目标内容').fill(goal);
   await page.getByText('时间与关联（可选）', { exact: true }).click();
   await page.getByLabel('所属愿景（可选）').selectOption({ label: vision });
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
   await page.getByRole('button', { name: '添加行动', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   await page.getByText('可选设置', { exact: true }).click();
   await page.getByLabel('所属目标（可选）').selectOption({ label: goal });
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
   await page.getByRole('tab', { name: '反馈', exact: true }).click();
   await page.getByRole('list', { name: '行动列表' }).getByRole('button', { name: action }).click();
   const progress = page.getByRole('dialog', { name: action });
@@ -58,6 +71,7 @@ test('数据备份可直接发现，并在全新资料库中恢复记录、原�
   await progress.getByLabel('本次执行状态').selectOption('partial');
   await progress.getByLabel('反馈内容（可选）').fill('已经明确两个问题，保留原目标关联。');
   await progress.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
   await navigate(page, /^分身/);
   await page.getByRole('button', { name: '备份', exact: true }).click();
   const panel = page.getByRole('region', { name: '备份与恢复' });

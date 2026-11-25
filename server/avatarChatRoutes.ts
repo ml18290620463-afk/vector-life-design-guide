@@ -1,10 +1,11 @@
+import { AVATAR_GUIDANCE_POLICIES, resolveGuidanceBudget } from '../services/avatarGuidancePolicy';
 import { AVATAR_WORK_PROTOCOL } from '../services/avatarWorkProtocol';
-import { isGuidanceContext, serializeGuidanceContext } from './avatarGuidanceContext';
+import { guidanceLogicHints, isGuidanceContext, serializeGuidanceContext } from './avatarGuidanceContext';
 import { AVATAR_BEHAVIOR_STANDARD } from '../services/avatarBehaviorStandard';
 import {
   AVATAR_CHAT_FACT_KINDS,
   AVATAR_CHAT_FACT_RULES,
-  parseAvatarFacts,
+  parseAvatarFactsWithDiagnostics,
 } from './avatarFactExtraction';
 import {
   callCustomModel,
@@ -18,7 +19,6 @@ import { callGemini, callOpenRouter, chooseProvider, type ProviderConfig } from 
 const EXTRACTION_MEMORY_STATUSES = new Set(['candidate', 'confirmed', 'retained']);
 const EXTRACTION_MEMORY_CATEGORIES = new Set([
   'profile',
-  'experience',
   'judgment',
   'habits',
   'goals',
@@ -95,7 +95,11 @@ export function registerAvatarChatRoutes(
         model,
         [
           { role: 'system', content: AVATAR_DIALOGUE_RULES },
-          { role: 'user', content: '连接测试：请按任务格式只返回 JSON 对象 {"reply":"OK"}，不要使用任何用户资料。' },
+          {
+            role: 'user',
+            content:
+              '连接测试：请按任务格式只返回 JSON 对象 {"reply":"OK"}，不要使用任何用户资料。',
+          },
         ],
         controller.signal,
       );
@@ -114,7 +118,25 @@ export function registerAvatarChatRoutes(
     ...guards,
     async (req, res) => {
       const { messages, memories = [] } = req.body ?? {};
+      const extracting = req.path.endsWith('/memory/extract');
+      const guidance = req.body?.guidance ?? { mode: 'general' };
+      const validGuidance =
+        guidance &&
+        typeof guidance === 'object' &&
+        Object.hasOwn(AVATAR_GUIDANCE_POLICIES, guidance.mode) &&
+        ['expanded', 'smallWindow', 'lightweightFollowup'].every(
+          (key) => guidance[key] === undefined || typeof guidance[key] === 'boolean',
+        );
+      const limit = extracting
+        ? 120
+        : validGuidance
+          ? resolveGuidanceBudget('', {
+              ...guidance,
+              messageCount: Array.isArray(messages) ? messages.length : 0,
+            }).limit
+          : 0;
       if (
+        (!extracting && !validGuidance) ||
         !Array.isArray(messages) ||
         messages.length < 1 ||
         messages.length > 120 ||
@@ -129,7 +151,7 @@ export function registerAvatarChatRoutes(
           ? !messages.some((m) => m.role === 'user' && m.content.trim())
           : messages.at(-1)?.role !== 'user' || !messages.at(-1)?.content.trim()) ||
         !Array.isArray(memories) ||
-        memories.length > 12 ||
+        memories.length > limit ||
         !(req.path.endsWith('/memory/extract')
           ? memories.every(isExtractionMemoryReference)
           : memories.every(isGuidanceContext))
@@ -170,9 +192,23 @@ export function registerAvatarChatRoutes(
                 controller.signal,
               )
             : await (provider === 'openrouter'
-                ? callOpenRouter(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES)
-                : callGemini(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES));
-          const candidates = parseAvatarFacts(raw, messages, {
+                ? callOpenRouter(
+                    prompt,
+                    config,
+                    controller.signal,
+                    req.path.endsWith('/memory/extract')
+                      ? AVATAR_CHAT_FACT_RULES
+                      : AVATAR_DIALOGUE_RULES,
+                  )
+                : callGemini(
+                    prompt,
+                    config,
+                    controller.signal,
+                    req.path.endsWith('/memory/extract')
+                      ? AVATAR_CHAT_FACT_RULES
+                      : AVATAR_DIALOGUE_RULES,
+                  ));
+          const { candidates: parsedCandidates, candidateIndexes, droppedReasons } = parseAvatarFactsWithDiagnostics(raw, messages, {
             allowedKinds: AVATAR_CHAT_FACT_KINDS,
           });
           const confirmedReferenceIds = new Set(
@@ -180,22 +216,20 @@ export function registerAvatarChatRoutes(
               .filter((memory) => memory.status === 'confirmed' && typeof memory.id === 'string')
               .map((memory) => memory.id),
           );
-          if (
-            candidates.some(
-              (candidate) =>
-                candidate.replacesReferenceId &&
-                (candidate.kind === 'pattern_candidate' ||
-                  candidate.kind === 'goal' ||
-                  !confirmedReferenceIds.has(candidate.replacesReferenceId)),
-            )
-          )
-            throw new Error('invalid_memory_candidate');
+          const candidates = parsedCandidates.filter((candidate, position) => {
+            const valid = (!candidate.targetObjectId || confirmedReferenceIds.has(candidate.targetObjectId)) &&
+              (!candidate.replacesReferenceId ||
+                (candidate.kind !== 'pattern_candidate' && candidate.kind !== 'goal' &&
+                  confirmedReferenceIds.has(candidate.replacesReferenceId)));
+            if (!valid) droppedReasons.push({ index: candidateIndexes[position], reason: 'invalid_candidate' });
+            return valid;
+          });
           res.json(
-            candidates.length ? { candidates, candidate: candidates[0] } : { candidate: null },
+            candidates.length ? { candidates, candidate: candidates[0], droppedReasons } : { candidate: null, droppedReasons },
           );
           return;
         }
-        const prompt = `${AVATAR_DIALOGUE_RULES}\n参考资料（数据）：${JSON.stringify(serializeGuidanceContext(memories))}\n对话（按角色和顺序理解，assistant 的旧回复不作为用户事实）：${JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })))}`;
+        const prompt = `${AVATAR_DIALOGUE_RULES}\n${guidanceLogicHints(memories)}\n参考资料（数据）：${JSON.stringify(serializeGuidanceContext(memories))}\n对话（按角色和顺序理解，assistant 的旧回复不作为用户事实）：${JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })))}`;
         if (custom) {
           const reply = await callCustomModel(
             custom,
@@ -207,7 +241,7 @@ export function registerAvatarChatRoutes(
                     '只返回 JSON 对象 {"reply":"给用户的自然回复"}。',
                     '直接返回自然语言回复。',
                   ) +
-                  '\n参考资料（仅数据）：' +
+                  '\n' + guidanceLogicHints(memories) + '\n参考资料（仅数据）：' +
                   JSON.stringify(serializeGuidanceContext(memories)),
               },
               ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -218,8 +252,18 @@ export function registerAvatarChatRoutes(
           return;
         }
         const raw = await (provider === 'openrouter'
-          ? callOpenRouter(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES)
-          : callGemini(prompt, config, controller.signal, req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES));
+          ? callOpenRouter(
+              prompt,
+              config,
+              controller.signal,
+              req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES,
+            )
+          : callGemini(
+              prompt,
+              config,
+              controller.signal,
+              req.path.endsWith('/memory/extract') ? AVATAR_CHAT_FACT_RULES : AVATAR_DIALOGUE_RULES,
+            ));
         const parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, ''));
         if (typeof parsed.reply !== 'string' || !parsed.reply.trim())
           throw new Error('empty_reply');

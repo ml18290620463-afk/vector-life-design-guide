@@ -91,7 +91,7 @@ export type AppEntryRouteAction =
 
 const getNowRouteState = (route: AppNowRoutePath): AppState => {
   if (route === 'tags') return AppState.NOW_TAGS;
-  if (route === 'avatar-chat') return AppState.NOW_AVATAR_CHAT;
+  if (route === 'avatar-chat' || route === 'avatar-settings') return AppState.NOW_AVATAR_CHAT;
   return AppState.NOW;
 };
 
@@ -100,7 +100,7 @@ export const getPreviewScreenAction = (
   options: { isMobile: boolean; isUnlocked: boolean },
 ): AppEntryRouteAction => {
   if (screen === 'onboarding') {
-    return { kind: 'route', states: [AppState.ONBOARDING], lock: true };
+    return { kind: 'entry-gate' };
   }
 
   if (options.isMobile && !options.isUnlocked) {

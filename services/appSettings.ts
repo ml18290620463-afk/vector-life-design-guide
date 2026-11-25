@@ -1,5 +1,6 @@
 export const AppStorageKeys = {
   theme: 'vector_theme',
+  language: 'vector_language',
   themeRevision: 'vector_theme_revision',
   customIdentity: 'vector_custom_identity',
   recoveryVerifier: 'vector_recovery_hash',

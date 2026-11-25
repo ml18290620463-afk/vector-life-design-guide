@@ -48,9 +48,26 @@ export const useAppEntryRouting = ({
     (requestedPath?: string | null) => {
       pendingPathAfterUnlockRef.current =
         requestedPath ?? getCurrentRestorablePathname() ?? getLastMainRoute();
-      isUnlockedRef.current = false;
-      setIsUnlocked(false);
-      setAppState(passwordHash ? AppState.LOGIN : AppState.ONBOARDING);
+      if (passwordHash) {
+        isUnlockedRef.current = false;
+        setIsUnlocked(false);
+        setAppState(AppState.LOGIN);
+        return;
+      }
+
+      // Local use is available immediately; protection can be enabled in settings.
+      isUnlockedRef.current = true;
+      setIsUnlocked(true);
+      const action = getPostUnlockRouteAction(pendingPathAfterUnlockRef.current ?? '/now');
+      pendingPathAfterUnlockRef.current = null;
+      if (action.kind === 'route') {
+        if (action.nowRoute) setNowRoute(action.nowRoute);
+        if (action.replacePath) {
+          replaceAppPath(action.replacePath, action.replaceState ?? {});
+          rememberMainRoute(action.replacePath);
+        }
+        action.states.forEach((state) => setAppState(state));
+      }
     },
     [passwordHash, setAppState, setIsUnlocked],
   );
@@ -71,7 +88,7 @@ export const useAppEntryRouting = ({
         replaceAppPath(action.replacePath, action.replaceState ?? {});
         rememberMainRoute(action.replacePath);
       }
-      action.states.forEach(setAppState);
+      action.states.forEach((state) => setAppState(state));
     },
     [routeToEntryGate, setAppState, setIsUnlocked],
   );
@@ -135,10 +152,12 @@ export const useAppEntryRouting = ({
   }, [applyEntryRouteAction, loading]);
 
   const restoreCurrentOrStableRoute = useCallback(() => {
+    // The public root always opens the cover; entering resumes the saved module.
     if (window.location.pathname === '/' && !getPreviewScreen()) {
       setAppState(AppState.COVER);
       return;
     }
+
     const route = getNowRouteFromPath();
     if (route) {
       routeNowPath(route);

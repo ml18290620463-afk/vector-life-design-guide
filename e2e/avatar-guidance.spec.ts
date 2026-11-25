@@ -47,8 +47,8 @@ for (const width of [320, 393, 440]) {
     );
     await page.screenshot({ path: testInfo.outputPath('avatar-chat.png') });
 
-    await page.getByRole('button', { name: '记忆档案', exact: true }).click();
-    for (const name of ['关于我', '我的模式', '我的变化']) {
+    await page.getByRole('button', { name: '记忆库', exact: true }).click();
+    for (const name of ['关于我', '我的认识', '我的变化']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
     }
     await expect(page.getByRole('button', { name: '新增记忆' })).toBeVisible();

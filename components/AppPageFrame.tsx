@@ -1,3 +1,4 @@
+import { SilkWorkspace } from './SilkWorkspace';
 import type { FC, ReactNode } from 'react';
 import type { MobileMainTab } from '../features/mobile/types';
 import type { Language } from '../types';
@@ -41,6 +42,7 @@ export const AppPageFrame: FC<AppPageFrameProps> = ({
       onNavigateIntent={onNavigateIntent}
     />
     <div className="desktop-workspace" data-workspace={activeTab}>
+      <SilkWorkspace key={activeTab} />
       <h1 className="desktop-workspace__accessible-title">
         {getMainModules(language).find((item) => item.id === activeTab)?.title}
       </h1>

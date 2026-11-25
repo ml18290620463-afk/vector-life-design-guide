@@ -1,19 +1,17 @@
+import { selectRevisionCandidates } from '../../../services/avatarRevisionSelection';
 import { useAIVisibilityChoice } from '../../../components/AIVisibilityDialog';
-import { saveReviewedAvatarMemory } from '../../../services/avatarMemoryAtoms';
+import { saveReviewedAvatarCognition } from '../../../services/avatarOntologyCandidates';
+import { readAvatarOntology } from '../../../services/avatarOntologyStore';
 import { assertAIPrivacyUnchanged } from '../../../services/aiPrivacy';
 import {
-  isSameDurableMemoryAssertion,
   memoryStatementKey,
-} from '../../../services/avatarMemoryShared';
+} from '../../../services/avatarStatementComparison';
 import { useEffect, useRef, useState } from 'react';
 import { saveArchiveDirection } from '../../../services/futureRepository';
-import {
-  readAvatarAtomicMemories,
-  supersedeAvatarAtomicMemory,
-} from '../../../services/avatarMemory';
-import { readAvatarNameStatement } from '../../../services/avatarMemoryPolicy';
 import { generateSecureId } from '../../../services/idGenerator';
 import type {
+  CognitiveCategory,
+  CognitiveObject,
   AvatarMemoryCategory,
   AvatarMemoryFacet,
   AvatarMemoryNature,
@@ -52,7 +50,6 @@ const factMemoryMetadata = (kind: AvatarFactCandidate['kind']) => {
     value: { category: 'judgment', facets: ['value'], nature: 'explicit' },
     habit: { category: 'habits', facets: ['habit'], nature: 'explicit' },
     goal: { category: 'goals', facets: ['aspirational_self'], nature: 'explicit' },
-    experience: { category: 'experience', facets: ['domain_background'], nature: 'experience' },
     expression: { category: 'expression', facets: ['preference'], nature: 'explicit' },
     pattern_candidate: { category: 'judgment', facets: ['cognitive_pattern'], nature: 'inferred' },
   };
@@ -65,6 +62,8 @@ interface UseAvatarMemoryCaptureOptions {
   avatarMemoryReferences: AvatarMemoryExtractionReference[];
   showToast: (message: string) => void;
   refreshAvatarMemories: () => void;
+  appendReviewMessage?: (statement: string) => ChatMessage[];
+  prepareExtraction: (messages: ChatMessage[]) => Promise<unknown>;
 }
 
 export const useAvatarMemoryCapture = ({
@@ -73,17 +72,18 @@ export const useAvatarMemoryCapture = ({
   avatarMemoryReferences,
   showToast,
   refreshAvatarMemories,
+  prepareExtraction,
+  appendReviewMessage,
 }: UseAvatarMemoryCaptureOptions) => {
   const visibilityChoice = useAIVisibilityChoice('zh', 'memory');
   const [companionSummary, setCompanionSummary] = useState<RecordPreviewPayload | null>(null);
   const [memoryNature, setMemoryNature] = useState<AvatarMemoryNature>('inferred');
   const [candidateKind, setCandidateKind] = useState<AvatarFactCandidate['kind'] | null>(null);
   const [candidateCategory, setCandidateCategory] = useState<AvatarMemoryCategory | null>(null);
-  const [candidatePatternKey, setCandidatePatternKey] = useState<string | null>(null);
   const [candidateReplacementId, setCandidateReplacementId] = useState<string | null>(null);
   const [candidateSources, setCandidateSources] = useState<AvatarMemorySourceRef[]>([]);
   const [extractedFacets, setExtractedFacets] = useState<AvatarMemoryFacet[] | null>(null);
-  type CapturedCandidate = AvatarFactCandidate & { sources: ChatMessage[] };
+  type CapturedCandidate = Awaited<ReturnType<typeof extractAvatarFacts>>[number];
   const [candidateQueue, setCandidateQueue] = useState<CapturedCandidate[]>([]);
   const [candidatePosition, setCandidatePosition] = useState(0);
   const [memorySaving, setMemorySaving] = useState(false);
@@ -92,6 +92,7 @@ export const useAvatarMemoryCapture = ({
   const extractionMounted = useRef(true);
   const summaryOpen = useRef(false);
   const memorySavingRef = useRef(false);
+  const revisionTarget = useRef<CognitiveObject | null>(null);
   const candidatePrivacyToken = useRef<string | null>(null);
   const directionProposalId = useRef<string | null>(null);
   summaryOpen.current = !!companionSummary;
@@ -111,35 +112,29 @@ export const useAvatarMemoryCapture = ({
       setExtractedFacets(null);
       setCandidateKind(null);
       setCandidateCategory(null);
-      setCandidatePatternKey(null);
       setCandidateReplacementId(null);
       setCandidateSources([]);
     }
   }, [companionSummary]);
 
-  const captureCandidateSources = (sourceMessages: ChatMessage[]): AvatarMemorySourceRef[] =>
-    sourceMessages.map((message) => ({
-      source: 'message' as const,
-      id: message.id,
-      excerpt: message.content.slice(0, 200),
-      ...(Number.isFinite(Date.parse(message.created_at))
-        ? { createdAt: Date.parse(message.created_at) }
-        : {}),
-      ...(sessionId.trim() ? { sessionId } : {}),
-    }));
-
   const showCandidate = (candidate: CapturedCandidate) => {
-    candidatePrivacyToken.current = candidate.sources[0]?.aiPrivacyToken ?? '';
+    candidatePrivacyToken.current = candidate.aiPrivacyToken;
     const metadata = factMemoryMetadata(candidate.kind);
     setMemoryNature(metadata.nature);
     setCandidateKind(candidate.kind);
     setCandidateCategory(metadata.category);
-    setCandidatePatternKey(
-      candidate.kind === 'pattern_candidate' ? (candidate.patternKey ?? null) : null,
-    );
-    setCandidateReplacementId(candidate.replacesReferenceId ?? null);
+    setCandidateReplacementId((revisionTarget.current?.status === 'confirmed' ? revisionTarget.current.id : null) ??
+      (candidate.action === 'propose_supersede' ? candidate.targetObjectId : null) ?? candidate.replacesReferenceId ?? null);
     setExtractedFacets(metadata.facets);
-    setCandidateSources(captureCandidateSources(candidate.sources));
+    setCandidateSources(
+      candidate.evidenceAnchors.map((anchor) => ({
+        source: 'message' as const,
+        id: anchor.sourceId,
+        excerpt: anchor.verbatimQuote,
+        createdAt: Date.parse(anchor.sourceOccurredAt),
+        sessionId,
+      })),
+    );
     setCompanionSummary({
       text: candidate.statement,
       mood_tags: [],
@@ -169,90 +164,42 @@ export const useAvatarMemoryCapture = ({
   };
 
   const addMemory = () => {
-    candidatePrivacyToken.current = null;
-    setCandidateQueue([]);
-    setCandidatePosition(0);
-    setMemoryNature('explicit');
-    setCandidateKind(null);
-    setCandidateCategory(null);
-    setCandidatePatternKey(null);
-    setCandidateReplacementId(null);
-    setCandidateSources([]);
-    setCompanionSummary({
-      text: '',
-      mood_tags: [],
-      event_tags: [],
-      record_time: new Date().toISOString(),
-      display_time: '',
-      is_sparse: false,
-    });
+    showToast('请先在对话中表达要保存的信息，再提炼并确认');
   };
 
-  const considerAvatarName = (name: string, source: ChatMessage) => {
-    candidatePrivacyToken.current = source.aiPrivacyToken ?? '';
-    setCandidateQueue([]);
-    setCandidatePosition(0);
-    setMemoryNature('explicit');
-    setCandidateKind('profile');
-    setCandidateCategory('profile');
-    setCandidateSources(captureCandidateSources([source]));
-    setCompanionSummary({
-      text: `用户为分身取名为「${name}」`,
-      mood_tags: [],
-      event_tags: ['分身称呼'],
-      record_time: source.created_at,
-      display_time: new Date(source.created_at).toLocaleString(),
-      is_sparse: false,
-    });
+  const considerAvatarName = (_name: string, sourceMessages: ChatMessage[]) => {
+    // Naming follows the same server quote verification as every other expression.
+    void generateCompanionSummary(sourceMessages);
   };
 
-  const generateCompanionSummary = async (sourceMessages: ChatMessage[], automatic = false) => {
-    if (extractionBusy.current || summaryOpen.current) return;
+  const generateCompanionSummary = async (sourceMessages: ChatMessage[], automatic = false, revision?: CognitiveObject, revalidation = false) => {
+    if (extractionBusy.current || (summaryOpen.current && !revalidation)) return;
     if (!sourceMessages.some((message) => message.role === 'user')) {
       showToast('先聊几句，再提炼个人信息');
       return;
     }
+    revisionTarget.current = revision ?? null;
     extractionBusy.current = true;
     setGeneratingMemory(true);
     try {
+      await prepareExtraction(sourceMessages);
       const candidates = await extractAvatarFacts(sourceMessages, avatarMemoryReferences);
-      if (!extractionMounted.current || summaryOpen.current) return;
-      const storedMemories = readAvatarAtomicMemories().filter(
-        (memory) =>
-          memory.status === 'candidate' ||
-          memory.status === 'confirmed' ||
-          memory.status === 'retained',
-      );
-      const durableAssertion = (candidate: (typeof candidates)[number]) => {
-        const metadata = factMemoryMetadata(candidate.kind);
-        return {
-          statement: candidate.statement,
-          facets: metadata.facets,
-          nature: metadata.nature,
-          // Chat candidates do not establish a verified real-world situation.
-          // Keep the scope empty so different stored situations are never merged.
-          contexts: [],
-        };
-      };
-      const uniqueCandidates = candidates.filter(
-        (candidate, index) =>
-          !avatarMemoryReferences.some(
-            (memory) => memoryStatementKey(memory.text) === memoryStatementKey(candidate.statement),
-          ) &&
-          !storedMemories.some((memory) =>
-            isSameDurableMemoryAssertion(memory, durableAssertion(candidate)),
-          ) &&
-          candidates.findIndex(
-            (item) =>
-              memoryStatementKey(item.statement) === memoryStatementKey(candidate.statement) ||
-              isSameDurableMemoryAssertion(durableAssertion(item), durableAssertion(candidate)),
-          ) === index,
+      if (!extractionMounted.current || (summaryOpen.current && !revalidation)) return;
+      const eligibleCandidates = revision
+        ? selectRevisionCandidates(candidates, sourceMessages, revision)
+        : candidates;
+      const uniqueCandidates = eligibleCandidates.filter(
+        (candidate, index) => eligibleCandidates.findIndex(
+          (item) => memoryStatementKey(item.statement) === memoryStatementKey(candidate.statement),
+        ) === index,
       );
       if (!uniqueCandidates.length) {
         if (!automatic) showToast('这段对话更适合留在聊天记录中，暂未发现需要写入档案的长期信息');
         return;
       }
-      setCandidateQueue(uniqueCandidates);
+      // One explicit revision action can replace the target only once.
+      const reviewCandidates = revision ? uniqueCandidates.slice(0, 1) : uniqueCandidates;
+      setCandidateQueue(reviewCandidates);
       setCandidatePosition(0);
       showCandidate(uniqueCandidates[0]);
     } catch (error) {
@@ -287,93 +234,89 @@ export const useAvatarMemoryCapture = ({
     memorySavingRef.current = true;
     setMemorySaving(true);
     try {
-    const aiVisibility = await visibilityChoice.request();
-    if (!aiVisibility) return;
-    try {
-      if (candidatePrivacyToken.current !== null)
-        await assertAIPrivacyUnchanged(candidatePrivacyToken.current);
-    } catch {
-      showToast('记录的 AI 权限已变化，请重新提炼后确认');
-      setCandidateQueue([]);
-      setCompanionSummary(null);
-      return;
-    }
-    if (directionKind) {
+      const reviewedCandidate = candidateQueue[candidatePosition];
+      if (!directionKind && reviewedCandidate && companionSummary.text !== reviewedCandidate.statement) {
+        if (!appendReviewMessage) {
+          showToast('审核内容已修改，请重新核验用户原话');
+          return;
+        }
+        const messages = appendReviewMessage(companionSummary.text);
+        await generateCompanionSummary(messages, false, revisionTarget.current ?? undefined, true);
+        // Revalidation only presents a fresh proposal. A separate explicit action
+        // is required before choosing visibility and committing the new receipt.
+        return;
+      }
+      const aiVisibility = await visibilityChoice.request();
+      if (!aiVisibility) return;
       try {
-        directionProposalId.current ??= generateSecureId('proposal');
-        await saveArchiveDirection({
-          proposalId: directionProposalId.current,
-          aiVisibility,
-          kind: directionKind,
-          text: companionSummary.text,
-          tags,
-          sourceRefs: candidateSources,
-        });
-        advanceCandidate();
-        showToast('已存入方向与行动');
+        if (candidatePrivacyToken.current !== null)
+          await assertAIPrivacyUnchanged(candidatePrivacyToken.current);
       } catch {
-        showToast('保存失败，请重试');
-      }
-      return;
-    }
-    const replacementId = candidateReplacementId;
-    if (replacementId) {
-      const target = readAvatarAtomicMemories().find((memory) => memory.id === replacementId);
-      if (!target || target.status !== 'confirmed') {
-        showToast('原有理解已发生变化，请重新确认这条信息');
+        showToast('记录的 AI 权限已变化，请重新提炼后确认');
+        setCandidateQueue([]);
+        setCompanionSummary(null);
         return;
       }
-      const updated = supersedeAvatarAtomicMemory(replacementId, companionSummary.text, {
-        aiVisibility,
-        sourceRefs: candidateSources,
-        nature: confirmedNature,
-        category,
-        facets: extractedFacets ?? inferMemoryFacets(companionSummary),
-        tags,
-        contexts: ['来自聊天自述'],
+      if (directionKind) {
+        try {
+          directionProposalId.current ??= generateSecureId('proposal');
+          await saveArchiveDirection({
+            proposalId: directionProposalId.current,
+            aiVisibility,
+            kind: directionKind,
+            text: companionSummary.text,
+            tags,
+            sourceRefs: candidateSources,
+          });
+          advanceCandidate();
+          showToast('已存入方向与行动');
+        } catch {
+          showToast('保存失败，请重试');
+        }
+        return;
+      }
+      const candidate = candidateQueue[candidatePosition];
+      if (!candidate) {
+        showToast('缺少经过核验的用户原话，请重新提炼');
+        return;
+      }
+      const categories: Record<AvatarFactCandidate['kind'], CognitiveCategory> = {
+        profile: 'foundation_situation',
+        preference: 'preferences_boundaries',
+        boundary: 'preferences_boundaries',
+        value: 'values_motivation',
+        habit: 'foundation_situation',
+        expression: 'preferences_boundaries',
+        pattern_candidate: 'understanding_judgment',
+        goal: 'foundation_situation',
+      };
+      const graph = await readAvatarOntology();
+      const saved = await saveReviewedAvatarCognition({
+        extraction: candidate,
+        expectedRevision: graph.revision,
+        sessionId,
+        domain: candidate.kind === 'pattern_candidate' ? 'my_understanding' : 'about_me',
+        category: revisionTarget.current?.category ?? categories[candidate.kind],
+        ...(revisionTarget.current?.status === 'candidate'
+          ? { replacesCandidateId: revisionTarget.current.id } : {}),
+        aiVisible: aiVisibility === 'allowed',
+        statement: companionSummary.text,
+        ...(candidateReplacementId
+          ? { revision: { previousObjectId: candidateReplacementId, reason: candidate.revisionReason } }
+          : {}),
       });
-      if (!updated) {
-        showToast('更新失败，请重试');
-        return;
-      }
       refreshAvatarMemories();
       advanceCandidate();
-      showToast('已更新这条理解，旧版本已保留在我的变化中');
-      return;
-    }
-    const now = Date.now();
-    const isPatternCandidate = candidateKind === 'pattern_candidate';
-    const saved = saveReviewedAvatarMemory({
-      aiVisibility,
-      id:
-        confirmedNature === 'explicit' && readAvatarNameStatement(companionSummary.text)
-          ? 'avatar-name'
-          : generateSecureId('avatar-memory'),
-      statement: companionSummary.text.trim(),
-      nature: confirmedNature,
-      category,
-      facets: extractedFacets ?? inferMemoryFacets(companionSummary),
-      ...(isPatternCandidate && candidatePatternKey ? { patternKey: candidatePatternKey } : {}),
-      tags,
-      contexts: [
-        candidateSources.length ? '来自聊天自述' : '手动添加',
-        ...(isPatternCandidate ? ['待验证模式'] : []),
-      ],
-      sourceRefs: candidateSources,
-      confidence: confirmedNature === 'inferred' ? 0.5 : 0.7,
-      // A user may agree that an observation is worth retaining without
-      // declaring it a stable trait. It stays a candidate until independent
-      // conversations provide enough support for a final review.
-      status: isPatternCandidate ? 'candidate' : 'confirmed',
-      sensitivity: 'normal',
-      createdAt: now,
-      ...(isPatternCandidate ? {} : { confirmedAt: now, confirmedBy: 'user' as const }),
-    });
-    if (saved) {
-      refreshAvatarMemories();
-      advanceCandidate();
-      showToast(isPatternCandidate ? '已保留为观察线索，更多表达支持后再请你确认' : '已存入记忆');
-    } else showToast('保存失败，请重试');
+      const object = saved.graph.objects.find((item) => item.id === saved.objectId)!;
+      showToast(
+        object.status === 'candidate'
+          ? '已保留为观察线索，更多独立证据支持后再请你确认'
+          : candidateReplacementId
+            ? '已更新这条理解，旧版本已保留在我的变化中'
+            : '已存入记忆',
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '保存失败，请重试');
     } finally {
       memorySavingRef.current = false;
       setMemorySaving(false);

@@ -1,23 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { answerAvatarEvidence, resolvePatternCorrection } from './avatarEvidenceDialogue';
-import type { AvatarUnderstandingVersion } from '../features/avatar/types';
+import { cognition, evidenceGraph } from '../tests/fixtures/avatarOntology';
 import type { DiaryEntry, Principle } from '../types';
-const pattern: AvatarUnderstandingVersion = {
-  id: 'p',
-  statement: '行动前会准备',
-  status: 'confirmed',
-  aiVisibility: 'allowed',
-  sourceEntryIds: ['e'],
-  createdAt: 1,
-};
+const pattern = cognition();
 const entry: DiaryEntry = {
   id: 'e',
   title: '准备',
   content: '提前整理材料，仍出现了遗漏。',
   tags: [],
   createdAt: 1,
-  aiVisibility: 'allowed' as const, isLocked: false,
+  aiVisibility: 'allowed' as const,
+  isLocked: false,
 };
+const secondEntry = { ...entry, id: 'e2', createdAt: 86400001 };
+const graph = evidenceGraph([pattern], [entry, secondEntry]);
 const principle: Principle = {
   id: 'rule',
   text: '先列检查清单',
@@ -30,16 +26,21 @@ const principle: Principle = {
 };
 describe('Avatar evidence answers', () => {
   it('excludes unconfirmed conclusions and narrations are not hijacked', () => {
-    expect(answerAvatarEvidence('我今天按原则提前准备了材料', [pattern], [], [entry])).toBeNull();
+    expect(
+      answerAvatarEvidence('我今天按原则提前准备了材料', graph, [], [entry, secondEntry]),
+    ).toBeNull();
     const answer = answerAvatarEvidence(
       '我有哪些模式？',
-      [
-        pattern,
-        { ...pattern, id: 'pending', status: 'pending', statement: '未认可' },
-        { ...pattern, id: 'rejected', status: 'rejected', statement: '不符合' },
-      ],
+      evidenceGraph(
+        [
+          pattern,
+          { ...pattern, id: 'pending', status: 'candidate', statement: '未认可' },
+          { ...pattern, id: 'rejected', status: 'rejected', statement: '不符合' },
+        ],
+        [entry, secondEntry],
+      ),
       [],
-      [entry],
+      [entry, secondEntry],
     );
     expect(answer).toContain(pattern.statement);
     expect(answer).not.toContain('未认可');
@@ -48,9 +49,10 @@ describe('Avatar evidence answers', () => {
   it('resolves principle evidence through confirmed patterns and reports actual outcomes', () => {
     const answer = answerAvatarEvidence(
       '原则有哪些证据，什么情况适用？',
-      [pattern],
+      graph,
       [principle],
       [
+        secondEntry,
         {
           ...entry,
           principleFeedback: [{ principleId: 'rule', outcome: 'unhelpful', createdAt: 1 }],
@@ -70,7 +72,7 @@ describe('Avatar evidence answers', () => {
       [{ ...entry, isEncrypted: true }],
       [{ ...entry, unlockAt: Date.now() + 100000 }],
     ]) {
-      const answer = answerAvatarEvidence('模式的证据是什么？', [pattern], [], entries);
+      const answer = answerAvatarEvidence('模式的证据是什么？', graph, [], entries);
       expect(answer).toContain('目前还没有你认可的模式');
       expect(answer).not.toContain(entry.content);
     }

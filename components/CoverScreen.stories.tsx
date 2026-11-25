@@ -17,6 +17,7 @@ const meta = {
   },
   args: {
     onStart: fn(),
+    onSetLanguage: fn(),
     language: 'zh',
     principles: samplePrinciples,
     theme: 'dark',

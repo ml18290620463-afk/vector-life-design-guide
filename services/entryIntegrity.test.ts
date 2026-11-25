@@ -94,20 +94,31 @@ describe('record integrity', () => {
   it('requires the correct password before appending to an encrypted record', async () => {
     const original = await SecurityService.encrypt('原文', 'right-password');
     await set(keys.entries, [{ ...entry, content: original, isEncrypted: true }]);
-    await expect(appendEntrySupplement(keys, entry.id, '补充', 'wrong', 'wrong-password')).rejects.toThrow('密令不正确');
+    await expect(
+      appendEntrySupplement(keys, entry.id, '补充', 'wrong', 'wrong-password'),
+    ).rejects.toThrow('密令不正确');
     expect(((await get(keys.entries)) as DiaryEntry[])[0].supplements).toBeUndefined();
     await appendEntrySupplement(keys, entry.id, '补充', 'right', 'right-password');
     const saved = ((await get(keys.entries)) as DiaryEntry[])[0];
     expect(saved.content).toBe(original);
     expect(saved.supplements?.[0].isEncrypted).toBe(true);
-    expect(await SecurityService.decrypt(saved.supplements![0].content, 'right-password')).toBe('补充');
+    expect(await SecurityService.decrypt(saved.supplements![0].content, 'right-password')).toBe(
+      '补充',
+    );
   });
 });
 
- it('commits supplement and fresh permission together, including the backup', async () => {
+it('commits supplement and fresh permission together, including the backup', async () => {
   await set(keys.entries, [{ ...entry, aiVisibility: 'allowed', aiConsentAt: Date.now() + 1000 }]);
   const previous = (await get(keys.entries))[0];
-  await appendEntrySupplement(keys, entry.id, '私密补充', 'private-supplement', undefined, 'private');
+  await appendEntrySupplement(
+    keys,
+    entry.id,
+    '私密补充',
+    'private-supplement',
+    undefined,
+    'private',
+  );
   const saved = (await get(keys.entries))[0];
   expect(saved.aiVisibility).toBe('private');
   expect(saved.aiConsentAt).toBeGreaterThan(previous.aiConsentAt);

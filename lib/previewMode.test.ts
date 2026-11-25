@@ -24,11 +24,17 @@ describe('previewMode navigation helpers', () => {
   });
 
   it('cleans retired preview links without dropping unrelated URL state', () => {
-    window.history.replaceState({ from: 'test' }, '', '/?preview=recovered-draft&screen=now&lang=zh#notes');
+    window.history.replaceState(
+      { from: 'test' },
+      '',
+      '/?preview=recovered-draft&screen=now&lang=zh#notes',
+    );
 
     removeObsoletePreviewQuery();
 
-    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe('/?lang=zh#notes');
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      '/?lang=zh#notes',
+    );
     expect(window.history.state).toEqual({ from: 'test' });
   });
 

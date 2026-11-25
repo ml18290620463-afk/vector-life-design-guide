@@ -316,7 +316,7 @@ export function AvatarModelSettings({
           >
             <ArrowLeft aria-hidden="true" />
           </button>
-          <h2 id="avatar-model-title">分身设置</h2>
+          <h2 id="avatar-model-title">模型配置</h2>
         </header>
         <div className="avatar-model-field">
           <label htmlFor="avatar-provider">服务商</label>
@@ -337,6 +337,9 @@ export function AvatarModelSettings({
           {savedConfig
             ? '连接已配置，可直接返回分身对话。'
             : '选择服务商后，在高级设置中连接你的账号。'}
+        </p>
+        <p className="avatar-model-hint" role="note">
+          你确认发送的内容会交给所选模型服务商处理。撤销授权或删除本地记录会阻止后续发送，但无法撤回此前已发送的数据；服务商的保留期限以其政策为准。
         </p>
         <button
           ref={advancedToggleRef}

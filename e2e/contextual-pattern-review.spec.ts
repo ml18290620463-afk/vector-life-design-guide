@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { seedOnboardedApp } from './seedHelpers';
+import { seedOnboardedApp, choosePrivateVisibility } from './seedHelpers';
 
 async function record(page: Page, text: string) {
   await page
@@ -8,6 +8,7 @@ async function record(page: Page, text: string) {
     .click();
   await page.getByLabel('此刻发生了什么？').fill(text);
   await page.getByLabel('保存到过去').click();
+  await choosePrivateVisibility(page);
 }
 
 // Past intentionally keeps user-maintained principles separate from avatar patterns.

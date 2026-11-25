@@ -7,17 +7,11 @@ import {
   GUIDANCE_STARTERS,
 } from './avatarGuidance';
 import { emptyFutureState } from './futureRepository';
-import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../features/avatar/types';
+import type { CognitiveObject } from '../features/avatar/types';
+import { cognition, evidenceGraph } from '../tests/fixtures/avatarOntology';
 import type { Principle } from '../types';
 
-const pattern: AvatarUnderstandingVersion = {
-  id: 'pattern',
-  statement: '面对登山安排，我会反复推迟出发',
-  status: 'confirmed',
-  aiVisibility: 'allowed',
-  sourceEntryIds: ['entry'],
-  createdAt: 1,
-};
+const pattern = cognition({ id: 'pattern', statement: '面对登山安排，我会反复推迟出发' });
 const principle: Principle = {
   id: 'principle',
   text: '先做力所能及的一步',
@@ -27,8 +21,8 @@ const principle: Principle = {
   aiVisibility: 'allowed',
   sourcePatternIds: ['pattern'],
 };
-const fixture = () => ({
-  entries: [
+const fixture = () => {
+  const entries = [
     {
       id: 'entry',
       title: '登山',
@@ -38,22 +32,32 @@ const fixture = () => ({
       aiVisibility: 'allowed' as const,
       isLocked: false,
     },
-  ],
-  patterns: [pattern],
-  principles: [principle],
-  actions: [],
-  future: emptyFutureState(),
-});
+  ];
+  entries.push({ ...entries[0], id: 'entry2', createdAt: 86400001 });
+  return {
+    entries,
+    graph: evidenceGraph([pattern], entries),
+    principles: [principle],
+    actions: [],
+    future: emptyFutureState(),
+  };
+};
 
 describe('read-only avatar guidance', () => {
   it('uses only confirmed patterns with authorized extant evidence', () => {
     const input = fixture();
-    input.patterns = [
-      pattern,
-      { ...pattern, id: 'pending', status: 'pending' },
-      { ...pattern, id: 'deleted', sourceEntryIds: ['gone'] },
-      { ...pattern, id: 'kept', sourceEntryIds: [], retainedAfterSourceDeletion: true },
-    ];
+    input.graph = evidenceGraph(
+      [
+        pattern,
+        cognition({ ...pattern, id: 'pending', status: 'candidate' }),
+        cognition({ ...pattern, id: 'deleted' }),
+        cognition({ ...pattern, id: 'kept', status: 'retained_after_source_delete' }),
+      ],
+      input.entries,
+    );
+    input.graph.edges = input.graph.edges.map((e) =>
+      e.fromId === 'deleted' ? { ...e, toId: 'gone' } : e,
+    );
     expect(
       buildGuidanceSources(input)
         .filter((s) => s.kind === '模式')
@@ -207,24 +211,17 @@ describe('read-only avatar guidance', () => {
     const input = fixture();
     const sources = buildGuidanceSources({
       ...input,
-      avatarMemories: [
-        {
-          id: 'memory-preference',
-          statement: '用户偏好简洁、少解释、直接执行的界面',
-          nature: 'explicit',
-          facets: ['preference'],
-          tags: ['产品体验'],
-          contexts: ['产品体验'],
-          sourceRefs: [{ source: 'entry', id: 'entry' }],
-          confidence: 0.86,
-          status: 'confirmed',
-          aiVisibility: 'allowed',
-          sensitivity: 'normal',
-          createdAt: 1,
-          confirmedBy: 'user',
-          confirmedAt: 1,
-        },
-      ],
+      graph: evidenceGraph(
+        [
+          cognition({
+            id: 'memory-preference',
+            statement: '用户偏好简洁、少解释、直接执行的界面',
+            domain: 'about_me',
+            category: 'preferences_boundaries',
+          }),
+        ],
+        input.entries,
+      ),
     });
 
     expect(sources.find((source) => source.id === 'memory-preference')).toMatchObject({
@@ -302,46 +299,63 @@ describe('read-only avatar guidance', () => {
   });
 });
 
-const atomic = (overrides: Partial<AvatarAtomicMemory> = {}): AvatarAtomicMemory => ({
-  id: 'name',
-  statement: '用户为分身取名为「小树」',
-  nature: 'explicit',
-  facets: ['preference'],
-  tags: [],
-  contexts: [],
-  sourceRefs: [{ source: 'entry', id: 'entry' }],
-  confidence: 0.7,
-  status: 'confirmed',
-  aiVisibility: 'allowed',
-  sensitivity: 'normal',
-  createdAt: 1,
-  confirmedAt: 1,
-  confirmedBy: 'user',
-  ...overrides,
-});
+const atomic = (overrides: Partial<CognitiveObject> = {}) =>
+  cognition({
+    id: 'name',
+    statement: '用户为分身取名为「小树」',
+    domain: 'about_me',
+    category: 'preferences_boundaries',
+    ...overrides,
+  });
 
 describe('six-layer recall boundaries', () => {
   it('uses the latest reviewed name independently of question keyword ranking', () => {
     const sources = buildGuidanceSources({
       ...fixture(),
-      avatarMemories: [
-        atomic(),
-        atomic({ id: 'new-name', statement: '用户为分身取名为「小鹿」', confirmedAt: 2 }),
-      ],
+      graph: evidenceGraph(
+        [
+          atomic(),
+          atomic({
+            id: 'new-name',
+            statement: '用户为分身取名为「小鹿」',
+            confirmedAt: new Date(2).toISOString(),
+          }),
+        ],
+        fixture().entries,
+      ),
     });
-    expect(buildGroundedGuidance('你叫什么名字', sources).text).toContain('我是 VECTOR，你可以叫我「小鹿」');
+    expect(buildGroundedGuidance('你叫什么名字', sources).text).toContain(
+      '我是 VECTOR，你可以叫我「小鹿」',
+    );
   });
   it('does not use unreviewed, expired, future, or inferred names', () => {
     const now = Date.now();
     const sources = buildGuidanceSources({
       ...fixture(),
-      avatarMemories: [
-        atomic({ id: 'candidate', status: 'candidate' }),
-        atomic({ id: 'rejected', status: 'rejected' }),
-        atomic({ id: 'expired', validTo: now }),
-        atomic({ id: 'future', validFrom: now + 60000 }),
-        atomic({ id: 'inferred', nature: 'inferred' }),
-      ],
+      graph: evidenceGraph(
+        [
+          atomic({ id: 'candidate', status: 'candidate' }),
+          atomic({ id: 'rejected', status: 'rejected' }),
+          atomic({
+            id: 'expired',
+            validity: {
+              mode: 'staged',
+              validFrom: new Date(0).toISOString(),
+              validUntil: new Date(now).toISOString(),
+            },
+          }),
+          atomic({
+            id: 'future',
+            validity: { mode: 'long_term', validFrom: new Date(now + 60000).toISOString() },
+          }),
+          atomic({
+            id: 'inferred',
+            domain: 'my_understanding',
+            category: 'understanding_judgment',
+          }),
+        ],
+        fixture().entries,
+      ),
     });
     expect(sources.filter((s) => s.avatarName)).toHaveLength(0);
     expect(buildGroundedGuidance('你叫什么名字', sources).text).not.toContain('「小树」');
@@ -350,7 +364,18 @@ describe('six-layer recall boundaries', () => {
     const sources = buildGuidanceSources({
       ...fixture(),
       now: 1,
-      avatarMemories: [atomic({ validTo: 2 })],
+      graph: evidenceGraph(
+        [
+          atomic({
+            validity: {
+              mode: 'staged',
+              validFrom: new Date(0).toISOString(),
+              validUntil: new Date(2).toISOString(),
+            },
+          }),
+        ],
+        [fixture().entries[0]],
+      ),
     });
     expect(sources.some((s) => s.avatarName)).toBe(true);
     expect(buildGroundedGuidance('你叫什么名字', sources).text).not.toContain('「小树」');
@@ -361,10 +386,15 @@ describe('six-layer recall boundaries', () => {
       ['state', '不能据此判断你现在的感受'],
       ['commitment', '是否完成还需要核实'],
     ] as const) {
-      const sources = buildGuidanceSources({
-        ...fixture(),
-        avatarMemories: [atomic({ statement: '散步让我更平静', nature })],
-      });
+      const sources = [
+        {
+          id: 'semantic-context',
+          kind: '背景' as const,
+          module: 'past' as const,
+          text: '散步让我更平静',
+          nature,
+        },
+      ];
       expect(buildGroundedGuidance('散步让我更平静', sources).text).toContain(wording);
     }
   });

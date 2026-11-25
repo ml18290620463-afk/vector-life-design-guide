@@ -27,3 +27,7 @@ CHANGELOG.md
 # list nesting and the rendered code blocks both. Author-curated
 # operations doc; whitespace is meaningful.
 docs/billing-smoke-test.md
+
+# Generated local analysis and audit artifacts
+lighthouse-reports
+.taste-skill

@@ -1,6 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { get as legacyGet, set as legacySet } from 'idb-keyval';
-beforeEach(() => { vi.resetModules(); localStorage.clear(); sessionStorage.clear(); });
+beforeEach(() => {
+  vi.resetModules();
+  localStorage.clear();
+  sessionStorage.clear();
+});
 const alice = '11111111-1111-4111-8111-111111111111';
 const bob = '22222222-2222-4222-8222-222222222222';
 async function open(id: string) {

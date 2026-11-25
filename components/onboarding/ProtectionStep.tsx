@@ -5,12 +5,15 @@ export function ProtectionStep({
   language,
   onSave,
   onBack,
+  purpose = 'first-entry',
 }: {
   language: Language;
+  purpose?: 'first-entry' | 'avatar-upgrade';
   onSave: (password: string) => Promise<void>;
   onBack: () => void;
 }) {
   const zh = language === 'zh';
+  const upgrade = purpose === 'avatar-upgrade';
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,11 +51,23 @@ export function ProtectionStep({
         }
       }}
     >
-      <h1>{zh ? '保存前，保护这条记录' : 'Protect your first entry'}</h1>
+      <h1>
+        {upgrade
+          ? zh
+            ? '保护并升级分身资料'
+            : 'Protect and upgrade your avatar'
+          : zh
+            ? '保存前，保护这条记录'
+            : 'Protect your first entry'}
+      </h1>
       <p>
-        {zh
-          ? '设置本机解锁密码后，草稿将加密保存。请牢记密码；恢复密钥与备份可稍后在设置中管理。'
-          : 'Your draft will be encrypted with your device password. Remember it; recovery and backups are available in settings.'}
+        {upgrade
+          ? zh
+            ? '设置本机解锁密码后，将加密保存旧分身资料快照，核验成功后自动完成升级。升级前原始资料保持不变。'
+            : 'Set a device password to encrypt and verify a snapshot of your existing avatar before upgrading. Your original data is preserved.'
+          : zh
+            ? '设置本机解锁密码后，草稿将加密保存。请牢记密码；恢复密钥与备份可稍后在设置中管理。'
+            : 'Your draft will be encrypted with your device password. Remember it; recovery and backups are available in settings.'}
       </p>
       <label>
         {zh ? '密码（至少 8 位字母和数字）' : 'Password (8+ characters, letters and numbers)'}
@@ -80,10 +95,20 @@ export function ProtectionStep({
       </label>
       {error && <p role="alert">{error}</p>}
       <button type="submit" data-testid="onboarding-protect" disabled={busy}>
-        {busy ? (zh ? '正在加密…' : 'Encrypting…') : zh ? '加密保存草稿' : 'Save encrypted draft'}
+        {busy
+          ? zh
+            ? '正在加密…'
+            : 'Encrypting…'
+          : upgrade
+            ? zh
+              ? '设置密码并升级'
+              : 'Set password and upgrade'
+            : zh
+              ? '加密保存草稿'
+              : 'Save encrypted draft'}
       </button>
       <button type="button" className="onboarding-secondary" disabled={busy} onClick={onBack}>
-        {zh ? '返回编辑' : 'Back to writing'}
+        {upgrade ? (zh ? '暂不升级' : 'Not now') : zh ? '返回编辑' : 'Back to writing'}
       </button>
     </form>
   );

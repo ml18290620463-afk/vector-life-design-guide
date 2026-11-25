@@ -45,7 +45,7 @@ const getInitialTheme = (): Theme => {
 
 export const useAppStore = create<AppStore>((set, get) => ({
   appState: AppState.COVER,
-  language: 'zh',
+  language: normalizeLanguage(getStoredString(AppStorageKeys.language) || 'zh'),
   theme: getInitialTheme(),
   currentUser: '用户名',
   userId: currentAccountId() ?? 'local-user',
@@ -61,7 +61,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     set({ appState: state });
   },
-  setLanguage: (lang) => set({ language: normalizeLanguage(lang) }),
+  setLanguage: (lang) => {
+    const language = normalizeLanguage(lang);
+    setStoredString(AppStorageKeys.language, language);
+    set({ language });
+  },
   setTheme: (theme) => {
     setStoredString(AppStorageKeys.theme, theme);
     if (theme === 'light') {

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { seedOnboardedApp } from './seedHelpers';
+import { seedOnboardedApp, choosePrivateVisibility } from './seedHelpers';
 
 async function enterFuture(page: Page) {
   await page
@@ -11,6 +11,7 @@ async function addAction(page: Page, title: string) {
   await page.getByRole('button', { name: '添加行动', exact: true }).click();
   await page.getByLabel('行动内容').fill(title);
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
 }
 async function reloadAndUnlock(page: Page) {
   await page.reload();
@@ -38,6 +39,7 @@ for (const width of [390, 1440]) {
     await dialog.getByLabel('本次执行状态').selectOption('partial');
     await dialog.getByLabel('反馈内容（可选）').fill('证件核对完成，还需要准备签证材料');
     await dialog.getByRole('button', { name: '保存', exact: true }).click();
+    await choosePrivateVisibility(page);
     await expect(dialog).toHaveCount(0);
     await list.getByRole('button', { name: first }).click();
     await expect(
@@ -84,16 +86,19 @@ test('未来：删除目标会持久清理关联行动并保留愿景', async ({
   await page.getByRole('button', { name: '添加愿景', exact: true }).click();
   await page.getByLabel('愿景内容').fill(vision);
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
   await page.getByRole('button', { name: '添加目标', exact: true }).click();
   await page.getByLabel('目标内容').fill(goal);
   await page.getByText('时间与关联（可选）', { exact: true }).click();
   await page.getByLabel('所属愿景（可选）').selectOption({ label: vision });
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
   await page.getByRole('button', { name: '添加行动', exact: true }).click();
   await page.getByLabel('行动内容').fill(action);
   await page.getByText('可选设置', { exact: true }).click();
   await page.getByLabel('所属目标（可选）').selectOption({ label: goal });
   await page.getByRole('button', { name: '保存', exact: true }).click();
+  await choosePrivateVisibility(page);
   await page.getByRole('button', { name: new RegExp(`查看目标：.*${goal}`) }).click();
   await page.getByRole('button', { name: '编辑', exact: true }).click();
   await page.getByRole('button', { name: '删除目标', exact: true }).click();
@@ -120,7 +125,10 @@ test('完成行动：长期推进留在未来，存入过去成为普通经历',
   await addAction(page, '完成访谈');
   await page.getByRole('tab', { name: '反馈', exact: true }).click();
   const list = page.getByRole('list', { name: '行动列表' });
-  for (const [title, destination] of [['持续阅读', 'long_term'], ['完成访谈', 'past']]) {
+  for (const [title, destination] of [
+    ['持续阅读', 'long_term'],
+    ['完成访谈', 'past'],
+  ]) {
     await list.getByRole('button', { name: title }).click();
     const dialog = page.getByRole('dialog', { name: title });
     await dialog.getByRole('button', { name: '更新进展', exact: true }).click();
@@ -128,6 +136,7 @@ test('完成行动：长期推进留在未来，存入过去成为普通经历',
     await dialog.getByRole('combobox', { name: '完成后', exact: true }).selectOption(destination);
     await dialog.getByLabel('反馈内容（可选）').fill('明确三个需求');
     await dialog.getByRole('button', { name: '保存', exact: true }).click();
+    await choosePrivateVisibility(page);
     await expect(dialog).toHaveCount(0);
   }
   await expect(list.getByRole('button', { name: '持续阅读' })).toBeVisible();
@@ -135,11 +144,13 @@ test('完成行动：长期推进留在未来，存入过去成为普通经历',
   await reloadAndUnlock(page);
   await page.getByRole('tab', { name: '反馈', exact: true }).click();
   await expect(list.getByRole('button', { name: '完成访谈' })).toHaveCount(0);
-  await page.getByRole('navigation', { name: '主页面导航' }).getByRole('button', { name: /^过去/ }).click();
+  await page
+    .getByRole('navigation', { name: '主页面导航' })
+    .getByRole('button', { name: /^过去/ })
+    .click();
   await expect(page.getByText('完成访谈', { exact: true }).first()).toBeVisible();
   await expect(page.locator('.mobile-past-goal-summary')).toHaveCount(0);
 });
-
 
 for (const width of [390, 1440]) {
   test(`未来草稿刷新恢复并在保存后清理 ${width}px`, async ({ page }) => {
@@ -149,11 +160,14 @@ for (const width of [390, 1440]) {
     await enterFuture(page);
     await page.getByRole('button', { name: '添加行动', exact: true }).click();
     await page.getByLabel('行动内容').fill('刷新后继续的规划草稿');
-    await expect(page.getByRole('status').filter({ hasText: '草稿已加密保存在本机' })).toBeVisible();
+    await expect(
+      page.getByRole('status').filter({ hasText: '草稿已加密保存在本机' }),
+    ).toBeVisible();
     await reloadAndUnlock(page);
     await page.getByRole('button', { name: '添加行动', exact: true }).click();
     await expect(page.getByLabel('行动内容')).toHaveValue('刷新后继续的规划草稿');
     await page.getByRole('button', { name: '保存', exact: true }).click();
+    await choosePrivateVisibility(page);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.getByRole('button', { name: '添加行动', exact: true }).click();
     await expect(page.getByLabel('行动内容')).toHaveValue('');

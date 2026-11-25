@@ -5,7 +5,12 @@ import { TRANSLATIONS } from '../constants';
 import type { Principle } from '../types';
 
 const t = TRANSLATIONS.zh;
-const choosePrivate = () => fireEvent.click(within(screen.getByRole('dialog', { name: '是否允许 AI 可见？' })).getByRole('button', { name: /仅自己可见/ }));
+const choosePrivate = () =>
+  fireEvent.click(
+    within(screen.getByRole('dialog', { name: '是否允许 AI 可见？' })).getByRole('button', {
+      name: /仅自己可见/,
+    }),
+  );
 
 const baseProps = {
   theme: 'dark' as const,
@@ -92,13 +97,15 @@ describe('ArchivePrinciplesView', () => {
     expect(screen.getByText('这一条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
     choosePrivate();
-    await waitFor(() => expect(onUpdatePrinciple).toHaveBeenCalledWith({
-      ...principle,
-      text: '先核对事实，再作判断',
-      application: undefined,
-      aiVisibility: 'private',
-      aiConsentAt: expect.any(Number),
-    }));
+    await waitFor(() =>
+      expect(onUpdatePrinciple).toHaveBeenCalledWith({
+        ...principle,
+        text: '先核对事实，再作判断',
+        application: undefined,
+        aiVisibility: 'private',
+        aiConsentAt: expect.any(Number),
+      }),
+    );
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '书写原则' })).toBeNull());
     expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
@@ -191,17 +198,19 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
     choosePrivate();
 
-    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledWith(
-      '先确认事实，再作判断',
-      expect.any(Number),
-      true,
-      undefined,
-      undefined,
-      undefined,
-      [],
-      [],
-      'private',
-    ));
+    await waitFor(() =>
+      expect(onAddPrinciple).toHaveBeenCalledWith(
+        '先确认事实，再作判断',
+        expect.any(Number),
+        true,
+        undefined,
+        undefined,
+        undefined,
+        [],
+        [],
+        'private',
+      ),
+    );
     await waitFor(() => expect(onManagementChange).toHaveBeenLastCalledWith(false));
     expect(screen.queryByLabelText(t.addPrinciple)).toBeNull();
     expect(screen.getByRole('button', { name: '写原则' })).toBeTruthy();
@@ -231,17 +240,19 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.click(screen.getByRole('button', { name: t.addPrinciple }));
     choosePrivate();
 
-    await waitFor(() => expect(onAddPrinciple).toHaveBeenLastCalledWith(
-      '会议开始前先确认范围',
-      expect.any(Number),
-      true,
-      undefined,
-      undefined,
-      undefined,
-      [],
-      ['practice-2'],
-      'private',
-    ));
+    await waitFor(() =>
+      expect(onAddPrinciple).toHaveBeenLastCalledWith(
+        '会议开始前先确认范围',
+        expect.any(Number),
+        true,
+        undefined,
+        undefined,
+        undefined,
+        [],
+        ['practice-2'],
+        'private',
+      ),
+    );
   });
 
   it('keeps writing focused and records principle metadata automatically', () => {
@@ -459,17 +470,19 @@ describe('ArchivePrinciplesView', () => {
       screen.getAllByRole('button').find((button) => button.textContent?.includes(t.addPrinciple))!,
     );
     choosePrivate();
-    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledWith(
-      '先做最小步骤',
-      expect.any(Number),
-      true,
-      undefined,
-      undefined,
-      undefined,
-      [],
-      [],
-      'private',
-    ));
+    await waitFor(() =>
+      expect(onAddPrinciple).toHaveBeenCalledWith(
+        '先做最小步骤',
+        expect.any(Number),
+        true,
+        undefined,
+        undefined,
+        undefined,
+        [],
+        [],
+        'private',
+      ),
+    );
   });
 
   it('creates a principle with system-owned metadata and no manual tag selection', async () => {
@@ -482,17 +495,19 @@ describe('ArchivePrinciplesView', () => {
       screen.getAllByRole('button').find((button) => button.textContent?.includes(t.addPrinciple))!,
     );
     choosePrivate();
-    await waitFor(() => expect(onAddPrinciple).toHaveBeenCalledWith(
-      '重要事情先开始',
-      new Date().getFullYear(),
-      true,
-      undefined,
-      undefined,
-      undefined,
-      [],
-      [],
-      'private',
-    ));
+    await waitFor(() =>
+      expect(onAddPrinciple).toHaveBeenCalledWith(
+        '重要事情先开始',
+        new Date().getFullYear(),
+        true,
+        undefined,
+        undefined,
+        undefined,
+        [],
+        [],
+        'private',
+      ),
+    );
     expect(screen.queryByLabelText('标签（可选）')).toBeNull();
   });
 

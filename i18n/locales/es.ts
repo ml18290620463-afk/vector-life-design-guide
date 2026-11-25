@@ -144,7 +144,6 @@ export const es = {
   setTimeLock: 'ESTABLECER TIEMPO DE DESCRIPCIÓN (CÁPSULA DEL TIEMPO)',
   immediate: 'INMEDIATO',
   oneMin: '1 MIN DESPUÉS (TEST)',
-  oneDay: '24 HORAS DESPUÉS',
   customDate: 'FECHA PERSONALIZADA',
   career: 'CARRERA',
   careerDesc: 'Logros, posición, competitividad',

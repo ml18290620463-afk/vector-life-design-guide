@@ -52,6 +52,9 @@ jobs:
           SENTRY_RELEASE: ${{ github.sha }}
         run: npm run build
 
+      - name: Resource budgets
+        run: npm run audit:resources
+
       # Phase 4 §W1.5 — Sentry release + sourcemap upload.
       #
       # Only runs on push to main (PR builds skip — they don't
@@ -122,7 +125,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Core flows, backup and accessibility
-        run: npx playwright test e2e/now-functional.spec.ts e2e/future-functional.spec.ts e2e/contextual-pattern-review.spec.ts e2e/past-functional.spec.ts e2e/data-backup-functional.spec.ts e2e/a11y.spec.ts e2e/experience-layout.spec.ts --workers=1
+        run: npx playwright test e2e/first-run-bilingual.spec.ts e2e/now-functional.spec.ts e2e/future-functional.spec.ts e2e/contextual-pattern-review.spec.ts e2e/past-functional.spec.ts e2e/data-backup-functional.spec.ts e2e/a11y.spec.ts e2e/experience-layout.spec.ts e2e/ai-privacy.spec.ts e2e/ai-request-boundary.spec.ts --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

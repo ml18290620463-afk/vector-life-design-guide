@@ -12,7 +12,7 @@
 - **Past**：响应式过去记录模块，在桌面与移动端统一承担读取、搜索、回顾、归档，以及用户手动维护原则。
 - **Future**：设计愿景、目标与行动规划，在践行中记录行动的实际结果。
 - **Avatar / 分身**：通过对话综合当下记录、过往经历、原则与未来目标，帮助用户理解处境、行为模式、困境的成因和长期影响。分身提出的模式须经用户在弹窗中确认、拒绝或修正。
-- **连续性保障**：记录草稿与恢复、本地加密和数据读写在底层保持可用，不占用日常操作入口。
+- **连续性保障**：记录草稿与恢复、可选的局部数据保护和数据读写在底层保持可用，不占用日常操作入口。
 
 已下线并从主代码路径移除的旧模块包括：旧 Editor、新建记录旧链路、启明星、心象、圆桌、信件模式、心象记忆管理、跨设备迁移向导、可信设备管理与高级签名备份。
 
@@ -100,7 +100,7 @@ npm run lint
 ## 数据连续性
 
 - 长文本记录会自动保存草稿；重新进入记录页时可恢复未完成内容。
-- 本地数据使用设备端存储与主密码保护；安全与恢复机制保留在服务层，避免干扰日常记录、回看、规划和对话。
+- 本地数据优先存于设备；主密码仅保护指定数据及应用访问，普通记录、素材与记忆不因此自动整库加密。
 - 数据迁移、导入与完整备份格式继续由底层兼容逻辑维护，不作为日常工作区入口。
 
 ## 部署
@@ -140,8 +140,29 @@ NODE_ENV=production OPENROUTER_API_KEY=... HOST=127.0.0.1 npx tsx server.ts
 - entries 序列化过大时，IndexedDB 仍写入，但 localStorage 镜像会跳过；此时建议手动导出备份。
 - IndexedDB 写入失败会显示同步错误，建议先复制原文再排查浏览器存储空间或权限问题。
 
-## 历史文档
+## 当前交付与验证
 
-早期路线图、评估报告和产品愿景仍保留在仓库中，方便追溯项目演化。但它们可能描述已经下线的实验功能，不代表当前产品事实。
+当前版：**p0-p2-20261123**。无强制启动引导、无预置个人记录。
 
-入口见：[docs/archive/README.md](./docs/archive/README.md)。
+- [本轮实施与验收报告](docs/current/p0-p2-delivery.md)
+- [存储、加密、AI 与同步边界](PRIVACY.md)
+- [可选整库加密设计](docs/current/encryption-design.md)
+- [模型、实机和 7 日试用协议](docs/current/validation-protocols.md)
+- [付费前验收与尚存缺口](docs/billing-smoke-test.md)
+
+```bash
+npm run lint
+npm run format:check
+npm run typecheck
+npm test
+npm run build
+npm run audit:resources
+npx playwright install chromium
+npm run test:e2e:core
+npm run test:e2e:experience
+npm run audit:lighthouse
+```
+
+完整本轮浏览器场景以 `.github/workflows/ci.yml` 为准；本机已安装 Chrome 时可使用 `E2E_BROWSER_CHANNEL=chrome`。真实模型对照、真实支付环境、整库迁移和真人试用仍需各自验收，不能以自动化测试代替。
+
+本地优先不等于整库加密。无密码导出的备份是明文 JSON，有密码的备份才加密。最终 ZIP 仅含当前源码、资源、合成测试夹具和当前说明，不包含 Git 历史、个人记录、密钥或旧评测报告。

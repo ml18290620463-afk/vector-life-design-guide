@@ -29,7 +29,7 @@ export const isMobileMainAppState = (appState: AppState) => getMobileMainTab(app
 
 export const getNowRouteAppState = (route: NowRoute): AppState => {
   if (route === 'tags') return AppState.NOW_TAGS;
-  if (route === 'avatar-chat') return AppState.NOW_AVATAR_CHAT;
+  if (route === 'avatar-chat' || route === 'avatar-settings') return AppState.NOW_AVATAR_CHAT;
   return AppState.NOW;
 };
 

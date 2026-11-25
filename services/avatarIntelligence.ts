@@ -1,8 +1,8 @@
 import { eventTagForLookup } from '../features/now/constants/tags';
 import type { DiaryEntry } from '../types';
 import type {
-  AvatarAtomicMemory,
-  AvatarUnderstandingVersion,
+  AvatarExtractionCandidate,
+  AvatarGrowthCognitionReference,
 } from '../features/avatar/types';
 import {
   analyzeAvatarInformation,
@@ -105,7 +105,7 @@ export interface AvatarConflictCandidate {
 export interface AvatarGrowthPreview {
   extraction: AvatarStructuredExtraction;
   memoryCandidates: AvatarMemoryCandidate[];
-  atomicMemoryCandidates: AvatarAtomicMemory[];
+  atomicMemoryCandidates: AvatarExtractionCandidate[];
   temporalFacts: AvatarTemporalFact[];
   temporalEdges: AvatarTemporalEdge[];
   conflicts: AvatarConflictCandidate[];
@@ -118,8 +118,10 @@ export interface AvatarGrowthPreview {
 }
 
 export interface AvatarGrowthContext {
-  entries?: Array<Pick<DiaryEntry, 'id' | 'title' | 'content' | 'tags' | 'createdAt'> & Partial<DiaryEntry>>;
-  understandings?: AvatarUnderstandingVersion[];
+  entries?: Array<
+    Pick<DiaryEntry, 'id' | 'title' | 'content' | 'tags' | 'createdAt'> & Partial<DiaryEntry>
+  >;
+  understandings?: AvatarGrowthCognitionReference[];
   evidenceSources?: Array<{ entryId: string; supplementId?: string; createdAt: number }>;
   now?: number;
 }
@@ -241,12 +243,9 @@ const hasLikelyConflict = (current: string, previous: string): boolean =>
   );
 
 import {
-  atomicMemoryFromPattern,
   buildAtomicMemoryCandidates,
   withoutRecurringPatternFacets,
 } from './avatarMemoryCandidates';
-
-export { atomicMemoryFromPattern, buildAtomicMemoryCandidates };
 
 export class LocalStructuredExtractionProvider implements StructuredExtractionProvider {
   async extract(input: AvatarExtractionInput): Promise<AvatarStructuredExtraction> {
@@ -452,8 +451,7 @@ export const buildAvatarGrowthPreview = async (
     graph?: TemporalGraphProvider;
   } = {},
 ): Promise<AvatarGrowthPreview> => {
-  const extractionProvider =
-    providers.extraction ?? new LocalStructuredExtractionProvider();
+  const extractionProvider = providers.extraction ?? new LocalStructuredExtractionProvider();
   const memoryProvider = providers.memory ?? new LocalLongTermMemoryProvider();
   const graphProvider = providers.graph ?? new LocalTemporalGraphProvider();
   const extraction = await extractionProvider.extract({
@@ -473,12 +471,8 @@ export const buildAvatarGrowthPreview = async (
         return factualCandidate ? [factualCandidate] : [];
       })
     : atomicMemoryCandidates;
-  for (const candidate of safeAtomicMemoryCandidates) {
-    if (candidate.facets.includes('cognitive_pattern') && extraction.patternKey)
-      candidate.patternKey = extraction.patternKey;
-  }
   const recallEntryIds = selectAvatarRecallMemories(
-    (context.entries ?? []).map(entry => ({ ...entry, isLocked: entry.isLocked ?? false })),
+    (context.entries ?? []).map((entry) => ({ ...entry, isLocked: entry.isLocked ?? false })),
     [extraction.summary, ...extraction.moodTags, ...extraction.eventTags].join(' '),
     5,
   ).map((memory) => memory.sourceEntryId);

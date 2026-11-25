@@ -1,3 +1,8 @@
+import {
+  avatarMigrationCheckpointFrom,
+  decodeAvatarMigrationCheckpoint,
+} from './avatarOntologyMigrationCheckpoint';
+import { AVATAR_MIGRATION_SNAPSHOT_KEY, AVATAR_MIGRATION_RESULT_KEY } from './avatarOntologyKey';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { clear, get, set } from 'idb-keyval';
 import {
@@ -101,7 +106,7 @@ it('restores all protected domains in an empty browser storage and repeated merg
     hasDraft: true,
     goals: 1,
     actions: 1,
-    confirmedMemories: 1,
+    confirmedMemories: 0,
   });
   await importVaultBackup(backup, 'merge', undefined, password);
   expect(await get(K.entries)).toHaveLength(1);
@@ -112,7 +117,17 @@ it('restores all protected domains in an empty browser storage and repeated merg
   expect((await loadNowDraft()).draft?.text).toBe('私人草稿');
   expect((await readFutureSnapshot()).state.goals).toHaveLength(1);
   expect((await readFutureSnapshot()).actions).toHaveLength(1);
-  expect(JSON.parse(localStorage.getItem(cache)!)).toHaveLength(1);
+  expect(localStorage.getItem(cache)).toBeNull();
+  const archive = await decodeAvatarMigrationCheckpoint(
+    avatarMigrationCheckpointFrom({
+      [AVATAR_MIGRATION_SNAPSHOT_KEY]: await get(AVATAR_MIGRATION_SNAPSHOT_KEY),
+      [AVATAR_MIGRATION_RESULT_KEY]: await get(AVATAR_MIGRATION_RESULT_KEY),
+    }),
+    password,
+  );
+  expect(JSON.parse(archive.snapshot.raw.atoms!)).toEqual([
+    { id: 'memory', statement: '私人理解', status: 'confirmed' },
+  ]);
   expect(await get(BACKUP_RESTORE_JOB)).toBeUndefined();
   useAppStore.setState({ masterPassword: null, isUnlocked: false });
   await expect(loadNowDraft()).rejects.toThrow('解锁');
@@ -169,7 +184,7 @@ it('keeps an encrypted recovery job after local cache failure and retries only a
   const original = localStorage.setItem.bind(localStorage);
   let failCache = true;
   vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
-    if (key === cache && failCache) throw new Error('disk full');
+    if (key === 'user_custom_anchors' && failCache) throw new Error('disk full');
     return original(key, value);
   });
   await expect(importVaultBackup(backup, 'replace', undefined, password)).rejects.toThrow(
@@ -185,7 +200,8 @@ it('keeps an encrypted recovery job after local cache failure and retries only a
   useAppStore.setState({ isUnlocked: true, masterPassword: password });
   await recoverBackupRestore();
   expect(await get(BACKUP_RESTORE_JOB)).toBeUndefined();
-  expect(JSON.parse(localStorage.getItem(cache)!)[0].statement).toBe('私人理解');
+  expect(await get(AVATAR_MIGRATION_SNAPSHOT_KEY)).toBeDefined();
+  expect(JSON.stringify(await get(AVATAR_MIGRATION_SNAPSHOT_KEY))).not.toContain('私人理解');
 }, 30_000);
 it('boots a locked vault with no recovery job and blocks legacy plaintext export', async () => {
   await protect();
@@ -210,7 +226,7 @@ it('runs a restore drill without writing the current vault', async () => {
   const file = await fixture();
   const backup = (await decryptVaultBackupFile(file, password)) as VaultBackup;
   const before = await get(K.entries);
-  const drill = await drillVaultBackupRestore(backup, 'merge');
+  const drill = await drillVaultBackupRestore(backup, 'merge', undefined, password);
   expect(drill.canRestore).toBe(true);
   expect(drill.totalAfter).toBe(1);
   expect(await get(K.entries)).toEqual(before);
@@ -247,7 +263,23 @@ it('round-trips every backup domain, embedded media and complete linked future h
     'vector:avatar:memory-tags:v1': [{ name: '沟通' }],
     'vector:avatar:understandings:v1': [{ id: 'understanding1', sourceEntryIds: ['e1'] }],
     'vector:avatar:sessions:v1': [
-      { id: 'session1', messages: [{ role: 'user', content: '如何确认范围？' }] },
+      {
+        id: 'session1',
+        mode: 'general',
+        context: { mode: 'general', source: 'global' },
+        createdAt: 1,
+        updatedAt: 1,
+        references: [],
+        messages: [
+          {
+            id: 'message1',
+            role: 'user',
+            type: 'text',
+            content: '如何确认范围？',
+            created_at: '2026-10-09T00:00:00.000Z',
+          },
+        ],
+      },
     ],
     user_custom_anchors: ['耐心'],
   }))

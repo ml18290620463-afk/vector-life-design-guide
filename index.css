@@ -47,20 +47,22 @@
 @import '@fontsource/jetbrains-mono/latin-700.css';
 
 @theme {
-  --font-sans: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
   --font-mono:
-    'JetBrains Mono', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, monospace;
+    'JetBrains Mono', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', ui-monospace,
+    SFMono-Regular, monospace;
 
   /*
    * Product palette — ice / mint / mist-violet / luminous-white (2026)
    * 背景底色 / 主背景层 / 深蓝层 · 主副弱文字 · 科技主色 / 青能量 / 弱发光青 / 克制强调
    */
-  --color-space-bg: #10171D;
-  --color-space-layer: #19232C;
-  --color-space-deep: #202D38;
-  --color-space-text: #E8EEF2;
-  --color-space-text-secondary: #A0AFBA;
-  --color-space-text-muted: #7E909E;
+  --color-space-bg: #10171d;
+  --color-space-layer: #19232c;
+  --color-space-deep: #202d38;
+  --color-space-text: #e8eef2;
+  --color-space-text-secondary: #a0afba;
+  --color-space-text-muted: #7e909e;
   /*
    * Cover 文案墙（深色）— 字色 + 透明度带
    * 普通 18–28% · 稍重要 30–40% · 重点句 45%
@@ -75,29 +77,29 @@
   --opacity-cover-type-strong: 0.56;
 
   /* Cover hero + status + CTA（深色封面专项，见设计原则：90% 低温静默 / 10% 高能秩序） */
-  --color-cover-hero-title: #E8EEF2;
+  --color-cover-hero-title: #e8eef2;
   --color-cover-hero-subtitle: #d9f8f4;
   --color-cover-hero-rule: #a7e8f2;
-  --color-cover-status-title: #9CCBDD;
-  --color-cover-status-body: #A0AFBA;
-  --color-cover-status-rule: #8DC4AE;
-  --color-cover-cta-border: #9CCBDD;
+  --color-cover-status-title: #9ccbdd;
+  --color-cover-status-body: #a0afba;
+  --color-cover-status-rule: #8dc4ae;
+  --color-cover-cta-border: #9ccbdd;
   --color-cover-cta-bg: rgba(10, 42, 59, 0.78);
-  --color-cover-cta-icon: #E8EEF2;
+  --color-cover-cta-icon: #e8eef2;
   --color-cover-cta-label: #d9f8f4;
   --color-cover-cta-hover-glow: #b7f4ff;
   /* 神秘感紫：仅轨迹线 / 少量粒子 / 极少数关键词，不用玫红粉紫 */
-  --color-cover-orbit-violet: #ABB7D8;
+  --color-cover-orbit-violet: #abb7d8;
   --color-cover-keyword-violet: #bbb5dc;
-  --color-tech-primary: #9CCBDD;
-  --color-tech-cyan-energy: #78B4CB;
-  --color-tech-cyan-glow: #B5DDEA;
-  --color-tech-accent-violet: #ABB7D8;
-  --color-vector-champagne: #E8EEF2;
-  --color-vector-champagne-soft: #A0AFBA;
-  --color-vector-ice-blue: #9CCBDD;
-  --color-vector-deep-ink: #10171D;
-  --color-vector-quiet-moss: #8DC4AE;
+  --color-tech-primary: #9ccbdd;
+  --color-tech-cyan-energy: #78b4cb;
+  --color-tech-cyan-glow: #b5ddea;
+  --color-tech-accent-violet: #abb7d8;
+  --color-vector-champagne: #e8eef2;
+  --color-vector-champagne-soft: #a0afba;
+  --color-vector-ice-blue: #9ccbdd;
+  --color-vector-deep-ink: #10171d;
+  --color-vector-quiet-moss: #8dc4ae;
 
   /* Vector Core - High-End Technical Theme Tokens */
   --color-archive-bg: #f4f7f9;
@@ -10945,20 +10947,74 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
 }
 
 /* Per-save AI consent keeps the editor footprint unchanged. */
-.ai-visibility-dialog { width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; box-sizing: border-box; }
-.ai-visibility-dialog > p { font-size: 13px; line-height: 1.7; opacity: .75; }
-.ai-visibility-options { display: grid; gap: 10px; margin: 18px 0; }
-.ai-visibility-options button { display: grid; gap: 6px; padding: 16px; text-align: left; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 12px; min-height: 80px; cursor: pointer; }
-.ai-visibility-options strong { font-size: 15px; font-weight: 500; }
-.ai-visibility-options span { font-size: 12px; line-height: 1.6; opacity: .7; }
-.ai-visibility-options button:hover { background: rgb(128 128 128 / .08); }
-.ai-visibility-options button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
-.ai-visibility-dialog .ai-visibility-note { font-size: 11px; }
+.ai-visibility-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  box-sizing: border-box;
+}
+.ai-visibility-dialog > p {
+  font-size: 13px;
+  line-height: 1.7;
+  opacity: 0.75;
+}
+.ai-visibility-options {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+.ai-visibility-options button {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  min-height: 80px;
+  cursor: pointer;
+}
+.ai-visibility-options strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.ai-visibility-options span {
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.7;
+}
+.ai-visibility-options button:hover {
+  background: rgb(128 128 128 / 0.08);
+}
+.ai-visibility-options button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.ai-visibility-dialog .ai-visibility-note {
+  font-size: 11px;
+}
 
-.past-search-filters { margin: 12px 0; font-size: 13px; }
-.past-search-filters summary { cursor: pointer; padding: 8px 0; }
-.past-search-filters__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 0; }
-.past-search-filters__fields label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.past-search-filters {
+  margin: 12px 0;
+  font-size: 13px;
+}
+.past-search-filters summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.past-search-filters__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px 0;
+}
+.past-search-filters__fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
 .past-search-filters__fields input,
 .past-search-filters__fields select {
   box-sizing: border-box;
@@ -10974,7 +11030,9 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
   color-scheme: dark;
 }
 html.light .past-search-filters__fields input,
-html.light .past-search-filters__fields select { color-scheme: light; }
+html.light .past-search-filters__fields select {
+  color-scheme: light;
+}
 .past-search-filters__fields select option {
   background: var(--ds-surface);
   color: var(--ds-text);
@@ -10989,5 +11047,21 @@ html.light .past-search-filters__fields select { color-scheme: light; }
   cursor: pointer;
 }
 
-.now-privacy-choice { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:8px 16px; font-size:12px; color:var(--text-secondary, #858b94); }
-.now-privacy-choice select { min-width:0; max-width:65%; padding:6px 8px; border:1px solid var(--border-color, #5558); border-radius:8px; color:inherit; background:transparent; }
+.now-privacy-choice {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary, #858b94);
+}
+.now-privacy-choice select {
+  min-width: 0;
+  max-width: 65%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color, #5558);
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+}

@@ -51,35 +51,54 @@ export const getAvatarIntroMessages = (args: {
   createdAt: string;
   createId: () => string;
   mode?: AvatarMode;
+  language?: 'zh' | 'en';
 }) => {
+  const t = (zh: string, en: string) => (args.language === 'en' ? en : zh);
   if (args.mode === 'review') {
     return [
-      buildAssistantTextMessage('记录真实结果。完成后保存到「过去」。', {
-        id: args.createId(),
-        createdAt: args.createdAt,
-      }),
+      buildAssistantTextMessage(
+        t(
+          '记录真实结果。完成后保存到「过去」。',
+          'Record what actually happened. Save it to Past when finished.',
+        ),
+        {
+          id: args.createId(),
+          createdAt: args.createdAt,
+        },
+      ),
     ];
   }
   if (args.mode === 'general') {
     return [
       buildAssistantTextMessage(
-        args.isFirstVisit ? '我是 VECTOR。说一件事就好。' : '我在。继续说。',
+        args.isFirstVisit
+          ? t('我是 VECTOR。说一件事就好。', 'I am VECTOR. Start with one thing.')
+          : t('我在。继续说。', 'I am here. Go on.'),
         { id: args.createId(), createdAt: args.createdAt },
       ),
     ];
   }
   return args.isFirstVisit
     ? [
-        buildAssistantTextMessage('说一件事。完成后生成记录。', {
-          id: args.createId(),
-          createdAt: args.createdAt,
-        }),
+        buildAssistantTextMessage(
+          t(
+            '说一件事。完成后生成记录。',
+            'Tell me about one thing. Create a record when finished.',
+          ),
+          {
+            id: args.createId(),
+            createdAt: args.createdAt,
+          },
+        ),
       ]
     : [
-        buildAssistantTextMessage('继续说。完成后生成记录。', {
-          id: args.createId(),
-          createdAt: args.createdAt,
-        }),
+        buildAssistantTextMessage(
+          t('继续说。完成后生成记录。', 'Go on. Create a record when finished.'),
+          {
+            id: args.createId(),
+            createdAt: args.createdAt,
+          },
+        ),
       ];
 };
 

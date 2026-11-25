@@ -1,17 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { GuidanceSource } from './avatarGuidance';
-import {
-  buildGroundedGuidance,
-  sourceMatchesTemporalScope,
-} from './avatarGuidance';
-import { isSameDurableMemoryAssertion } from './avatarMemoryShared';
-import {
-  CANDIDATE_MEMORY_TTL,
-  readAvatarAtomicMemories,
-  writeAvatarAtomicMemory,
-} from './avatarMemoryAtoms';
-import type { AvatarAtomicMemory } from '../features/avatar/types';
-
+import { buildGroundedGuidance, sourceMatchesTemporalScope } from './avatarGuidance';
+import { isSameDurableMemoryAssertion } from './avatarStatementComparison';
 /**
  * A fixed, offline regression set for source selection and memory boundaries.
  * It evaluates our deterministic safety layer, not the quality of any chosen AI model.
@@ -23,26 +13,6 @@ const source = (patch: Partial<GuidanceSource>): GuidanceSource => ({
   module: 'past',
   temporalStatus: 'current_understanding',
   ...patch,
-});
-
-const candidate = (patch: Partial<AvatarAtomicMemory> = {}): AvatarAtomicMemory => ({
-  id: 'candidate',
-  statement: '用户偏好安静的工作环境',
-  nature: 'explicit',
-  facets: ['preference'],
-  tags: [],
-  contexts: [],
-  sourceRefs: [{ source: 'message', id: 'dialogue', excerpt: '我喜欢安静的环境' }],
-  confidence: 0.7,
-  status: 'candidate',
-  sensitivity: 'normal',
-  createdAt: Date.now(),
-  ...patch,
-});
-
-afterEach(() => {
-  localStorage.clear();
-  vi.useRealTimers();
 });
 
 describe('avatar guidance fixed evaluation set', () => {
@@ -64,7 +34,9 @@ describe('avatar guidance fixed evaluation set', () => {
       text: '2025 年一次项目冲突后感到疲惫',
       nature: 'state',
       temporalStatus: 'historical_fact',
-      evidence: [{ text: '项目冲突后感到疲惫', occurredAt: new Date(2025, 5, 2).getTime(), source: 'entry' }],
+      evidence: [
+        { text: '项目冲突后感到疲惫', occurredAt: new Date(2025, 5, 2).getTime(), source: 'entry' },
+      ],
     });
 
     const current = buildGroundedGuidance('我现在是否仍然容易疲惫？', [past], undefined, {
@@ -90,12 +62,22 @@ describe('avatar guidance fixed evaluation set', () => {
       text: '用户目前更重视稳定节奏与长期投入',
     });
 
-    const current = buildGroundedGuidance('我现在该怎样安排工作节奏？', [oldUnderstanding, currentUnderstanding], undefined, {
-      preferredSourceIds: ['old-understanding', 'current-understanding'],
-    });
-    const comparison = buildGroundedGuidance('回看我对工作节奏的变化', [oldUnderstanding, currentUnderstanding], undefined, {
-      preferredSourceIds: ['old-understanding', 'current-understanding'],
-    });
+    const current = buildGroundedGuidance(
+      '我现在该怎样安排工作节奏？',
+      [oldUnderstanding, currentUnderstanding],
+      undefined,
+      {
+        preferredSourceIds: ['old-understanding', 'current-understanding'],
+      },
+    );
+    const comparison = buildGroundedGuidance(
+      '回看我对工作节奏的变化',
+      [oldUnderstanding, currentUnderstanding],
+      undefined,
+      {
+        preferredSourceIds: ['old-understanding', 'current-understanding'],
+      },
+    );
 
     expect(current.sources.map((item) => item.id)).toEqual(['current-understanding']);
     expect(comparison.sources.map((item) => item.id)).toEqual(
@@ -146,13 +128,4 @@ describe('avatar guidance fixed evaluation set', () => {
     ).toBe(false);
   });
 
-  it('physically removes an unconfirmed candidate after 24 hours before it can become guidance', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-10-19T00:00:00.000Z'));
-    writeAvatarAtomicMemory(candidate());
-
-    vi.advanceTimersByTime(CANDIDATE_MEMORY_TTL);
-
-    expect(readAvatarAtomicMemories()).toEqual([]);
-  });
 });

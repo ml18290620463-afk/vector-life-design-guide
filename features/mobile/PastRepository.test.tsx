@@ -257,10 +257,12 @@ describe('PastRepository', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
     fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
     await waitFor(() => expect(onUpdatePrinciple).toHaveBeenCalled());
-    expect(onUpdatePrinciple).toHaveBeenCalledWith(expect.objectContaining({
-      ...principle,
-      text: '先核对事实，再作判断',
-      aiVisibility: 'private',
-    }));
+    expect(onUpdatePrinciple).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...principle,
+        text: '先核对事实，再作判断',
+        aiVisibility: 'private',
+      }),
+    );
   });
 });

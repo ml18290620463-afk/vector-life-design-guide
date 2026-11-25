@@ -41,9 +41,13 @@ describe('experienceFeedback', () => {
     ).toEqual({ trigger: '会议开始前', action: '' });
   });
   it('preserves an exception-only note through serialization and sanitation', () => {
-    const source = buildPrinciple({ application: { trigger: '', action: '', exception: '  紧急安全问题先处理  ' } });
+    const source = buildPrinciple({
+      application: { trigger: '', action: '', exception: '  紧急安全问题先处理  ' },
+    });
     expect(sanitizePrinciple(JSON.parse(JSON.stringify(source))).application).toEqual({
-      trigger: '', action: '', exception: '紧急安全问题先处理',
+      trigger: '',
+      action: '',
+      exception: '紧急安全问题先处理',
     });
   });
   it('uses a neutral confidence for legacy principles', () => {

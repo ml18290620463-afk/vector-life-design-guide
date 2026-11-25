@@ -1,0 +1,15 @@
+$ rg -n expandGuidanceAssociations|MAX_GUIDANCE|GUIDANCE_LIMIT services features server
+exit=1
+
+$ rg -n slice\(0,\s*12\)|slice\(0,\s*2\)|slice\(0,\s*4\) services/avatarGuidance.ts features/now/api/avatar.ts server/avatarChatRoutes.ts
+exit=1
+
+$ rg -n slice\(-12\)|extracting.*12|capture: policy|review: policy features/now/api/avatar.ts server/avatarChatRoutes.ts services/avatarGuidancePolicy.ts
+services/avatarGuidancePolicy.ts:27:  capture: policy('capture', 3, 3, 1, 0, 2, 0.45),
+services/avatarGuidancePolicy.ts:32:  review: policy('review', 12, 20, 2, 4, 6, 0.28),
+features/now/api/avatar.ts:180:        .slice(-12)
+exit=0
+
+Repository-wide code scan:
+$ rg -n expandGuidanceAssociations|MAX_GUIDANCE|GUIDANCE_LIMIT --glob !docs/** --glob !package-lock.json .
+exit=1

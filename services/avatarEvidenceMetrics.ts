@@ -24,8 +24,7 @@ export interface AvatarEvidenceMetric {
  */
 const COUNTABLE_TERMS = ['痛苦', '焦虑', '委屈', '压力', '难过', '生气', '疲惫'] as const;
 
-const countQuestion = (question: string) =>
-  /(多少|几)(次|回|个)?|统计|一共|总共/.test(question);
+const countQuestion = (question: string) => /(多少|几)(次|回|个)?|统计|一共|总共/.test(question);
 
 const requestedTerm = (question: string) => COUNTABLE_TERMS.find((term) => question.includes(term));
 

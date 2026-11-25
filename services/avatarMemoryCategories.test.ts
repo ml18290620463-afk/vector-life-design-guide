@@ -4,7 +4,6 @@ import {
   MEMORY_CATEGORIES,
   normalizeMemoryCategory,
 } from './avatarMemoryCategories';
-import { sanitizeAvatarAtomicMemories } from './avatarMemory';
 
 describe('memory categories', () => {
   it('provides the eight requested categories in order', () => {
@@ -20,25 +19,14 @@ describe('memory categories', () => {
     ]);
   });
   it('keeps temporary feelings as state and retains evidence when categorizing', () => {
-    const memory = {
-      id: 'state',
+    const candidate = {
       statement: '今天紧张',
-      nature: 'state',
-      facets: ['emotional_pattern'],
-      tags: [],
-      contexts: [],
-      category: 'recent_state',
-      sourceRefs: [{ source: 'message', id: 'source-1', excerpt: '今天紧张' }],
-      confidence: 0.5,
-      status: 'confirmed',
-      sensitivity: 'normal',
-      createdAt: 100,
-      confirmedAt: 110,
-      confirmedBy: 'user',
+      nature: 'state' as const,
+      facets: ['emotional_pattern' as const],
     };
-    const [stored] = sanitizeAvatarAtomicMemories([memory]);
-    expect(stored).toMatchObject(memory);
-    expect(categoryForMemory(stored)).toBe('recent_state');
+    const original = structuredClone(candidate);
+    expect(categoryForMemory(candidate)).toBe('recent_state');
+    expect(candidate).toEqual(original);
   });
   it('maps old category names without dropping their grouping', () => {
     expect(normalizeMemoryCategory('values')).toBe('judgment');

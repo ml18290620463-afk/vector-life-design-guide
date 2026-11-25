@@ -8,6 +8,8 @@ import type { MobileMainTab } from '../../mobile/types';
 import type { ActionDraftContext } from '../../../types/future';
 
 type DesktopNowFrameProps = {
+  onSetPassword?: (password: string) => Promise<void>;
+  onUnlockAvatar?: () => void;
   language: Language;
   nowRoute: NowRoute;
   onExit: () => void;
@@ -32,6 +34,8 @@ type DesktopNowFrameProps = {
 };
 
 export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
+  onSetPassword,
+  onUnlockAvatar,
   language,
   nowRoute,
   onExit,
@@ -60,6 +64,8 @@ export const DesktopNowFrame: FC<DesktopNowFrameProps> = ({
     onNavigateIntent={onNavigateIntent}
   >
     <NowFlow
+      onSetPassword={onSetPassword}
+      onUnlockAvatar={onUnlockAvatar}
       onNavigateModule={onNavigate}
       route={nowRoute}
       theme={theme}

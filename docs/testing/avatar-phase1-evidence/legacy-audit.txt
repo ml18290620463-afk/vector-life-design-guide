@@ -1,0 +1,14 @@
+$ rg -n AvatarUnderstandingVersion|AvatarAtomicMemory|AvatarMemoryRelationKind services features types --glob !*.test.*
+services/avatarOntologyMigrationConversion.ts:5:  LegacyAvatarAtomicMemory,
+services/avatarOntologyMigrationConversion.ts:6:  LegacyAvatarUnderstandingVersion,
+services/avatarOntologyMigrationConversion.ts:64:    const u = item as unknown as LegacyAvatarUnderstandingVersion;
+services/avatarOntologyMigrationConversion.ts:65:    const a = item as unknown as LegacyAvatarAtomicMemory;
+services/avatarLegacyTypes.ts:16:export interface LegacyAvatarUnderstandingVersion {
+services/avatarLegacyTypes.ts:123:export interface LegacyAvatarAtomicMemory {
+services/avatarLegacyTypes.ts:153:export type LegacyAvatarMemoryRelationKind =
+services/avatarLegacyTypes.ts:167:  readonly kind: LegacyAvatarMemoryRelationKind;
+Exit: 0
+
+$ rg -n saveUnderstanding|updateUnderstanding|deleteUnderstanding|saveAtomicMemory|updateAtomicMemory|deleteAtomicMemory|from .*avatarMemory(Atoms|Understandings|Relations|Shared) services features components hooks server
+Exit: 1
+

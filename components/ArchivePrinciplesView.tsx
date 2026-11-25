@@ -141,7 +141,8 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
     newPrincipleText.trim() ||
     annotation.trigger !==
       (principles.find((p) => p.id === editingPrincipleId)?.application?.trigger ?? '') ||
-    (annotation.exception ?? '') !== (principles.find((p) => p.id === editingPrincipleId)?.application?.exception ?? '') ||
+    (annotation.exception ?? '') !==
+      (principles.find((p) => p.id === editingPrincipleId)?.application?.exception ?? '') ||
     annotation.action !==
       (principles.find((p) => p.id === editingPrincipleId)?.application?.action ?? '') ||
     (editingPrincipleId &&
@@ -171,12 +172,15 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
       document.removeEventListener('click', intercept, true);
     };
   }, [dirty, busy]);
-  const runMutation = async (action: () => void | false | Promise<void | false>, done?: () => void) => {
+  const runMutation = async (
+    action: () => void | false | Promise<void | false>,
+    done?: () => void,
+  ) => {
     if (busy) return;
     setBusy(true);
     setSaveError('');
     try {
-      if (await action() !== false) done?.();
+      if ((await action()) !== false) done?.();
     } catch {
       setSaveError(
         language === 'zh'
@@ -471,16 +475,53 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                         async () => {
                           const aiVisibility = await visibilityChoice.request();
                           if (!aiVisibility) return;
-                          const consent = { aiVisibility, aiConsentAt: Math.max(Date.now(), (editingPrinciple?.aiConsentAt ?? 0) + 1) };
-                          const application = annotation.trigger || annotation.action || annotation.exception || editingPrinciple?.application ? annotation : undefined;
+                          const consent = {
+                            aiVisibility,
+                            aiConsentAt: Math.max(
+                              Date.now(),
+                              (editingPrinciple?.aiConsentAt ?? 0) + 1,
+                            ),
+                          };
+                          const application =
+                            annotation.trigger ||
+                            annotation.action ||
+                            annotation.exception ||
+                            editingPrinciple?.application
+                              ? annotation
+                              : undefined;
                           if (editingPrinciple) {
-                            if (editorText.trim() !== editingPrinciple.text.trim() && onRevisePrinciple) {
-                              await onRevisePrinciple(editingPrinciple, editorText.trim(), revisionKind, { ...consent, application });
+                            if (
+                              editorText.trim() !== editingPrinciple.text.trim() &&
+                              onRevisePrinciple
+                            ) {
+                              await onRevisePrinciple(
+                                editingPrinciple,
+                                editorText.trim(),
+                                revisionKind,
+                                { ...consent, application },
+                              );
                             } else {
-                              await onUpdatePrinciple({ ...editingPrinciple, text: editorText.trim(), application, ...consent });
+                              await onUpdatePrinciple({
+                                ...editingPrinciple,
+                                text: editorText.trim(),
+                                application,
+                                ...consent,
+                              });
                             }
                           } else {
-                            await onAddPrinciple(editorText.trim(), new Date().getFullYear(), true, undefined, application, undefined, [], practiceReflectionContext ? [practiceReflectionContext.practiceRecordId] : [], aiVisibility);
+                            await onAddPrinciple(
+                              editorText.trim(),
+                              new Date().getFullYear(),
+                              true,
+                              undefined,
+                              application,
+                              undefined,
+                              [],
+                              practiceReflectionContext
+                                ? [practiceReflectionContext.practiceRecordId]
+                                : [],
+                              aiVisibility,
+                            );
                           }
                         },
                         () => {
@@ -602,9 +643,17 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                 >
                   <Plus size={16} aria-hidden="true" />
                   {language === 'zh' ? '补充说明' : 'Add details'}
-                  <span>{annotation.trigger.trim() || annotation.action.trim() || annotation.exception?.trim()
-                    ? language === 'zh' ? '已补充' : 'Added'
-                    : language === 'zh' ? '选填' : 'Optional'}</span>
+                  <span>
+                    {annotation.trigger.trim() ||
+                    annotation.action.trim() ||
+                    annotation.exception?.trim()
+                      ? language === 'zh'
+                        ? '已补充'
+                        : 'Added'
+                      : language === 'zh'
+                        ? '选填'
+                        : 'Optional'}
+                  </span>
                 </button>
                 {annotationOpen && (
                   <PastActionDialog
@@ -613,43 +662,57 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                     onCancel={() => setAnnotationOpen(false)}
                   >
                     <p className="principle-details-dialog__hint">
-                      {language === 'zh' ? '为下一次用到这条原则，留一点提示。' : 'Leave a cue for the next time you use this principle.'}
+                      {language === 'zh'
+                        ? '为下一次用到这条原则，留一点提示。'
+                        : 'Leave a cue for the next time you use this principle.'}
                     </p>
-                <div className="principle-editor__annotations">
-                  <label>
-                    {' '}
-                    {language === 'zh' ? '适用时刻 · 可选' : 'When · optional'}
-                    <textarea
-                      aria-label={language === 'zh' ? '适用时刻' : 'When'}
-                      rows={2}
-                      disabled={busy}
-                      value={annotation.trigger}
-                      onChange={(event) =>
-                        setAnnotation((value) => ({ ...value, trigger: event.target.value }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    {' '}
-                    {language === 'zh' ? '具体做法 · 可选' : 'Action · optional'}
-                    <textarea
-                      aria-label={language === 'zh' ? '具体做法' : 'Action'}
-                      rows={2}
-                      disabled={busy}
-                      value={annotation.action}
-                      onChange={(event) =>
-                        setAnnotation((value) => ({ ...value, action: event.target.value }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    {language === 'zh' ? '不适用的情况 · 可选' : 'Exceptions · optional'}
-                    <textarea aria-label={language === 'zh' ? '不适用的情况' : 'Exceptions'}
-                      rows={2} maxLength={240} disabled={busy} value={annotation.exception ?? ''}
-                      onChange={(event) => setAnnotation((value) => ({ ...value, exception: event.target.value }))} />
-                  </label>
-                </div>
-                    <button type="button" data-cancel className="principle-details-dialog__done" onClick={() => setAnnotationOpen(false)}>
+                    <div className="principle-editor__annotations">
+                      <label>
+                        {' '}
+                        {language === 'zh' ? '适用时刻 · 可选' : 'When · optional'}
+                        <textarea
+                          aria-label={language === 'zh' ? '适用时刻' : 'When'}
+                          rows={2}
+                          disabled={busy}
+                          value={annotation.trigger}
+                          onChange={(event) =>
+                            setAnnotation((value) => ({ ...value, trigger: event.target.value }))
+                          }
+                        />
+                      </label>
+                      <label>
+                        {' '}
+                        {language === 'zh' ? '具体做法 · 可选' : 'Action · optional'}
+                        <textarea
+                          aria-label={language === 'zh' ? '具体做法' : 'Action'}
+                          rows={2}
+                          disabled={busy}
+                          value={annotation.action}
+                          onChange={(event) =>
+                            setAnnotation((value) => ({ ...value, action: event.target.value }))
+                          }
+                        />
+                      </label>
+                      <label>
+                        {language === 'zh' ? '不适用的情况 · 可选' : 'Exceptions · optional'}
+                        <textarea
+                          aria-label={language === 'zh' ? '不适用的情况' : 'Exceptions'}
+                          rows={2}
+                          maxLength={240}
+                          disabled={busy}
+                          value={annotation.exception ?? ''}
+                          onChange={(event) =>
+                            setAnnotation((value) => ({ ...value, exception: event.target.value }))
+                          }
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      data-cancel
+                      className="principle-details-dialog__done"
+                      onClick={() => setAnnotationOpen(false)}
+                    >
                       {language === 'zh' ? '完成' : 'Done'}
                     </button>
                   </PastActionDialog>
@@ -752,7 +815,14 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                   >
                                     {principle.text}
                                   </p>
-                                  <small>{principle.aiVisibility !== 'allowed' && <PrivateVisibilityIcon />}{principle.aiVisibility === 'allowed' ? '允许 AI 可见 · 仍受来源权限限制' : '仅自己可见'}</small>
+                                  <small>
+                                    {principle.aiVisibility !== 'allowed' && (
+                                      <PrivateVisibilityIcon />
+                                    )}
+                                    {principle.aiVisibility === 'allowed'
+                                      ? '允许 AI 可见 · 仍受来源权限限制'
+                                      : '仅自己可见'}
+                                  </small>
                                   {displayFirst && (
                                     <time className="principle-card__formed-year">
                                       {language === 'zh'
@@ -772,7 +842,10 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                       </div>
                                       <div>
                                         <dt>{language === 'zh' ? '例外' : 'Except'}</dt>
-                                        <dd>{principle.application.exception || (language === 'zh' ? '尚未补充' : 'Not specified')}</dd>
+                                        <dd>
+                                          {principle.application.exception ||
+                                            (language === 'zh' ? '尚未补充' : 'Not specified')}
+                                        </dd>
                                       </div>
                                     </dl>
                                   )}
@@ -780,7 +853,23 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                               </div>
                               {(!displayFirst || !managementOpen) && (
                                 <div className="mobile-principle-card__actions flex items-center gap-2">
-                                  {onOpenFutureAction && <button type="button" onClick={() => onOpenFutureAction({ principleId: principle.id, sourceEntryId: principle.derivedFromEntryIds?.[0], evidenceEntryIds: principle.derivedFromEntryIds, rationale: principle.text })}>{language === 'zh' ? '实践这条原则' : 'Practice this principle'}</button>}
+                                  {onOpenFutureAction && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onOpenFutureAction({
+                                          principleId: principle.id,
+                                          sourceEntryId: principle.derivedFromEntryIds?.[0],
+                                          evidenceEntryIds: principle.derivedFromEntryIds,
+                                          rationale: principle.text,
+                                        })
+                                      }
+                                    >
+                                      {language === 'zh'
+                                        ? '实践这条原则'
+                                        : 'Practice this principle'}
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     disabled={busy}

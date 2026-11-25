@@ -1,15 +1,13 @@
 import type { Express } from 'express';
 import type { DiaryEntry } from '../types';
-import type { AvatarUnderstandingVersion } from '../features/avatar/types';
+import type { AvatarGrowthCognitionReference } from '../features/avatar/types';
 import { buildAvatarGrowthPreview } from '../services/avatarIntelligence';
 import { callCustomModel, validateModelConfig } from './avatarCustomModel';
 import { AVATAR_FACT_RULES, parseAvatarFacts } from './avatarFactExtraction';
 import { safeModelError, modelErrorDiagnostic } from './avatarCustomModel';
 import { formatLogError } from './scrubLog';
 
-const sanitizeAvatarGrowthEntries = (
-  entries: unknown,
-): DiaryEntry[] => {
+const sanitizeAvatarGrowthEntries = (entries: unknown): DiaryEntry[] => {
   if (!Array.isArray(entries)) return [];
   return entries.flatMap((entry) => {
     if (!entry || typeof entry !== 'object') return [];
@@ -45,19 +43,39 @@ const sanitizeAvatarGrowthEntries = (
   });
 };
 
-const sanitizeGrowthEvidenceSources = (sources: unknown, messages: Array<{ role: string; content: string; createdAt?: number }>) => {
+const sanitizeGrowthEvidenceSources = (
+  sources: unknown,
+  messages: Array<{ role: string; content: string; createdAt?: number }>,
+) => {
   if (!Array.isArray(sources) || sources.length !== messages.length) return [];
   return sources.flatMap((source, index) => {
     if (!source || typeof source !== 'object') return [];
-    const item = source as { entryId?: unknown; supplementId?: unknown; content?: unknown; createdAt?: unknown };
-    if (typeof item.entryId !== 'string' || typeof item.content !== 'string' || typeof item.createdAt !== 'number' || item.content !== messages[index].content) return [];
-    return [{ entryId: item.entryId, ...(typeof item.supplementId === 'string' ? { supplementId: item.supplementId } : {}), createdAt: item.createdAt }];
+    const item = source as {
+      entryId?: unknown;
+      supplementId?: unknown;
+      content?: unknown;
+      createdAt?: unknown;
+    };
+    if (
+      typeof item.entryId !== 'string' ||
+      typeof item.content !== 'string' ||
+      typeof item.createdAt !== 'number' ||
+      item.content !== messages[index].content
+    )
+      return [];
+    return [
+      {
+        entryId: item.entryId,
+        ...(typeof item.supplementId === 'string' ? { supplementId: item.supplementId } : {}),
+        createdAt: item.createdAt,
+      },
+    ];
   });
 };
 
 const sanitizeAvatarGrowthUnderstandings = (
   understandings: unknown,
-): AvatarUnderstandingVersion[] => {
+): AvatarGrowthCognitionReference[] => {
   if (!Array.isArray(understandings)) return [];
   return understandings.flatMap((understanding) => {
     if (!understanding || typeof understanding !== 'object') return [];
@@ -154,32 +172,54 @@ export function registerAvatarGrowthRoutes(app: Express) {
         res.off('close', onClose);
       }
       const facts = parseAvatarFacts(raw, userMessages);
-      const evidenceSources = sanitizeGrowthEvidenceSources(req.body?.evidenceSources, userMessages);
+      const evidenceSources = sanitizeGrowthEvidenceSources(
+        req.body?.evidenceSources,
+        userMessages,
+      );
       const normalizedInput = {
         messages: userMessages,
         source: parseAvatarGrowthSource(req.body?.source),
-        ...(typeof req.body?.sourceEntryId === 'string' ? { sourceEntryId: req.body.sourceEntryId } : {}),
-        ...(typeof req.body?.sourceSupplementId === 'string' ? { sourceSupplementId: req.body.sourceSupplementId } : {}),
+        ...(typeof req.body?.sourceEntryId === 'string'
+          ? { sourceEntryId: req.body.sourceEntryId }
+          : {}),
+        ...(typeof req.body?.sourceSupplementId === 'string'
+          ? { sourceSupplementId: req.body.sourceSupplementId }
+          : {}),
         ...(typeof req.body?.occurredAt === 'number' ? { occurredAt: req.body.occurredAt } : {}),
       };
       const extracted = {
         summary: facts[0]?.statement ?? '',
         signals: facts.map((fact) => ({
-          facet: fact.kind === 'preference' ? 'preference' as const
-            : fact.kind === 'boundary' ? 'boundary' as const
-              : fact.kind === 'goal' ? 'goal' as const
-                : fact.kind === 'habit' || fact.kind === 'pattern_candidate' ? 'thought' as const
-                  : fact.kind === 'value' ? 'thought' as const
-                    : fact.kind === 'experience' || fact.kind === 'profile' ? 'event' as const
-                      : fact.kind === 'expression' ? 'preference' as const : 'thought' as const,
+          facet:
+            fact.kind === 'preference'
+              ? ('preference' as const)
+              : fact.kind === 'boundary'
+                ? ('boundary' as const)
+                : fact.kind === 'goal'
+                  ? ('goal' as const)
+                  : fact.kind === 'habit' || fact.kind === 'pattern_candidate'
+                    ? ('thought' as const)
+                    : fact.kind === 'value'
+                      ? ('thought' as const)
+                      : fact.kind === 'profile'
+                        ? ('event' as const)
+                        : fact.kind === 'expression'
+                          ? ('preference' as const)
+                          : ('thought' as const),
           text: fact.statement,
           confidence: fact.kind === 'pattern_candidate' ? 0.58 : 0.78,
           evidence: fact.sourceIndexes.map((index, position) => ({
-            source: evidenceSources[index] ? 'entry' as const : 'message' as const,
+            source: evidenceSources[index] ? ('entry' as const) : ('message' as const),
             id: evidenceSources[index]?.entryId ?? `message-${index + 1}`,
             excerpt: fact.evidences[position],
-            ...(typeof evidenceSources[index]?.createdAt === 'number' ? { createdAt: evidenceSources[index].createdAt } : typeof userMessages[index].createdAt === 'number' ? { createdAt: userMessages[index].createdAt } : {}),
-            ...(evidenceSources[index]?.supplementId ? { supplementId: evidenceSources[index].supplementId } : {}),
+            ...(typeof evidenceSources[index]?.createdAt === 'number'
+              ? { createdAt: evidenceSources[index].createdAt }
+              : typeof userMessages[index].createdAt === 'number'
+                ? { createdAt: userMessages[index].createdAt }
+                : {}),
+            ...(evidenceSources[index]?.supplementId
+              ? { supplementId: evidenceSources[index].supplementId }
+              : {}),
           })),
         })),
         moodTags: [],
@@ -188,10 +228,12 @@ export function registerAvatarGrowthRoutes(app: Express) {
         nextQuestion: null,
         needsUserConfirmation: true as const,
         ...(normalizedInput.sourceEntryId ? { sourceEntryId: normalizedInput.sourceEntryId } : {}),
-        ...facts.find((fact) => fact.kind === 'pattern_candidate')?.patternKey
+        ...(facts.find((fact) => fact.kind === 'pattern_candidate')?.patternKey
           ? { patternKey: facts.find((fact) => fact.kind === 'pattern_candidate')!.patternKey }
-          : {},
-        ...(typeof req.body?.sourceSupplementId === 'string' ? { sourceSupplementId: req.body.sourceSupplementId } : {}),
+          : {}),
+        ...(typeof req.body?.sourceSupplementId === 'string'
+          ? { sourceSupplementId: req.body.sourceSupplementId }
+          : {}),
         occurredAt: normalizedInput.occurredAt ?? Date.now(),
       };
       const preview = await buildAvatarGrowthPreview(

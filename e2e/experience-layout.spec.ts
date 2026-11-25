@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+// Chromium treats route.fulfill HTML as a synthetic/public response. Grant
+// this local fixture origin access to Vite HMR; retain all pageerror checks.
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.grantPermissions(['local-network-access'], { origin: baseURL! });
+});
+
 for (const mode of ['web', 'mobile']) {
   for (const module of ['past', 'now', 'future', 'avatar']) {
     test(`${mode} ${module} layout and editor`, async ({ page }, info) => {
@@ -31,7 +37,9 @@ for (const mode of ['web', 'mobile']) {
           // Seed the maximum retained history. The screen must only mount a
           // small reading window even when a long-running conversation has
           // reached its storage limit.
-          localStorage.setItem('vector:avatar:sessions:v1', JSON.stringify([{id:'scroll-history',mode:'general',context:common.launchContext,createdAt:1,updatedAt:2,messages:Array.from({length:600},(_,i)=>({id:'turn-'+i,role:i%2?'assistant':'user',type:'text',content:'历史消息 '+i+'：'+ '这是一段用于验证长对话能够完整阅读的内容。'.repeat(12),created_at:new Date(1700000000000+i*1000).toISOString()})),references:[]}]));
+          const {initializeAvatarOntology,persistAvatarOntologySession}=await import('/services/avatarOntologyStore.ts');
+          const graph=await initializeAvatarOntology();
+          await persistAvatarOntologySession(graph.revision,{id:'scroll-history',mode:'general',context:common.launchContext,createdAt:1,updatedAt:2,messages:Array.from({length:600},(_,i)=>({id:'turn-'+i,role:i%2?'assistant':'user',type:'text',content:'历史消息 '+i+'：'+ '这是一段用于验证长对话能够完整阅读的内容。'.repeat(12),created_at:new Date(1700000000000+i*1000).toISOString()})),references:[]});
         }
         const content=React.createElement(Module,common);
         const child='${module}' === 'avatar' ? React.createElement('div',{className:'now-shell ${mode === 'mobile' ? 'now-flow--mobile-shell' : ''}'},content) : content;
@@ -254,7 +262,7 @@ for (const mode of ['web', 'mobile']) {
         // Long conversations only mount the most recent window. This keeps
         // typing and scrolling responsive without losing stored history.
         await expect(list.locator('.now-chat-bubble')).toHaveCount(60);
-        const earlier = page.getByRole('button', { name: '查看更早消息（540）' });
+        const earlier = page.getByRole('button', { name: '查看更早消息 (540)' });
         await expect(earlier).toBeVisible();
         await earlier.click();
         await expect(page.getByText('历史消息 539：', { exact: false })).toBeAttached();

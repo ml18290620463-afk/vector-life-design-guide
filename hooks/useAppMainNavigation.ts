@@ -57,9 +57,11 @@ export const useAppMainNavigation = ({ setAppState, setNowRoute }: UseAppMainNav
 
   const handleNowRouteChange = useCallback(
     (route: NowRoute) => {
-      const tab: MobileMainTab = route === 'avatar-chat' ? 'avatar' : 'now';
+      const tab: MobileMainTab = route === 'avatar-chat' || route === 'avatar-settings' ? 'avatar' : 'now';
       void preloadMainModule(tab).catch(() => undefined);
-      rememberMainRoute(route === 'avatar-chat' ? '/avatar' : route === 'tags' ? '/now/tags' : '/now');
+      rememberMainRoute(
+        route === 'avatar-chat' ? '/avatar' : route === 'avatar-settings' ? '/now/avatar-settings' : route === 'tags' ? '/now/tags' : '/now',
+      );
       if (isMobileExperience() && route === 'avatar-chat') navigateMobileTab(tab);
       else pushNowPath(route);
       setNowRoute(route);

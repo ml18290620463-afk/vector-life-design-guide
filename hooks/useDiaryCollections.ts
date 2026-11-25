@@ -1,6 +1,7 @@
 import {
   useCallback,
   useState,
+  useRef,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
@@ -20,8 +21,20 @@ export const useDiaryCollections = (
 ) => {
   const [guidingStars, setGuidingStars] = useState<string[]>([]);
   const [selectedStars, setSelectedStars] = useState<string[]>([]);
-  const [materials, setMaterials] = useState<Attachment[]>([]);
-  const [containers, setContainers] = useState<Container[]>([]);
+  const [materials, updateMaterials] = useState<Attachment[]>([]);
+  const materialsRef = useRef<Attachment[]>([]);
+  const setMaterials = useCallback((value: SetStateAction<Attachment[]>) => {
+    const next = typeof value === 'function' ? value(materialsRef.current) : value;
+    materialsRef.current = next;
+    updateMaterials(next);
+  }, []);
+  const [containers, updateContainers] = useState<Container[]>([]);
+  const containersRef = useRef<Container[]>([]);
+  const setContainers = useCallback((value: SetStateAction<Container[]>) => {
+    const next = typeof value === 'function' ? value(containersRef.current) : value;
+    containersRef.current = next;
+    updateContainers(next);
+  }, []);
 
   const saveGuidingStars = useCallback(
     async (stars: string[]) => {
@@ -48,31 +61,30 @@ export const useDiaryCollections = (
   const addMaterial = useCallback(
     async (material: Attachment) => {
       const keys = getDiaryStorageKeys(userId);
-      let nextMaterials: Attachment[] = [];
-      setMaterials((previous) => {
-        nextMaterials = [material, ...previous];
-        return nextMaterials;
-      });
+      const nextMaterials = [
+        { ...material, id: material.id || generateSecureId('material') },
+        ...materialsRef.current,
+      ];
+      setMaterials(nextMaterials);
       await set(keys.materials, nextMaterials).catch(() =>
         console.warn('Failed to save materials to IndexedDB'),
       );
     },
-    [userId],
+    [userId, setMaterials],
   );
 
   const deleteMaterial = useCallback(
     async (index: number) => {
       const keys = getDiaryStorageKeys(userId);
-      let nextMaterials: Attachment[] = [];
-      setMaterials((previous) => {
-        nextMaterials = previous.filter((_, currentIndex) => currentIndex !== index);
-        return nextMaterials;
-      });
+      const nextMaterials = materialsRef.current.filter(
+        (_, currentIndex) => currentIndex !== index,
+      );
+      setMaterials(nextMaterials);
       await set(keys.materials, nextMaterials).catch(() =>
         console.warn('Failed to save materials to IndexedDB'),
       );
     },
-    [userId],
+    [userId, setMaterials],
   );
 
   const persistContainers = useCallback(
@@ -97,19 +109,17 @@ export const useDiaryCollections = (
         name,
         createdAt: Date.now(),
       };
-      let next: Container[] = [];
-      setContainers((previous) => (next = [container, ...previous]));
+      const next = [container, ...containersRef.current];
+      setContainers(next);
       void persistContainers(next);
     },
-    [persistContainers],
+    [persistContainers, setContainers],
   );
 
   const deleteContainer = useCallback(
     (id: string) => {
-      let nextContainers: Container[] = [];
-      setContainers(
-        (previous) => (nextContainers = previous.filter((container) => container.id !== id)),
-      );
+      const nextContainers = containersRef.current.filter((container) => container.id !== id);
+      setContainers(nextContainers);
       void persistContainers(nextContainers);
       // State updater functions may be replayed by React's development
       // checks. Build the persistence payload from the store's current ref,
@@ -122,7 +132,7 @@ export const useDiaryCollections = (
       setEntries(nextEntries);
       void persistEntries(nextEntries);
     },
-    [entriesRef, persistContainers, persistEntries, setEntries],
+    [entriesRef, persistContainers, persistEntries, setEntries, setContainers],
   );
 
   return {

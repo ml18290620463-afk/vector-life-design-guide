@@ -1,7 +1,8 @@
+import { useAvatarLanguage } from './avatarLanguage';
 import React, { useId, useState } from 'react';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { CONFIG } from '../constants/config';
-import { EVENT_TAGS, EVENT_TAG_HINTS, MOOD_TAGS } from '../constants/tags';
+import { EVENT_TAGS, EVENT_TAG_HINTS, MOOD_TAGS, tagLabel, tagHint } from '../constants/tags';
 import { readCustomAnchors, writeCustomAnchors } from '../state/nowStorage';
 import type { NowDraft } from '../types/now';
 
@@ -20,6 +21,7 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
   onBack,
   showToast,
 }) => {
+  const { language, t } = useAvatarLanguage();
   const hintId = useId();
   const [moodTags, setMoodTags] = useState(draft.mood_tags);
   const [eventTags, setEventTags] = useState(draft.event_tags);
@@ -41,7 +43,7 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
       return;
     }
     if (values.length >= max) {
-      showToast('最多选择 3 个');
+      showToast(t('最多选择 3 个', 'Choose up to 3'));
       return;
     }
     const next = [...values, tag];
@@ -74,7 +76,7 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
       <button
         type="button"
         className="now-custom-tag-delete"
-        aria-label={`删除${section}自定义标签 ${tag}`}
+        aria-label={`删除${section}自定义标签 ${tagLabel(tag, language)}`}
         onClick={() => deleteCustomTag(tag)}
       >
         <X size={12} aria-hidden="true" />
@@ -83,13 +85,15 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
 
   const addCustomAnchor = (target: 'mood' | 'event') => {
     if (!allowCustomTags) {
-      showToast('保存草稿后可添加自定义标签');
+      showToast(t('保存草稿后可添加自定义标签', 'Save the draft before adding custom tags'));
       return;
     }
-    const value = window.prompt('输入自定义锚点，2～12 字')?.trim();
+    const value = window
+      .prompt(t('输入自定义锚点，2～12 字', 'Enter a custom tag, 2–12 characters'))
+      ?.trim();
     if (!value) return;
     if (value.length < 2 || value.length > 12) {
-      showToast('自定义锚点需为 2～12 字');
+      showToast(t('自定义锚点需为 2～12 字', 'Custom tags need 2–12 characters'));
       return;
     }
     const next = Array.from(new Set([...customAnchors, value]));
@@ -106,24 +110,32 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
   return (
     <main className="now-page now-tags-page">
       <header className="now-header">
-        <button type="button" className="now-icon-button" onClick={onBack} aria-label="返回">
+        <button
+          type="button"
+          className="now-icon-button"
+          onClick={onBack}
+          aria-label={t('返回', 'Back')}
+        >
           <ArrowLeft size={20} />
         </button>
-        <div className="now-time">选择标签</div>
+        <div className="now-time">{t('选择标签', 'Choose tags')}</div>
         <span aria-hidden="true" />
       </header>
       <section className="now-tag-section">
-        <h2>心情</h2>
+        <h2>{t('心情', 'Mood')}</h2>
         <div className="now-chip-grid">
           {Array.from(new Set([...MOOD_TAGS, ...customAnchors])).map((tag) => (
-            <div key={tag} className={isCustomTag(tag) ? 'now-tag-item is-custom' : 'now-tag-item'}>
+            <div
+              key={tagLabel(tag, language)}
+              className={isCustomTag(tag) ? 'now-tag-item is-custom' : 'now-tag-item'}
+            >
               <button
                 type="button"
                 className={moodTags.includes(tag) ? 'is-selected' : ''}
                 aria-pressed={moodTags.includes(tag)}
                 onClick={() => toggle(tag, moodTags, setMoodTags, CONFIG.MAX_MOOD_TAGS)}
               >
-                {tag}
+                {tagLabel(tag, language)}
               </button>
               {deleteButton(tag, '心情')}
             </div>
@@ -131,19 +143,19 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
           <button
             type="button"
             onClick={() => addCustomAnchor('mood')}
-            aria-label="为心情添加自定义锚点"
+            aria-label={t('为心情添加自定义锚点', 'Add a mood tag')}
           >
-            <Plus size={14} /> 自定义锚点
+            <Plus size={14} /> {t('自定义锚点', 'Custom tag')}
           </button>
         </div>
         <div className="now-event-tag-heading">
-          <h2>事件</h2>
+          <h2>{t('事件', 'Event')}</h2>
           <button
             type="button"
             onClick={() => addCustomAnchor('event')}
-            aria-label="为事件添加自定义锚点"
+            aria-label={t('为事件添加自定义锚点', 'Add an event tag')}
           >
-            <Plus size={14} /> 自定义
+            <Plus size={14} /> {t('自定义', 'Custom')}
           </button>
         </div>
         <div className="now-chip-grid now-event-tag-grid">
@@ -154,19 +166,22 @@ export const TagSelectPage: React.FC<TagSelectPageProps> = ({
               ...eventTags,
             ]),
           ).map((tag, index) => (
-            <div key={tag} className={isCustomTag(tag) ? 'now-tag-item is-custom' : 'now-tag-item'}>
+            <div
+              key={tagLabel(tag, language)}
+              className={isCustomTag(tag) ? 'now-tag-item is-custom' : 'now-tag-item'}
+            >
               <button
                 type="button"
                 className={eventTags.includes(tag) ? 'is-selected' : ''}
-                aria-label={tag}
+                aria-label={tagLabel(tag, language)}
                 aria-describedby={EVENT_TAG_HINTS[tag] ? `${hintId}-${index}` : undefined}
                 aria-pressed={eventTags.includes(tag)}
                 onClick={() => toggle(tag, eventTags, setEventTags, CONFIG.MAX_EVENT_TAGS)}
               >
-                <span>{tag}</span>
+                <span>{tagLabel(tag, language)}</span>
                 {EVENT_TAG_HINTS[tag] && (
                   <span id={`${hintId}-${index}`} role="tooltip" className="now-event-tag-hint">
-                    {EVENT_TAG_HINTS[tag]}
+                    {tagHint(tag, language)}
                   </span>
                 )}
               </button>

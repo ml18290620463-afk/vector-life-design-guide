@@ -1,5 +1,5 @@
 export type AppMainTabPath = 'past' | 'now' | 'future' | 'avatar';
-export type AppNowRoutePath = 'now' | 'tags' | 'avatar-chat';
+export type AppNowRoutePath = 'now' | 'tags' | 'avatar-chat' | 'avatar-settings';
 
 export const isNowSurfacePathname = (pathname: string): boolean =>
   pathname === '/avatar' || pathname === '/now' || pathname.startsWith('/now/');
@@ -8,6 +8,7 @@ export const getNowRouteFromPathname = (pathname: string): AppNowRoutePath | nul
   if (pathname === '/avatar') return 'avatar-chat';
   if (pathname === '/now/tags') return 'tags';
   if (pathname === '/now/avatar-chat') return 'avatar-chat';
+  if (pathname === '/now/avatar-settings') return 'avatar-settings';
   if (pathname === '/now') return 'now';
   return null;
 };
@@ -15,7 +16,7 @@ export const getNowRouteFromPathname = (pathname: string): AppNowRoutePath | nul
 export const getMainTabFromPathname = (pathname: string): AppMainTabPath | null => {
   if (pathname === '/past') return 'past';
   if (pathname === '/future') return 'future';
-  if (pathname === '/avatar') return 'avatar';
+  if (pathname === '/avatar' || pathname === '/now/avatar-settings') return 'avatar';
   if (pathname === '/now' || pathname.startsWith('/now/')) return 'now';
   return null;
 };

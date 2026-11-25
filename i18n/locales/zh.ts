@@ -229,7 +229,6 @@ export const zh = {
   setTimeLock: '设定解密时间 (时间胶囊)',
   immediate: '立即',
   oneMin: '1分钟后 (测试)',
-  oneDay: '24小时后',
   customDate: '自定义日期',
   career: '职业发展',
   careerDesc: '事业成就、职位、职场竞争力',

@@ -1,4 +1,4 @@
-import { canAIReadEntry } from '../../../services/aiPrivacy';
+import { canAIReadEntry } from '../../../services/aiEntryAccess';
 import { generateSecureId } from '../../../services/idGenerator';
 import { CONFIG } from '../constants/config';
 import {

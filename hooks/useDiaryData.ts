@@ -13,7 +13,6 @@ import type {
   PrincipleApplication,
 } from '../types';
 import { AppError, reportError } from '../lib/error';
-import { getSampleEntries } from '../services/sampleEntries';
 import { getStoredString } from '../services/browserStorage';
 import {
   DiaryStorageKeys,
@@ -39,7 +38,6 @@ import {
 } from '../services/diaryDataRead';
 import { DEFAULT_PRINCIPLE_CONFIDENCE } from '../services/experienceFeedback';
 import { updateRelatedEntryIds } from '../services/entryRelations';
-import { pruneAvatarAtomicMemoriesBySourceIds } from '../services/avatarMemory';
 import { useActionItems } from './useActionItems';
 import { commitArrayDelta, subscribeVault, vaultTransaction } from '../services/vaultTransaction';
 import { stateFrom } from '../services/futureRepository';
@@ -209,11 +207,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
           console.log('Vector Vault: Starting deep migration scan...');
           const migrationResult = await scanLegacyDiaryData(userId);
           if (isStale()) return;
-          const migrated = await persistMigrationResult(
-            userId,
-            migrationResult,
-            getSampleEntries(language),
-          );
+          const migrated = await persistMigrationResult(userId, migrationResult);
           currentEntries = migrated.entries;
           console.log(
             `Vector Vault: Migration complete. Merged ${migrationResult.entries.length} entries.`,
@@ -461,26 +455,57 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     [entries, persistEntries],
   );
 
-  const changeAIVisibility = useCallback(async (entryId: string, aiVisibility: 'private' | 'allowed') => {
-    const keys = getDiaryStorageKeys(userId);
-    const saved = await vaultTransaction([keys.entries, keys.backup], (values) => {
-      const current = (values[keys.entries] as DiaryEntry[] | undefined) ?? [];
-      if (!current.some(e => e.id === entryId)) throw new Error('记录已不存在');
-      const next = current.map(e => e.id === entryId ? { ...e, aiVisibility, aiConsentAt: Math.max(Date.now(), (e.aiConsentAt ?? 0) + 1) } : e);
-      values[keys.entries] = next;
-      values[keys.backup] = next;
-      return next;
-    });
-    entriesRef.current = saved;
-    setEntries(saved);
-    removeDiaryMirror(keys.entries);
-    removeDiaryMirror(keys.backup);
-  }, [userId]);
+  const changeAIVisibility = useCallback(
+    async (entryId: string, aiVisibility: 'private' | 'allowed') => {
+      const keys = getDiaryStorageKeys(userId);
+      const { DELETION_TOMBSTONES_KEY, hashDeletedId, mergeDeletionTombstones, readDeletionTombstones } =
+        await import('../services/deletionTombstone');
+      const occurredAt = new Date().toISOString();
+      const entityIdHash = aiVisibility === 'private' ? await hashDeletedId(entryId) : null;
+      const saved = await vaultTransaction([keys.entries, keys.backup, DELETION_TOMBSTONES_KEY], (values) => {
+        const current = (values[keys.entries] as DiaryEntry[] | undefined) ?? [];
+        if (!current.some((e) => e.id === entryId)) throw new Error('记录已不存在');
+        const changedAt = Date.parse(occurredAt);
+        const next = current.map((e) =>
+          e.id === entryId
+            ? { ...e, aiVisibility, updatedAt: changedAt, aiConsentAt: Math.max(changedAt, (e.aiConsentAt ?? 0) + 1) }
+            : e,
+        );
+        values[keys.entries] = next;
+        values[keys.backup] = next;
+        if (entityIdHash) {
+          values[DELETION_TOMBSTONES_KEY] = mergeDeletionTombstones(
+            readDeletionTombstones(values[DELETION_TOMBSTONES_KEY]),
+            [{ entityIdHash, entityKind: 'source_record', opType: 'ai_revoked', occurredAt, schemaVersion: 1 }],
+          );
+        }
+        return next;
+      });
+      entriesRef.current = saved;
+      setEntries(saved);
+      removeDiaryMirror(keys.entries);
+      removeDiaryMirror(keys.backup);
+    },
+    [userId],
+  );
 
   const appendSupplement = useCallback(
-    async (entryId: string, content: string, supplementId: string, password?: string | null, aiVisibility: 'private' | 'allowed' = 'private') => {
+    async (
+      entryId: string,
+      content: string,
+      supplementId: string,
+      password?: string | null,
+      aiVisibility: 'private' | 'allowed' = 'private',
+    ) => {
       const keys = getDiaryStorageKeys(userId);
-      const saved = await appendEntrySupplement(keys, entryId, content, supplementId, password, aiVisibility);
+      const saved = await appendEntrySupplement(
+        keys,
+        entryId,
+        content,
+        supplementId,
+        password,
+        aiVisibility,
+      );
       entriesRef.current = saved;
       setEntries(saved);
       removeDiaryMirror(keys.entries);
@@ -636,7 +661,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   const deletePrinciple = useCallback(
     async (id: string) => {
       await persistPrinciples(principles.filter((principle) => principle.id !== id));
-      pruneAvatarAtomicMemoriesBySourceIds([id], false);
+      // Principles are derived output, never original evidence in the v2 ontology.
       const now = Date.now();
       const nextLinks = patternPrincipleLinks.map((link) =>
         link.principleId === id ? { ...link, status: 'inactive' as const, updatedAt: now } : link,
@@ -718,7 +743,12 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   );
 
   const revisePrinciple = useCallback(
-    async (original: Principle, text: string, revisionKind: PrincipleRevisionKind, consent?: Pick<Principle, 'aiVisibility' | 'aiConsentAt' | 'application'>) => {
+    async (
+      original: Principle,
+      text: string,
+      revisionKind: PrincipleRevisionKind,
+      consent?: Pick<Principle, 'aiVisibility' | 'aiConsentAt' | 'application'>,
+    ) => {
       const revisedAt = Date.now();
       const successor: Principle = {
         ...original,

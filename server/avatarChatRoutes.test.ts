@@ -164,7 +164,7 @@ describe('personal fact extraction', () => {
     expect(prompt).toContain(
       'kind 只能是 profile/preference/boundary/value/habit/goal/expression/pattern_candidate',
     );
-    expect(prompt).toContain('绝不输出 experience');
+    expect(prompt).toContain('不得提炼为认知对象');
     expect(prompt).not.toContain('重要经历(experience)');
     expect(prompt).not.toContain(
       'kind 只能是 profile/preference/boundary/value/habit/goal/experience/',
@@ -185,8 +185,9 @@ describe('personal fact extraction', () => {
       .post('/api/v1/avatar/memory/extract')
       .send({ messages: [{ role: 'user', content: '去年项目失败让我很痛苦。' }] });
 
-    expect(res.status).toBe(502);
-    expect(res.body.candidate).toBeUndefined();
+    expect(res.status).toBe(200);
+    expect(res.body.candidate).toBeNull();
+    expect(res.body.droppedReasons).toEqual([{ index: 0, reason: 'forbidden_event_or_commitment' }]);
   });
   it('returns up to three separately evidenced candidates from one dialogue', async () => {
     vi.mocked(callOpenRouter).mockResolvedValue(
@@ -289,12 +290,14 @@ describe('personal fact extraction', () => {
             statement: '用户目前更适合在有少量环境声的地方工作',
             ...candidate,
             sourceIndexes: [0],
-            evidences: ['以前我喜欢绝对安静，现在有一点环境声反而更专注'],
+            evidences: ['我以前喜欢绝对安静，现在有一点环境声反而更专注'],
           },
         }),
       );
       const res = await request(app()).post('/api/v1/avatar/memory/extract').send(base);
-      expect(res.status).toBe(502);
+      expect(res.status).toBe(200);
+      expect(res.body.candidate).toBeNull();
+      expect(res.body.droppedReasons).toEqual([{ index: 0, reason: 'invalid_candidate' }]);
     }
   });
   it('rejects invalid extraction reference status, pattern key, and category', async () => {
@@ -317,7 +320,7 @@ describe('personal fact extraction', () => {
     const res = await request(app())
       .post('/api/v1/avatar/memory/extract')
       .send({ messages: [{ role: 'user', content: '你最终的目标是什么？' }] });
-    expect(res.body).toEqual({ candidate: null });
+    expect(res.body).toEqual({ candidate: null, droppedReasons: [] });
   });
   it('rejects assistant evidence and does not fall back to raw conversation on failure', async () => {
     vi.mocked(callOpenRouter).mockResolvedValue(
@@ -338,8 +341,9 @@ describe('personal fact extraction', () => {
           { role: 'user', content: '为什么？' },
         ],
       });
-    expect(res.status).toBe(502);
-    expect(res.body.candidate).toBeUndefined();
+    expect(res.status).toBe(200);
+    expect(res.body.candidate).toBeNull();
+    expect(res.body.droppedReasons).toEqual([{ index: 0, reason: 'invalid_role' }]);
   });
   it('uses assistant turns as context while preserving multiple user evidence sources', async () => {
     vi.mocked(callOpenRouter).mockResolvedValue(
@@ -418,7 +422,9 @@ describe('personal fact extraction', () => {
           { role: 'user', content: '遇到难题我通常先独处想清楚。' },
         ],
       });
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(200);
+    expect(res.body.candidate).toBeNull();
+    expect(res.body.droppedReasons).toEqual([{ index: 0, reason: 'invalid_candidate' }]);
   });
   it('preserves a valid conservative merge key for a pattern observation', async () => {
     vi.mocked(callOpenRouter).mockResolvedValue(
@@ -458,8 +464,9 @@ describe('personal fact extraction', () => {
     const res = await request(app())
       .post('/api/v1/avatar/memory/extract')
       .send({ messages: [{ role: 'user', content: '这次我会先一个人理清想法。' }] });
-    expect(res.status).toBe(502);
-    expect(res.body.candidate).toBeUndefined();
+    expect(res.status).toBe(200);
+    expect(res.body.candidate).toBeNull();
+    expect(res.body.droppedReasons).toEqual([{ index: 0, reason: 'quote_mismatch' }]);
   });
 });
 
@@ -525,7 +532,6 @@ describe('shared reference transport', () => {
   });
 });
 
-
 it('defines explicit boundaries for evidence, statistics, thematic recall and internal implementation', () => {
   expect(AVATAR_DIALOGUE_RULES).toContain('记录中匹配到的条数');
   expect(AVATAR_DIALOGUE_RULES).toContain('可能相关的资料');
@@ -541,7 +547,10 @@ it('sends VECTOR identity rules with old assistant identities through both chat 
     { role: 'assistant', content: '我是 ChatGPT。' },
     { role: 'user', content: '你好 你叫什么名字' },
   ];
-  for (const modelConfig of [undefined, { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model: 'model' }]) {
+  for (const modelConfig of [
+    undefined,
+    { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model: 'model' },
+  ]) {
     const res = await request(app()).post('/api/v1/avatar/chat').send({ messages, modelConfig });
     expect(res.status).toBe(200);
   }
@@ -558,10 +567,12 @@ it('sends VECTOR identity rules with old assistant identities through both chat 
 it('reapplies the work protocol after switching models and for extraction tasks', async () => {
   vi.mocked(callCustomModel).mockResolvedValue('我是 VECTOR。');
   for (const model of ['model-a', 'model-b']) {
-    await request(app()).post('/api/v1/avatar/chat').send({
-      modelConfig: { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model },
-      messages: [{ role: 'user', content: '帮我想清楚下一步' }],
-    });
+    await request(app())
+      .post('/api/v1/avatar/chat')
+      .send({
+        modelConfig: { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model },
+        messages: [{ role: 'user', content: '帮我想清楚下一步' }],
+      });
   }
   for (const call of vi.mocked(callCustomModel).mock.calls) {
     expect(call[1][0].role).toBe('system');
@@ -569,10 +580,61 @@ it('reapplies the work protocol after switching models and for extraction tasks'
     expect(call[1][0].content).toContain('没有工具成功结果不得声称已执行');
   }
   vi.mocked(callOpenRouter).mockResolvedValue('{"candidates":[]}');
-  await request(app()).post('/api/v1/avatar/memory/extract').send({
-    messages: [{ role: 'user', content: '今天很累' }],
-  });
+  await request(app())
+    .post('/api/v1/avatar/memory/extract')
+    .send({
+      messages: [{ role: 'user', content: '今天很累' }],
+    });
   const system = vi.mocked(callOpenRouter).mock.calls[0][3];
   expect(system).toContain('分身工作协议');
-  expect(system).toContain('绝不输出 experience');
+  expect(system).toContain('不得提炼为认知对象');
+});
+
+describe('Phase 2 server guidance budgets', () => {
+  it.each([
+    ['capture', 3, 3],
+    ['general', 6, 12],
+    ['distill', 8, 12],
+    ['recall', 10, 16],
+    ['decide', 12, 16],
+    ['review', 12, 20],
+  ])('enforces default and expanded %s limits', async (mode, normal, expanded) => {
+    vi.mocked(callOpenRouter).mockResolvedValue(JSON.stringify({ reply: '已参考资料' }));
+    for (const [expand, limit] of [
+      [false, normal],
+      [true, expanded],
+    ] as const) {
+      for (const extra of [0, 1]) {
+        const res = await request(app())
+          .post('/api/v1/avatar/chat')
+          .send({
+            messages: [{ role: 'user', content: '请分析这些资料' }],
+            guidance: { mode, expanded: expand },
+            memories: Array.from({ length: Number(limit) + extra }, () => ({
+              text: '用户原始资料',
+            })),
+          });
+        expect(res.status).toBe(extra ? 400 : 200);
+      }
+    }
+  });
+  it('rejects overlong excerpts and contracts small-window requests', async () => {
+    const base = { messages: [{ role: 'user', content: '请分析' }] };
+    for (const body of [
+      { memories: [{ text: 'a'.repeat(701) }] },
+      {
+        guidance: { mode: 'review', smallWindow: true },
+        memories: Array.from({ length: 3 }, () => ({ text: '资料' })),
+      },
+    ]) {
+      expect(
+        (
+          await request(app())
+            .post('/api/v1/avatar/chat')
+            .send({ ...base, ...body })
+        ).status,
+      ).toBe(400);
+    }
+    expect(callOpenRouter).not.toHaveBeenCalled();
+  });
 });

@@ -1,5 +1,40 @@
+/* eslint-disable max-lines -- Backup restore keeps the preview and commit checks in one reviewed flow. */
+import { recoverBackupRestore } from './vaultBackupRecovery';
+export { recoverBackupRestore } from './vaultBackupRecovery';
+import {
+  normalizeAvatarBackupPayload,
+  readLegacyAvatarBackupCaches,
+} from './avatarOntologyMigration';
+import { plaintextEntries } from './vaultBackupEntries';
+import {
+  avatarBackupKeys,
+  exportAvatarCheckpoint,
+  prepareAvatarCheckpointRestore,
+  assignAvatarCheckpoint,
+} from './avatarOntologyBackupCheckpoint';
+import type { AvatarMigrationCheckpoint } from './avatarOntologyMigrationCheckpoint';
+import { withAvatarSession } from './avatarOntologySessionGuard';
+import { AVATAR_ONTOLOGY_KEY } from './avatarOntologyKey';
+import type { AvatarOntologySnapshot } from './avatarOntologyStore';
+import { validateAvatarOntology } from './avatarOntologyValidation';
+import { mergeAvatarOntologyBackup } from './avatarOntologyBackup';
+import {
+  canonical,
+  materialRows,
+  mergeRows,
+  validateBackupEntries,
+  validateBackupLinks,
+  rows,
+  scalarDomain,
+  strings,
+  type Row,
+} from './vaultBackupNormalization';
 import { accountLocalStorage } from './accountScope';
-import { normalizeFutureDrafts, type FutureDraft, type FutureDraftSnapshot } from './futureDraftRepository';
+import {
+  normalizeFutureDrafts,
+  type FutureDraft,
+  type FutureDraftSnapshot,
+} from './futureDraftRepository';
 import { PAST_PROCESSING_KEY } from './pastProcessingCache';
 import { PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY } from './privateDraftKey';
 import { normalizeNowDraft, loadNowDraft, type DraftSnapshot } from './nowDraftRepository';
@@ -13,16 +48,23 @@ import {
 } from './diaryStorage';
 import { stateFrom } from './futureRepository';
 import {
-  vaultTransaction,
   rawVaultTransaction,
   preparedVaultTransaction,
   BACKUP_RESTORE_JOB,
-  VaultLockedError,
 } from './vaultTransaction';
 import { SecurityService } from './securityService';
 import { useAppStore } from '../stores/appStore';
 import { encryptVaultBackupFile } from './vaultBackupFile';
 import { recoverSourceDeletion } from './sourceDeletion';
+import {
+  DELETION_TOMBSTONES_KEY,
+  hashDeletedId,
+  mergeDeletionTombstones,
+  tombstoneBlocksEntry,
+  readDeletionTombstones,
+  blockedOntologyRows,
+  type DeletionTombstone,
+} from './deletionTombstone';
 import { storedArray, withLegacyValue } from './vaultLegacyRead';
 import { decodeEntries, type UnreadableEntry } from './readableEntries';
 import { materialReferencesForBackup, summarizeVaultBackupContent } from './vaultBackupSummary';
@@ -39,20 +81,8 @@ const domainsFor = (userId?: string) => ({
   selectedStars: getSelectedStarsStorageKey(userId),
 });
 const domains = domainsFor();
-const memoryKeys = [
-  'vector:avatar:atomic-memories:v1',
-  'vector:avatar:memory-relations:v1',
-  'vector:avatar:memory-tags:v1',
-] as const;
-const cacheKeys = [
-  PAST_PROCESSING_KEY,
-  ...memoryKeys,
-  'vector:avatar:understandings:v1',
-  'vector:avatar:sessions:v1',
-  'user_custom_anchors',
-] as const;
+const cacheKeys = [PAST_PROCESSING_KEY, 'user_custom_anchors'] as const;
 const RESTORE_JOB = BACKUP_RESTORE_JOB;
-type Row = { id: string; [key: string]: unknown };
 export interface VaultBackup {
   type: 'vector-vault-backup';
   schemaVersion: 2 | 3;
@@ -65,39 +95,18 @@ export interface VaultBackup {
     future: FutureState;
     draft?: NowDraft | null;
     futureDrafts?: Record<string, FutureDraft>;
+    ontology?: AvatarOntologySnapshot;
+    migrationCheckpoint?: AvatarMigrationCheckpoint;
+    deletionTombstones?: DeletionTombstone[];
     caches: Record<string, unknown[]>;
   };
 }
-const canonical = (value: unknown): string => {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object')
-    return `{${Object.entries(value)
-      .filter(([, v]) => v !== undefined)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`)
-      .join(',')}}`;
-  return JSON.stringify(value);
-};
-function rows(value: unknown, key = 'id'): asserts value is Row[] {
-  if (
-    !Array.isArray(value) ||
-    value.some((r) => !r || typeof r[key] !== 'string' || !r[key]) ||
-    new Set(value.map((r) => r[key])).size !== value.length
-  )
-    throw new Error('备份包含无效或重复编号');
-}
-function strings(value: unknown): asserts value is string[] {
-  if (!Array.isArray(value) || value.some((v) => typeof v !== 'string'))
-    throw new Error('备份标签格式无效');
-}
-const scalarDomain = (name: string) =>
-  ['guidingStars', 'selectedStars', 'user_custom_anchors'].includes(name);
 const mergeValues = (name: string, current: unknown[], incoming: unknown[]) =>
   name === PAST_PROCESSING_KEY
     ? []
     : scalarDomain(name)
       ? [...new Set([...current, ...incoming])]
-      : mergeRows(current, incoming, name === 'vector:avatar:memory-tags:v1' ? 'name' : 'id');
+      : mergeRows(current, incoming);
 export function validateVaultBackup(value: unknown): asserts value is VaultBackup {
   const b = value as VaultBackup;
   if (
@@ -115,83 +124,18 @@ export function validateVaultBackup(value: unknown): asserts value is VaultBacku
     else rows(b.vault.data[name]);
   }
   if (canonical(b.entries) !== canonical(b.vault.data.entries)) throw new Error('备份记录不一致');
-  for (const e of b.entries)
-    if (
-      typeof e.content !== 'string' ||
-      typeof e.title !== 'string' ||
-      !Number.isFinite(e.createdAt) ||
-      !Array.isArray(e.tags) ||
-      (e.supplements !== undefined &&
-        (!Array.isArray(e.supplements) ||
-          e.supplements.some(
-            (item) =>
-              !item ||
-              typeof item.id !== 'string' ||
-              typeof item.content !== 'string' ||
-              !Number.isFinite(item.createdAt),
-          ) ||
-          new Set(e.supplements.map((item) => item.id)).size !== e.supplements.length))
-    )
-      throw new Error('记录格式无效');
+  validateBackupEntries(b.entries);
+  if (b.vault.ontology !== undefined) validateAvatarOntology(b.vault.ontology);
+  readDeletionTombstones(b.vault.deletionTombstones);
   stateFrom(b.vault.future);
   if (b.vault.draft) normalizeNowDraft(b.vault.draft);
   normalizeFutureDrafts(b.vault.futureDrafts);
   for (const key of cacheKeys) {
     if (key === PAST_PROCESSING_KEY && b.vault.caches[key] === undefined) continue;
-    if (
-      b.schemaVersion === 2 &&
-      memoryKeys.some((name) => name === key) &&
-      b.vault.caches[key] === undefined
-    )
-      continue;
     if (scalarDomain(key)) strings(b.vault.caches[key]);
-    else rows(b.vault.caches[key], key === 'vector:avatar:memory-tags:v1' ? 'name' : 'id');
+    else rows(b.vault.caches[key]);
   }
-  const entries = new Set(b.entries.map((e) => e.id));
-  const actions = b.vault.data.actions as Row[];
-  const goalIds = new Set(b.vault.future.goals.map((g) => g.id));
-  for (const a of actions)
-    if (
-      typeof a.title !== 'string' ||
-      !['pending', 'active', 'completed', 'abandoned'].includes(String(a.status)) ||
-      (a.goalId && !goalIds.has(String(a.goalId)))
-    )
-      throw new Error('行动关联无效');
-  for (const e of b.vault.future.events)
-    if (
-      (e.sourceEntryId && !entries.has(e.sourceEntryId)) ||
-      (e.sourceActionId && !actions.some((a) => a.id === e.sourceActionId))
-    )
-      throw new Error('成果来源缺失');
-}
-/** A persisted restore decision repairs the legacy local caches after a crash. */
-let recovery: Promise<void> | undefined;
-export function recoverBackupRestore(): Promise<void> {
-  if (recovery) return recovery;
-  recovery = (async () => {
-    if (!(await rawVaultTransaction([RESTORE_JOB], (v) => Boolean(v[RESTORE_JOB]), true))) return;
-    // Boot must reach the unlock screen before an encrypted recovery job can run.
-    const session = useAppStore.getState();
-    const protectedVault = await rawVaultTransaction(
-      [K.passwordHash],
-      (v) => v[K.passwordHash] ?? accountLocalStorage.getItem(K.passwordHash),
-      true,
-    );
-    if (protectedVault && (!session.isUnlocked || !session.masterPassword)) return;
-    await vaultTransaction([RESTORE_JOB], (v) => {
-      const job = v[RESTORE_JOB] as
-        | { caches: Record<string, unknown[]>; mirrorKeys: string[] }
-        | undefined;
-      if (!job) return;
-      for (const key of cacheKeys) accountLocalStorage.setItem(key, JSON.stringify(job.caches[key] ?? []));
-      for (const key of job.mirrorKeys) accountLocalStorage.removeItem(key);
-      accountLocalStorage.removeItem(K.backup);
-      v[RESTORE_JOB] = undefined;
-    });
-  })().finally(() => {
-    recovery = undefined;
-  });
-  return recovery;
+  validateBackupLinks(b.entries, b.vault.data.actions as Row[], b.vault.future);
 }
 async function snapshotVaultBackup(
   version: string,
@@ -204,13 +148,22 @@ async function snapshotVaultBackup(
   await recoverSourceDeletion();
   await recoverBackupRestore();
   return preparedVaultTransaction(
-    [...Object.values(domains), K.future, K.passwordHash, PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY],
+    [
+      ...Object.values(domains),
+      K.future,
+      K.passwordHash,
+      PRIVATE_DRAFT_KEY,
+      FUTURE_DRAFT_KEY,
+      ...avatarBackupKeys,
+      DELETION_TOMBSTONES_KEY,
+    ],
     async (v) => {
       if (!allowProtected && (v[K.passwordHash] || accountLocalStorage.getItem(K.passwordHash)))
         throw new Error('完整备份暂不支持加密资料库，未导出任何文件');
       const data = Object.fromEntries(
         Object.entries(domains).map(([name, key]) => [name, storedArray(v[key], key) ?? []]),
       ) as VaultBackup['vault']['data'];
+      data.materials = materialRows(data.materials);
       const decoded = await decodeEntries(
         data.entries as DiaryEntry[],
         useAppStore.getState().masterPassword,
@@ -237,6 +190,11 @@ async function snapshotVaultBackup(
         entries: data.entries as DiaryEntry[],
         vault: {
           data,
+          deletionTombstones: readDeletionTombstones(v[DELETION_TOMBSTONES_KEY]),
+          migrationCheckpoint: await exportAvatarCheckpoint(v),
+          ...(v[AVATAR_ONTOLOGY_KEY] !== undefined
+            ? { ontology: structuredClone(v[AVATAR_ONTOLOGY_KEY]) as AvatarOntologySnapshot }
+            : {}),
           future: (() => {
             const future = stateFrom(withLegacyValue(v[K.future], K.future));
             if (decoded.unreadableEntries.length)
@@ -247,10 +205,17 @@ async function snapshotVaultBackup(
               );
             return future;
           })(),
-          caches,
+          caches: { ...caches, ...readLegacyAvatarBackupCaches() },
           futureDrafts: (v[FUTURE_DRAFT_KEY] as FutureDraftSnapshot | undefined)?.drafts ?? {},
           draft: (v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined)?.draft ?? null,
         },
+      };
+      result.vault = {
+        ...result.vault,
+        ...(await normalizeAvatarBackupPayload(
+          result.vault,
+          useAppStore.getState().masterPassword,
+        )),
       };
       validateVaultBackup(result);
       return {
@@ -267,41 +232,37 @@ export async function exportVaultBackup(version: string, userId?: string) {
   return (await snapshotVaultBackup(version, userId)).backup;
 }
 export async function exportVaultBackupFile(version: string, userId?: string) {
-  const session = useAppStore.getState();
-  const { backup, protectedVault } = await snapshotVaultBackup(version, userId, true);
-  const result = protectedVault
-    ? await encryptVaultBackupFile(backup, session.masterPassword ?? '')
-    : backup;
-  const current = useAppStore.getState();
-  if (
-    current.isUnlocked !== session.isUnlocked ||
-    current.masterPassword !== session.masterPassword
-  )
-    throw new VaultLockedError();
-  return result;
+  return withAvatarSession(async (assertCurrent) => {
+    const session = useAppStore.getState();
+    const { backup, protectedVault } = await snapshotVaultBackup(version, userId, true);
+    assertCurrent();
+    const result = protectedVault
+      ? await encryptVaultBackupFile(backup, session.masterPassword ?? '')
+      : backup;
+    assertCurrent();
+    return result;
+  });
 }
 /** Explicitly produces a usable copy of readable records after damage. The source vault is never changed. */
 export async function exportRecoverableVaultBackupFile(version: string, userId?: string) {
-  const session = useAppStore.getState();
-  const { backup, protectedVault, skippedEntries } = await snapshotVaultBackup(
-    version,
-    userId,
-    true,
-    true,
-  );
-  const file = protectedVault
-    ? await encryptVaultBackupFile(backup, session.masterPassword ?? '')
-    : backup;
-  const current = useAppStore.getState();
-  if (
-    current.isUnlocked !== session.isUnlocked ||
-    current.masterPassword !== session.masterPassword
-  )
-    throw new VaultLockedError();
-  return { file, skippedEntries } as {
-    file: VaultBackup | Awaited<ReturnType<typeof encryptVaultBackupFile>>;
-    skippedEntries: UnreadableEntry[];
-  };
+  return withAvatarSession(async (assertCurrent) => {
+    const session = useAppStore.getState();
+    const { backup, protectedVault, skippedEntries } = await snapshotVaultBackup(
+      version,
+      userId,
+      true,
+      true,
+    );
+    assertCurrent();
+    const file = protectedVault
+      ? await encryptVaultBackupFile(backup, session.masterPassword ?? '')
+      : backup;
+    assertCurrent();
+    return { file, skippedEntries } as {
+      file: VaultBackup | Awaited<ReturnType<typeof encryptVaultBackupFile>>;
+      skippedEntries: UnreadableEntry[];
+    };
+  });
 }
 export interface VaultRecoveryDrill {
   mode: 'merge' | 'replace';
@@ -309,6 +270,7 @@ export interface VaultRecoveryDrill {
   importedCount: number;
   totalAfter: number;
   conflicts: string[];
+  resurrectionCount: number;
   dataCounts: Record<string, number>;
   materialReferences: MaterialReferenceSummary;
   externalReferenceLimitations: string;
@@ -319,11 +281,24 @@ export async function drillVaultBackupRestore(
   backup: VaultBackup,
   mode: 'merge' | 'replace' = 'merge',
   userId?: string,
+  backupPassword?: string,
 ): Promise<VaultRecoveryDrill> {
+  backup = structuredClone(backup);
   validateVaultBackup(backup);
+  backup.vault = {
+    ...backup.vault,
+    ...(await normalizeAvatarBackupPayload(backup.vault, backupPassword ?? null)),
+  };
   const localDomains = domainsFor(userId);
   return preparedVaultTransaction(
-    [...Object.values(localDomains), K.passwordHash, PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY],
+    [
+      ...Object.values(localDomains),
+      K.passwordHash,
+      PRIVATE_DRAFT_KEY,
+      FUTURE_DRAFT_KEY,
+      ...avatarBackupKeys,
+      DELETION_TOMBSTONES_KEY,
+    ],
     async (v) => {
       const current = await decodeEntries(
         (storedArray(v[K.entries], K.entries) as DiaryEntry[]) ?? [],
@@ -332,6 +307,34 @@ export async function drillVaultBackupRestore(
       const conflicts = current.unreadableEntries.map(
         (entry) => `本机记录无法读取：${entry.id}（${entry.reason}）`,
       );
+      const deleted = new Map(
+        readDeletionTombstones(v[DELETION_TOMBSTONES_KEY]).map((item) => [item.entityIdHash, item]),
+      );
+      const resurrected = (
+        await Promise.all(
+          backup.entries.map(async (entry) => ({
+            entry,
+            tombstone: deleted.get(await hashDeletedId(entry.id)),
+          })),
+        )
+      ).filter(({ entry, tombstone }) => tombstoneBlocksEntry(tombstone, entry));
+      if (resurrected.length)
+        conflicts.push(`备份含 ${resurrected.length} 条已删除的旧记录，恢复前须单独确认`);
+      const blockedGraphRows = await blockedOntologyRows(backup.vault.ontology, [...deleted.values()]);
+      if (blockedGraphRows.length)
+        conflicts.push(`备份含 ${blockedGraphRows.length} 条已删除的旧认知资料，恢复前须单独确认`);
+      try {
+        mergeAvatarOntologyBackup(v[AVATAR_ONTOLOGY_KEY], backup.vault.ontology, mode);
+        await prepareAvatarCheckpointRestore(
+          v,
+          backup.vault,
+          mode,
+          backupPassword,
+          useAppStore.getState().masterPassword ?? backupPassword ?? null,
+        );
+      } catch (error) {
+        conflicts.push(error instanceof Error ? error.message : '认知资料无法恢复');
+      }
       const byId = new Map(current.entries.map((entry) => [entry.id, entry]));
       for (const entry of backup.entries) {
         const old = byId.get(entry.id);
@@ -341,7 +344,11 @@ export async function drillVaultBackupRestore(
       const oldFutureDraft = v[FUTURE_DRAFT_KEY] as FutureDraftSnapshot | undefined;
       const incomingFutureDrafts = normalizeFutureDrafts(backup.vault.futureDrafts);
       const localFutureDrafts = normalizeFutureDrafts(oldFutureDraft?.drafts);
-      const draftConflicts = Object.keys(incomingFutureDrafts).filter(key => localFutureDrafts[key] && canonical(localFutureDrafts[key]) !== canonical(incomingFutureDrafts[key]));
+      const draftConflicts = Object.keys(incomingFutureDrafts).filter(
+        (key) =>
+          localFutureDrafts[key] &&
+          canonical(localFutureDrafts[key]) !== canonical(incomingFutureDrafts[key]),
+      );
       if (mode === 'merge' && draftConflicts.length) conflicts.push('本机和备份存在不同规划草稿');
 
       if (
@@ -364,6 +371,7 @@ export async function drillVaultBackupRestore(
         importedCount: backup.entries.length,
         totalAfter,
         conflicts,
+        resurrectionCount: resurrected.length + blockedGraphRows.length,
         dataCounts: Object.fromEntries(
           Object.entries(backup.vault.data).map(([key, rows]) => [key, rows.length]),
         ),
@@ -375,219 +383,257 @@ export async function drillVaultBackupRestore(
     true,
   );
 }
-async function plaintextEntries(
-  entries: DiaryEntry[],
-  password: string | null,
-): Promise<DiaryEntry[]> {
-  return Promise.all(
-    entries.map(async (entry) => {
-      const decryptContent = async (content: string, encrypted?: boolean) => {
-        if (!encrypted) return content;
-        if (!password) throw new VaultLockedError();
-        return SecurityService.decrypt(content, password);
-      };
-      return {
-        ...entry,
-        content: await decryptContent(entry.content, entry.isEncrypted),
-        isEncrypted: false,
-        supplements: entry.supplements
-          ? await Promise.all(
-              entry.supplements.map(async (supplement) => ({
-                ...supplement,
-                content: await decryptContent(supplement.content, supplement.isEncrypted),
-                isEncrypted: false,
-              })),
-            )
-          : undefined,
-      };
-    }),
-  );
-}
-function mergeRows(current: unknown[], incoming: unknown[], key = 'id'): unknown[] {
-  const merged = [...current];
-  for (const raw of incoming) {
-    const row = raw as Record<string, unknown>;
-    const old = merged.find((r) => (r as Record<string, unknown>)[key] === row[key]);
-    if (old && canonical(old) !== canonical(row))
-      throw new Error(
-        `编号冲突：${String(row[key])}。未导入任何数据，请检查并使用内容一致的备份。`,
-      );
-    if (!old) merged.push(row);
-  }
-  return merged;
-}
 export async function importVaultBackup(
   backup: VaultBackup,
   mode: 'merge' | 'replace' = 'merge',
   userId?: string,
   backupPassword?: string,
+  confirmResurrection = false,
 ) {
-  const domains = domainsFor(userId);
-  validateVaultBackup(backup);
-  await recoverSourceDeletion();
-  await recoverBackupRestore();
-  const hasProtection = await rawVaultTransaction(
-    [K.passwordHash],
-    (v) => Boolean(v[K.passwordHash] ?? accountLocalStorage.getItem(K.passwordHash)),
-    true,
-  );
-  const protection =
-    !hasProtection && backupPassword
-      ? await (async () => {
-          const salt = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
-          return {
-            password: backupPassword,
-            salt,
-            hash: await SecurityService.hashPassword(backupPassword, salt),
-            onlyIfUnprotected: true as const,
-          };
-        })()
-      : undefined;
-  const summary = await preparedVaultTransaction(
-    [
-      ...Object.values(domains),
-      K.future,
-      K.backup,
-      K.passwordHash,
-      K.initializedFlag,
-      K.semanticEmbeddings,
-      PRIVATE_DRAFT_KEY, FUTURE_DRAFT_KEY,
-      RESTORE_JOB,
-    ],
-    async (v) => {
-      const targetPassword =
-        protection?.password ?? (v[K.passwordHash] ? useAppStore.getState().masterPassword : null);
-      const existingEntries = await plaintextEntries(
-        (storedArray(v[K.entries], K.entries) as DiaryEntry[]) ?? [],
-        useAppStore.getState().masterPassword,
-      );
-      const oldDraft = v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined;
-      const oldFutureDraft = v[FUTURE_DRAFT_KEY] as FutureDraftSnapshot | undefined;
-      const incomingFutureDrafts = normalizeFutureDrafts(backup.vault.futureDrafts);
-      const localFutureDrafts = normalizeFutureDrafts(oldFutureDraft?.drafts);
-      const draftConflicts = Object.keys(incomingFutureDrafts).filter(key => localFutureDrafts[key] && canonical(localFutureDrafts[key]) !== canonical(incomingFutureDrafts[key]));
-      if (mode === 'merge' && draftConflicts.length) throw new Error('本机和备份存在不同规划草稿，请先保存本机规划后再合并。');
-
-      const incomingDraft = backup.vault.draft;
-      if (
-        mode === 'merge' &&
-        incomingDraft &&
-        oldDraft?.draft &&
-        canonical(incomingDraft) !== canonical(oldDraft.draft)
-      )
-        throw new Error('本机和备份都存在不同草稿，请先保存本机草稿为记录后再合并。');
-      const nextDraft =
-        mode === 'replace' ? (incomingDraft ?? null) : (oldDraft?.draft ?? incomingDraft ?? null);
-      const data = {} as VaultBackup['vault']['data'];
-      for (const [name, key] of Object.entries(domains)) {
-        const incoming =
-          name === 'entries'
-            ? await plaintextEntries(backup.entries, backupPassword ?? null)
-            : backup.vault.data[name as keyof typeof domains];
-        data[name as keyof typeof domains] =
-          mode === 'replace'
-            ? incoming
-            : mergeValues(
-                name,
-                name === 'entries' ? existingEntries : (storedArray(v[key], key) ?? []),
-                incoming,
-              );
-      }
-      const current = stateFrom(withLegacyValue(v[K.future], K.future));
-      const future = structuredClone(backup.vault.future);
-      if (mode === 'merge') {
-        for (const name of [
-          'visions',
-          'goals',
-          'items',
-          'events',
-          'revisions',
-          'closures',
-          'receipts',
-        ] as const) {
-          (future[name] as unknown[]) = mergeRows(
-            current[name],
-            future[name],
-            name === 'receipts' ? 'operationId' : 'id',
+  backup = structuredClone(backup);
+  const { summary, protection } = await withAvatarSession(async (assertCurrent) => {
+    const domains = domainsFor(userId);
+    validateVaultBackup(backup);
+    backup.vault = {
+      ...backup.vault,
+      ...(await normalizeAvatarBackupPayload(backup.vault, backupPassword ?? null)),
+    };
+    assertCurrent();
+    await recoverSourceDeletion();
+    await recoverBackupRestore();
+    const hasProtection = await rawVaultTransaction(
+      [K.passwordHash],
+      (v) => Boolean(v[K.passwordHash] ?? accountLocalStorage.getItem(K.passwordHash)),
+      true,
+    );
+    const protection =
+      !hasProtection && backupPassword
+        ? await (async () => {
+            const salt = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+            return {
+              password: backupPassword,
+              salt,
+              hash: await SecurityService.hashPassword(backupPassword, salt),
+              onlyIfUnprotected: true as const,
+            };
+          })()
+        : undefined;
+    const summary = await preparedVaultTransaction(
+      [
+        ...Object.values(domains),
+        K.future,
+        K.backup,
+        K.passwordHash,
+        K.initializedFlag,
+        K.semanticEmbeddings,
+        PRIVATE_DRAFT_KEY,
+        FUTURE_DRAFT_KEY,
+        RESTORE_JOB,
+        ...avatarBackupKeys,
+        DELETION_TOMBSTONES_KEY,
+      ],
+      async (v) => {
+        assertCurrent();
+        const localTombstones = readDeletionTombstones(v[DELETION_TOMBSTONES_KEY]);
+        const deleted = new Map(localTombstones.map((item) => [item.entityIdHash, item]));
+        const resurrected = (
+          await Promise.all(
+            backup.entries.map(async (entry) => ({
+              entry,
+              tombstone: deleted.get(await hashDeletedId(entry.id)),
+            })),
+          )
+        ).filter(({ entry, tombstone }) => tombstoneBlocksEntry(tombstone, entry));
+        const blockedGraphRows = await blockedOntologyRows(backup.vault.ontology, localTombstones);
+        if ((resurrected.length || blockedGraphRows.length) && !confirmResurrection)
+          throw new Error(
+            `备份含 ${resurrected.length + blockedGraphRows.length} 条删除后留下的旧资料，请在恢复预览中确认后重试`,
           );
-        }
-      }
-      if (mode === 'merge') {
-        future.practiceRecords = mergeRows(
-          current.practiceRecords ?? [],
-          future.practiceRecords ?? [],
-        ) as FutureState['practiceRecords'];
-        future.goalFeedbackRecords = mergeRows(
-          current.goalFeedbackRecords ?? [],
-          future.goalFeedbackRecords ?? [],
-        ) as FutureState['goalFeedbackRecords'];
-        const origins = { ...current.archiveOrigins };
-        for (const [key, value] of Object.entries(future.archiveOrigins ?? {})) {
-          if (origins[key] && canonical(origins[key]) !== canonical(value))
-            throw new Error('资料来源关联冲突，未导入任何数据');
-          origins[key] = value;
-        }
-        future.archiveOrigins = origins;
-      }
-      future.revision = Math.max(current.revision, future.revision) + 1;
-      const caches = Object.fromEntries(
-        cacheKeys.map((key) => [
-          key,
-          mode === 'replace'
-            ? (backup.vault.caches[key] ?? [])
-            : mergeValues(
-                key,
-                JSON.parse(accountLocalStorage.getItem(key) ?? '[]'),
-                backup.vault.caches[key] ?? [],
-              ),
-        ]),
-      );
-      validateVaultBackup({
-        ...backup,
-        entries: data.entries,
-        entryCount: data.entries.length,
-        vault: { data, future, caches },
-      });
-      if (targetPassword)
-        data.entries = await Promise.all(
-          (data.entries as DiaryEntry[]).map(async (entry) => ({
-            ...entry,
-            content: await SecurityService.encrypt(entry.content, targetPassword),
-            isEncrypted: true,
-            supplements: entry.supplements
-              ? await Promise.all(
-                  entry.supplements.map(async (supplement) => ({
-                    ...supplement,
-                    content: await SecurityService.encrypt(supplement.content, targetPassword),
-                    isEncrypted: true,
-                  })),
-                )
-              : undefined,
-          })),
+        const explicitlyRestored = new Set(
+          confirmResurrection ? resurrected.map(({ tombstone }) => tombstone!.entityIdHash) : [],
         );
-      for (const [name, key] of Object.entries(domains))
-        v[key] = data[name as keyof typeof domains];
-      v[FUTURE_DRAFT_KEY] = { revision: (oldFutureDraft?.revision ?? 0) + 1, drafts: mode === 'replace' ? incomingFutureDrafts : { ...incomingFutureDrafts, ...localFutureDrafts } };
-      v[PRIVATE_DRAFT_KEY] = { revision: (oldDraft?.revision ?? 0) + 1, draft: nextDraft };
-      v[K.future] = future;
-      v[K.backup] = data.entries;
-      v[K.initializedFlag] = true;
-      v[K.semanticEmbeddings] = undefined;
-      v[RESTORE_JOB] = { caches, mirrorKeys: Object.values(domains) };
-      const restored = summarizeVaultBackupContent({
-        entries: data.entries as DiaryEntry[],
-        vault: { data, future, draft: nextDraft, caches },
-      });
-      return {
-        importedCount: backup.entries.length,
-        totalAfter: data.entries.length,
-        mode,
-        restored,
-      };
-    },
-    false,
-    protection,
-  );
+        if (confirmResurrection) {
+          for (const row of backup.vault.ontology?.objects ?? []) {
+            if (blockedGraphRows.includes(row.id))
+              explicitlyRestored.add(await hashDeletedId(row.id, 'cognitive_object'));
+          }
+          for (const row of backup.vault.ontology?.edges ?? []) {
+            if (blockedGraphRows.includes(row.id))
+              explicitlyRestored.add(await hashDeletedId(row.id, 'ontology_edge'));
+          }
+        }
+        v[DELETION_TOMBSTONES_KEY] = mergeDeletionTombstones(
+          localTombstones.filter((item) => !explicitlyRestored.has(item.entityIdHash)),
+          readDeletionTombstones(backup.vault.deletionTombstones),
+        ).filter((item) => !explicitlyRestored.has(item.entityIdHash));
+        const ontology = mergeAvatarOntologyBackup(
+          v[AVATAR_ONTOLOGY_KEY],
+          backup.vault.ontology,
+          mode,
+        );
+        const targetPassword =
+          protection?.password ??
+          ((v[K.passwordHash] ?? accountLocalStorage.getItem(K.passwordHash))
+            ? useAppStore.getState().masterPassword
+            : null);
+        const checkpoint = await prepareAvatarCheckpointRestore(
+          v,
+          backup.vault,
+          mode,
+          backupPassword,
+          targetPassword,
+        );
+        assignAvatarCheckpoint(v, checkpoint, ontology);
+        const existingEntries = await plaintextEntries(
+          (storedArray(v[K.entries], K.entries) as DiaryEntry[]) ?? [],
+          useAppStore.getState().masterPassword,
+        );
+        const oldDraft = v[PRIVATE_DRAFT_KEY] as DraftSnapshot | undefined;
+        const oldFutureDraft = v[FUTURE_DRAFT_KEY] as FutureDraftSnapshot | undefined;
+        const incomingFutureDrafts = normalizeFutureDrafts(backup.vault.futureDrafts);
+        const localFutureDrafts = normalizeFutureDrafts(oldFutureDraft?.drafts);
+        const draftConflicts = Object.keys(incomingFutureDrafts).filter(
+          (key) =>
+            localFutureDrafts[key] &&
+            canonical(localFutureDrafts[key]) !== canonical(incomingFutureDrafts[key]),
+        );
+        if (mode === 'merge' && draftConflicts.length)
+          throw new Error('本机和备份存在不同规划草稿，请先保存本机规划后再合并。');
+
+        const incomingDraft = backup.vault.draft;
+        if (
+          mode === 'merge' &&
+          incomingDraft &&
+          oldDraft?.draft &&
+          canonical(incomingDraft) !== canonical(oldDraft.draft)
+        )
+          throw new Error('本机和备份都存在不同草稿，请先保存本机草稿为记录后再合并。');
+        const nextDraft =
+          mode === 'replace' ? (incomingDraft ?? null) : (oldDraft?.draft ?? incomingDraft ?? null);
+        const data = {} as VaultBackup['vault']['data'];
+        for (const [name, key] of Object.entries(domains)) {
+          const incoming =
+            name === 'entries'
+              ? await plaintextEntries(backup.entries, backupPassword ?? null)
+              : backup.vault.data[name as keyof typeof domains];
+          data[name as keyof typeof domains] =
+            mode === 'replace'
+              ? incoming
+              : mergeValues(
+                  name,
+                  name === 'entries'
+                    ? existingEntries
+                    : name === 'materials'
+                      ? materialRows(storedArray(v[key], key) ?? [])
+                      : (storedArray(v[key], key) ?? []),
+                  incoming,
+                );
+        }
+        const current = stateFrom(withLegacyValue(v[K.future], K.future));
+        const future = structuredClone(backup.vault.future);
+        if (mode === 'merge') {
+          for (const name of [
+            'visions',
+            'goals',
+            'items',
+            'events',
+            'revisions',
+            'closures',
+            'receipts',
+          ] as const) {
+            (future[name] as unknown[]) = mergeRows(
+              current[name],
+              future[name],
+              name === 'receipts' ? 'operationId' : 'id',
+            );
+          }
+        }
+        if (mode === 'merge') {
+          future.practiceRecords = mergeRows(
+            current.practiceRecords ?? [],
+            future.practiceRecords ?? [],
+          ) as FutureState['practiceRecords'];
+          future.goalFeedbackRecords = mergeRows(
+            current.goalFeedbackRecords ?? [],
+            future.goalFeedbackRecords ?? [],
+          ) as FutureState['goalFeedbackRecords'];
+          const origins = { ...current.archiveOrigins };
+          for (const [key, value] of Object.entries(future.archiveOrigins ?? {})) {
+            if (origins[key] && canonical(origins[key]) !== canonical(value))
+              throw new Error('资料来源关联冲突，未导入任何数据');
+            origins[key] = value;
+          }
+          future.archiveOrigins = origins;
+        }
+        future.revision = Math.max(current.revision, future.revision) + 1;
+        const caches = Object.fromEntries(
+          cacheKeys.map((key) => [
+            key,
+            mode === 'replace'
+              ? (backup.vault.caches[key] ?? [])
+              : mergeValues(
+                  key,
+                  JSON.parse(accountLocalStorage.getItem(key) ?? '[]'),
+                  backup.vault.caches[key] ?? [],
+                ),
+          ]),
+        );
+        validateVaultBackup({
+          ...backup,
+          entries: data.entries,
+          entryCount: data.entries.length,
+          vault: { data, future, caches, ontology },
+        });
+        if (targetPassword)
+          data.entries = await Promise.all(
+            (data.entries as DiaryEntry[]).map(async (entry) => ({
+              ...entry,
+              content: await SecurityService.encrypt(entry.content, targetPassword),
+              isEncrypted: true,
+              supplements: entry.supplements
+                ? await Promise.all(
+                    entry.supplements.map(async (supplement) => ({
+                      ...supplement,
+                      content: await SecurityService.encrypt(supplement.content, targetPassword),
+                      isEncrypted: true,
+                    })),
+                  )
+                : undefined,
+            })),
+          );
+        for (const [name, key] of Object.entries(domains))
+          v[key] = data[name as keyof typeof domains];
+        if (ontology !== undefined) v[AVATAR_ONTOLOGY_KEY] = ontology;
+        v[FUTURE_DRAFT_KEY] = {
+          revision: (oldFutureDraft?.revision ?? 0) + 1,
+          drafts:
+            mode === 'replace'
+              ? incomingFutureDrafts
+              : { ...incomingFutureDrafts, ...localFutureDrafts },
+        };
+        v[PRIVATE_DRAFT_KEY] = { revision: (oldDraft?.revision ?? 0) + 1, draft: nextDraft };
+        v[K.future] = future;
+        v[K.backup] = data.entries;
+        v[K.initializedFlag] = true;
+        v[K.semanticEmbeddings] = undefined;
+        v[RESTORE_JOB] = { caches, mirrorKeys: Object.values(domains) };
+        const restored = summarizeVaultBackupContent({
+          entries: data.entries as DiaryEntry[],
+          vault: { data, future, draft: nextDraft, caches, ontology },
+        });
+        return {
+          importedCount: backup.entries.length,
+          totalAfter: data.entries.length,
+          mode,
+          restored,
+        };
+      },
+      false,
+      protection,
+      assertCurrent,
+    );
+    return { summary, protection };
+  });
   if (protection) useAppStore.setState({ masterPassword: protection.password, isUnlocked: true });
   try {
     await recoverBackupRestore();

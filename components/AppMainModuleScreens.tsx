@@ -26,6 +26,8 @@ import type { ActionDraftContext, PracticeReflectionContext } from '../types/fut
 import type { PrincipleRevisionKind } from '../services/principleRevision';
 
 type AppMainModuleScreensProps = {
+  onSetPassword?: (password: string) => Promise<void>;
+  onUnlockAvatar?: () => void;
   actions: ActionItem[];
   onAddAction: (action: Omit<ActionItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ActionItem>;
   onUpdateAction: (action: ActionItem) => Promise<void> | void;
@@ -66,7 +68,12 @@ type AppMainModuleScreensProps = {
   onPersistNowRecord: (
     payload: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>,
   ) => Promise<DiaryEntry>;
-  onAppendSupplement?: (entryId: string, content: string, supplementId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
+  onAppendSupplement?: (
+    entryId: string,
+    content: string,
+    supplementId: string,
+    aiVisibility: 'private' | 'allowed',
+  ) => Promise<void>;
   onChangeAIVisibility?: (entryId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
   draftPassword?: string | null;
   onRelatedEntriesResolved: (entryId: string, relatedEntryIds: string[]) => void | Promise<void>;
@@ -86,6 +93,8 @@ type AppMainModuleScreensProps = {
 };
 
 export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
+  onSetPassword,
+  onUnlockAvatar,
   actions,
   addPrinciple,
   appState,
@@ -159,16 +168,22 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
   return (
     <>
       {useMobileShell && mobileMainTab && (
-          <MobileShell
-            activeTab={mobileMainTab}
-            language={language}
-            onTabChange={onMobileTabChange}
-            onTabIntent={onMainModuleIntent}
+        <MobileShell
+          activeTab={mobileMainTab}
+          language={language}
+          onTabChange={onMobileTabChange}
+          onTabIntent={onMainModuleIntent}
+        >
+          <Suspense
+            fallback={
+              <div role="status" className="module-loading">
+                {language === 'zh' ? '正在打开…' : 'Opening…'}
+              </div>
+            }
           >
-            <Suspense fallback={<div role="status" className="module-loading">{language === 'zh' ? '正在打开…' : 'Opening…'}</div>}>
             {isPastSurfaceState(appState) && (
               <PastRepository
-              onOpenFutureAction={openFutureAction}
+                onOpenFutureAction={openFutureAction}
                 draftPassword={draftPassword}
                 onAppendSupplement={onAppendSupplement}
                 onChangeAIVisibility={onChangeAIVisibility}
@@ -204,6 +219,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
             )}
             {isNowSurfaceState(appState) && (
               <NowFlow
+                onSetPassword={onSetPassword}
+                onUnlockAvatar={onUnlockAvatar}
                 onNavigateModule={onMobileTabChange}
                 route={nowRoute}
                 theme={theme}
@@ -228,8 +245,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
                 }}
               />
             )}
-            </Suspense>
-          </MobileShell>
+          </Suspense>
+        </MobileShell>
       )}
 
       {!useMobileShell && isPastSurfaceState(appState) && (
@@ -244,7 +261,7 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
               onOpenFutureAction={openFutureAction}
               draftPassword={draftPassword}
               onAppendSupplement={onAppendSupplement}
-                onChangeAIVisibility={onChangeAIVisibility}
+              onChangeAIVisibility={onChangeAIVisibility}
               onRelatedEntriesResolved={onRelatedEntriesResolved}
               initialSection={pastSection}
               initialQuery={pastQuery}
@@ -270,6 +287,8 @@ export const AppMainModuleScreens: FC<AppMainModuleScreensProps> = ({
       {!useMobileShell && isNowSurfaceState(appState) && (
         <Suspense fallback={<ScreenLoader language={language} />}>
           <DesktopNowFrame
+            onSetPassword={onSetPassword}
+            onUnlockAvatar={onUnlockAvatar}
             nowRoute={nowRoute}
             theme={theme}
             language={language}

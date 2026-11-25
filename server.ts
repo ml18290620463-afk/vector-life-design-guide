@@ -360,7 +360,12 @@ async function startServer() {
     fontSrc: ["'self'", 'data:'],
     styleSrc: ["'self'", "'unsafe-inline'"],
     scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
-    connectSrc: ["'self'", 'https://openrouter.ai', 'https://generativelanguage.googleapis.com', ...(process.env.VITE_SUPABASE_URL ? [new URL(process.env.VITE_SUPABASE_URL).origin] : [])],
+    connectSrc: [
+      "'self'",
+      'https://openrouter.ai',
+      'https://generativelanguage.googleapis.com',
+      ...(process.env.VITE_SUPABASE_URL ? [new URL(process.env.VITE_SUPABASE_URL).origin] : []),
+    ],
     workerSrc: ["'self'", 'blob:'],
     upgradeInsecureRequests: [],
   };

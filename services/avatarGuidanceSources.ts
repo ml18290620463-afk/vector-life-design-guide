@@ -1,10 +1,10 @@
+import type { AvatarOntologySnapshot } from './avatarOntologyStore';
 import { aiPrivacyToken, canAIReadEntry } from './aiPrivacy';
 import { resolveAvatarSourceEvidence } from './avatarSourceEvidence';
-import { readAvatarSessions } from './avatarMemorySessions';
-import { isCanonicalAvatarProjection } from './avatarKnowledgeProjection';
+import { selectAvatarOntologyContext } from './avatarOntologyContext';
 import type { ActionItem, DiaryEntry, Principle } from '../types';
 import type { FutureState } from '../types/future';
-import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../features/avatar/types';
+import type { CognitiveObject } from '../features/avatar/types';
 import { readAvatarNameStatement } from './avatarMemoryPolicy';
 import { goalProgress } from './futureRepository';
 import type { GuidanceSource } from './avatarGuidance';
@@ -15,19 +15,45 @@ import { currentPrinciples, historicalEvolutionPrinciples } from './principleRev
 /** Read-only context. Suggestions never become user commitments implicitly. */
 export function buildGuidanceSources(input: {
   entries: DiaryEntry[];
-  patterns: AvatarUnderstandingVersion[];
   principles: Principle[];
   actions: ActionItem[];
   future?: FutureState;
-  avatarMemories?: AvatarAtomicMemory[];
   now?: number;
+  includeExpiredHistory?: boolean;
+  diagnostics?: import('./avatarOntologyContext').OntologyRetrievalDiagnostics;
+  graph: AvatarOntologySnapshot;
 }): GuidanceSource[] {
-  const privacyToken = aiPrivacyToken(input.entries, input.future, input.actions, input.principles, input.avatarMemories);
+  const privacyToken = aiPrivacyToken(
+    input.entries,
+    input.future,
+    input.actions,
+    input.principles,
+    input.graph,
+  );
   const now = input.now ?? Date.now();
   const accessible = input.entries.filter((entry) => canAIReadEntry(entry, now));
+  if (input.diagnostics) input.diagnostics.privacyCount += input.entries.length - accessible.length;
   const entries = new Map(accessible.map((entry) => [entry.id, entry]));
   const denied = (ids: string[]) => ids.some((id) => !entries.has(id));
-  const sessions = readAvatarSessions();
+  const sessions = input.graph.sessions ?? [];
+  const eligible = selectAvatarOntologyContext(
+    input.graph,
+    input.entries,
+    privacyToken,
+    now,
+    input.includeExpiredHistory,
+    input.diagnostics,
+  );
+  const sourceEntryIds = (id: string) =>
+    eligible
+      .find(({ object }) => object.id === id)
+      ?.evidence.filter(
+        (edge) => edge.sourceKind === 'now_entry' || edge.sourceKind === 'past_experience',
+      )
+      .map((edge) => edge.toId) ?? [];
+  const activeUnderstanding = eligible
+    .filter(({ object }) => object.domain === 'my_understanding')
+    .map(({ object }) => object);
   const validOrigin = (id: string) =>
     Object.values(input.future?.archiveOrigins ?? {})
       .filter((origin) => origin.id === id)
@@ -42,10 +68,10 @@ export function buildGuidanceSources(input: {
   const dependencies = new Map<string, string[]>();
   const key = (kind: string, id: string) => `${kind}:${id}`;
   input.entries.forEach((e) => dependencies.set(key('entry', e.id), []));
-  input.patterns.forEach((p) =>
+  activeUnderstanding.forEach((p) =>
     dependencies.set(
       key('pattern', p.id),
-      p.sourceEntryIds.map((id) => key('entry', id)),
+      sourceEntryIds(p.id).map((id) => key('entry', id)),
     ),
   );
   input.principles.forEach((p) =>
@@ -76,16 +102,15 @@ export function buildGuidanceSources(input: {
   const blocked = new Set(
     input.entries.filter((e) => !canAIReadEntry(e, now)).map((e) => key('entry', e.id)),
   );
-  input.principles.filter(p => p.aiVisibility !== 'allowed').forEach(p => blocked.add(key('principle', p.id)));
+  input.principles
+    .filter((p) => p.aiVisibility !== 'allowed')
+    .forEach((p) => blocked.add(key('principle', p.id)));
   input.actions
     .filter((a) => a.aiVisibility !== 'allowed')
     .forEach((a) => blocked.add(key('action', a.id)));
   [...(input.future?.visions ?? []), ...(input.future?.goals ?? [])]
     .filter((v) => v.aiVisibility !== 'allowed')
     .forEach((v) => blocked.add(key('future', v.id)));
-  input.patterns
-    .filter((p) => p.status !== 'confirmed' || !p.sourceEntryIds.length || p.aiVisibility !== 'allowed')
-    .forEach((p) => blocked.add(key('pattern', p.id)));
   for (const kind of ['action', 'future']) {
     for (const id of dependencies.keys())
       if (id.startsWith(`${kind}:`) && !validOrigin(id.slice(kind.length + 1))) blocked.add(id);
@@ -132,6 +157,7 @@ export function buildGuidanceSources(input: {
                 text: excerpt(`${entry.title}：${entry.content}`),
                 searchText: searchableExcerpt(`${entry.title}：${entry.content}`),
                 occurredAt: entry.createdAt,
+                entryId: entry.id,
                 source: 'entry' as const,
               },
             ]
@@ -139,22 +165,16 @@ export function buildGuidanceSources(input: {
       })
       .sort((a, b) => b.occurredAt - a.occurredAt)
       .slice(0, 3);
-  const patterns = input.patterns.filter(
-    (p) =>
-      permitted('pattern', p.id) &&
-      p.status === 'confirmed' &&
-      !denied(p.sourceEntryIds) &&
-      (p.retainedAfterSourceDeletion || p.sourceEntryIds.some((id) => entries.has(id))),
-  );
+  const patterns = activeUnderstanding.filter((p) => permitted('pattern', p.id));
   const principles = currentPrinciples(input.principles).filter(
     (p) =>
       permitted('principle', p.id) &&
       (p.sourcePatternIds ?? []).every((id) => patterns.some((pattern) => pattern.id === id)) &&
       !denied([
         ...(p.derivedFromEntryIds ?? []),
-        ...input.patterns
+        ...activeUnderstanding
           .filter((pattern) => p.sourcePatternIds?.includes(pattern.id))
-          .flatMap((pattern) => pattern.sourceEntryIds),
+          .flatMap((pattern) => sourceEntryIds(pattern.id)),
       ]),
   );
   const actions = input.actions.filter(
@@ -217,35 +237,22 @@ export function buildGuidanceSources(input: {
       .slice(0, 3)
       .map(({ text, occurredOn, status }) => ({ text, occurredOn, status }));
   };
-  const sourceExists = (memory: AvatarAtomicMemory) => {
-    const entryIds = memory.sourceRefs.filter((ref) => ref.source === 'entry').map((ref) => ref.id);
-    if (denied(entryIds)) return false;
-    return memory.sourceRefs.every((ref) => {
-      if (ref.source === 'message')
-        return (
-          resolveAvatarSourceEvidence([ref], input.entries, sessions, now, privacyToken).length ===
-          1
-        );
-      if (ref.source === 'entry') return entries.has(ref.id) || memory.retainedAfterSourceDeletion;
-      if (ref.source === 'pattern') return patterns.some((p) => p.id === ref.id);
-      if (ref.source === 'principle') return principles.some((p) => p.id === ref.id);
-      if (ref.source === 'action') return actions.some((a) => a.id === ref.id);
-      if (ref.source === 'practice') return future?.practiceRecords?.some((r) => r.id === ref.id);
-      if (ref.source === 'future')
-        return (
-          future?.goals.some((g) => g.id === ref.id) || future?.visions.some((v) => v.id === ref.id)
-        );
-      return false;
-    });
-  };
-  const kindOfMemory = (memory: AvatarAtomicMemory): GuidanceSource['kind'] => {
-    if (memory.facets.includes('boundary')) return '边界';
-    if (memory.facets.includes('preference') || memory.facets.includes('aversion')) return '偏好';
-    if (memory.facets.includes('motivation') || memory.facets.includes('aspirational_self'))
-      return '驱动';
-    if (memory.facets.includes('emotional_trigger')) return '触点';
+  const kindOfCognition = (object: CognitiveObject): GuidanceSource['kind'] => {
+    if (object.category === 'preferences_boundaries') return '偏好';
+    if (object.category === 'values_motivation') return '驱动';
     return '背景';
   };
+  const cognitionEvidence = (id: string): NonNullable<GuidanceSource['evidence']> =>
+    [
+      ...evidence(sourceEntryIds(id)),
+      ...(eligible.find(({ object }) => object.id === id)?.evidence ?? [])
+        .filter((edge) => edge.sourceKind === 'chat_user_message')
+        .map((edge) => ({
+          text: excerpt(edge.verbatimQuote),
+          occurredAt: Date.parse(edge.sourceOccurredAt),
+          source: 'message' as const,
+        })),
+    ].slice(0, 3);
   const sources: GuidanceSource[] = [
     ...patterns.map((p) => ({
       id: p.id,
@@ -255,16 +262,10 @@ export function buildGuidanceSources(input: {
       nature: 'inferred' as const,
       status: p.status,
       temporalStatus: 'current_understanding' as const,
-      validFrom: p.confirmedAt ?? p.createdAt,
-      detail:
-        [
-          p.trigger && `情境：${p.trigger}`,
-          p.response && `反应：${p.response}`,
-          p.outcome && `观察到的结果：${p.outcome}`,
-        ]
-          .filter(Boolean)
-          .join('；') || undefined,
-      evidence: evidence(p.sourceEntryIds),
+      validFrom: Date.parse(p.validity.validFrom),
+      validTo: p.validity.validUntil ? Date.parse(p.validity.validUntil) : undefined,
+      detail: p.notes,
+      evidence: cognitionEvidence(p.id),
     })),
     ...principles.map((p) => ({
       id: p.id,
@@ -281,38 +282,40 @@ export function buildGuidanceSources(input: {
         ...(p.derivedFromEntryIds ?? []),
         ...patterns
           .filter((pattern) => p.sourcePatternIds?.includes(pattern.id))
-          .flatMap((pattern) => pattern.sourceEntryIds),
+          .flatMap((pattern) => sourceEntryIds(pattern.id)),
       ]),
-      results: selectGuidanceResults([
-        ...accessible.flatMap((entry) =>
-          (entry.principleFeedback ?? [])
-            .filter(
-              (f) =>
-                f.principleId === p.id &&
-                Number.isFinite(f.createdAt) &&
-                f.createdAt >= 0 &&
-                f.createdAt <= 8.64e15,
-            )
-            .map((f) => ({
-              text: excerpt(`${entry.title}：${entry.content}`),
-              occurredOn: new Date(f.createdAt).toISOString().slice(0, 10),
-              status: f.outcome,
-            })),
-        ),
-        ...actions.filter((a) => a.principleId === p.id).flatMap((a) => actionResults(a.id)),
-        ...practiceResults(p.derivedFromPracticeIds ?? []),
-      ]
-        .filter(
-          (result, index, all) =>
-            all.findIndex(
-              (other) =>
-                other.text === result.text &&
-                other.occurredOn === result.occurredOn &&
-                other.status === result.status,
-            ) === index,
-        )
-        .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
-        .map(({ text, occurredOn, status }) => ({ text, occurredOn, status }))),
+      results: selectGuidanceResults(
+        [
+          ...accessible.flatMap((entry) =>
+            (entry.principleFeedback ?? [])
+              .filter(
+                (f) =>
+                  f.principleId === p.id &&
+                  Number.isFinite(f.createdAt) &&
+                  f.createdAt >= 0 &&
+                  f.createdAt <= 8.64e15,
+              )
+              .map((f) => ({
+                text: excerpt(`${entry.title}：${entry.content}`),
+                occurredOn: new Date(f.createdAt).toISOString().slice(0, 10),
+                status: f.outcome,
+              })),
+          ),
+          ...actions.filter((a) => a.principleId === p.id).flatMap((a) => actionResults(a.id)),
+          ...practiceResults(p.derivedFromPracticeIds ?? []),
+        ]
+          .filter(
+            (result, index, all) =>
+              all.findIndex(
+                (other) =>
+                  other.text === result.text &&
+                  other.occurredOn === result.occurredOn &&
+                  other.status === result.status,
+              ) === index,
+          )
+          .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
+          .map(({ text, occurredOn, status }) => ({ text, occurredOn, status })),
+      ),
     })),
     ...historicalEvolutionPrinciples(input.principles)
       .filter(
@@ -323,9 +326,9 @@ export function buildGuidanceSources(input: {
           ) &&
           !denied([
             ...(principle.derivedFromEntryIds ?? []),
-            ...input.patterns
+            ...activeUnderstanding
               .filter((pattern) => principle.sourcePatternIds?.includes(pattern.id))
-              .flatMap((pattern) => pattern.sourceEntryIds),
+              .flatMap((pattern) => sourceEntryIds(pattern.id)),
           ]),
       )
       .map(({ principle, successor }) => ({
@@ -425,69 +428,25 @@ export function buildGuidanceSources(input: {
             ? `${goalProgress({ ...future, events: validEvents }, g).total} / ${g.measurement.target} ${g.measurement.unit}`
             : undefined,
     })),
-    ...(input.avatarMemories ?? [])
-      .filter(
-        (memory) =>
-          !isCanonicalAvatarProjection(memory) &&
-          memory.aiVisibility === 'allowed' &&
-          (memory.status === 'confirmed' || memory.status === 'retained') &&
-          sourceExists(memory),
-      )
-      .map((memory) => ({
-        id: memory.id,
-        kind: kindOfMemory(memory),
-        text: memory.statement,
-        nature: memory.nature,
-        status: memory.status,
+    ...eligible
+      .filter(({ object }) => object.domain === 'about_me')
+      .map(({ object }) => ({
+        id: object.id,
+        kind: kindOfCognition(object),
+        text: object.statement,
+        nature: 'explicit' as const,
+        status: object.status,
         temporalStatus:
-          memory.validTo !== undefined
+          object.validity.mode === 'staged'
             ? ('time_limited' as const)
-            : memory.nature === 'state' ||
-                memory.nature === 'experience' ||
-                memory.nature === 'commitment'
-              ? ('historical_fact' as const)
-              : ('current_understanding' as const),
-        evidence: [
-          ...evidence(memory.sourceRefs.filter((r) => r.source === 'entry').map((r) => r.id)),
-          ...memory.sourceRefs
-            .filter((r) => r.source === 'message' && r.excerpt)
-            .map((r) => ({
-              text: excerpt(r.excerpt!),
-              occurredAt: r.createdAt ?? memory.createdAt,
-              source: 'message' as const,
-            })),
-        ].slice(0, 3),
-        validFrom: memory.validFrom,
-        validTo: memory.validTo,
-        confirmedAt: memory.confirmedAt ?? memory.updatedAt ?? memory.createdAt,
-        avatarName:
-          // A name is the avatar's present identity, never historical context.
-          // Do not expose candidate, inferred, expired, or future statements as
-          // a usable name merely because their text happens to match the format.
-          memory.nature === 'explicit' &&
-          (memory.validFrom === undefined || memory.validFrom <= now) &&
-          (memory.validTo === undefined || now < memory.validTo)
-            ? (readAvatarNameStatement(memory.statement) ?? undefined)
-            : undefined,
-        module: memory.sourceRefs.find((ref) => ref.source === 'future' || ref.source === 'action')
-          ? ('future' as const)
-          : memory.sourceRefs.find((ref) => ref.source === 'entry' || ref.source === 'pattern')
-            ? ('past' as const)
-            : ('now' as const),
-        detail: memory.contexts.slice(0, 2).join(' · ') || undefined,
-        relatedKeys: memory.sourceRefs
-          .map((ref) =>
-            ref.source === 'pattern'
-              ? `模式:${ref.id}`
-              : ref.source === 'principle'
-                ? `原则:${ref.id}`
-                : ref.source === 'future'
-                  ? `目标:${ref.id}`
-                  : ref.source === 'action'
-                    ? `行动:${ref.id}`
-                    : '',
-          )
-          .filter(Boolean),
+            : ('current_understanding' as const),
+        evidence: cognitionEvidence(object.id),
+        validFrom: Date.parse(object.validity.validFrom),
+        validTo: object.validity.validUntil ? Date.parse(object.validity.validUntil) : undefined,
+        confirmedAt: object.confirmedAt ? Date.parse(object.confirmedAt) : undefined,
+        avatarName: readAvatarNameStatement(object.statement) ?? undefined,
+        module: sourceEntryIds(object.id).length ? ('past' as const) : ('now' as const),
+        detail: object.notes,
       })),
     ...accessible.map((entry) => ({
       id: `entry:${entry.id}`,
@@ -504,6 +463,22 @@ export function buildGuidanceSources(input: {
     .filter((source) => source.text.trim())
     .map((source) => ({
       ...source,
+      domain: input.graph.objects.find((object) => object.id === source.id)?.domain,
+      guardrail: input.graph.objects.find((object) => object.id === source.id)?.guardrail,
+      ...(source.status === 'archived_expired'
+        ? {
+            temporalStatus: 'historical_understanding' as const,
+            detail: `历史轨迹（阶段状态已到期）：${source.detail ?? source.text}`,
+          }
+        : {}),
+      tags: [
+        ...new Set([
+          ...(source.id.startsWith('entry:') ? (entries.get(source.id.slice(6))?.tags ?? []) : []),
+          ...input.graph.edges
+            .filter((edge) => edge.type === 'SCOPED_IN' && edge.fromId === source.id)
+            .map((edge) => (edge.type === 'SCOPED_IN' ? edge.tagLabel : '')),
+        ]),
+      ],
       aiPrivacyToken: privacyToken,
       text: source.text.slice(0, 4000),
       detail: source.detail?.slice(0, 2400),

@@ -40,7 +40,9 @@ for (const mode of ['web', 'mobile']) {
           // Seed the maximum retained history. The screen must only mount a
           // small reading window even when a long-running conversation has
           // reached its storage limit.
-          localStorage.setItem('vector:avatar:sessions:v1', JSON.stringify([{id:'scroll-history',mode:'general',context:common.launchContext,createdAt:1,updatedAt:2,messages:Array.from({length:600},(_,i)=>({id:'turn-'+i,role:i%2?'assistant':'user',type:'text',content:'历史消息 '+i+'：'+ '这是一段用于验证长对话能够完整阅读的内容。'.repeat(12),created_at:new Date(1700000000000+i*1000).toISOString()})),references:[]}]));
+          const {initializeAvatarOntology,persistAvatarOntologySession}=await import('/services/avatarOntologyStore.ts');
+          const graph=await initializeAvatarOntology();
+          await persistAvatarOntologySession(graph.revision,{id:'scroll-history',mode:'general',context:common.launchContext,createdAt:1,updatedAt:2,messages:Array.from({length:600},(_,i)=>({id:'turn-'+i,role:i%2?'assistant':'user',type:'text',content:'历史消息 '+i+'：'+ '这是一段用于验证长对话能够完整阅读的内容。'.repeat(12),created_at:new Date(1700000000000+i*1000).toISOString()})),references:[]});
         }
         const content=React.createElement(Module,common);
         const child='${module}' === 'avatar' ? React.createElement('div',{className:'now-shell ${mode === 'mobile' ? 'now-flow--mobile-shell' : ''}'},content) : content;
@@ -53,6 +55,9 @@ for (const mode of ['web', 'mobile']) {
         page.locator(mode === 'web' ? '.desktop-workspace' : '.mobile-shell'),
       ).toBeVisible({ timeout: 60000 });
       await expect(page.locator('h1').first()).toBeVisible();
+      if (module === 'avatar') {
+        await expect(page.locator('.now-chat-input')).toBeVisible();
+      }
       if (module === 'now') {
         await expect(page.locator('#now-record-text')).toHaveCSS('font-size', '17px');
         await expect(page.locator('#now-record-text')).toHaveCSS('font-weight', '400');

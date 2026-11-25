@@ -1,0 +1,7 @@
+{
+  "initialJsGzip": 250000,
+  "initialCssGzip": 80000,
+  "precacheBytes": 6000000,
+  "lazyModelBytes": 26000000,
+  "lazyRuntimeBytes": 39000000
+}

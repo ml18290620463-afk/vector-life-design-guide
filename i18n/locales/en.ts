@@ -236,7 +236,6 @@ export const en = {
   setTimeLock: 'SET DECRYPTION TIME (TIME CAPSULE)',
   immediate: 'IMMEDIATE',
   oneMin: '1 MIN LATER (TEST)',
-  oneDay: '24 HOURS LATER',
   customDate: 'CUSTOM DATE',
   career: 'CAREER',
   careerDesc: 'Achievements, position, competitiveness',

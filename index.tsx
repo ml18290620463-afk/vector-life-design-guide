@@ -9,6 +9,7 @@ import './styles/entrance-theme.css';
 import './styles/design-tokens.css';
 import './styles/global-type.css';
 import './styles/refinement.css';
+import './styles/silk-palette.css';
 import * as Sentry from '@sentry/react';
 import { initWebVitalsReporter } from './lib/vitals';
 import { registerVectorServiceWorker } from './lib/pwaRegister';

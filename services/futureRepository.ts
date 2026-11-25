@@ -540,7 +540,11 @@ function deleteGoalsInState(
 }
 
 /** Delete a vision and every future plan, feedback, and outcome nested beneath it. */
-export async function deleteVision(id: string, expectedRevision: number, expectedStateRevision?: number) {
+export async function deleteVision(
+  id: string,
+  expectedRevision: number,
+  expectedStateRevision?: number,
+) {
   return command((state, values) => {
     if (expectedStateRevision !== undefined && state.revision !== expectedStateRevision)
       throw new Error('关联内容已变化，请重新打开规划并核对删除范围。');
@@ -558,7 +562,11 @@ export async function deleteVision(id: string, expectedRevision: number, expecte
 }
 
 /** Delete a goal and all of its future-side dependent records. */
-export async function deleteGoal(id: string, expectedRevision: number, expectedStateRevision?: number) {
+export async function deleteGoal(
+  id: string,
+  expectedRevision: number,
+  expectedStateRevision?: number,
+) {
   return command((state, values) => {
     if (expectedStateRevision !== undefined && state.revision !== expectedStateRevision)
       throw new Error('关联内容已变化，请重新打开规划并核对删除范围。');
@@ -1020,8 +1028,8 @@ export function saveArchiveDirection(input: {
           status: 'pending',
           revision: 1,
           aiVisibility: input.aiVisibility === 'allowed' ? 'allowed' : 'private',
-        aiConsentAt: now,
-        createdAt: now,
+          aiConsentAt: now,
+          createdAt: now,
           updatedAt: now,
         },
         ...actions,

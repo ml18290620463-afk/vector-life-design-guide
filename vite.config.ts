@@ -10,11 +10,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const buildInfo = {
-    revision: '52632b2-crypto-environment-20261102',
-    branch: 'stable-refinement',
+    revision: '0b135be4f1fd21ad7fb472126ab30e8139254178',
+    branch: 'main + local final changes',
     builtAt: new Date().toISOString(),
     modified: true,
-    edition: 'editor-safety-type-20261102',
+    edition: 'p0-p2-20261123',
   };
   const env = loadEnv(mode, '.', '');
   const devPort = Number(env.VITE_DEV_PORT || env.PORT || 3000);
@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
+      manifest: true,
       // Phase 4 §W1.5 — emit hidden sourcemaps so the CI Sentry upload
       // step has them, but no `//# sourceMappingURL=...` comment is
       // appended to the JS bundles. The map files themselves are
@@ -140,10 +141,16 @@ export default defineConfig(({ mode }) => {
         // so the plugin doesn't generate a competing one.
         manifest: false,
         workbox: {
+          importScripts: ['/sw-cache-cleanup.js'],
           globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,woff,woff2}'],
           // Don't precache .map files (we already strip them post-build
           // for production but local dev shouldn't pre-cache them either).
-          globIgnores: ['**/*.map', '**/RibbonFabric-*.js', '**/RibbonCurrent-*.js', '**/SpaceTimeBackground-*.js'],
+          globIgnores: [
+            '**/*.map',
+            '**/RibbonFabric-*.js',
+            '**/RibbonCurrent-*.js',
+            '**/SpaceTimeBackground-*.js',
+          ],
           // Default 2 MiB is too small for the pdf.js + react chunks.
           // Bump to 4 MiB so warmstart actually works without warnings.
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
@@ -156,6 +163,12 @@ export default defineConfig(({ mode }) => {
           // an offline state instead of getting a fake 200.
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [
+            // Account and API responses must never persist in a runtime cache.
+            {
+              urlPattern: /\/api\//,
+              handler: 'NetworkOnly',
+            },
+
             // The local semantic model is intentionally lazy: it must not
             // inflate first-install precache, but once used it should remain
             // available offline without contacting a third-party CDN.
@@ -191,21 +204,6 @@ export default defineConfig(({ mode }) => {
                 url.hostname.endsWith('openrouter.ai') || url.hostname.endsWith('googleapis.com'),
               handler: 'NetworkOnly',
               options: { cacheName: 'vector-ai-no-cache' },
-            },
-            // Same-origin /api/* — network-first with a tight 5 s
-            // timeout so flaky networks fall back to the cached body
-            // (if any) instead of hanging the request.
-            {
-              urlPattern: /\/api\//,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'vector-api-cache',
-                networkTimeoutSeconds: 5,
-                expiration: {
-                  maxEntries: 32,
-                  maxAgeSeconds: 60 * 60 * 24,
-                },
-              },
             },
           ],
         },

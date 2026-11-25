@@ -1,109 +1,42 @@
-# Privacy Policy / 隐私政策
+# Privacy / 隐私说明
 
-Last updated: 2026-10-30.
+Updated: 2026-11-23. This describes the current implementation, not a security certification.
 
-## Plain summary
+VECTOR is local-first. New users can write immediately without a password or sample records. A screen lock and optional protection of selected data do **not** encrypt every local record. Anyone with access to your browser profile or an unlocked device may read unencrypted data.
 
-VECTOR is local-first. Your records, materials, principles, containers, attachments, master-password verifier, and ordinary backups are stored on your device first, mainly in browser storage / IndexedDB.
+VECTOR 以本地存储为主。首次使用直接进入记录页，无强制密码、引导或示例记录。主锁及局部数据保护**不等于整库静态加密**。可访问浏览器配置或已解锁设备的人可能读取未加密数据。
 
-The current product no longer includes the retired Morning Star, Memoir, Echo Chamber, letter mode, cross-device migration wizard, trusted-device store, or advanced signed-backup payloads. References to those systems in older roadmap or changelog files are historical notes, not current runtime behavior.
+## Storage and access / 存储与访问矩阵
 
-## English
+| Data / 数据                                                                                                        | Local storage / 本地存储                                   | Encryption / 加密边界                                                                                                                               | AI use / AI 使用                                                            | Backup and sync / 备份与同步                                                |
+| ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Ordinary diary entries / 普通记录                                                                                  | IndexedDB; small collections also mirrored in localStorage | Plain unless individually sealed/encrypted / 非封存记录通常为明文                                                                                   | Explicit allow, accessible and unlocked sources only / 显式允许且来源可访问 | Included in backup and optional account snapshot                            |
+| Material metadata / 素材元信息                                                                                     | IndexedDB; embedded metadata may accompany records         | No blanket encryption guarantee / 不承诺统一加密                                                                                                    | Only eligible selected context; attachments depend on the enabled feature   | Included when supported by backup schema; not a guarantee for external URLs |
+| Principles, memories, patterns, chats / 原则、记忆、模式、聊天                                                     | IndexedDB and account-scoped localStorage                  | Generally plaintext / 通常为明文                                                                                                                    | Eligibility and source permissions checked; candidates require review       | Supported stores included in snapshots                                      |
+| NOW private draft, future draft, future plans, actions, restore job / 私有草稿、未来草稿、未来规划、行动、恢复任务 | IndexedDB                                                  | Encrypted for the selected protected keys when password protection is configured; plaintext without protection / 设置保护后指定键加密，未设置时明文 | Only after unlock and applicable explicit permission                        | Export decrypts internally before creating the backup envelope              |
+| Processing receipts / 处理回执                                                                                     | Account-scoped localStorage                                | Plain IDs, fingerprints and versions; not raw source text / 明文标识、指纹和版本                                                                    | Not an independent permission grant                                         | Supported receipts may be backed up                                         |
+| Semantic embeddings / 语义向量缓存                                                                                 | IndexedDB / worker cache                                   | No full-vault encryption guarantee; derived data can still be sensitive                                                                             | Local semantic retrieval                                                    | Excluded from vault backup; can be rebuilt                                  |
+| Exported backup / 导出备份                                                                                         | User-selected file / 用户保存的文件                        | **Without password: plain JSON. With password: encrypted envelope** / **无密码为明文 JSON，有密码为加密文件**                                       | Export itself does not call AI                                              | Handle plain files as sensitive data                                        |
+| Optional account snapshot / 可选账号快照                                                                           | Remote account service                                     | Encrypted snapshot; account ownership checked / 加密快照并校验归属                                                                                  | Sync is separate from AI authorization                                      | Requires configured account service and password                            |
 
-### 1. Who is responsible
+Locking restricts application access. It does not erase local plaintext, OS backups, screenshots, exported files, or already transmitted information. Browser/device loss and forgotten passwords may cause irreversible data loss; keep a recoverable backup. Sealed historical records and protected drafts have their own decryption requirements.
 
-For self-hosted instances, the person or organization deploying the server is responsible for that deployment. There is no central VECTOR cloud account system unless a separate deployment explicitly adds one.
+锁定限制应用访问，不会擦除普通明文数据、系统备份、截图、导出文件或已发送内容。浏览器数据清理、设备丢失及忘记密码可能导致数据无法恢复；应自行保管可恢复备份。封存记录与受保护草稿各有解密要求。
 
-### 2. What data is processed
+## AI consent / AI 授权
 
-| Category                                                                  | Where it lives                                                             | Leaves your device?                                                       |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Records (`title`, `content`, `tags`, timestamps, archive/container state) | Browser storage / IndexedDB                                                | When exported, transferred, or included in an AI request                  |
-| Materials and attachments                                                 | Browser storage / IndexedDB; large files may affect backup size            | When exported, transferred, linked remotely, or included in an AI request |
-| Principles and containers                                                 | Browser storage / IndexedDB                                                | When exported or included in AI context                                   |
-| Master password verifier and salt                                         | Browser storage / IndexedDB                                                | No                                                                        |
-| Ordinary backup JSON                                                      | A file you explicitly download                                             | Only wherever you choose to store or send that file                       |
-| Avatar chat, memory extraction and summary requests                       | Sent to the configured server-side AI provider when you invoke AI features | Yes, only for that request                                                |
-| Server logs                                                               | The server operator's logging system                                       | Stays on that server/log sink                                             |
-| Sentry events                                                             | Only if `SENTRY_DSN` is configured                                         | Yes, to the configured Sentry project                                     |
+Saving asks whether AI may access the record. Private, sampled, sealed/encrypted, inaccessible or time-locked sources are excluded from eligible context. Selected authorized content may be sent through the configured server to the chosen model provider. Check that provider's policy and your deployment configuration before sending sensitive information.
 
-VECTOR does not include third-party analytics pixels, advertising pixels, or session replay by default.
+Permission changes abort in-flight client requests and reject stale responses. **Cancellation cannot retract content already sent or guarantee the provider stopped processing.** Source previews re-check current permissions and hide unavailable evidence. A true quotation does not prove a model's interpretation is correct. Review candidate memories before accepting them; rejection does not delete the original experience.
 
-### 3. AI provider transmission
+保存时由你选择 AI 可见性。私有、示例、封存/加密、不可访问或尚未解锁的来源不得作为可用上下文。经选择且已授权的内容可能通过服务端发往模型提供方；请了解实际部署及提供方政策。撤权会中止客户端请求并拒绝过时响应，**无法收回已发送内容，也不能保证提供方停止处理**。引用原文存在不等于模型推论正确，候选记忆需经人工审核。
 
-AI capabilities include avatar conversations, memory extraction, summaries and model discovery/testing. When these capabilities run, relevant messages and selected context or memories are sent through the VECTOR backend to the configured provider, such as OpenRouter or Google Gemini. Local-first does not mean AI requests stay on your device. Request context depends on the feature and current settings.
+## Accounts, diagnostics and deletion / 账号、诊断与删除
 
-Provider-side retention and processing are governed by the provider you configure. Read their policies before sending sensitive personal information.
+Accounts, billing, cloud snapshots and optional diagnostics exist in the codebase. Their availability and retention depend on the operator's configuration; local-first does not mean no network traffic or no central account. Sentry is optional. Operators must document enabled services, retention, subprocessors and a verified privacy contact before public deployment. This repository does not set an operator-wide retention promise.
 
-### 4. Backup and restore
+账号、支付、云快照及可选诊断均有实现；是否启用和保留时长取决于部署方。本地优先不等于无联网或无中心账号。部署方应在公开上线前提供实际启用服务、保留期限、处理方及可核实的隐私联系方式。
 
-Current vault backups contain schema 3 data: records and supplements, principles and their links, actions, guiding stars, containers, materials, future planning and feedback, the current draft, and retained avatar/cache data including conversations and memories. The normal download is encrypted with the source vault password; restoring it requires that password, even when the destination vault uses a different password.
+Deleting local data does not delete exported backups or copies already held by remote services. Use the relevant account/provider deletion process for remote copies. Do not put real private records in public bug reports.
 
-Embedded material bytes travel with the backup. Web links preserve only their addresses; remote content may change or disappear. Temporary references cannot guarantee recovery on another device. Review the backup inspection before restoring. A backup is not a full browser-profile copy and does not promise to preserve every deployment setting.
-
-Backup files are created locally and downloaded by your browser. VECTOR does not upload them to a server. If you send a backup file through email, chat, cloud drive, AirDrop, USB, or any other channel, that channel's privacy and security properties apply.
-
-### 5. Retention and deletion
-
-- Records remain until you delete them or clear browser storage.
-- Ordinary backup files remain wherever you saved them.
-- Server log retention depends on the deployment operator.
-- Sentry event retention depends on your Sentry project settings.
-- Wiping browser site data is irreversible unless you have a backup.
-
-### 6. Security posture
-
-- Main user data is local-first.
-- Master passwords are not stored in plaintext.
-- Markdown and attachment rendering use scheme allow-lists.
-- The server should default to loopback for local development. If exposed to a network, configure `AI_ALLOWED_ORIGINS` and `AI_ACCESS_TOKEN`.
-
-## 中文
-
-### 1. 谁负责数据
-
-如果你是自部署，部署这个服务的人或组织就是该实例的数据责任方。除非某个部署额外接入账号系统，否则 VECTOR 当前没有中心化云账号。
-
-### 2. VECTOR 当前处理哪些数据
-
-| 数据类型                                  | 存放位置                                           | 是否离开设备                                 |
-| ----------------------------------------- | -------------------------------------------------- | -------------------------------------------- |
-| 记录正文、标题、标签、时间、归档/容器状态 | 浏览器存储 / IndexedDB                             | 导出、转移或作为 AI 请求上下文时可能离开设备 |
-| 素材与附件                                | 浏览器存储 / IndexedDB；大附件可能影响备份体积     | 导出、转移或作为 AI 请求上下文时可能离开设备 |
-| 原则与容器                                | 浏览器存储 / IndexedDB                             | 导出或作为 AI 上下文时可能离开设备           |
-| 主密码校验数据与盐                        | 浏览器存储 / IndexedDB                             | 不会                                         |
-| 普通备份 JSON                             | 你主动下载的文件                                   | 只会去你选择保存或发送的地方                 |
-| 分身对话、记忆提取与摘要请求              | 使用 AI 能力时，经由服务端发送给配置的 AI Provider | 会，仅限该次请求                             |
-| 服务端日志                                | 部署方的日志系统                                   | 留在该服务器或日志系统中                     |
-| Sentry 事件                               | 仅在配置 `SENTRY_DSN` 时启用                       | 会，发送到配置的 Sentry 项目                 |
-
-VECTOR 默认不嵌入第三方统计像素、广告像素或会话回放工具。
-
-### 3. AI Provider 传输
-
-当前 AI 能力包括分身对话、记忆提取、摘要以及模型列表与连接测试。这些能力运行时，相关消息、选入的上下文或记忆会经由 VECTOR 后端发送给配置的 Provider，例如 OpenRouter 或 Google Gemini。本地优先不代表 AI 请求仅在本机处理；具体发送范围取决于使用的功能和当前设置。
-
-上游 Provider 的留存和处理规则由你配置的 Provider 决定。请不要把你不愿交给第三方模型服务商处理的敏感信息发起请求。
-
-### 4. 备份与恢复
-
-当前资料库备份采用 schema 3，包含记录及补充、原则及关联、行动、引导星、容器、素材、未来规划与反馈、当前草稿，以及分身对话、记忆等缓存数据。常规下载使用来源资料库的密令加密；即使目标资料库使用不同密令，检查备份时仍需输入来源密令。
-
-内嵌素材的文件内容随备份保存；网页链接只保存地址，远程内容可能变化或失效；临时引用不能保证跨设备恢复。恢复前请查看备份检查结果。资料库备份不是整个浏览器资料夹的副本，也不承诺包含全部部署设置。
-
-备份文件在本地生成并由浏览器下载。VECTOR 不会把备份上传到服务器。如果你通过邮件、聊天工具、网盘、AirDrop、U 盘等方式转移备份文件，对应渠道的隐私与安全属性由该渠道决定。
-
-### 5. 保留与删除
-
-- 记录会保留到你删除它们或清空浏览器站点数据为止。
-- 普通备份文件会保留在你保存它们的位置。
-- 服务端日志保留多久取决于部署方。
-- Sentry 事件保留多久取决于你的 Sentry 项目设置。
-- 清空浏览器站点数据不可逆；除非你提前导出了备份。
-
-### 6. 安全姿态
-
-- 主数据本地优先。
-- 主密码不会以明文保存。
-- Markdown 与附件渲染使用协议白名单。
-- 服务端本地开发默认应监听 loopback。若暴露到网络，请配置 `AI_ALLOWED_ORIGINS` 与 `AI_ACCESS_TOKEN`。
+删除本地数据不会删除已导出的备份或远端副本；远端数据应通过对应账号/服务处理。不要在公开问题中提交真实隐私记录。

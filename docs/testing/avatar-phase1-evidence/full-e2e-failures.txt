@@ -1,0 +1,44 @@
+  42 failed
+    [chromium] › e2e/ai-privacy.spec.ts:32:3 › 记录与补充每次保存都明确选择 AI 权限 1440 ───────────────────────────
+    [chromium] › e2e/avatar-functional.spec.ts:108:1 › 分身只在确认后保存提炼信息，档案支持修改、撤销删除、删除与刷新恢复 ───────────
+    [chromium] › e2e/avatar-functional.spec.ts:196:1 › 分身取消提炼和各层返回不会写入记忆，窄屏仍可继续对话 ──────────────────
+    [chromium] › e2e/avatar-functional.spec.ts:244:1 › 记忆删除确认按 Escape 会返回详情而非关闭整个窗口 ────────────────
+    [chromium] › e2e/avatar-functional.spec.ts:281:1 › 分身对话失败后重试只补充回复，不重复写入用户消息 ────────────────────
+    [chromium] › e2e/avatar-memory-archive.spec.ts:29:3 › minimal memory archive at 320px ──────────
+    [chromium] › e2e/avatar-memory-archive.spec.ts:29:3 › minimal memory archive at 393px ──────────
+    [chromium] › e2e/avatar-memory-archive.spec.ts:29:3 › minimal memory archive at 1280px ─────────
+    [chromium] › e2e/avatar-upgrade.spec.ts:56:1 › passwordless new account initializes one empty v2 graph 
+    [chromium] › e2e/avatar-upgrade.spec.ts:65:1 › legacy account pauses consumers and upgrades through password CTA 
+    [chromium] › e2e/avatar-upgrade.spec.ts:92:1 › locked legacy account cannot mount consumers or commit migration before unlock 
+    [chromium] › e2e/experience-layout.spec.ts:11:5 › web avatar layout and editor ─────────────────
+    [chromium] › e2e/experience-layout.spec.ts:11:5 › mobile avatar layout and editor ──────────────
+    [chromium] › e2e/future-feedback-hierarchy.spec.ts:7:5 › 390px › 行动详情显示目标关系并同步目标完成情况 ───────────
+    [chromium] › e2e/future-feedback-hierarchy.spec.ts:62:5 › 390px › 行动搜索、状态分类、直接填写与历史回看 ──────────
+    [chromium] › e2e/future-feedback-hierarchy.spec.ts:7:5 › 1440px › 行动详情显示目标关系并同步目标完成情况 ──────────
+    [chromium] › e2e/future-feedback-hierarchy.spec.ts:62:5 › 1440px › 行动搜索、状态分类、直接填写与历史回看 ─────────
+    [chromium] › e2e/future-layout-data.spec.ts:17:1 › 未来设计：真实长规划在手机与宽屏中保持可读 ───────────────────────
+    [chromium] › e2e/future-mobile-navigation.spec.ts:34:3 › future design and practice stay usable at 320px 
+    [chromium] › e2e/future-mobile-navigation.spec.ts:34:3 › future design and practice stay usable at 393px 
+    [chromium] › e2e/future-mobile-navigation.spec.ts:34:3 › future design and practice stay usable at 768px 
+    [chromium] › e2e/future-mobile-navigation.spec.ts:34:3 › future design and practice stay usable at 1280px 
+    [chromium] › e2e/future-session.spec.ts:4:1 › one login allows future editing and all module navigation without another password 
+    [chromium] › e2e/future.spec.ts:58:1 › Future shares Past navigation typography and the mobile palette 
+    [chromium] › e2e/future.spec.ts:89:1 › editors stay inside the mobile page in a wide browser preview 
+    [chromium] › e2e/future.spec.ts:118:1 › mobile create, count distinct mountains, correct, revoke and reload 
+    [chromium] › e2e/future.spec.ts:148:1 › real tabs serialize retries and publish committed changes 
+    [chromium] › e2e/future.spec.ts:191:1 › mobile long content and 200% text keep forms inside viewport and save reachable 
+    [chromium] › e2e/future.spec.ts:231:1 › protected vault fails closed instead of writing new private data as plaintext 
+    [chromium] › e2e/language-options.spec.ts:3:1 › first-run language picker offers complete English and Chinese introductions 
+    [chromium] › e2e/now-material-integrity.spec.ts:4:1 › 混合素材经过草稿恢复后完整保存到过去 ───────────────────────
+    [chromium] › e2e/past-patterns-data.spec.ts:96:3 › past patterns keep conclusions readable with real mobile data 
+    [chromium] › e2e/past-patterns-data.spec.ts:96:3 › past patterns keep conclusions readable with real web data 
+    [chromium] › e2e/past-reading-data.spec.ts:85:3 › past reading uses clear affordances with real mobile data 
+    [chromium] › e2e/past-reading-data.spec.ts:85:3 › past reading uses clear affordances with real web data 
+    [chromium] › e2e/past-supplements.spec.ts:5:3 › 补充保留原记录与时间，图片可查看，刷新可恢复 390 ─────────────────────
+    [chromium] › e2e/past-supplements.spec.ts:5:3 › 补充保留原记录与时间，图片可查看，刷新可恢复 1440 ────────────────────
+    [chromium] › e2e/theme-v1.spec.ts:5:5 › mobile now layout and editor ───────────────────────────
+    [chromium] › e2e/theme-v1.spec.ts:5:5 › mobile avatar layout and editor ────────────────────────
+    [chromium] › e2e/three-record-audit.spec.ts:37:3 › 三条真实路径审计 1440 ───────────────────────────────
+    [chromium] › e2e/three-record-audit.spec.ts:37:3 › 三条真实路径审计 390 ────────────────────────────────
+    [chromium] › e2e/visual.spec.ts:18:3 › @visual cover screen › default cover mode matches baseline 
+  82 passed (48.6m)

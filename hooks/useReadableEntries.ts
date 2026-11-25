@@ -38,13 +38,19 @@ export function useReadableEntries(
             supplements: undefined,
           };
         const supplements = (entry.supplements ?? []).some((item) => item.isEncrypted)
-          ? await Promise.all((entry.supplements ?? []).map((item) =>
-              item.isEncrypted
-                ? password
-                  ? SecurityService.decrypt(item.content, password).then((content) => ({ ...item, content, isEncrypted: false }))
-                  : Promise.reject(new Error('Missing session key'))
-                : item,
-            ))
+          ? await Promise.all(
+              (entry.supplements ?? []).map((item) =>
+                item.isEncrypted
+                  ? password
+                    ? SecurityService.decrypt(item.content, password).then((content) => ({
+                        ...item,
+                        content,
+                        isEncrypted: false,
+                      }))
+                    : Promise.reject(new Error('Missing session key'))
+                  : item,
+              ),
+            )
           : entry.supplements;
         if (!entry.isEncrypted) return { ...entry, supplements };
         if (!password) throw new Error('Missing session key');
@@ -113,7 +119,16 @@ export function useReadableEntries(
         !source.isLocked &&
         !(source.unlockAt && source.unlockAt > Date.now())
       )
-        return [{ ...entry, content: cached.content, supplements: entry.supplements?.some((item) => item.isEncrypted) ? cached.supplements : entry.supplements, isEncrypted: false }];
+        return [
+          {
+            ...entry,
+            content: cached.content,
+            supplements: entry.supplements?.some((item) => item.isEncrypted)
+              ? cached.supplements
+              : entry.supplements,
+            isEncrypted: false,
+          },
+        ];
       return [];
     });
   }, [stored, isUnlocked, password, current, result]);

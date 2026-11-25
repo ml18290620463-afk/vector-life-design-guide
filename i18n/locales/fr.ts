@@ -144,7 +144,6 @@ export const fr = {
   setTimeLock: 'RÉGLER LE TEMPS DE DÉCRYPTAGE (CAPSULE TEMPORELLE)',
   immediate: 'IMMÉDIAT',
   oneMin: '1 MIN PLUS TARD (TEST)',
-  oneDay: '24 HEURES PLUS TARD',
   customDate: 'DATE PERSONNALISÉE',
   career: 'CARRIÈRE',
   careerDesc: 'Réalisations, poste, compétitivité',

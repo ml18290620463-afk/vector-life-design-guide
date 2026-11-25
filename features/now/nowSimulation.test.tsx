@@ -84,6 +84,22 @@ const saved: Persist = async (payload) => ({
 });
 
 describe('Now simulated input integration', () => {
+  it('cancels consent without saving and explicitly authorizes a later save', async () => {
+    const persist = vi.fn(saved);
+    render(<Flow persist={persist} />);
+    await waitFor(() => expect(input()).toBeEnabled());
+    fillRecord();
+    fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: '返回编辑' }));
+    expect(persist).not.toHaveBeenCalled();
+    expect(input()).toHaveValue('今天主动澄清会议目标，讨论更聚焦。');
+    await waitFor(() => expect(screen.getByLabelText('保存到过去')).toBeEnabled());
+    fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: /允许 AI 可见/ }));
+    await waitFor(() => expect(persist).toHaveBeenCalledOnce());
+    expect(persist.mock.calls[0][0]).toMatchObject({ aiVisibility: 'allowed' });
+  });
+
   it('saves entered text and event without mood, preserves timestamp, clears editor', async () => {
     const persist = vi.fn(saved);
     render(<Flow persist={persist} />);
@@ -92,12 +108,14 @@ describe('Now simulated input integration', () => {
     const timestamp = document.querySelector('time')!.textContent;
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: /仅自己可见/ }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist).toHaveBeenCalledTimes(1);
     expect(persist.mock.calls[0][0]).toMatchObject({
       content: '今天主动澄清会议目标，讨论更聚焦。',
       tags: ['事件:工作事业'],
       title: timestamp,
+      aiVisibility: 'private',
     });
   });
   it('retains failed draft and reuses id on retry', async () => {
@@ -111,9 +129,11 @@ describe('Now simulated input integration', () => {
     await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: /仅自己可见/ }));
     await screen.findByText('模拟存储失败');
     expect(input()).toHaveValue('今天主动澄清会议目标，讨论更聚焦。');
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: /仅自己可见/ }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist.mock.calls[0][0].id).toBe(persist.mock.calls[1][0].id);
   });
@@ -138,6 +158,7 @@ describe('Now simulated input integration', () => {
     await waitFor(() => expect(document.querySelector('.now-material')).not.toBeNull());
 
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: /仅自己可见/ }));
     await screen.findByText('模拟存储失败');
     expect(input()).toHaveValue('今天主动澄清会议目标，讨论更聚焦。');
     expect(document.querySelector('.now-material')).not.toBeNull();
@@ -149,6 +170,7 @@ describe('Now simulated input integration', () => {
     });
 
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: /仅自己可见/ }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist).toHaveBeenCalledTimes(2);
     expect(persist.mock.calls[0][0].id).toBe(persist.mock.calls[1][0].id);
@@ -171,6 +193,8 @@ describe('Now simulated input integration', () => {
     fireEvent.click(send);
     fireEvent.click(send);
     expect(send).toBeDisabled();
+    expect(persist).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: /仅自己可见/ }));
     await waitFor(() => expect(persist).toHaveBeenCalledTimes(1));
     await act(async () => resolve(await saved(persist.mock.calls[0][0])));
   });
@@ -181,6 +205,7 @@ describe('Now simulated input integration', () => {
     await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
     fillRecord();
     fireEvent.click(screen.getByLabelText('保存到过去'));
+    fireEvent.click(await screen.findByRole('button', { name: /仅自己可见/ }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(persist).toHaveBeenCalledOnce();
     expect(postRecord).not.toHaveBeenCalled();
@@ -206,7 +231,7 @@ describe('Now simulated input integration', () => {
       const exit = vi.fn();
       const view = render(<Flow persist={vi.fn(saved)} exit={exit} />);
       await screen.findByLabelText('此刻发生了什么？');
-    await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
+      await waitFor(() => expect(screen.getByLabelText('此刻发生了什么？')).toBeEnabled());
       fillRecord();
       fireEvent.click(screen.getByRole('button', { name: '清空草稿' }));
       fireEvent.click(screen.getByRole('button', { name: choice }));

@@ -1,10 +1,28 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const session = { access_token: 'test-access', refresh_token: 'test-refresh', expires_at: 1, user: { id: '11111111-1111-4111-8111-111111111111' } };
-beforeEach(() => { vi.resetModules(); sessionStorage.clear(); localStorage.clear(); window.history.replaceState(null, "", "/"); });
+const session = {
+  access_token: 'test-access',
+  refresh_token: 'test-refresh',
+  expires_at: 1,
+  user: { id: '11111111-1111-4111-8111-111111111111' },
+};
+beforeEach(() => {
+  vi.resetModules();
+  sessionStorage.clear();
+  localStorage.clear();
+  window.history.replaceState(null, '', '/');
+});
 afterEach(() => vi.unstubAllGlobals());
 it('never restores an in-flight login after logout', async () => {
   let finish!: (value: Response) => void;
-  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    ),
+  );
   const auth = await import('./auth');
   const login = auth.verifyEmailCode('a@example.test', '123456');
   const rejected = expect(login).rejects.toThrow('取消');
@@ -20,7 +38,12 @@ it('deduplicates refresh and rejects refresh results received after session clea
   const auth = await import('./auth');
   await auth.verifyEmailCode('a@example.test', '123456');
   let finish!: (value: Response) => void;
-  fetcher.mockImplementation(() => new Promise<Response>((resolve) => { finish = resolve; }));
+  fetcher.mockImplementation(
+    () =>
+      new Promise<Response>((resolve) => {
+        finish = resolve;
+      }),
+  );
   const first = auth.accountAccessToken();
   const second = auth.accountAccessToken();
   const results = Promise.allSettled([first, second]);

@@ -1,3 +1,5 @@
+import { FutureSectionTabs } from './FutureSectionTabs';
+import { GoalFeedbackFields, GoalFeedbackHeading } from './GoalFeedbackFields';
 import { useAIVisibilityChoice } from '../../components/AIVisibilityDialog';
 import { ActionFeedbackList } from './ActionFeedbackList';
 import { ActionFeedbackReading } from './ActionFeedbackReading';
@@ -225,8 +227,7 @@ export function FuturePage({
 
   const savePendingVision = async () => {
     if (!pendingVision) return;
-    const aiVisibility =
-      await visibility.request();
+    const aiVisibility = await visibility.request();
     if (aiVisibility) return run(() => saveVision({ ...pendingVision, aiVisibility }), false);
   };
 
@@ -249,14 +250,12 @@ export function FuturePage({
         setNotice('');
         return;
       }
-      const aiVisibility =
-        await visibility.request();
+      const aiVisibility = await visibility.request();
       if (!aiVisibility) return;
       return run(() => saveVision({ ...nextVision, aiVisibility }), false);
     }
 
-    const aiVisibility =
-      await visibility.request();
+    const aiVisibility = await visibility.request();
     if (!aiVisibility) return;
 
     if (editor.kind === 'goal') {
@@ -327,8 +326,7 @@ export function FuturePage({
           }
         : undefined;
     if (feedbackEnded && !goalFeedback) return;
-    const aiVisibility =
-      await visibility.request();
+    const aiVisibility = await visibility.request();
     if (!aiVisibility) return;
     if (goalFeedback) Object.assign(goalFeedback, { aiVisibility });
     const feedbackStatus = practiceStatus;
@@ -471,19 +469,7 @@ export function FuturePage({
   return (
     <main className="future-page">
       {visibility.dialog}
-      <div className="future-primary-tabs" role="tablist" aria-label="未来分区">
-        {(['design', 'practice', 'history'] as const).map((value) => (
-          <button
-            type="button"
-            role="tab"
-            key={value}
-            aria-selected={section === value}
-            onClick={() => switchSection(value)}
-          >
-            {value === 'design' ? '设计' : value === 'practice' ? '反馈' : '历史'}
-          </button>
-        ))}
-      </div>
+      <FutureSectionTabs section={section} onChange={switchSection} />
       {content}
       {practicePanelOpen && selectedFeedbackAction && (
         <dialog
@@ -547,12 +533,7 @@ export function FuturePage({
             />
           ) : (
             <>
-              <article className="future-editor-heading">
-                <h2>{selectedFeedbackAction.title}</h2>
-                {feedbackGoal && (
-                  <p className="future-reading-context">目标 · {feedbackGoal.title}</p>
-                )}
-              </article>
+              <GoalFeedbackHeading title={selectedFeedbackAction.title} goal={feedbackGoal} />
               <FeedbackEditor
                 key={selectedFeedbackAction.id}
                 busy={busy}
@@ -573,30 +554,11 @@ export function FuturePage({
                       }
                 }
               >
-                {feedbackGoal && ['active', 'paused'].includes(feedbackGoal.status) && (
-                  <section className="future-goal-sync">
-                    <label>
-                      同步目标完成情况
-                      <select
-                        name="goalDecision"
-                        value={goalDecision}
-                        onChange={(event) =>
-                          setGoalDecision(event.target.value as GoalFeedbackDecision | '')
-                        }
-                      >
-                        <option value="">暂不更新</option>
-                        <option value="continue">继续推进</option>
-                        <option value="complete">已完成</option>
-                      </select>
-                    </label>
-                    {goalDecision && (
-                      <label>
-                        目标进展（可选）
-                        <textarea name="goalNote" rows={3} />
-                      </label>
-                    )}
-                  </section>
-                )}
+                <GoalFeedbackFields
+                  goal={feedbackGoal}
+                  decision={goalDecision}
+                  onChange={setGoalDecision}
+                />
               </FeedbackEditor>
             </>
           )}

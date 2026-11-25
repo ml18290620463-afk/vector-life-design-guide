@@ -6,7 +6,7 @@ import {
 } from './avatarGuidance';
 import { emptyFutureState } from './futureRepository';
 import type { DiaryEntry, ActionItem, Principle } from '../types';
-import type { AvatarAtomicMemory, AvatarUnderstandingVersion } from '../features/avatar/types';
+import { cognition, evidenceGraph } from '../tests/fixtures/avatarOntology';
 
 const entry: DiaryEntry = {
   id: 'e',
@@ -17,16 +17,12 @@ const entry: DiaryEntry = {
   aiVisibility: 'allowed' as const,
   isLocked: false,
 };
-const pattern: AvatarUnderstandingVersion = {
+const pattern = cognition({
   id: 'p',
   statement: '范围不清时先沟通',
-  status: 'confirmed',
-  aiVisibility: 'allowed',
-  sourceEntryIds: ['e'],
-  createdAt: 1,
-  trigger: '任务范围不清',
-  response: '先沟通',
-};
+  notes: '情境：任务范围不清；反应：先沟通',
+});
+const secondEntry: DiaryEntry = { ...entry, id: 'e2', createdAt: 86400001 };
 const principle: Principle = {
   id: 'r',
   text: '先确认范围',
@@ -47,38 +43,45 @@ const action: ActionItem = {
   sourceEntryId: 'e',
 };
 const input = () => ({
-  entries: [entry],
-  patterns: [pattern],
+  entries: [entry, secondEntry],
+  graph: evidenceGraph([pattern], [entry, secondEntry]),
   principles: [principle],
   actions: [action],
   future: emptyFutureState(),
-  now: 100,
+  now: 172800000,
 });
 
 describe('guidance evidence and outcome boundaries', () => {
-  it.each([{ isLocked: true }, { isEncrypted: true }, { isSample: true }, { unlockAt: 101 }])(
-    'excludes inaccessible originals and their derived interpretations: %j',
-    (protection) => {
-      const data = input();
-      data.entries = [entry, { ...entry, id: 'hidden', content: 'secret', ...protection }];
-      data.patterns = [{ ...pattern, sourceEntryIds: ['e', 'hidden'] }];
-      data.actions = [{ ...action, evidenceEntryIds: ['hidden'] }];
-      const sources = buildGuidanceSources(data);
-      expect(sources.map((s) => s.id)).toEqual(['entry:e']);
-      expect(JSON.stringify(sources)).not.toContain('secret');
-    },
-  );
+  it.each([
+    { isLocked: true },
+    { isEncrypted: true },
+    { isSample: true },
+    { unlockAt: Date.now() + 86400000 },
+  ])('excludes inaccessible originals and their derived interpretations: %j', (protection) => {
+    const data = input();
+    data.entries = [entry, { ...entry, id: 'hidden', content: 'secret', ...protection }];
+    data.graph = evidenceGraph([pattern], data.entries);
+    data.actions = [{ ...action, evidenceEntryIds: ['hidden'] }];
+    const sources = buildGuidanceSources(data);
+    expect(sources.map((s) => s.id)).toEqual(['entry:e']);
+    expect(JSON.stringify(sources)).not.toContain('secret');
+  });
   it('sends current excerpts, occurrence time and application conditions, bounded and without modifying the originals', () => {
     const data = input();
-    data.entries = [{ ...entry, content: `<p>${'任务范围'.repeat(300)}</p>` }];
+    data.entries = [{ ...entry, content: `<p>${'任务范围'.repeat(300)}</p>` }, secondEntry];
+    data.graph = evidenceGraph([pattern], data.entries);
     const before = JSON.stringify(data);
     const sources = buildGuidanceSources(data);
     expect(sources.find((s) => s.id === 'p')).toMatchObject({
       nature: 'inferred',
       detail: expect.stringContaining('情境：任务范围不清'),
-      evidence: [{ text: expect.any(String), occurredAt: 1 }],
+      evidence: expect.arrayContaining([
+        expect.objectContaining({ text: expect.any(String), occurredAt: 1 }),
+      ]),
     });
-    expect(sources.find((s) => s.id === 'r')?.evidence?.[0].text).toHaveLength(700);
+    expect(
+      sources.find((s) => s.id === 'r')?.evidence?.find((e) => e.occurredAt === 1)?.text,
+    ).toHaveLength(700);
     expect(sources.find((s) => s.id === 'r')?.detail).toContain('向负责人确认');
     expect(JSON.stringify(sources)).not.toContain('<p>');
     expect(JSON.stringify(data)).toBe(before);
@@ -90,32 +93,31 @@ describe('guidance evidence and outcome boundaries', () => {
         ...entry,
         content: `${'无关开场。'.repeat(180)}真正需要确认的是预算边界，之后再决定方案。${'无关收尾。'.repeat(180)}`,
       },
+      secondEntry,
     ];
+    data.graph = evidenceGraph([pattern], data.entries);
     const sources = buildGuidanceSources(data);
     const guidance = buildGroundedGuidance('预算边界怎么确认', sources);
     const matchedPattern = guidance.sources.find((source) => source.id === 'p');
 
-    expect(matchedPattern?.evidence?.[0]?.text).toContain('预算边界');
-    expect(matchedPattern?.evidence?.[0]?.text.length).toBeLessThanOrEqual(702);
-    expect(matchedPattern?.evidence?.[0]).not.toHaveProperty('searchText');
+    const matchedEvidence = matchedPattern?.evidence?.find((e) => e.occurredAt === 1);
+    expect(matchedEvidence?.text).toContain('预算边界');
+    expect(matchedEvidence?.text.length).toBeLessThanOrEqual(702);
+    expect(matchedEvidence).not.toHaveProperty('searchText');
   });
   it('does not invent evidence for an explicitly retained memory after source deletion', () => {
-    const memory: AvatarAtomicMemory = {
+    const memory = cognition({
       id: 'm',
       statement: '我需要独处',
-      nature: 'explicit',
-      category: 'recent_state',
-      facets: ['preference'],
-      contexts: [],
-      tags: [],
-      confidence: 0.5,
-      status: 'retained',
-      sensitivity: 'normal',
-      createdAt: 1,
-      retainedAfterSourceDeletion: true,
-      sourceRefs: [{ source: 'entry', id: 'gone', excerpt: 'deleted secret' }],
+      domain: 'about_me',
+      category: 'preferences_boundaries',
+      status: 'retained_after_source_delete',
+    });
+    const data = {
+      ...input(),
+      entries: [],
+      graph: evidenceGraph([memory], [{ ...entry, id: 'gone', content: 'deleted secret' }]),
     };
-    const data = { ...input(), entries: [], avatarMemories: [memory] };
     const saved = buildGuidanceSources(data).find((s) => s.id === 'm');
     expect(saved).toBeUndefined();
     expect(JSON.stringify(buildGuidanceSources(data))).not.toContain('deleted secret');
@@ -264,14 +266,16 @@ describe('guidance evidence and outcome boundaries', () => {
   });
   it('bounds long user-authored interpretations to the model transport limits', () => {
     const data = input();
-    data.patterns = [
-      {
-        ...pattern,
-        statement: '长'.repeat(5000),
-        trigger: '情境'.repeat(2000),
-        response: '反应'.repeat(2000),
-      },
-    ];
+    data.graph = evidenceGraph(
+      [
+        cognition({
+          ...pattern,
+          statement: '长'.repeat(5000),
+          notes: '情境'.repeat(2000) + '反应'.repeat(2000),
+        }),
+      ],
+      data.entries,
+    );
     const source = buildGuidanceSources(data).find((s) => s.id === 'p');
     expect(source?.text).toHaveLength(4000);
     expect(source?.detail).toHaveLength(2400);

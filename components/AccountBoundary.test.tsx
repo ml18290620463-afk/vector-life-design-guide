@@ -3,32 +3,73 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 const mocks = vi.hoisted(() => ({
   baseRevision: 0,
-  resume: vi.fn(), scope: vi.fn(), lock: vi.fn(), cloud: vi.fn(),
-  open: vi.fn(), apply: vi.fn(), send: vi.fn(), verify: vi.fn(),
+  recover: vi.fn(),
+  resume: vi.fn(),
+  scope: vi.fn(),
+  lock: vi.fn(),
+  cloud: vi.fn(),
+  open: vi.fn(),
+  apply: vi.fn(),
+  send: vi.fn(),
+  verify: vi.fn(),
+}));
+vi.mock('../services/vaultTransaction', () => ({
+  VaultLockedError: class VaultLockedError extends Error {},
 }));
 vi.mock('../services/account/auth', () => ({
-  accountsEnabled: true, accountsRequired: true,
-  resumeAccount: mocks.resume, sendEmailCode: mocks.send, verifyEmailCode: mocks.verify,
-  clearSavedSession: vi.fn(), logoutAccount: vi.fn(),
+  accountsEnabled: true,
+  accountsRequired: true,
+  resumeAccount: mocks.resume,
+  sendEmailCode: mocks.send,
+  verifyEmailCode: mocks.verify,
+  clearSavedSession: vi.fn(),
+  logoutAccount: vi.fn(),
 }));
-vi.mock('../services/accountScope', () => ({ initializeAccountScope: mocks.scope, accountLocalStorage: { getItem: () => null, removeItem: vi.fn() } }));
+vi.mock('../services/accountScope', () => ({
+  initializeAccountScope: mocks.scope,
+  accountLocalStorage: { getItem: () => null, removeItem: vi.fn() },
+}));
 vi.mock('../services/account/tabLock', () => ({ holdAccountTab: mocks.lock }));
 vi.mock('../services/account/cloud', () => ({ readCloudRevision: mocks.cloud }));
 vi.mock('../services/account/snapshot', () => ({
-  recoverSnapshotRestore: vi.fn(), captureSnapshot: async () => ({}), fingerprint: async () => 'local',
-  hasVault: () => false, readSyncBase: () => ({ revision: mocks.baseRevision, fingerprint: '' }),
-  openSnapshot: mocks.open, applySnapshot: mocks.apply, saveSyncBase: vi.fn(),
+  recoverSnapshotRestore: mocks.recover,
+  captureSnapshot: async () => ({}),
+  fingerprint: async () => 'local',
+  hasVault: () => false,
+  readSyncBase: () => ({ revision: mocks.baseRevision, fingerprint: '' }),
+  openSnapshot: mocks.open,
+  applySnapshot: mocks.apply,
+  saveSyncBase: vi.fn(),
 }));
-vi.mock('../services/account/recovery', () => ({ RECOVERY_SELECTION: 'recovery', readRecoveryCopy: vi.fn() }));
+vi.mock('../services/account/recovery', () => ({
+  RECOVERY_SELECTION: 'recovery',
+  readRecoveryCopy: vi.fn(),
+}));
 vi.mock('../App', () => ({ default: () => <div>PRIVATE_DIARY_APP</div> }));
 vi.mock('./AccountSyncStatus', () => ({ AccountSyncStatus: () => null }));
 afterEach(cleanup);
-beforeEach(() => { vi.resetModules(); vi.clearAllMocks(); mocks.baseRevision = 0; mocks.resume.mockResolvedValue(null); mocks.lock.mockResolvedValue(undefined); mocks.cloud.mockResolvedValue(null); });
+beforeEach(() => {
+  vi.resetModules();
+  vi.clearAllMocks();
+  mocks.baseRevision = 0;
+  mocks.recover.mockReset().mockResolvedValue(undefined);
+  mocks.resume.mockResolvedValue(null);
+  mocks.lock.mockResolvedValue(undefined);
+  mocks.cloud.mockResolvedValue(null);
+});
 it('does not mount the diary before email verification and account scope preparation', async () => {
   const { AccountBoundary } = await import('./AccountBoundary');
   mocks.verify.mockResolvedValue({ user: { id: 'alice', email: 'alice@example.com' } });
-  render(<StrictMode><AccountBoundary /></StrictMode>);
-  await waitFor(() => expect((screen.getByRole('button', { name: '发送登录邮件' }) as HTMLButtonElement).disabled).toBe(false));
+  render(
+    <StrictMode>
+      <AccountBoundary />
+    </StrictMode>,
+  );
+  await waitFor(() =>
+    expect(
+      (screen.getByRole('button', { name: '发送登录邮件' }) as HTMLButtonElement).disabled,
+    ).toBe(false),
+  );
   expect(screen.queryByText('PRIVATE_DIARY_APP')).toBeNull();
   fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'alice@example.com' } });
   fireEvent.click(screen.getByRole('button', { name: '发送登录邮件' }));
@@ -46,9 +87,19 @@ it('keeps a new device outside the diary when cloud decryption fails', async () 
   mocks.cloud.mockResolvedValue({ revision: 2, payload: { encrypted: true } });
   mocks.open.mockRejectedValue(new Error('密码不正确'));
   const { AccountBoundary } = await import('./AccountBoundary');
-  render(<StrictMode><AccountBoundary /></StrictMode>);
-  fireEvent.change(await screen.findByLabelText('资料库密码'), { target: { value: 'wrong-password' } });
-  await waitFor(() => expect((screen.getByRole('button', { name: '解密并恢复' }) as HTMLButtonElement).disabled).toBe(false));
+  render(
+    <StrictMode>
+      <AccountBoundary />
+    </StrictMode>,
+  );
+  fireEvent.change(await screen.findByLabelText('资料库密码'), {
+    target: { value: 'wrong-password' },
+  });
+  await waitFor(() =>
+    expect((screen.getByRole('button', { name: '解密并恢复' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    ),
+  );
   fireEvent.click(screen.getByRole('button', { name: '解密并恢复' }));
   await screen.findByText('密码不正确');
   expect(mocks.apply).not.toHaveBeenCalled();
@@ -63,4 +114,25 @@ it('restores a cleared device even when its remembered revision matches cloud', 
   render(<AccountBoundary />);
   await screen.findByLabelText('资料库密码');
   expect(screen.queryByText('PRIVATE_DIARY_APP')).toBeNull();
+});
+
+it('requires a verified recovery password before mounting the app or reading cloud', async () => {
+  const { VaultLockedError } = await import('../services/vaultTransaction');
+  mocks.resume.mockResolvedValue({ user: { id: 'alice' } });
+  mocks.recover.mockRejectedValueOnce(new VaultLockedError());
+  const { AccountBoundary } = await import('./AccountBoundary');
+  render(<AccountBoundary />);
+  const input = await screen.findByLabelText('资料库密码');
+  expect(screen.queryByText('PRIVATE_DIARY_APP')).toBeNull();
+  expect(mocks.cloud).not.toHaveBeenCalled();
+  mocks.recover.mockRejectedValueOnce(new Error('恢复资料密码校验失败'));
+  fireEvent.change(input, { target: { value: 'wrong' } });
+  fireEvent.click(screen.getByRole('button', { name: '解密并恢复' }));
+  await screen.findByText('恢复资料密码校验失败');
+  expect(mocks.cloud).not.toHaveBeenCalled();
+  expect(screen.queryByText('PRIVATE_DIARY_APP')).toBeNull();
+  fireEvent.change(input, { target: { value: 'correct-password' } });
+  fireEvent.click(screen.getByRole('button', { name: '解密并恢复' }));
+  await screen.findByText('PRIVATE_DIARY_APP');
+  expect(mocks.recover).toHaveBeenLastCalledWith('correct-password');
 });

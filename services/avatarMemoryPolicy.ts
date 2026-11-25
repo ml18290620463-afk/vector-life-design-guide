@@ -1,4 +1,4 @@
-import type { AvatarAtomicMemory, AvatarMemoryNature } from '../features/avatar/types';
+import type { AvatarMemoryNature } from '../features/avatar/types';
 
 export const MEMORY_NATURE_LABELS: Record<AvatarMemoryNature, string> = {
   explicit: '明确表达 · 资料、偏好或观点',
@@ -22,13 +22,4 @@ export function suggestMemoryNature(text: string): AvatarMemoryNature {
   if (/(喜欢|偏好|讨厌|不喜欢|倾向|原则是|不能接受|底线是)/.test(text)) kinds.add('explicit');
   if (/(昨天|上周|去年|经历了|发生了|完成了|参加了)/.test(text)) kinds.add('experience');
   return kinds.size === 1 ? [...kinds][0] : 'inferred';
-}
-
-/** End time is exclusive; absent bounds mean unknown, not a fabricated date. */
-export function isCurrentAvatarMemory(memory: AvatarAtomicMemory, now = Date.now()): boolean {
-  return (
-    (memory.status === 'confirmed' || memory.status === 'retained') &&
-    (memory.validFrom === undefined || memory.validFrom <= now) &&
-    (memory.validTo === undefined || now < memory.validTo)
-  );
 }

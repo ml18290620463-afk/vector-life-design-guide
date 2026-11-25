@@ -142,7 +142,6 @@ export const ko = {
   setTimeLock: '복호화 시간 설정 (타임 캡슐)',
   immediate: '즉시',
   oneMin: '1분 후 (테스트)',
-  oneDay: '24시간 후',
   customDate: '사용자 정의 날짜',
   career: '커리어',
   careerDesc: '성과, 직위, 경쟁력',

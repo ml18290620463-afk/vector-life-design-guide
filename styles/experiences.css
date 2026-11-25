@@ -1388,7 +1388,9 @@ html.light.vector-force-mobile .mobile-shell.mobile-shell {
   background: var(--sky-canvas) !important;
   color: var(--mobile-ink);
 }
-html.light.vector-force-mobile .mobile-shell :is(.now-shell, .now-page, .mobile-past-page, .future-page) {
+html.light.vector-force-mobile
+  .mobile-shell
+  :is(.now-shell, .now-page, .mobile-past-page, .future-page) {
   background: transparent;
 }
 html.light.vector-force-mobile .mobile-shell .mobile-main-nav.mobile-main-nav {
@@ -1465,7 +1467,10 @@ html.light.vector-force-mobile .mobile-shell .mobile-past-page__segments button 
   color: var(--mobile-muted) !important;
   -webkit-text-fill-color: currentColor !important;
 }
-html.light.vector-force-mobile .mobile-shell .mobile-past-page__segments button[aria-selected='true'] {
+html.light.vector-force-mobile
+  .mobile-shell
+  .mobile-past-page__segments
+  button[aria-selected='true'] {
   color: var(--mobile-accent-strong) !important;
 }
 html.light.vector-force-mobile .mobile-shell .mobile-past-page__segment--active::after {
@@ -2968,7 +2973,8 @@ html.vector-force-web
 html.vector-force-web
   .desktop-main-module-frame--now:not(.desktop-main-module-frame--avatar)
   .now-page:not(.avatar-guide-page)
-  .now-editor textarea {
+  .now-editor
+  textarea {
   min-height: 240px;
   flex: 1 1 auto;
 }

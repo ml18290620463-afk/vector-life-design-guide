@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AvatarInsightPanel,
   AvatarRecallPanel,
-  AvatarUnderstandingCard,
   RecordPreviewCard,
 } from './AvatarRecordPanels';
 
@@ -113,14 +112,6 @@ describe('AvatarRecordPanels', () => {
     expect(screen.getByText('第一条')).not.toBeNull();
     expect(screen.getByText('第二条')).not.toBeNull();
     expect(screen.queryByText('第三条')).toBeNull();
-  });
-
-  it('requires explicit confirmation before accepting an understanding', () => {
-    const onResolve = vi.fn();
-    render(<AvatarUnderstandingCard statement="你更看重可验证的进展" onResolve={onResolve} />);
-    expect(screen.getByText('待确认')).not.toBeNull();
-    fireEvent.click(screen.getByText('确认'));
-    expect(onResolve).toHaveBeenCalledWith('confirmed', '你更看重可验证的进展');
   });
 
   it('allows editing preview text before sending', () => {

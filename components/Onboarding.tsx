@@ -4,7 +4,6 @@ import { NowPage } from '../features/now/components/NowPage';
 import { TagSelectPage } from '../features/now/components/TagSelectPage';
 import { createEmptyDraft, isDraftEmpty } from '../features/now/state/nowRules';
 import type { NowDraft } from '../features/now/types/now';
-import { WelcomeStep } from './onboarding/WelcomeStep';
 import { ProtectionStep } from './onboarding/ProtectionStep';
 import './onboarding/onboarding.css';
 
@@ -21,14 +20,8 @@ interface OnboardingProps {
   onCancel?: () => void;
 }
 
-export const Onboarding = ({
-  language,
-  onSetLanguage,
-  theme = 'dark',
-  onComplete,
-  onCancel,
-}: OnboardingProps) => {
-  const [step, setStep] = useState<'welcome' | 'write' | 'protect'>('welcome');
+export const Onboarding = ({ language, theme = 'dark', onComplete, onCancel }: OnboardingProps) => {
+  const [step, setStep] = useState<'write' | 'protect'>('write');
   // No draft repository or autosave until the vault has been protected.
   const [draft, setDraft] = useState(createEmptyDraft);
   const [tags, setTags] = useState(false);
@@ -51,20 +44,8 @@ export const Onboarding = ({
       className={`onboarding-simple now-shell ${theme === 'light' ? 'now-shell--light' : ''}`}
       data-testid="onboarding"
     >
-      {step === 'welcome' && (
-        <WelcomeStep
-          language={language}
-          onSetLanguage={onSetLanguage}
-          onContinue={() => setStep('write')}
-        />
-      )}
       {step === 'write' && (
         <>
-          <p className="onboarding-draft-notice">
-            {language === 'zh'
-              ? '先写下来。首次保存时再设置密码；离开或刷新前请保存草稿。'
-              : 'Write first. Set a password when you save. Save before leaving or refreshing.'}
-          </p>
           {tags ? (
             <TagSelectPage
               draft={draft}

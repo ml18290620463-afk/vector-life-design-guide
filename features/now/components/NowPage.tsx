@@ -1,3 +1,5 @@
+import { tagLabel } from '../constants/tags';
+import { useAvatarLanguage } from './avatarLanguage';
 import React, { useEffect, useRef, useState } from 'react';
 import { Anchor, ArrowLeft, Image, Link as LinkIcon, Plus, Video, Trash2 } from 'lucide-react';
 import { CONFIG } from '../constants/config';
@@ -32,6 +34,7 @@ export const NowPage: React.FC<NowPageProps> = ({
   showToast,
   mobileShell = false,
 }) => {
+  const { t, language } = useAvatarLanguage();
   const [pastedUrl, setPastedUrl] = useState('');
   const [linkEditing, setLinkEditing] = useState<string | null>(null);
   const [linkValue, setLinkValue] = useState('');
@@ -62,7 +65,14 @@ export const NowPage: React.FC<NowPageProps> = ({
     setExiting(true);
     try {
       if (!(await (discard ? onDiscardDraft() : onSaveDraft()))) {
-        showToast(discard ? '草稿未能清除，请重试' : '草稿保存失败，请继续编辑并重试');
+        showToast(
+          discard
+            ? t('草稿未能清除，请重试', 'Could not clear the draft. Please retry.')
+            : t(
+                '草稿保存失败，请继续编辑并重试',
+                'Could not save the draft. Keep editing and retry.',
+              ),
+        );
         return;
       }
       setExitOpen(false);
@@ -71,7 +81,14 @@ export const NowPage: React.FC<NowPageProps> = ({
         setPastedUrl('');
       } else onExit();
     } catch {
-      showToast(discard ? '草稿未能清除，请重试' : '草稿保存失败，请继续编辑并重试');
+      showToast(
+        discard
+          ? t('草稿未能清除，请重试', 'Could not clear the draft. Please retry.')
+          : t(
+              '草稿保存失败，请继续编辑并重试',
+              'Could not save the draft. Keep editing and retry.',
+            ),
+      );
     } finally {
       exitInFlight.current = false;
       setExiting(false);
@@ -98,7 +115,9 @@ export const NowPage: React.FC<NowPageProps> = ({
     onError: showToast,
   });
   const canSend = getCanSend(draft) && !picker.failures.length;
-  const tagSummary = [...draft.event_tags, ...draft.mood_tags].join(' · ');
+  const tagSummary = [...draft.event_tags, ...draft.mood_tags]
+    .map((tag) => tagLabel(tag, language))
+    .join(' · ');
 
   const handleImageImport = () => {
     setMaterialMenuOpen(false);
@@ -119,7 +138,7 @@ export const NowPage: React.FC<NowPageProps> = ({
   const handleBack = () => {
     if (sending || exitInFlight.current || picker.isReading()) return;
     if (picker.hasFailures()) {
-      showToast('请重试或移除未读取的素材');
+      showToast(t('请重试或移除未读取的素材', 'Retry or remove the unread attachments.'));
       return;
     }
     if (isDraftEmpty(draft)) {
@@ -174,7 +193,7 @@ export const NowPage: React.FC<NowPageProps> = ({
     if (sending || exiting) return;
     const url = normalizeWebMaterialUrl(linkValue);
     if (!url) {
-      showToast('请输入有效的网页链接');
+      showToast(t('请输入有效的网页链接', 'Enter a valid web link.'));
       return;
     }
     if (linkEditing === '') {
@@ -234,9 +253,11 @@ export const NowPage: React.FC<NowPageProps> = ({
             submitLink();
           }}
         >
-          <h2 id="now-link-title">{linkEditing ? '替换链接' : '添加链接'}</h2>
+          <h2 id="now-link-title">
+            {linkEditing ? t('替换链接', 'Replace link') : t('添加链接', 'Add link')}
+          </h2>
           <label htmlFor="now-link-url" className="sr-only">
-            网页链接
+            {t('网页链接', 'Web link')}
           </label>
           <input
             id="now-link-url"
@@ -250,10 +271,10 @@ export const NowPage: React.FC<NowPageProps> = ({
           />
           <div className="now-exit-dialog__actions">
             <button type="submit" disabled={sending || exiting || picker.reading}>
-              确定
+              {t('确定', 'Confirm')}
             </button>
             <button type="button" onClick={() => setLinkEditing(null)}>
-              取消
+              {t('取消', 'Cancel')}
             </button>
           </div>
         </form>
@@ -264,7 +285,7 @@ export const NowPage: React.FC<NowPageProps> = ({
           className="now-icon-button"
           onClick={handleBack}
           disabled={sending || exiting || picker.reading}
-          aria-label={mobileShell ? '返回过去' : '返回'}
+          aria-label={mobileShell ? t('返回过去', 'Back to Past') : t('返回', 'Back')}
         >
           <ArrowLeft size={20} />
         </button>
@@ -277,7 +298,7 @@ export const NowPage: React.FC<NowPageProps> = ({
           <button
             type="button"
             className="now-tool-button"
-            aria-label="清空草稿"
+            aria-label={t('清空草稿', 'Clear draft')}
             disabled={sending || exiting || picker.reading}
             onClick={() => setExitOpen(true)}
           >
@@ -290,7 +311,7 @@ export const NowPage: React.FC<NowPageProps> = ({
         <section className="now-editor">
           <div className="now-editor__surface">
             <label htmlFor="now-record-text" className="sr-only">
-              此刻发生了什么？
+              {t('此刻发生了什么？', 'What is happening now?')}
             </label>
             <textarea
               id="now-record-text"
@@ -300,7 +321,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               onChange={(event) =>
                 setDraft((current) => ({ ...current, text: event.target.value }))
               }
-              placeholder="写下此刻"
+              placeholder={t('写下此刻', 'Write about this moment')}
               aria-describedby={
                 draft.text.length >= CONFIG.MAX_TEXT_LENGTH * 0.9 ? 'now-record-count' : undefined
               }
@@ -324,29 +345,35 @@ export const NowPage: React.FC<NowPageProps> = ({
                 if (picker.addLink(pastedUrl)) setPastedUrl('');
               }}
             >
-              添加为链接
+              {t('添加为链接', 'Add as link')}
             </button>
-            <button type="button" aria-label="忽略链接建议" onClick={() => setPastedUrl('')}>
-              关闭
+            <button
+              type="button"
+              aria-label={t('忽略链接建议', 'Dismiss link suggestion')}
+              onClick={() => setPastedUrl('')}
+            >
+              {t('关闭', 'Close')}
             </button>
           </div>
         )}
         {picker.failures.map((item) => (
           <div key={item.id} className="now-material-failure" role="alert">
-            <span>{item.file.name} · 读取失败</span>
+            <span>
+              {item.file.name} · {t('读取失败', 'Read failed')}
+            </span>
             <button
               type="button"
               disabled={picker.reading}
               onClick={() => void picker.retryFailure(item.id)}
             >
-              重试
+              {t('重试', 'Retry')}
             </button>
             <button
               type="button"
               disabled={picker.reading}
               onClick={() => picker.removeFailure(item.id)}
             >
-              移除
+              {t('移除', 'Remove')}
             </button>
           </div>
         ))}
@@ -378,7 +405,7 @@ export const NowPage: React.FC<NowPageProps> = ({
                   setRemovedMaterial(null);
                 }}
               >
-                撤销删除素材
+                {t('撤销删除素材', 'Undo attachment removal')}
               </button>
             )}
           </div>
@@ -391,14 +418,14 @@ export const NowPage: React.FC<NowPageProps> = ({
               className="now-anchor-point"
               onClick={() => onRouteChange('tags')}
               disabled={sending || exiting || picker.reading}
-              aria-label="心情与事件"
+              aria-label={t('心情与事件', 'Mood and events')}
             >
               <span className="now-anchor-point__icon" aria-hidden="true">
                 <Anchor size={20} />
               </span>
               <span className="now-anchor-point__meta">
                 <span className="now-anchor-point__summary" title={tagSummary || undefined}>
-                  {tagSummary || '标签'}
+                  {tagSummary || t('标签', 'Tags')}
                 </span>
               </span>
             </button>
@@ -406,7 +433,11 @@ export const NowPage: React.FC<NowPageProps> = ({
               type="button"
               className={`now-tool-button now-tool-button--add ${materialMenuOpen ? 'is-open' : ''}`}
               disabled={sending || exiting || picker.reading}
-              aria-label={materialMenuOpen ? '收起素材' : '添加素材'}
+              aria-label={
+                materialMenuOpen
+                  ? t('收起素材', 'Hide attachments')
+                  : t('添加素材', 'Add attachment')
+              }
               aria-expanded={materialMenuOpen}
               onClick={() => setMaterialMenuOpen((open) => !open)}
             >
@@ -414,36 +445,36 @@ export const NowPage: React.FC<NowPageProps> = ({
             </button>
           </div>
           {materialMenuOpen ? (
-            <div className="now-material-popover" aria-label="素材类型">
+            <div className="now-material-popover" aria-label={t('素材类型', 'Attachment type')}>
               <button
                 type="button"
                 className="now-tool-button"
                 disabled={sending || exiting || picker.reading}
-                aria-label="图片"
+                aria-label={t('图片', 'Image')}
                 onClick={handleImageImport}
               >
                 <Image size={19} aria-hidden="true" />
-                <span>图片</span>
+                <span>{t('图片', 'Image')}</span>
               </button>
               <button
                 type="button"
                 className="now-tool-button"
                 disabled={sending || exiting || picker.reading}
-                aria-label="视频"
+                aria-label={t('视频', 'Video')}
                 onClick={handleVideoImport}
               >
                 <Video size={19} aria-hidden="true" />
-                <span>视频</span>
+                <span>{t('视频', 'Video')}</span>
               </button>
               <button
                 type="button"
                 className="now-tool-button"
                 disabled={sending || exiting || picker.reading}
-                aria-label="链接"
+                aria-label={t('链接', 'Link')}
                 onClick={handleLinkImport}
               >
                 <LinkIcon size={19} aria-hidden="true" />
-                <span>链接</span>
+                <span>{t('链接', 'Link')}</span>
               </button>
             </div>
           ) : null}
@@ -457,21 +488,27 @@ export const NowPage: React.FC<NowPageProps> = ({
             onClick={() => {
               if (picker.isReading() || sending || exiting) return;
               if (picker.hasFailures()) {
-                showToast('请重试或移除未读取的素材');
+                showToast(t('请重试或移除未读取的素材', 'Retry or remove the unread attachments.'));
                 return;
               }
               const reason = getDisabledSendReason(draft);
               if (reason) {
-                showToast(reason);
+                showToast(t(reason));
                 return;
               }
               onSend();
             }}
-            aria-label="保存到过去"
+            aria-label={t('保存到过去', 'Save to Past')}
             aria-busy={sending || picker.reading}
             disabled={sending || exiting || picker.reading || picker.failures.length > 0}
           >
-            <span>{picker.reading ? '素材读取中…' : sending ? '保存中…' : '保存'}</span>
+            <span>
+              {picker.reading
+                ? t('素材读取中…', 'Reading attachments…')
+                : sending
+                  ? t('保存中…', 'Saving…')
+                  : t('保存', 'Save')}
+            </span>
           </button>
         </footer>
       </div>
@@ -485,10 +522,10 @@ export const NowPage: React.FC<NowPageProps> = ({
             if (!exiting) setExitOpen(false);
           }}
         >
-          <h2 id="now-exit-title">清空草稿？</h2>
+          <h2 id="now-exit-title">{t('清空草稿？', 'Clear draft?')}</h2>
           <div className="now-exit-dialog__actions">
             <button type="button" disabled={exiting} onClick={() => void finishExit(true)}>
-              确认清空
+              {t('确认清空', 'Confirm clear')}
             </button>
             <button
               disabled={exiting}
@@ -496,7 +533,7 @@ export const NowPage: React.FC<NowPageProps> = ({
               type="button"
               onClick={() => setExitOpen(false)}
             >
-              继续编辑
+              {t('继续编辑', 'Keep editing')}
             </button>
           </div>
         </dialog>

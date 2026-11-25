@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Check, Pencil, X } from 'lucide-react';
-import type { AvatarUnderstandingStatus } from '../../avatar/types';
 import type { AvatarRecallMemory, AvatarStructuredInsight } from '../state/nowRules';
 import type { RecordPreviewPayload } from '../types/now';
+import { UnifiedArtifactCard } from './UnifiedArtifactCard';
 
 export const AvatarRecallPanel: React.FC<{
   memories: AvatarRecallMemory[];
@@ -32,58 +31,6 @@ export const AvatarRecallPanel: React.FC<{
           <small>可查看来源</small>
         </button>
       ))}
-    </aside>
-  );
-};
-
-interface AvatarUnderstandingCardProps {
-  statement: string;
-  status?: AvatarUnderstandingStatus;
-  onResolve: (status: 'confirmed' | 'rejected', statement: string) => void;
-}
-
-export const AvatarUnderstandingCard: React.FC<AvatarUnderstandingCardProps> = ({
-  statement,
-  status = 'pending',
-  onResolve,
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(statement);
-  const isPending = status === 'pending';
-  return (
-    <aside className="now-avatar-understanding" aria-label="理解">
-      <div className="now-avatar-understanding__head">
-        <strong>理解</strong>
-        <span>{isPending ? '待确认' : status === 'confirmed' ? '已归纳' : '已忽略'}</span>
-      </div>
-      {editing && isPending ? (
-        <textarea
-          aria-label="修改理解"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-        />
-      ) : (
-        <p>{value}</p>
-      )}
-      {isPending && (
-        <div className="now-avatar-understanding__actions">
-          <button type="button" onClick={() => onResolve('confirmed', value.trim() || statement)}>
-            <Check size={15} aria-hidden="true" />
-            确认
-          </button>
-          <button type="button" onClick={() => setEditing((current) => !current)}>
-            <Pencil size={15} aria-hidden="true" />
-            {editing ? '继续确认' : '修改'}
-          </button>
-          <button type="button" onClick={() => onResolve('rejected', value.trim() || statement)}>
-            <X size={15} aria-hidden="true" />
-            忽略
-          </button>
-        </div>
-      )}
-      <p className="sr-only" aria-live="polite">
-        {status === 'confirmed' ? '已归纳' : status === 'rejected' ? '已忽略' : ''}
-      </p>
     </aside>
   );
 };
@@ -172,7 +119,7 @@ export const RecordPreviewCard: React.FC<RecordPreviewCardProps> = ({
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(payload.text);
   return (
-    <article className="now-preview-card">
+    <UnifiedArtifactCard kind="record" className="now-preview-card">
       {editing ? (
         <textarea value={text} onChange={(event) => setText(event.target.value)} />
       ) : (
@@ -229,6 +176,6 @@ export const RecordPreviewCard: React.FC<RecordPreviewCardProps> = ({
           保存到过去
         </button>
       </div>
-    </article>
+    </UnifiedArtifactCard>
   );
 };

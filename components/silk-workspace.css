@@ -1,0 +1,26 @@
+html.light body #root .desktop-main-module-frame{background:#FAFBFF!important}html.light body #root .desktop-main-module-frame :is(.desktop-workspace,.desktop-workspace__body,.now-shell,.now-page){background:transparent!important}html.light body #root .desktop-main-module-frame .desktop-main-nav{background:rgba(237,243,250,.92)!important}html.light body #root .desktop-main-module-frame .desktop-main-nav{color:#52677f!important;border-color:#d6e1ed!important}html.light body #root .desktop-main-module-frame .desktop-main-nav__item{color:#617287!important}html.light body #root .desktop-main-module-frame .desktop-main-nav__item--active{background:linear-gradient(110deg,#e6eff8,#eef4fb)!important;border-color:#c5d5e6!important;color:#486585!important}html.light body #root .desktop-main-module-frame .desktop-main-nav__brand{color:#4e6783!important}html.light body #root .desktop-main-module-frame .now-card{border-color:#d2dfea!important;background:linear-gradient(125deg,#ffffff 20%,#fcfdff 100%)!important}html.light body #root .desktop-main-module-frame .now-shell{color:#566c84!important}html.light body #root .desktop-main-module-frame .now-card button{border-color:#d2dfea!important}html.light body #root .desktop-main-module-frame .now-send-button{background:linear-gradient(120deg,#5b7697,#496686)!important;color:#fff!important}html.light body #root .desktop-main-module-frame :is(.now-anchor-point,.now-tool-button,.now-anchor-point__icon){color:#5b7390!important}html.light body #root .desktop-main-module-frame .now-anchor-point__icon{background:#edf3f9!important;border-color:#ccdbe9!important}html.light body #root .desktop-main-module-frame #root{position:relative;z-index:1}html.light body #root .desktop-main-module-frame .now-card{box-shadow:0 12px 26px -22px rgba(55,84,111,.22)!important}
+
+html.light body #root .desktop-main-module-frame {background:#FAFBFF!important;color:#303D4B!important}
+html.light body #root .desktop-main-module-frame .now-shell {color:#303D4B!important}
+html.light body #root .desktop-main-module-frame :is(.now-header,.now-header button,.now-header time) {color:#59636F!important}
+html.light body #root .desktop-main-module-frame #now-record-text {color:#303D4B!important;background:transparent!important;caret-color:#486A8A}
+html.light body #root .desktop-main-module-frame #now-record-text::placeholder {color:#6B7683!important;opacity:1!important}
+html.light body #root .desktop-main-module-frame :is(.now-anchor-point,.now-tool-button,.now-anchor-point__summary) {color:#59636F!important}
+html.light body #root .desktop-main-module-frame .now-anchor-point__icon {color:#486A8A!important;background:linear-gradient(135deg,#FAFBFF,#EAF2FA)!important;border-color:#D3E4F4!important;box-shadow:inset 0 1px 0 #fff!important}
+html.light body #root .desktop-main-module-frame .now-card button {border-color:#D3E4F4!important}
+html.light body #root .desktop-main-module-frame .now-send-button {background:linear-gradient(110deg,#527493,#3E607F)!important;color:#FAFBFF!important;box-shadow:0 4px 12px #486A8A14,inset 0 1px 0 #ffffff33!important}
+html.light body #root .desktop-main-module-frame .now-send-button:disabled {background:#EAF2FA!important;color:#65788B!important;opacity:1!important;box-shadow:inset 0 1px 0 #fff!important}
+
+html.light body #root .desktop-main-module-frame .desktop-workspace {position:relative;isolation:isolate;overflow:hidden;background:#FAFBFF!important}
+.silk-workspace {position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+html.light body #root .desktop-main-module-frame .desktop-workspace__body {position:relative;z-index:1}
+html.light body #root .desktop-main-module-frame .now-card {background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+html.light body #root .desktop-main-module-frame .desktop-main-nav {background:linear-gradient(155deg,#FAFBFF,#F1F2F8)!important;border-color:#dce4ee!important;box-shadow:1px 0 20px #D2DAEB14!important}
+html.light body #root .desktop-main-module-frame .desktop-main-nav__item {color:#59636F!important;background:transparent!important;border-color:#d7e1ed!important;box-shadow:none!important}
+html.light body #root .desktop-main-module-frame .desktop-main-nav__item--active {background:linear-gradient(110deg,#EAF2FA,#F4F8FC)!important;border-color:#ccdaeb!important;color:#334B64!important;box-shadow:inset 0 1px 0 #ffffffcc!important}
+html.light body #root .desktop-main-module-frame .desktop-main-nav__brand {color:#303D4B!important;background:transparent!important}
+html.light body #root .desktop-main-module-frame button:focus-visible {outline:2px solid #527493;outline-offset:3px}
+
+html.light body #root .desktop-main-module-frame :is(.now-shell,.now-page,.desktop-workspace__body){background:transparent!important}
+
+html:not(.light) .silk-workspace { display: none; }

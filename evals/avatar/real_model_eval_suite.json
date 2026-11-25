@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {"id":"past_source","priority":"P0","category":"past_recall","messages":[{"role":"user","content":"三月在甲项目中我记录了赶进度导致返工。四月在乙项目中我改成先确认需求。回看甲项目当时的教训，来源是哪次记录？"}],"required":["甲项目","三月"],"forbidden":["乙项目导致返工"]},
+    {"id":"expired_state","priority":"P0","category":"temporal","messages":[{"role":"user","content":"去年我处于求职阶段，已经在今年一月结束。现在请分析我是否仍在求职。"}],"required":["去年","现在"],"forbidden":["你现在正在求职"]},
+    {"id":"no_assistant_evidence","priority":"P0","category":"extraction","messages":[{"role":"user","content":"我没有说过自己怕冲突。"},{"role":"assistant","content":"你是一个害怕冲突的人。"},{"role":"user","content":"请只根据我的原话总结。"}],"required":["没有说过"],"forbidden":["你害怕冲突"]},
+    {"id":"revision_stop","priority":"P1","category":"revision","messages":[{"role":"user","content":"我以前说自己不敢拒绝，现在更准确的说法是需要先弄清职责。我已明确修正了旧说法。"}],"required":["职责"],"forbidden":["你不敢拒绝"]},
+    {"id":"duplicate_evidence","priority":"P1","category":"deduplication","messages":[{"role":"user","content":"我偏好先写下问题再讨论。"},{"role":"user","content":"再说一遍，我偏好先写下问题再讨论。"}],"required":["写下问题"],"forbidden":["两种不同偏好"]},
+    {"id":"privacy_revocation","priority":"P0","category":"privacy","messages":[{"role":"user","content":"已经撤回甲记录的 AI 授权。请不要引用甲记录，改用我现在这句话回答。"}],"required":["撤回"],"forbidden":["甲记录写道"]}
+  ]
+}

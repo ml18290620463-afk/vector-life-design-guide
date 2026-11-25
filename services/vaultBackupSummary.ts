@@ -1,3 +1,4 @@
+import type { AvatarOntologySnapshot } from './avatarOntologyStore';
 import {
   summarizeMaterialReferences,
   type MaterialReferenceSummary,
@@ -27,12 +28,10 @@ type BackupLike = {
     future: FutureState;
     draft?: unknown | null;
     futureDrafts?: Record<string, unknown>;
+    ontology?: AvatarOntologySnapshot;
     caches: Record<string, unknown[]>;
   };
 };
-
-const MEMORY_KEY = 'vector:avatar:atomic-memories:v1';
-const SESSIONS_KEY = 'vector:avatar:sessions:v1';
 
 const hasDraftContent = (draft: unknown) => {
   if (!draft || typeof draft !== 'object') return false;
@@ -75,11 +74,9 @@ export const materialReferencesForBackup = (backup: BackupLike): MaterialReferen
 /** A user-facing inventory. Candidate memories deliberately do not count as retained understanding. */
 export const summarizeVaultBackupContent = (backup: BackupLike): VaultBackupContentSummary => {
   const materialReferences = materialReferencesForBackup(backup);
-  const confirmedMemories = (backup.vault.caches[MEMORY_KEY] ?? []).filter((memory) => {
-    if (!memory || typeof memory !== 'object') return false;
-    const status = (memory as { status?: unknown }).status;
-    return status === 'confirmed' || status === 'retained';
-  }).length;
+  const confirmedMemories = (backup.vault.ontology?.objects ?? []).filter(
+    (object) => object.status === 'confirmed' || object.status === 'retained_after_source_delete',
+  ).length;
   return {
     entries: backup.entries.length,
     supplements: backup.entries.reduce(
@@ -91,14 +88,16 @@ export const summarizeVaultBackupContent = (backup: BackupLike): VaultBackupCont
       materialReferences.externalLink +
       materialReferences.unstableReference,
     portableMaterials: materialReferences.embedded,
-    hasDraft: hasDraftContent(backup.vault.draft) || Object.keys(backup.vault.futureDrafts ?? {}).length > 0,
+    hasDraft:
+      hasDraftContent(backup.vault.draft) ||
+      Object.keys(backup.vault.futureDrafts ?? {}).length > 0,
     visions: backup.vault.future.visions.length,
     goals: backup.vault.future.goals.length,
     // FutureState.items are goal checklist items. Deliberate actions live in the
     // separate vault domain and are what users see in the action plan.
     actions: backup.vault.data.actions.length,
     confirmedMemories,
-    conversations: (backup.vault.caches[SESSIONS_KEY] ?? []).length,
+    conversations: (backup.vault.ontology?.sessions ?? []).length,
     materialReferences,
   };
 };

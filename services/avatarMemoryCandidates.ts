@@ -1,10 +1,8 @@
 import type {
-  AvatarAtomicMemory,
+  AvatarExtractionCandidate,
   AvatarMemoryFacet,
   AvatarMemoryNature,
   AvatarMemorySensitivity,
-  AvatarUnderstandingVersion,
-  PastPatternDomain,
 } from '../features/avatar/types';
 import type {
   AvatarExtractionFacet,
@@ -60,24 +58,6 @@ const facetToNature = (facet: AvatarExtractionFacet): AvatarMemoryNature => {
 const facetToSensitivity = (facet: AvatarExtractionFacet): AvatarMemorySensitivity =>
   facet === 'boundary' || facet === 'emotion' || facet === 'person' ? 'sensitive' : 'normal';
 
-const domainToAtomicFacet = (domain?: PastPatternDomain): AvatarMemoryFacet => {
-  switch (domain) {
-    case 'behavioral':
-      return 'behavioral_pattern';
-    case 'emotional':
-      return 'emotional_pattern';
-    case 'relational':
-      return 'relational_pattern';
-    case 'motivational':
-      return 'motivation';
-    case 'coping':
-      return 'recovery_resource';
-    case 'cognitive':
-    default:
-      return 'cognitive_pattern';
-  }
-};
-
 const recurringPatternFacets = new Set<AvatarMemoryFacet>([
   'cognitive_pattern',
   'behavioral_pattern',
@@ -85,15 +65,17 @@ const recurringPatternFacets = new Set<AvatarMemoryFacet>([
   'relational_pattern',
 ]);
 
-const isRecurringPatternCandidate = (candidate: AvatarAtomicMemory) =>
+const isRecurringPatternCandidate = (candidate: AvatarExtractionCandidate) =>
   candidate.facets.some((facet) => recurringPatternFacets.has(facet));
 
-export const withoutRecurringPatternFacets = (candidate: AvatarAtomicMemory): AvatarAtomicMemory | null => {
+export const withoutRecurringPatternFacets = (
+  candidate: AvatarExtractionCandidate,
+): AvatarExtractionCandidate | null => {
   const facets = candidate.facets.filter((facet) => !recurringPatternFacets.has(facet));
-  return facets.length ? { ...candidate, facets, patternKey: undefined } : null;
+  return facets.length ? { ...candidate, facets } : null;
 };
 
-const hasIndependentEntryEvidence = (candidate: AvatarAtomicMemory) =>
+const hasIndependentEntryEvidence = (candidate: AvatarExtractionCandidate) =>
   new Set(
     candidate.sourceRefs
       .filter((reference) => reference.source === 'entry')
@@ -104,7 +86,7 @@ export const buildAtomicMemoryCandidates = (
   extraction: AvatarStructuredExtraction,
   memoryCandidates: AvatarMemoryCandidate[],
   evidenceSources: AvatarGrowthContext['evidenceSources'] = [],
-): AvatarAtomicMemory[] => {
+): AvatarExtractionCandidate[] => {
   const durable = new Set(memoryCandidates.map((candidate) => candidate.statement));
   const baseRefs = extraction.sourceEntryId
     ? [
@@ -116,7 +98,7 @@ export const buildAtomicMemoryCandidates = (
         },
       ]
     : [];
-  const candidates: AvatarAtomicMemory[] = extraction.signals
+  const candidates: AvatarExtractionCandidate[] = extraction.signals
     .filter((signal) => durable.has(signal.text) && signal.facet !== 'emotion')
     .map((signal) => ({
       id: stableId('atomic', [
@@ -133,13 +115,24 @@ export const buildAtomicMemoryCandidates = (
       sourceRefs: [
         ...baseRefs,
         ...signal.evidence.map((evidence) => {
-          const sourceIndex = evidence.source === 'message' ? Number(evidence.id.replace(/^message-/, '')) - 1 : -1;
-          const mappedSource = Number.isInteger(sourceIndex) ? evidenceSources[sourceIndex] : undefined;
+          const sourceIndex =
+            evidence.source === 'message' ? Number(evidence.id.replace(/^message-/, '')) - 1 : -1;
+          const mappedSource = Number.isInteger(sourceIndex)
+            ? evidenceSources[sourceIndex]
+            : undefined;
           return {
-            source: mappedSource ? 'entry' as const : evidence.source === 'understanding' ? ('pattern' as const) : evidence.source,
+            source: mappedSource
+              ? ('entry' as const)
+              : evidence.source === 'understanding'
+                ? ('pattern' as const)
+                : evidence.source,
             id: mappedSource?.entryId ?? evidence.id,
             excerpt: evidence.excerpt,
-            ...(typeof mappedSource?.createdAt === 'number' ? { createdAt: mappedSource.createdAt } : typeof evidence.createdAt === 'number' ? { createdAt: evidence.createdAt } : {}),
+            ...(typeof mappedSource?.createdAt === 'number'
+              ? { createdAt: mappedSource.createdAt }
+              : typeof evidence.createdAt === 'number'
+                ? { createdAt: evidence.createdAt }
+                : {}),
             ...(mappedSource?.supplementId ? { supplementId: mappedSource.supplementId } : {}),
           };
         }),
@@ -152,7 +145,7 @@ export const buildAtomicMemoryCandidates = (
     }));
   // Multiple facets describe one statement from the same extraction, not separate memories.
   // Never deduplicate historical records or similar statements from independent sources.
-  const grouped = new Map<string, AvatarAtomicMemory>();
+  const grouped = new Map<string, AvatarExtractionCandidate>();
   for (const candidate of candidates) {
     const existing = grouped.get(candidate.statement);
     if (!existing) {
@@ -184,38 +177,3 @@ export const buildAtomicMemoryCandidates = (
     return factualCandidate ? [factualCandidate] : [];
   });
 };
-
-export const atomicMemoryFromPattern = (
-  pattern: AvatarUnderstandingVersion,
-): AvatarAtomicMemory => ({
-  id: stableId('atomic_pattern', [pattern.id, pattern.statement]),
-  statement: pattern.statement,
-  nature: 'inferred',
-  facets: [domainToAtomicFacet(pattern.patternDomain)],
-  tags: [pattern.patternLabel, pattern.patternDomain]
-    .filter((item): item is string => Boolean(item))
-    .slice(0, 4),
-  contexts: [pattern.patternLabel, pattern.trigger].filter((item): item is string => Boolean(item)),
-  sourceRefs: [
-    { source: 'pattern', id: pattern.id, excerpt: pattern.patternLabel ?? pattern.statement },
-    ...pattern.sourceEntryIds.map((id) => ({ source: 'entry' as const, id })),
-  ],
-  confidence: pattern.status === 'confirmed' ? 0.82 : 0.58,
-  status:
-    pattern.status === 'confirmed'
-      ? 'confirmed'
-      : pattern.status === 'rejected'
-        ? 'rejected'
-        : 'candidate',
-  sensitivity:
-    pattern.patternDomain === 'relational' || pattern.patternDomain === 'emotional'
-      ? 'sensitive'
-      : 'normal',
-  createdAt: pattern.confirmedAt ?? pattern.createdAt,
-  ...(pattern.updatedAt ? { updatedAt: pattern.updatedAt } : {}),
-  ...(pattern.confirmedAt
-    ? { confirmedAt: pattern.confirmedAt, confirmedBy: 'user' as const }
-    : {}),
-  ...(pattern.retainedAfterSourceDeletion ? { retainedAfterSourceDeletion: true } : {}),
-});
-

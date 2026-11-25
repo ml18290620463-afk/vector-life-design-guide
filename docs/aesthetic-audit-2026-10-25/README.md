@@ -18,15 +18,15 @@
 
 0–4：明显妨碍阅读与操作；5–6：可用但不统一；7–8：方向成立、有明确细节缺口；9–10：跨页面与状态稳定精细。以下为设计判断，非仪器测量；小数只用于固定后续比较。与功能基线分开。
 
-| 维度 | /10 | 理由 |
-|---|---:|---|
-| 品牌辨识与气质 | 8.0 | E与上升笔触、单入口成立 |
-| 色彩与层次 | 7.5 | 主色克制，移动端仍有旧背景残留 |
-| 字体与阅读 | 7.0 | 手机正文清楚，桌面行宽与视觉字重待统一 |
-| 布局与空间 | 6.8 | 容器嵌套、不同页面内容起点漂移 |
-| 跨模块一致性 | 6.3 | tabs、表面与操作形态差异明显 |
-| 移动静态适配 | 7.0 | 本次尺寸无横向溢出，局部主题异常 |
-| 光影与材质 | 7.6 | 首页笔触有表现力，内部渐变仍抢层次 |
+| 维度           | /10 | 理由                                   |
+| -------------- | --: | -------------------------------------- |
+| 品牌辨识与气质 | 8.0 | E与上升笔触、单入口成立                |
+| 色彩与层次     | 7.5 | 主色克制，移动端仍有旧背景残留         |
+| 字体与阅读     | 7.0 | 手机正文清楚，桌面行宽与视觉字重待统一 |
+| 布局与空间     | 6.8 | 容器嵌套、不同页面内容起点漂移         |
+| 跨模块一致性   | 6.3 | tabs、表面与操作形态差异明显           |
+| 移动静态适配   | 7.0 | 本次尺寸无横向溢出，局部主题异常       |
+| 光影与材质     | 7.6 | 首页笔触有表现力，内部渐变仍抢层次     |
 
 等权均分约7.2/10，仅静态视觉基线。动效不评分。后续保持同尺寸、同fixture、同维度与权重，状态覆盖扩展另列。
 
@@ -67,7 +67,7 @@
 
 ## 源码补充证据
 
-- styles/theme-v1.css:167 使用 .principle-card__content，而 components/ArchivePrinciplesView.tsx:671 使用 .mobile-principle-card__content。需修正覆盖并消除旧段落样式竞争。
+- styles/theme-v1.css:167 使用 .principle-card**content，而 components/ArchivePrinciplesView.tsx:671 使用 .mobile-principle-card**content。需修正覆盖并消除旧段落样式竞争。
 - styles/experiences.css:3068 起仍有原则衬线字体和旧排版规则。检查最终计算样式再更改。
 - index.html:8、:64 与 manifest.json:6–7 的浏览器背景色和正式主题不一致；这是源码不一致，不代表已观察到闪屏。
 - components/CoverScreen.brush.css:37及components/CoverScreen.tsx:27起，平台字体字母与固定SVG E组合存在跨平台比例风险。
@@ -81,10 +81,10 @@ Impeccable引擎0.1.17安装成功，detect components styles --json完成，退
 
 ## 页面证据
 
-| 页面 | 桌面 | 手机 |
-|---|---|---|
-| 首页 | [截图](web-home.png) | [截图](mobile-home.png) |
-| 此刻 | [截图](web-now.png) | [截图](mobile-now.png) |
-| 过去 | [截图](web-past.png) | [截图](mobile-past.png) |
+| 页面 | 桌面                   | 手机                      |
+| ---- | ---------------------- | ------------------------- |
+| 首页 | [截图](web-home.png)   | [截图](mobile-home.png)   |
+| 此刻 | [截图](web-now.png)    | [截图](mobile-now.png)    |
+| 过去 | [截图](web-past.png)   | [截图](mobile-past.png)   |
 | 未来 | [截图](web-future.png) | [截图](mobile-future.png) |
 | 分身 | [截图](web-avatar.png) | [截图](mobile-avatar.png) |

@@ -1,4 +1,4 @@
-import type { AvatarAtomicMemory, AvatarMemoryCategory } from '../features/avatar/types';
+import type { AvatarExtractionCandidate, AvatarMemoryCategory } from '../features/avatar/types';
 
 export const MEMORY_CATEGORIES: Record<AvatarMemoryCategory, { label: string }> = {
   profile: { label: '基础事实' },
@@ -23,7 +23,7 @@ export function normalizeMemoryCategory(value: unknown): AvatarMemoryCategory | 
 
 /** Legacy display fallback; evidence and memory nature remain unchanged. */
 export function categoryForMemory(
-  memory: Pick<AvatarAtomicMemory, 'category' | 'nature' | 'facets' | 'statement'>,
+  memory: Pick<AvatarExtractionCandidate, 'category' | 'nature' | 'facets' | 'statement'>,
 ): AvatarMemoryCategory {
   const category = normalizeMemoryCategory(memory.category);
   if (category) return category;
@@ -48,3 +48,7 @@ export function categoryForMemory(
   if (memory.nature === 'inferred') return 'judgment';
   return 'profile';
 }
+
+/** Explicitly reviewed commitments are handed to Future, never stored as cognition. */
+export const isDirectionCandidate = (memory: Pick<AvatarExtractionCandidate, 'nature' | 'category' | 'facets'>) =>
+  memory.nature === 'commitment' || memory.category === 'goals' || memory.facets.includes('aspirational_self');

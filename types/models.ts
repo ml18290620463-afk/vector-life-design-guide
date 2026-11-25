@@ -131,6 +131,8 @@ export interface Container {
 }
 
 export interface Attachment {
+  /** Stable identity for standalone materials in vault backups. */
+  id?: string;
   type: 'image' | 'video' | 'audio' | 'pdf' | 'other';
   data: string; // Base64 or Blob URL (Base64 for persistence)
   name: string;

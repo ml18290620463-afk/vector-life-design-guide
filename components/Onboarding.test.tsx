@@ -8,7 +8,7 @@ describe('minimal onboarding', () => {
     const complete = vi.fn().mockResolvedValue(undefined);
     render(<Onboarding language="zh" onSetLanguage={vi.fn()} onComplete={complete} />);
     expect(screen.queryByTestId('onboarding-password')).toBeNull();
-    fireEvent.click(screen.getByTestId('onboarding-skip'));
+    expect(screen.queryByTestId('onboarding-skip')).toBeNull();
     fireEvent.change(screen.getByLabelText('此刻发生了什么？'), { target: { value: '私密内容' } });
     expect(complete).not.toHaveBeenCalled();
     fireEvent.click(screen.getByLabelText('保存到过去'));
@@ -36,7 +36,7 @@ describe('minimal onboarding', () => {
         onComplete={vi.fn().mockRejectedValue(new Error('disk'))}
       />,
     );
-    fireEvent.click(screen.getByTestId('onboarding-skip'));
+    expect(screen.queryByTestId('onboarding-skip')).toBeNull();
     fireEvent.change(screen.getByLabelText('此刻发生了什么？'), { target: { value: '保留我' } });
     fireEvent.click(screen.getByLabelText('保存到过去'));
     for (const id of ['onboarding-password', 'onboarding-password-confirm'])

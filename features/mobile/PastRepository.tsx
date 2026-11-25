@@ -24,7 +24,12 @@ import { filterPastEntries, searchPastEntriesWithMatchKind } from './pastSearch'
 interface PastRepositoryProps {
   onOpenFutureAction?: (context: ActionDraftContext) => void;
   archiveMode?: boolean;
-  onAppendSupplement?: (entryId: string, content: string, supplementId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
+  onAppendSupplement?: (
+    entryId: string,
+    content: string,
+    supplementId: string,
+    aiVisibility: 'private' | 'allowed',
+  ) => Promise<void>;
   onChangeAIVisibility?: (entryId: string, aiVisibility: 'private' | 'allowed') => Promise<void>;
   draftPassword?: string | null;
   onRelatedEntriesResolved?: (entryId: string, ids: string[]) => void | Promise<void>;
@@ -272,7 +277,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                   searchQuery={normalizedTimelineQuery}
                   draftPassword={draftPassword}
                   onAppendSupplement={onAppendSupplement}
-                onChangeAIVisibility={onChangeAIVisibility}
+                  onChangeAIVisibility={onChangeAIVisibility}
                   entry={row.entry}
                   searchMatchKind={row.match}
                   highlight={!isManaging && !hasTimelineQuery && index === 0}
@@ -375,15 +380,67 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               </button>
             </div>
             <details className="past-search-filters">
-              <summary>{language === 'zh' ? '筛选记录' : 'Filter records'}{hasFilters ? ' · 已启用' : ''}</summary>
+              <summary>
+                {language === 'zh' ? '筛选记录' : 'Filter records'}
+                {hasFilters ? ' · 已启用' : ''}
+              </summary>
               <div className="past-search-filters__fields">
-                <label>开始日期<input type="date" value={filters.from} onChange={e => setFilters({...filters, from: e.target.value})} /></label>
-                <label>结束日期<input type="date" value={filters.to} onChange={e => setFilters({...filters, to: e.target.value})} /></label>
-                <label>标签<select value={filters.tag} onChange={e => setFilters({...filters, tag: e.target.value})}><option value="">全部标签</option>{Array.from(new Set(safeEntries.flatMap(e => e.tags ?? []))).sort().map(tag => <option key={tag}>{tag}</option>)}</select></label>
-                <label>素材类型<select value={filters.material} onChange={e => setFilters({...filters, material: e.target.value})}><option value="">全部类型</option><option value="text">纯文字</option><option value="image">图片</option><option value="audio">音频</option><option value="video">视频</option><option value="link">链接</option></select></label>
+                <label>
+                  开始日期
+                  <input
+                    type="date"
+                    value={filters.from}
+                    onChange={(e) => setFilters({ ...filters, from: e.target.value })}
+                  />
+                </label>
+                <label>
+                  结束日期
+                  <input
+                    type="date"
+                    value={filters.to}
+                    onChange={(e) => setFilters({ ...filters, to: e.target.value })}
+                  />
+                </label>
+                <label>
+                  标签
+                  <select
+                    value={filters.tag}
+                    onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
+                  >
+                    <option value="">全部标签</option>
+                    {Array.from(new Set(safeEntries.flatMap((e) => e.tags ?? [])))
+                      .sort()
+                      .map((tag) => (
+                        <option key={tag}>{tag}</option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  素材类型
+                  <select
+                    value={filters.material}
+                    onChange={(e) => setFilters({ ...filters, material: e.target.value })}
+                  >
+                    <option value="">全部类型</option>
+                    <option value="text">纯文字</option>
+                    <option value="image">图片</option>
+                    <option value="audio">音频</option>
+                    <option value="video">视频</option>
+                    <option value="link">链接</option>
+                  </select>
+                </label>
               </div>
-              {filters.from && filters.to && filters.from > filters.to && <p role="alert">开始日期不能晚于结束日期。</p>}
-              {hasFilters && <button type="button" onClick={() => setFilters({from: '', to: '', tag: '', material: ''})}>清除筛选</button>}
+              {filters.from && filters.to && filters.from > filters.to && (
+                <p role="alert">开始日期不能晚于结束日期。</p>
+              )}
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={() => setFilters({ from: '', to: '', tag: '', material: '' })}
+                >
+                  清除筛选
+                </button>
+              )}
             </details>
             {hasTimelineQuery && (
               <p className="mobile-past-search-result-count" role="status">

@@ -7,6 +7,7 @@ import {
   readFutureSnapshot,
   recordActionPractice,
 } from './futureRepository';
+import { evidenceGraph } from '../tests/fixtures/avatarOntology';
 import { buildGuidanceSources } from './avatarGuidanceSources';
 import { readAIPrivacy, assertAIPrivacyUnchanged } from './aiPrivacy';
 
@@ -18,7 +19,7 @@ const sources = async () => {
   const { state, actions } = await readFutureSnapshot();
   return buildGuidanceSources({
     entries: [],
-    patterns: [],
+    graph: evidenceGraph([], []),
     principles: [],
     future: state,
     actions,

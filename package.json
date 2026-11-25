@@ -2,7 +2,7 @@
   "name": "vector-life-design-guide",
   "private": true,
   "version": "1.1.0",
-  "description": "Local-first VECTOR life design journal with encrypted storage, guiding-star reflection, and secure AI proxying.",
+  "description": "Local-first VECTOR life design journal with explicit AI consent, optional protection for selected local data, and encrypted backups.",
   "license": "MIT",
   "author": "VECTOR Life Design Guide contributors",
   "repository": {
@@ -36,7 +36,8 @@
     "prepare": "husky",
     "test:e2e:core": "playwright test e2e/now-functional.spec.ts e2e/past-functional.spec.ts e2e/future-functional.spec.ts --project=chromium --workers=1",
     "test:e2e:experience": "playwright test e2e/experience-layout.spec.ts e2e/a11y.spec.ts --project=chromium --workers=1",
-    "preview:stable": "VECTOR_SERVE_BUILD=1 HOST=0.0.0.0 PORT=3009 tsx server.ts"
+    "preview:stable": "VECTOR_SERVE_BUILD=1 HOST=0.0.0.0 PORT=3009 tsx server.ts",
+    "audit:resources": "node scripts/resource-budget.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs}": [

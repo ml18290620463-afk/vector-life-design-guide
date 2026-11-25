@@ -29,11 +29,9 @@ describe('appEntryRoutes', () => {
     });
   });
 
-  it('keeps onboarding as an explicit locked route', () => {
+  it('redirects legacy onboarding links through the normal entry gate', () => {
     expect(getPreviewScreenAction('onboarding', { isMobile: true, isUnlocked: false })).toEqual({
-      kind: 'route',
-      states: [AppState.ONBOARDING],
-      lock: true,
+      kind: 'entry-gate',
     });
   });
 

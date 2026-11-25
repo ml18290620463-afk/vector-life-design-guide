@@ -1,3 +1,4 @@
+import { useAvatarLanguage } from './avatarLanguage';
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type {
@@ -7,7 +8,8 @@ import type {
   AvatarMemorySourceRef,
 } from '../../avatar/types';
 import { categoryForMemory } from '../../../services/avatarMemoryCategories';
-import { isDirectionCandidate } from '../../../services/avatarMemoryArchive';
+import { isDirectionCandidate } from '../../../services/avatarMemoryCategories';
+import { UnifiedArtifactCard } from './UnifiedArtifactCard';
 
 export function AvatarMemoryConfirm({
   text,
@@ -57,6 +59,7 @@ export function AvatarMemoryConfirm({
   ) => void;
   sending: boolean;
 }) {
+  const { language, t } = useAvatarLanguage();
   const [directionKind, setDirectionKind] = useState<'vision' | 'goal' | 'action'>('goal');
   const dialog = useRef<HTMLDialogElement>(null);
   const resolvedNature = nature;
@@ -66,6 +69,8 @@ export function AvatarMemoryConfirm({
   const sourceSummary = (() => {
     const entryCount = sourceRefs.filter((source) => source.source === 'entry').length;
     const messageCount = sourceRefs.filter((source) => source.source === 'message').length;
+    if (language === 'en')
+      return `Based on ${entryCount} past record(s) and ${messageCount || sourceCount} chat statement(s). Only added to memory after your confirmation; this does not create a Past record.`;
     if (entryCount && messageCount)
       return `依据 ${entryCount} 条过往记录与 ${messageCount} 条聊天自述。确认后保存为分身记忆。`;
     if (entryCount) return `依据 ${entryCount} 条过往记录。确认后保存为分身记忆。`;
@@ -96,7 +101,7 @@ export function AvatarMemoryConfirm({
         <button
           type="button"
           className="avatar-memory-dialog__back"
-          aria-label="返回分身"
+          aria-label={t('返回分身')}
           disabled={sending}
           onClick={onCancel}
         >
@@ -104,73 +109,74 @@ export function AvatarMemoryConfirm({
         </button>
         <h2 id="avatar-memory-confirm-title">
           {replacementStatement
-            ? '更新这条关于你的理解？'
+            ? t('更新这条关于你的理解？')
             : candidateKind === 'pattern_candidate'
-              ? '保留这条观察线索？'
-              : '记住这条关于你的信息？'}
+              ? t('保留这条观察线索？')
+              : t('记住这条关于你的信息？')}
         </h2>
       </header>
+      <UnifiedArtifactCard kind={replacementStatement ? 'revision' : 'memory'} className="avatar-memory-dialog__artifact">
       {replacementStatement && (
         <div className="avatar-memory-dialog__context">
-          <p className="avatar-memory-dialog__hint">这会更新你已确认的理解：</p>
+          <p className="avatar-memory-dialog__hint">{t('这会更新你已确认的理解：')}</p>
           <p>「{replacementStatement}」</p>
         </div>
       )}
       {candidateTotal > 1 && (
         <p className="avatar-memory-dialog__hint">
-          本段对话中的第 {candidatePosition + 1} / {candidateTotal} 条
+          {t('本段对话中的第', 'Candidate')} {candidatePosition + 1} / {candidateTotal}
         </p>
       )}
       <details className="avatar-memory-dialog__context">
-        <summary>提炼说明</summary>
+        <summary>{t('提炼说明')}</summary>
         <p className="avatar-memory-dialog__hint">
           {sourceSummary}
-          {candidateKind === 'pattern_candidate' && ' 这是暂定观察，确认前不会影响分身记忆。'}
+          {candidateKind === 'pattern_candidate' && t(' 这是暂定观察，确认前不会影响分身记忆。')}
         </p>
       </details>
       <label htmlFor="avatar-memory-candidate">
         {facets.includes('preference')
-          ? '你的喜好'
+          ? t('你的喜好')
           : facets.includes('boundary')
-            ? '你的边界'
+            ? t('你的边界')
             : facets.includes('habit')
-              ? '你的习惯'
+              ? t('你的习惯')
               : facets.includes('value')
-                ? '你的价值取向'
+                ? t('你的价值取向')
                 : candidateKind === 'goal'
-                  ? '你正在追求的方向'
+                  ? t('你正在追求的方向')
                   : candidateKind === 'experience'
-                    ? '一段重要经历'
+                    ? t('一段重要经历')
                     : candidateKind === 'expression'
-                      ? '你的表达偏好'
+                      ? t('你的表达偏好')
                       : candidateKind === 'pattern_candidate'
-                        ? '基于多次表达的观察'
-                        : '关于你'}
+                        ? t('基于多次表达的观察')
+                        : t('关于你')}
       </label>
       <textarea
         id="avatar-memory-candidate"
-        aria-label="提炼的信息"
+        aria-label={t('提炼的信息')}
         rows={3}
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
       />
       {isDirection && (
         <label>
-          保存为
+          {t('保存为')}
           <select
-            aria-label="保存类型"
+            aria-label={t('保存类型')}
             value={directionKind}
             onChange={(e) => setDirectionKind(e.target.value as typeof directionKind)}
           >
-            <option value="vision">愿景</option>
-            <option value="goal">目标</option>
-            <option value="action">行动</option>
+            <option value="vision">{t('愿景')}</option>
+            <option value="goal">{t('目标')}</option>
+            <option value="action">{t('行动')}</option>
           </select>
         </label>
       )}
       <div className="avatar-memory-dialog__actions">
         <button type="button" disabled={sending} onClick={onCancel}>
-          暂不记住
+          {t('暂不记住')}
         </button>
         <button
           type="button"
@@ -181,12 +187,13 @@ export function AvatarMemoryConfirm({
           }
         >
           {replacementStatement
-            ? '确认更新'
+            ? t('确认更新')
             : candidateKind === 'pattern_candidate'
-              ? '保留观察'
-              : '确认记住'}
+              ? t('保留观察')
+              : t('确认记住')}
         </button>
       </div>
+      </UnifiedArtifactCard>
     </dialog>
   );
 }

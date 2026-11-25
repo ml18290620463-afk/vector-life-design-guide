@@ -121,20 +121,35 @@ describe('time scope across conversation turns', () => {
   });
 });
 
-
 describe('intent-scoped retrieval', () => {
   const mixed: GuidanceSource[] = [
-    { id: 'past', kind: '背景', module: 'past', text: '去年换工作时压力很大', evidence: [{ text: '去年换工作时压力很大', occurredAt: Date.now() }] },
+    {
+      id: 'past',
+      kind: '背景',
+      module: 'past',
+      text: '去年换工作时压力很大',
+      evidence: [{ text: '去年换工作时压力很大', occurredAt: Date.now() }],
+    },
     { id: 'goal', kind: '目标', module: 'future', text: '完成职业转型' },
     { id: 'action', kind: '行动', module: 'future', text: '更新简历' },
     { id: 'candidate', kind: '偏好', module: 'past', status: 'candidate', text: '可能喜欢独处' },
-    { id: 'confirmed', kind: '偏好', module: 'past', status: 'confirmed', text: '更喜欢独处恢复精力' },
+    {
+      id: 'confirmed',
+      kind: '偏好',
+      module: 'past',
+      status: 'confirmed',
+      text: '更喜欢独处恢复精力',
+    },
   ];
   it('does not inject future plans into an ordinary past question', () => {
-    expect(selectAvatarGuidanceContext(messages('换工作时我为什么压力大'), mixed).map((item) => item.id)).toEqual(['past']);
+    expect(
+      selectAvatarGuidanceContext(messages('换工作时我为什么压力大'), mixed).map((item) => item.id),
+    ).toEqual(['past']);
   });
   it('uses future context only when the user asks about direction', () => {
-    const ids = selectAvatarGuidanceContext(messages('我的目标和行动该怎么规划'), mixed).map((item) => item.id);
+    const ids = selectAvatarGuidanceContext(messages('我的目标和行动该怎么规划'), mixed).map(
+      (item) => item.id,
+    );
     expect(ids).toEqual(expect.arrayContaining(['goal', 'action']));
   });
   it('keeps only confirmed knowledge for a self-understanding question', () => {
@@ -147,11 +162,28 @@ describe('intent-scoped retrieval', () => {
 describe('practice informs new choices', () => {
   it('retrieves completed practice with feedback for a current decision', () => {
     const practice: GuidanceSource = {
-      id: 'practice-action', sourceKey: '行动:practice-action', kind: '背景', module: 'now',
-      text: '正式汇报提前准备提纲', temporalStatus: 'historical_fact', status: 'completed',
-      results: [{ text: '正式汇报准备了提纲，评判标准临时改变仍然焦虑', status: 'completed', occurredOn: '2026-11-01' }],
+      id: 'practice-action',
+      sourceKey: '行动:practice-action',
+      kind: '背景',
+      module: 'now',
+      text: '正式汇报提前准备提纲',
+      temporalStatus: 'historical_fact',
+      status: 'completed',
+      results: [
+        {
+          text: '正式汇报准备了提纲，评判标准临时改变仍然焦虑',
+          status: 'completed',
+          occurredOn: '2026-11-01',
+        },
+      ],
     };
-    expect(selectAvatarGuidanceContext(messages('正式汇报该不该提前准备提纲'), [practice])).toContainEqual(practice);
-    expect(selectAvatarGuidanceContext(messages('正式汇报该不该提前准备提纲'), [{ ...practice, results: [] }])).toEqual([]);
+    expect(
+      selectAvatarGuidanceContext(messages('正式汇报该不该提前准备提纲'), [practice]),
+    ).toContainEqual(practice);
+    expect(
+      selectAvatarGuidanceContext(messages('正式汇报该不该提前准备提纲'), [
+        { ...practice, results: [] },
+      ]),
+    ).toEqual([]);
   });
 });

@@ -66,7 +66,9 @@ function DesignSummary<T>({
             <span className="future-summary-result__content">
               <p className="future-summary-result__primary">{summary(item).primary}</p>
             </span>
-            <span className="future-summary-result__chevron" aria-hidden="true">›</span>
+            <span className="future-summary-result__chevron" aria-hidden="true">
+              ›
+            </span>
           </button>
         ))}
       {items.length > 3 && (

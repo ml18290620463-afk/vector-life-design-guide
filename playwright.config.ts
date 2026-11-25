@@ -8,8 +8,10 @@ process.env.NO_PROXY = [process.env.NO_PROXY, '127.0.0.1', 'localhost'].filter(B
 const requestedPort = process.env.E2E_PORT;
 const port = requestedPort ? Number(requestedPort) : 3710;
 
-if (!Number.isInteger(port) || port < 1024 || port > 65_535) {
-  throw new Error(`E2E_PORT must be a valid TCP port; received: ${requestedPort}`);
+if (!Number.isInteger(port) || port < 1024 || port > 64_535) {
+  throw new Error(
+    `E2E_PORT must be an integer from 1024 to 64535 (reserving the HMR port); received: ${requestedPort}`,
+  );
 }
 const baseURL = `http://127.0.0.1:${port}`;
 
@@ -36,7 +38,7 @@ export default defineConfig({
     // linked worktree the CLI tries to allocate its IPC socket beside the
     // dependency tree, which can belong to another checkout and make E2E
     // startup fail before the app is even served.
-    command: `PORT=${port} HOST=127.0.0.1 VITE_DEV_PORT=${port} VITE_DEV_HOST=127.0.0.1 VITE_HMR_PORT=${port + 1} node --import tsx server.ts`,
+    command: `PORT=${port} HOST=127.0.0.1 VITE_DEV_PORT=${port} VITE_DEV_HOST=127.0.0.1 VITE_HMR_PORT=${port + 1000} node --import tsx server.ts`,
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
     timeout: 30_000,

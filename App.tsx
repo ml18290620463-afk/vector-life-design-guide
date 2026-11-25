@@ -27,25 +27,9 @@ import { getHomePrinciples } from './lib/homePrinciples';
 import { shouldShowGlobalBackground, shouldUseMobileShell } from './lib/appShellRules';
 import { DEFAULT_AVATAR_CONTEXT } from './features/avatar/types';
 
-import { readAvatarAtomicMemories } from './services/avatarMemoryAtoms';
-import { readAvatarUnderstandings } from './services/avatarMemoryUnderstandings';
-
 const App: React.FC = () => {
   const reducedMotion = useMotionPreference();
   useEffect(removeObsoletePreviewQuery, []);
-  useEffect(() => {
-    const cleanCandidates = () => {
-      readAvatarAtomicMemories();
-      readAvatarUnderstandings();
-    };
-    cleanCandidates();
-    const timer = window.setInterval(cleanCandidates, 30_000);
-    window.addEventListener('focus', cleanCandidates);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('focus', cleanCandidates);
-    };
-  }, []);
 
   // Subscribe via `useShallow` so changes to unrelated store fields (e.g.
   // a child component flipping `selectedEntry`) do not trigger an App
@@ -339,6 +323,8 @@ const App: React.FC = () => {
           />
 
           <AppMainModuleScreens
+            onSetPassword={handleSetPassword}
+            onUnlockAvatar={() => setAppState(AppState.LOGIN)}
             draftPassword={masterPassword}
             addPrinciple={addPrinciple}
             appState={appState}

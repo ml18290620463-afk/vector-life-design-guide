@@ -1,16 +1,32 @@
+import {
+  initializeAvatarOntology,
+  readAvatarOntology,
+} from '../../../services/avatarOntologyStore';
+import { createAvatarSessionWriter } from '../../../services/avatarOntologySessions';
+import { useAppStore } from '../../../stores/appStore';
 import { clear, set } from 'idb-keyval';
 import { DiaryStorageKeys } from '../../../services/diaryStorage';
 import { aiPrivacyToken } from '../../../services/aiPrivacy';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render as renderRaw,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { AvatarChatPage } from './AvatarChatPage';
 import type { DiaryEntry } from '../../../types';
 import type { NowDraft, RecordPreviewPayload } from '../types/now';
-import {
-  readAvatarAtomicMemories,
-  writeAvatarAtomicMemory,
-  writeAvatarSession,
-} from '../../../services/avatarMemory';
+import { cognition, evidenceGraph } from '../../../tests/fixtures/avatarOntology';
+import { AVATAR_ONTOLOGY_KEY } from '../../../services/avatarOntologyKey';
+
+async function render(ui: Parameters<typeof renderRaw>[0]) {
+  const result = renderRaw(ui);
+  await screen.findByRole('textbox', { name: '对话内容' });
+  return result;
+}
 
 const draft = (): NowDraft => ({
   text: '',
@@ -29,17 +45,63 @@ const entry = (): DiaryEntry => ({
   createdAt: Date.parse('2026-07-06T13:45:00+08:00'),
   updatedAt: Date.parse('2026-07-06T13:45:00+08:00'),
   tags: ['心情:难过', '事件:职业发展'],
-  aiVisibility: 'allowed' as const, isLocked: false,
+  aiVisibility: 'allowed' as const,
+  isLocked: false,
 });
 
 describe('AvatarChatPage', () => {
+  it('does not save unchanged conversations again when vault refresh recreates props', async () => {
+    await createAvatarSessionWriter()({
+      id: 'stable-chat',
+      mode: 'general',
+      context: { mode: 'general', source: 'global' },
+      messages: [
+        {
+          id: 'user-stable',
+          role: 'user',
+          type: 'text',
+          content: '我喜欢安静',
+          created_at: '2026-11-24T00:00:00Z',
+        },
+      ],
+      references: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const ui = () => (
+      <AvatarChatPage
+        draft={draft()}
+        setDraft={vi.fn()}
+        pastEntries={[]}
+        sending={false}
+        onBack={vi.fn()}
+        onRouteChange={vi.fn()}
+        onSend={vi.fn()}
+        showToast={vi.fn()}
+        launchContext={{ mode: 'general', source: 'global' }}
+      />
+    );
+    const view = await render(ui());
+    await waitFor(async () =>
+      expect((await readAvatarOntology()).sessions?.[0].updatedAt).toBeGreaterThan(1),
+    );
+    const revision = (await readAvatarOntology()).revision;
+    for (let refresh = 0; refresh < 3; refresh++) {
+      view.rerender(ui());
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      });
+    }
+    expect((await readAvatarOntology()).revision).toBe(revision);
+  });
+
   it('keeps verified statistics when a mixed advice request fails to reach a model', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       json: async () => ({ error: 'model_not_configured' }),
     } as Response);
     await set(DiaryStorageKeys.entries, [{ ...entry(), content: '我很痛苦' }]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -56,8 +118,8 @@ describe('AvatarChatPage', () => {
       target: { value: '痛苦多少次，请给我建议' },
     });
     fireEvent.click(screen.getByRole('button', { name: /^发送$/ }));
-    await waitFor(() => expect(fetch).toHaveBeenCalled());
-    await waitFor(() =>
+    await waitFor(async () => expect(fetch).toHaveBeenCalled());
+    await waitFor(async () =>
       expect(screen.getByRole('alert').textContent).toContain('尚未连接语言模型'),
     );
     expect(screen.getAllByText(/1 条/).length).toBeGreaterThan(0);
@@ -69,6 +131,8 @@ describe('AvatarChatPage', () => {
   beforeEach(async () => {
     await clear();
     localStorage.clear();
+    useAppStore.setState({ masterPassword: null, isUnlocked: true });
+    await initializeAvatarOntology();
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ reply: '模型返回的回复' }) }),
@@ -82,7 +146,7 @@ describe('AvatarChatPage', () => {
 
   it('renders avatar assistant intro and accepts user input', async () => {
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -114,7 +178,7 @@ describe('AvatarChatPage', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ reply: '连接成功，继续聊吧。' }) });
     vi.stubGlobal('fetch', fetchMock);
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -145,7 +209,7 @@ describe('AvatarChatPage', () => {
     async (withHistory) => {
       const onSend = vi.fn();
       await set(DiaryStorageKeys.entries, withHistory ? [entry()] : []);
-      render(
+      await render(
         <AvatarChatPage
           draft={draft()}
           setDraft={vi.fn()}
@@ -170,8 +234,11 @@ describe('AvatarChatPage', () => {
       fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
         target: { value: followup },
       });
+      await waitFor(() =>
+        expect((screen.getByText('发送') as HTMLButtonElement).disabled).toBe(false),
+      );
       fireEvent.click(screen.getByText('发送'));
-      await waitFor(() => expect(screen.getAllByText('模型返回的回复')).toHaveLength(2));
+      await waitFor(async () => expect(screen.getAllByText('模型返回的回复')).toHaveLength(2));
       const requests = vi
         .mocked(fetch)
         .mock.calls.filter(([url]) => String(url).endsWith('/avatar/chat'))
@@ -185,13 +252,13 @@ describe('AvatarChatPage', () => {
         ]),
       );
       expect(onSend).not.toHaveBeenCalled();
-      expect(readAvatarAtomicMemories()).toHaveLength(0);
+      expect((await readAvatarOntology()).objects).toHaveLength(0);
     },
   );
 
   it('uses compact mobile header label', async () => {
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -205,13 +272,13 @@ describe('AvatarChatPage', () => {
       />,
     );
 
-    expect(screen.getByText('记录协助')).toBeTruthy();
+    expect(screen.getAllByText('帮我记一笔').length).toBeGreaterThan(0);
     expect(screen.getByText('协助')).toBeTruthy();
   });
 
   it('keeps direct input without the invitation or three conversation prompts', async () => {
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -240,7 +307,7 @@ describe('AvatarChatPage', () => {
   });
 
   it('restores general chat and sends saved turns with the next question', async () => {
-    writeAvatarSession({
+    await createAvatarSessionWriter()({
       id: 'avatar-session-old',
       mode: 'general',
       context: { mode: 'general', source: 'global' },
@@ -260,7 +327,7 @@ describe('AvatarChatPage', () => {
     });
 
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -290,7 +357,7 @@ describe('AvatarChatPage', () => {
   });
 
   it('renders a long restored conversation in windows without losing earlier messages', async () => {
-    writeAvatarSession({
+    await createAvatarSessionWriter()({
       id: 'avatar-session-long',
       mode: 'general',
       context: { mode: 'general', source: 'global' },
@@ -306,7 +373,7 @@ describe('AvatarChatPage', () => {
       updatedAt: Date.now() - 1000,
     });
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -321,13 +388,13 @@ describe('AvatarChatPage', () => {
     );
     expect(screen.queryByText('长对话第 1 条')).toBeNull();
     expect(screen.getByText('长对话第 65 条')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '查看更早消息（5）' }));
+    fireEvent.click(screen.getByRole('button', { name: '查看更早消息 (5)' }));
     expect(screen.getByText('长对话第 1 条')).toBeTruthy();
   });
 
   it('does not expose standalone avatar appearance customization', async () => {
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -355,7 +422,7 @@ describe('AvatarChatPage', () => {
         .mockResolvedValue({ ok: true, json: async () => ({ reply: '你好，今天过得怎么样？' }) }),
     );
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -393,7 +460,7 @@ describe('AvatarChatPage', () => {
       }),
     );
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -425,7 +492,7 @@ describe('AvatarChatPage', () => {
       }),
     );
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -450,7 +517,7 @@ describe('AvatarChatPage', () => {
 
   it('keeps model chat available without the removed mode switch', async () => {
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -464,10 +531,9 @@ describe('AvatarChatPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '打开分身设置' }));
+    fireEvent.click(screen.getByRole('button', { name: '打开数据与模型设置' }));
     expect(screen.queryByRole('button', { name: '陪聊' })).toBeNull();
     expect(screen.queryByRole('button', { name: '工具' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '返回分身' }));
 
     fireEvent.change(screen.getByRole('textbox', { name: '对话内容' }), {
       target: { value: '帮我找客户相关记录' },
@@ -479,40 +545,58 @@ describe('AvatarChatPage', () => {
   });
 
   it('shows searchable results and edits or forgets memories without exposing tag management', async () => {
-    writeAvatarAtomicMemory({
-      id: 'memory-ui-tag-1',
-      statement: '用户正在优化分身记忆标签系统',
-      nature: 'explicit',
-      facets: ['value'],
-      tags: ['分身产品', '记忆系统'],
-      contexts: [],
-      sourceRefs: [{ source: 'message', id: 'msg-ui-1' }],
-      confidence: 0.82,
-      status: 'confirmed',
-      sensitivity: 'normal',
-      createdAt: 1,
-      confirmedAt: 1,
-      confirmedBy: 'user',
-    });
-    writeAvatarAtomicMemory({
-      id: 'memory-ui-tag-2',
-      statement: '用户把职业发展作为一个长期线索',
-      nature: 'explicit',
-      facets: ['domain_background'],
-      tags: ['职业发展'],
-      contexts: [],
-      sourceRefs: [{ source: 'entry', id: 'entry-ui-2' }],
-      confidence: 0.74,
-      status: 'confirmed',
-      sensitivity: 'normal',
-      createdAt: 2,
-      aiVisibility: 'allowed',
-      confirmedAt: 2,
-      confirmedBy: 'user',
-    });
+    await set(
+      AVATAR_ONTOLOGY_KEY,
+      evidenceGraph(
+        [
+          cognition({
+            id: 'memory-ui-tag-1',
+            lineageId: 'memory-ui-tag-1',
+            domain: 'about_me',
+            evidenceGate: {
+              requiresMultiSourceGate: false,
+              independentExperienceCount: 1,
+              distinctUserMessageCount: 0,
+              distinctDateCount: 1,
+              distinctSessionCount: 0,
+              isReadyForConfirmation: true,
+            },
+            category: 'values_motivation',
+            statement: '用户正在优化分身记忆标签系统',
+          }),
+          cognition({
+            id: 'memory-ui-tag-2',
+            lineageId: 'memory-ui-tag-2',
+            domain: 'about_me',
+            evidenceGate: {
+              requiresMultiSourceGate: false,
+              independentExperienceCount: 1,
+              distinctUserMessageCount: 0,
+              distinctDateCount: 1,
+              distinctSessionCount: 0,
+              isReadyForConfirmation: true,
+            },
+            category: 'foundation_situation',
+            statement: '用户把职业发展作为一个长期线索',
+          }),
+        ],
+        [entry()],
+      ),
+    );
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidate: {
+          statement: '职业发展中我更看重自主性',
+          kind: 'profile',
+          sourceIndexes: [0],
+          evidences: ['职业发展中我更看重自主性'],
+        },
+      }),
+    } as Response);
 
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -539,29 +623,53 @@ describe('AvatarChatPage', () => {
       target: { value: '职业发展中我更看重自主性' },
     });
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+    fireEvent.click(await screen.findByRole('button', { name: '确认更新' }));
     fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
-    await waitFor(() => expect(readAvatarAtomicMemories().some((memory) => memory.statement === '职业发展中我更看重自主性')).toBe(true));
-    const revisedMemory = readAvatarAtomicMemories().find(
+    await waitFor(async () =>
+      expect(
+        (await readAvatarOntology()).objects.some(
+          (memory) => memory.statement === '职业发展中我更看重自主性',
+        ),
+      ).toBe(true),
+    );
+    const revisedMemory = (await readAvatarOntology()).objects.find(
       (memory) => memory.statement === '职业发展中我更看重自主性',
     );
     expect(revisedMemory?.status).toBe('confirmed');
-    expect(revisedMemory?.previousVersionId).toBe('memory-ui-tag-2');
+    expect((await readAvatarOntology()).edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'SUPERSEDES',
+          fromId: revisedMemory?.id,
+          toId: 'memory-ui-tag-2',
+        }),
+      ]),
+    );
     expect(
-      readAvatarAtomicMemories().find((memory) => memory.id === 'memory-ui-tag-2')?.status,
+      (await readAvatarOntology()).objects.find((memory) => memory.id === 'memory-ui-tag-2')
+        ?.status,
     ).toBe('superseded');
-    fireEvent.click(screen.getByRole('button', { name: /^职业发展中我更看重自主性/ }));
+    fireEvent.click(screen.getByRole('button', { name: '记忆库' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
+      target: { value: '职业发展' },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /^职业发展中我更看重自主性/ }));
     fireEvent.click(screen.getByRole('button', { name: '暂不采用' }));
-    expect(readAvatarAtomicMemories().find((m) => m.id === revisedMemory?.id)?.status).toBe(
-      'confirmed',
-    );
+    expect(
+      (await readAvatarOntology()).objects.find((m) => m.id === revisedMemory?.id)?.status,
+    ).toBe('confirmed');
     fireEvent.click(screen.getByRole('button', { name: '暂不采用' }));
-    expect(readAvatarAtomicMemories().find((m) => m.id === revisedMemory?.id)?.status).toBe(
-      'rejected',
+    await waitFor(async () =>
+      expect(
+        (await readAvatarOntology()).objects.find((m) => m.id === revisedMemory?.id)?.status,
+      ).toBe('rejected'),
     );
-    expect(readAvatarAtomicMemories().find((m) => m.id === 'memory-ui-tag-2')?.status).toBe(
-      'superseded',
+    expect(
+      (await readAvatarOntology()).objects.find((m) => m.id === 'memory-ui-tag-2')?.status,
+    ).toBe('superseded');
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^职业发展中我更看重自主性/ })).toBeNull(),
     );
-    expect(screen.queryByText('职业发展中我更看重自主性')).toBeNull();
   });
 
   it('lets companion chat produce a summary candidate without auto-saving', async () => {
@@ -577,6 +685,7 @@ describe('AvatarChatPage', () => {
             statement: '用户喜欢安静的工作环境',
             kind: 'preference',
             sourceIndexes: [0],
+            evidences: ['我喜欢安静的工作环境'],
           },
           mood_tags: ['压力'],
           event_tags: ['职业发展'],
@@ -587,7 +696,7 @@ describe('AvatarChatPage', () => {
     );
 
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -605,7 +714,7 @@ describe('AvatarChatPage', () => {
       target: { value: '我喜欢安静的工作环境' },
     });
     fireEvent.click(screen.getByText('发送'));
-    await waitFor(() =>
+    await waitFor(async () =>
       expect((screen.getByRole('button', { name: '提炼记忆' }) as HTMLButtonElement).disabled).toBe(
         false,
       ),
@@ -614,18 +723,20 @@ describe('AvatarChatPage', () => {
 
     expect(await screen.findByRole('dialog', { name: '记住这条关于你的信息？' })).toBeTruthy();
     expect(onSend).not.toHaveBeenCalled();
-    expect(readAvatarAtomicMemories()).toHaveLength(0);
+    expect((await readAvatarOntology()).objects).toHaveLength(0);
     expect((screen.getByRole('textbox', { name: '提炼的信息' }) as HTMLTextAreaElement).value).toBe(
       '用户喜欢安静的工作环境',
     );
     fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
     fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
     expect(onSend).not.toHaveBeenCalled();
-    await waitFor(() => expect(readAvatarAtomicMemories()[0]).toMatchObject({
-      statement: '用户喜欢安静的工作环境',
-      facets: ['preference'],
-      status: 'confirmed',
-    }));
+    await waitFor(async () =>
+      expect((await readAvatarOntology()).objects[0]).toMatchObject({
+        statement: '用户喜欢安静的工作环境',
+        category: 'preferences_boundaries',
+        status: 'confirmed',
+      }),
+    );
   });
 
   it.each(['candidate', 'empty', 'error'])(
@@ -641,13 +752,18 @@ describe('AvatarChatPage', () => {
             candidate:
               outcome === 'empty'
                 ? null
-                : { statement: '用户喜欢安静的工作环境', kind: 'preference', sourceIndexes: [0] },
+                : {
+                    statement: '用户喜欢安静的工作环境',
+                    kind: 'preference',
+                    sourceIndexes: [0],
+                    evidences: ['我喜欢安静的工作环境'],
+                  },
           }),
         };
       });
       vi.stubGlobal('fetch', fetchMock);
       await set(DiaryStorageKeys.entries, []);
-      render(
+      await render(
         <AvatarChatPage
           draft={draft()}
           setDraft={vi.fn()}
@@ -664,7 +780,7 @@ describe('AvatarChatPage', () => {
         target: { value: '我喜欢安静的工作环境' },
       });
       fireEvent.click(screen.getByText('发送'));
-      await waitFor(() =>
+      await waitFor(async () =>
         expect(
           (screen.getByRole('button', { name: '提炼记忆' }) as HTMLButtonElement).disabled,
         ).toBe(false),
@@ -672,22 +788,22 @@ describe('AvatarChatPage', () => {
       expect(fetchMock.mock.calls.some(([url]) => url.includes('/memory/extract'))).toBe(false);
       expect(screen.queryByRole('dialog')).toBeNull();
       fireEvent.click(screen.getByRole('button', { name: '提炼记忆' }));
-      await waitFor(() =>
+      await waitFor(async () =>
         expect(fetchMock.mock.calls.some(([url]) => url.includes('/memory/extract'))).toBe(true),
       );
-      await waitFor(() =>
+      await waitFor(async () =>
         expect(
           (screen.getByRole('button', { name: '提炼记忆' }) as HTMLButtonElement).disabled,
         ).toBe(false),
       );
-      expect(readAvatarAtomicMemories()).toHaveLength(0);
+      expect((await readAvatarOntology()).objects).toHaveLength(0);
       if (outcome === 'candidate') {
         expect(await screen.findByRole('dialog', { name: '记住这条关于你的信息？' })).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: '暂不记住' }));
       } else {
         expect(screen.queryByRole('dialog')).toBeNull();
       }
-      expect(readAvatarAtomicMemories()).toHaveLength(0);
+      expect((await readAvatarOntology()).objects).toHaveLength(0);
     },
   );
 
@@ -703,13 +819,14 @@ describe('AvatarChatPage', () => {
             statement: '用户去年项目失败并很痛苦',
             kind: 'experience',
             sourceIndexes: [0],
+            evidences: ['我喜欢安静的工作环境'],
           },
         }),
       };
     });
     vi.stubGlobal('fetch', fetchMock);
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -730,22 +847,23 @@ describe('AvatarChatPage', () => {
     await screen.findByText('我听到了。');
     fireEvent.click(screen.getByRole('button', { name: '提炼记忆' }));
 
-    await waitFor(() =>
+    await waitFor(async () =>
       expect(fetchMock.mock.calls.some(([url]) => url.includes('/memory/extract'))).toBe(true),
     );
-    await waitFor(() =>
+    await waitFor(async () =>
       expect((screen.getByRole('button', { name: '提炼记忆' }) as HTMLButtonElement).disabled).toBe(
         false,
       ),
     );
     expect(screen.queryByRole('dialog', { name: '记住这条关于你的信息？' })).toBeNull();
     expect(onSend).not.toHaveBeenCalled();
-    expect(readAvatarAtomicMemories()).toHaveLength(0);
+    expect((await readAvatarOntology()).objects).toHaveLength(0);
   });
 
-  it('requires confirmation and categorizes the edited memory automatically', async () => {
+  it('routes manual additions through original-user extraction instead of writing unverified facts', async () => {
+    const showToast = vi.fn();
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -754,63 +872,22 @@ describe('AvatarChatPage', () => {
         onBack={vi.fn()}
         onRouteChange={vi.fn()}
         onSend={vi.fn()}
-        showToast={vi.fn()}
+        showToast={showToast}
         launchContext={{ mode: 'general', source: 'global' }}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: '记忆库' }));
-    for (const label of [
-      '基础事实',
-      '事件经历',
-      '认知观点',
-      '行为习惯',
-      '目标计划',
-      '状态偏好',
-      '关系任务',
-      '表达风格',
-    ]) {
-      expect(screen.queryByRole('button', { name: new RegExp(label) })).toBeNull();
-    }
     fireEvent.click(screen.getByRole('button', { name: '新增记忆' }));
-    expect((screen.getByRole('button', { name: '确认记住' }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
-    fireEvent.change(screen.getByRole('textbox', { name: '提炼的信息' }), {
-      target: { value: '未确认内容' },
-    });
-    expect(readAvatarAtomicMemories()).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: '暂不记住' }));
-    expect(readAvatarAtomicMemories()).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: '新增记忆' }));
-    fireEvent.change(screen.getByRole('textbox', { name: '提炼的信息' }), {
-      target: { value: '我倾向使用简短直接的语句' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
-    fireEvent.click(screen.getByRole('button', { name: /^仅自己可见/ }));
-    await waitFor(() => expect(readAvatarAtomicMemories()).toHaveLength(1));
-    expect(readAvatarAtomicMemories()).toHaveLength(1);
-    expect(readAvatarAtomicMemories()[0]).toMatchObject({
-      statement: '我倾向使用简短直接的语句',
-      category: 'expression',
-      status: 'confirmed',
-      confirmedBy: 'user',
-    });
+    expect(showToast).toHaveBeenCalledWith('请先在对话中表达要保存的信息，再提炼并确认');
     expect(screen.queryByRole('dialog')).toBeNull();
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
-      target: { value: '不存在的记忆' },
-    });
-    expect(screen.queryByText('我倾向使用简短直接的语句')).toBeNull();
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
-      target: { value: '简短' },
-    });
-    expect(screen.getByText('我倾向使用简短直接的语句')).toBeTruthy();
+    expect((await readAvatarOntology()).objects).toHaveLength(0);
   });
 
   it('lets the avatar resume a saved draft locally without using the model', async () => {
     const onNavigateModule = vi.fn();
     const savedDraft = { ...draft(), text: '客户反馈还没整理完' };
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={savedDraft}
         setDraft={vi.fn()}
@@ -838,7 +915,7 @@ describe('AvatarChatPage', () => {
 
   it('lets the avatar open backup and recovery actions locally', async () => {
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -857,14 +934,14 @@ describe('AvatarChatPage', () => {
     });
     fireEvent.click(screen.getByText('发送'));
 
-    expect(screen.getByText(/生成一份加密备份/)).toBeTruthy();
+    expect(screen.getByText(/只有启用密码保护后，导出的文件才会加密/)).toBeTruthy();
     expect(screen.queryByRole('complementary', { name: '备份与恢复' })).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it('lets the avatar explain data protection locally without exposing credentials', async () => {
     await set(DiaryStorageKeys.entries, []);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}
@@ -896,7 +973,7 @@ describe('AvatarChatPage', () => {
       .mockResolvedValue(true);
 
     await set(DiaryStorageKeys.entries, [entry()]);
-    render(
+    await render(
       <AvatarChatPage
         draft={draft()}
         setDraft={vi.fn()}

@@ -1,22 +1,7 @@
 import type { Page } from '@playwright/test';
 
-/**
- * Phase 3 §3.f — shared E2E onboarding helper.
- *
- * `useDiaryData` persists everything (password hash, salt, guiding
- * stars, customIdentity) through `idb-keyval`, not raw localStorage,
- * so a Playwright `page.addInitScript` shim cannot fast-forward us
- * past onboarding without re-implementing the entire
- * IndexedDB-keyed schema. Instead we walk the same onboarding flow
- * that `app.spec.ts` / `backup.spec.ts` already use, factored into
- * one helper so the visual baselines stay focused on the rendered
- * surface rather than the click sequence.
- *
- * Wall-clock cost: ~25 s per spec. The visual baselines all share a
- * single Playwright project so the suite total stays under 90 s
- * even with four post-onboarding screens.
- */
-
+/** Tests for protected-vault features use a fixture created through the real
+ * storage API. First-run UX is tested separately without this fixture. */
 export interface SeedOnboardedAppOptions {
   /** Master password for the new vault. Stable so re-seeding the
    *  same machine produces identical hashes. */
@@ -58,17 +43,29 @@ export const seedOnboardedApp = async (
   await resetPersistentAppState(page);
 
   await page.getByTestId('cover-initialize').click();
-  await page.getByTestId('onboarding-skip').click();
-  await page.getByLabel('此刻发生了什么？').fill('初始化草稿');
-  await page.getByLabel('保存到过去').click();
-  await page.getByTestId('onboarding-password').fill(password);
-  await page.getByTestId('onboarding-password-confirm').fill(password);
-  await page.getByTestId('onboarding-protect').click();
   await page.getByRole('navigation', { name: '主页面导航' }).waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: '清空草稿' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: /清空/ }).click();
+  await page.evaluate(async (password) => {
+    const securityPath = '/services/securityService.ts';
+    const vaultPath = '/services/vaultTransaction.ts';
+    const { SecurityService } = await import(/* @vite-ignore */ securityPath);
+    const { changeFutureProtection } = await import(/* @vite-ignore */ vaultPath);
+    const salt = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+    const hash = await SecurityService.hashPassword(password, salt);
+    await changeFutureProtection(password, hash, salt);
+  }, password);
+  await page.reload();
+  const input = page.locator('input[type="password"]:visible');
+  await input.fill(password);
+  await input.press('Enter');
   await page
     .getByRole('navigation', { name: '主页面导航' })
     .getByRole('button', { name: /^过去/ })
     .click();
 };
+
+export async function choosePrivateVisibility(page: Page) {
+  await page
+    .getByRole('dialog', { name: '是否允许 AI 可见？' })
+    .getByRole('button', { name: /^仅自己可见/ })
+    .click();
+}

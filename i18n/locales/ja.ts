@@ -143,7 +143,6 @@ export const ja = {
   setTimeLock: '復号時間を設定 (タイムカプセル)',
   immediate: '即時',
   oneMin: '1分後 (テスト)',
-  oneDay: '24時間後',
   customDate: 'カスタム日付',
   career: 'キャリア',
   careerDesc: '実績、役職、競争力',

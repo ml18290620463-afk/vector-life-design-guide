@@ -6,7 +6,7 @@ type Result = NonNullable<GuidanceSource['results']>[number];
 export function selectGuidanceResults(results: Result[]): Result[] {
   const sorted = [...results].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
   const selected = sorted.slice(0, 4);
-  const exception = sorted.find(r => r.status === 'unhelpful' || r.status === 'unrelated');
+  const exception = sorted.find((r) => r.status === 'unhelpful' || r.status === 'unrelated');
   if (exception && !selected.includes(exception)) selected[selected.length - 1] = exception;
   return selected;
 }

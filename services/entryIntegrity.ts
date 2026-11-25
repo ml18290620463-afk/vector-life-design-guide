@@ -31,7 +31,9 @@ export async function appendEntrySupplement(
 ) {
   const text = content.trim();
   if (!text || !supplementId) throw new Error('请填写补充内容');
-  const current = ((await get<DiaryEntry[]>(keys.entries)) ?? []).find((item) => item.id === entryId);
+  const current = ((await get<DiaryEntry[]>(keys.entries)) ?? []).find(
+    (item) => item.id === entryId,
+  );
   if (!current) throw new Error('记录已不存在');
   if (current.isEncrypted && password) {
     try {
@@ -53,7 +55,11 @@ export async function appendEntrySupplement(
     const entries = (values[keys.entries] as DiaryEntry[] | undefined) ?? [];
     const entry = entries.find((item) => item.id === entryId);
     if (!entry) throw new Error('记录已不存在');
-    if (entry.isLocked || (entry.unlockAt && entry.unlockAt > Date.now()) || (entry.isEncrypted && !password))
+    if (
+      entry.isLocked ||
+      (entry.unlockAt && entry.unlockAt > Date.now()) ||
+      (entry.isEncrypted && !password)
+    )
       throw new Error('请先解锁记录');
     const existing = entry.supplements?.find((item) => item.id === supplementId);
     if (existing) {
@@ -69,7 +75,12 @@ export async function appendEntrySupplement(
             aiConsentAt: Math.max(Date.now(), (item.aiConsentAt ?? 0) + 1),
             supplements: [
               ...(item.supplements ?? []),
-              { id: supplementId, content: storedContent, createdAt: Date.now(), isEncrypted: encrypted },
+              {
+                id: supplementId,
+                content: storedContent,
+                createdAt: Date.now(),
+                isEncrypted: encrypted,
+              },
             ],
           }
         : item,

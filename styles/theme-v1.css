@@ -285,7 +285,10 @@ html:not(.light).mobile-product-active body .mobile-shell,
 html:not(.light).mobile-product-active body .mobile-shell__content,
 html:not(.light).mobile-product-active body .mobile-past-page,
 html:not(.light).mobile-product-active body .mobile-future-page,
-html:not(.light).mobile-product-active body .mobile-shell[data-mobile-tab='future'] .mobile-future-page {
+html:not(.light).mobile-product-active
+  body
+  .mobile-shell[data-mobile-tab='future']
+  .mobile-future-page {
   background: var(--vector-page) !important;
   background-image: none !important;
 }
@@ -388,7 +391,14 @@ html:not(.light) body .mobile-principle-card__content p {
   line-height: 1.8 !important;
 }
 
-html:not(.light) body :is(.mobile-past-page__header h1, .mobile-future-page__header h1, .now-header h1, .mobile-principles-view__title) {
+html:not(.light)
+  body
+  :is(
+    .mobile-past-page__header h1,
+    .mobile-future-page__header h1,
+    .now-header h1,
+    .mobile-principles-view__title
+  ) {
   font-weight: 500 !important;
 }
 

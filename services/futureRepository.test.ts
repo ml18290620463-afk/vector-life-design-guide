@@ -29,14 +29,8 @@ import { deleteSourceEntries } from './sourceDeletion';
 import { exportVaultBackup, importVaultBackup } from './vaultBackup';
 import { wipeVault } from './vaultWipe';
 import { readStoredArray } from './diaryDataRead';
-import {
-  readAvatarAtomicMemories,
-  readAvatarMemoryRelations,
-  readAvatarUnderstandings,
-  upsertAvatarMemoryRelations,
-  writeAvatarAtomicMemory,
-  writeAvatarUnderstanding,
-} from './avatarMemory';
+import { AVATAR_ONTOLOGY_KEY } from './avatarOntologyKey';
+import type { AvatarOntologySnapshot } from './avatarOntologyStore';
 
 const entry = (id: string): DiaryEntry => ({
   id,
@@ -604,7 +598,9 @@ describe('future planning lifecycle guards', () => {
       note: '已开始处理。',
       nextStep: 'continue',
     });
-    await expect(deleteFutureAction(practiced.id, practiced.revision! + 1)).resolves.toBeUndefined();
+    await expect(
+      deleteFutureAction(practiced.id, practiced.revision! + 1),
+    ).resolves.toBeUndefined();
     expect((await readFutureSnapshot()).state.practiceRecords).toEqual([]);
   });
 });
@@ -689,7 +685,9 @@ describe('future deletion dependencies', () => {
   it('deletes one confirmed progress event and removes its unused receipt, item, and closure reference', async () => {
     const goal = await mountainGoal();
     const [eventId] = await recordOutcome(outcome(goal, 'delete-one-outcome'));
-    const currentGoal = (await readFutureSnapshot()).state.goals.find((item) => item.id === goal.id)!;
+    const currentGoal = (await readFutureSnapshot()).state.goals.find(
+      (item) => item.id === goal.id,
+    )!;
     await setGoalStatus(currentGoal.id, 'completed', currentGoal.revision);
 
     await deleteProgress(eventId);
@@ -721,7 +719,9 @@ describe('future deletion dependencies', () => {
       nextStep: 'continue',
       principleFeedback: { principleId: 'principle-1', outcome: 'helpful' },
     });
-    const currentAction = (await readFutureSnapshot()).actions.find((item) => item.id === action.id)!;
+    const currentAction = (await readFutureSnapshot()).actions.find(
+      (item) => item.id === action.id,
+    )!;
     await recordOutcome({
       ...outcome(goal, 'remove-action-outcome'),
       actionId: action.id,
@@ -735,7 +735,9 @@ describe('future deletion dependencies', () => {
 
     const after = await readFutureSnapshot();
     expect(after.actions).not.toContainEqual(expect.objectContaining({ id: action.id }));
-    expect(after.state.practiceRecords).not.toContainEqual(expect.objectContaining({ id: practice.id }));
+    expect(after.state.practiceRecords).not.toContainEqual(
+      expect.objectContaining({ id: practice.id }),
+    );
     expect(after.state.events).toEqual([]);
     expect(after.state.receipts).toEqual([]);
     expect(after.state.items).toEqual([]);
@@ -808,7 +810,7 @@ describe('shared persistence and lifecycle', () => {
     expect((await get<Array<{ id: string }>>(K.principles))?.map((p) => p.id)).toEqual(
       knowledge ? ['derived', 'multiple', 'independent'] : ['multiple', 'independent'],
     );
-    expect(JSON.parse(localStorage.getItem('vector:avatar:sessions:v1')!)).toEqual([]);
+    expect(localStorage.getItem('vector:avatar:sessions:v1')).toBe('{broken');
   });
 
   it('removes every deleted-experience reference across the past, future, avatar and chat stores', async () => {
@@ -835,72 +837,85 @@ describe('shared persistence and lifecycle', () => {
         updatedAt: 1,
       },
     ]);
-    writeAvatarUnderstanding({
-      id: 'source-pattern',
-      statement: '复杂任务开始前会先准备',
-      status: 'confirmed',
-      sourceEntryIds: ['source'],
-      createdAt: 1,
-      confirmedAt: 1,
-    });
-    writeAvatarAtomicMemory({
-      id: 'source-memory',
-      statement: '登山后会把经验整理成清单',
-      nature: 'experience',
-      facets: ['habit'],
-      tags: [],
-      contexts: [],
-      sourceRefs: [{ source: 'entry', id: 'source' }],
-      confidence: 0.8,
-      status: 'confirmed',
-      sensitivity: 'normal',
-      createdAt: 1,
-      confirmedAt: 1,
-    });
-    writeAvatarAtomicMemory({
-      id: 'independent-memory',
-      statement: '独立保存的偏好',
-      nature: 'explicit',
-      facets: ['preference'],
-      tags: [],
-      contexts: [],
-      sourceRefs: [],
-      confidence: 0.8,
-      status: 'confirmed',
-      sensitivity: 'normal',
-      createdAt: 2,
-      confirmedAt: 2,
-    });
-    upsertAvatarMemoryRelations([
-      {
-        id: 'source-relation',
-        fromId: 'source-memory',
-        toId: 'independent-memory',
-        kind: 'supports',
-        confidence: 0.8,
-        sourceRefs: [{ source: 'entry', id: 'source' }],
-        createdAt: 1,
+    const timestamp = '2026-01-01T00:00:00.000Z';
+    const cognition = (id: string) => ({
+      id,
+      schemaVersion: 2 as const,
+      domain: 'about_me' as const,
+      category: 'preferences_boundaries' as const,
+      statement: '喜欢安静',
+      status: 'candidate' as const,
+      lineageId: id,
+      version: 1,
+      origin: 'user_manual' as const,
+      confidenceScore: 1,
+      reinforcementCount: 0,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      validity: { mode: 'long_term' as const, validFrom: timestamp },
+      privacy: { sensitivity: 'normal' as const, aiVisible: false, traceabilityDegraded: false },
+      evidenceGate: {
+        requiresMultiSourceGate: false,
+        independentExperienceCount: 0,
+        distinctUserMessageCount: 0,
+        distinctDateCount: 0,
+        distinctSessionCount: 0,
+        isReadyForConfirmation: false,
       },
-    ]);
-    localStorage.setItem(
-      'vector:avatar:sessions:v1',
-      JSON.stringify([
-        { id: 'source-session', messages: [{ id: 'message', sourceEntryId: 'source' }] },
-        { id: 'independent-session', messages: [{ id: 'message-2', text: '保留' }] },
-      ]),
-    );
+    });
+    const graph: AvatarOntologySnapshot = {
+      ontologySchemaVersion: 2,
+      revision: 0,
+      objects: [
+        cognition('source-pattern'),
+        cognition('source-memory'),
+        cognition('independent-memory'),
+      ],
+      edges: ['source-pattern', 'source-memory'].map((id) => ({
+        id: `e-${id}`,
+        schemaVersion: 2,
+        type: 'EVIDENCED_BY',
+        fromId: id,
+        toId: 'source',
+        createdAt: timestamp,
+        sourceKind: 'now_entry',
+        verbatimQuote: '登顶source',
+        quoteVerifiedByServer: true,
+        sourceOccurredAt: timestamp,
+        lastKnownSourceState: 'accessible',
+      })),
+      sessions: [
+        {
+          id: 'source-session',
+          mode: 'general',
+          context: { mode: 'general', source: 'past-detail', entryId: 'source' },
+          messages: [],
+          references: [],
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        {
+          id: 'independent-session',
+          mode: 'general',
+          context: { mode: 'general', source: 'global' },
+          messages: [],
+          references: [],
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    };
+    await set(AVATAR_ONTOLOGY_KEY, graph);
 
     await deleteSourceEntries(['source'], false, false);
 
     expect(await get(K.entries)).toEqual([]);
-    expect(readAvatarUnderstandings()).toEqual([]);
-    expect(readAvatarAtomicMemories().map((memory) => memory.id)).toEqual(['independent-memory']);
-    expect(readAvatarMemoryRelations()).toEqual([]);
+    const updated = await get<AvatarOntologySnapshot>(AVATAR_ONTOLOGY_KEY);
+    expect(updated?.objects.map((object) => object.id)).toEqual(['independent-memory']);
+    expect(updated?.edges).toEqual([]);
+    expect(updated?.sessions?.map((session) => session.id)).toEqual(['independent-session']);
     expect(await get(K.principles)).toEqual([]);
     expect(await get(K.patternPrincipleLinks)).toEqual([]);
-    expect(JSON.parse(localStorage.getItem('vector:avatar:sessions:v1')!)).toEqual([
-      { id: 'independent-session', messages: [{ id: 'message-2', text: '保留' }] },
-    ]);
 
     const snapshot = await readFutureSnapshot();
     expect(snapshot.state.events[0]).toMatchObject({
@@ -1165,7 +1180,9 @@ it('removes goal feedback under the original goal while keeping an action moved 
   expect((await readFutureSnapshot()).state.practiceRecords?.[0]).toEqual(record);
   await expect(deleteGoal(original.id, original.revision)).resolves.toBeUndefined();
   const afterDeletion = await readFutureSnapshot();
-  expect(afterDeletion.actions).toContainEqual(expect.objectContaining({ id: action.id, goalId: next.id }));
+  expect(afterDeletion.actions).toContainEqual(
+    expect.objectContaining({ id: action.id, goalId: next.id }),
+  );
   expect(afterDeletion.state.practiceRecords?.[0]).toMatchObject({ id: record.id, goalId: null });
 });
 
@@ -1243,47 +1260,73 @@ describe('Joint action and goal feedback', () => {
   );
 });
 
-
 describe('completed action destination', () => {
-  it.each(['long_term', 'past'] as const)('saves %s atomically with ordinary entries', async (destination) => {
-    const action = await saveFutureAction({ title: '完成一次访谈', status: 'pending' });
-    const record = await recordActionPractice({
-      actionId: action.id, expectedActionRevision: action.revision!,
-      occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
-      note: '明确了三个需求', completionDestination: destination,
-    });
-    const snapshot = await readFutureSnapshot();
-    expect(snapshot.actions[0].status).toBe('completed');
-    const entries = (await get<DiaryEntry[]>(K.entries)) ?? [];
-    if (destination === 'past') {
-      expect(entries).toHaveLength(1);
-      expect(entries[0]).toMatchObject({
-        id: record.pastEntryId, title: action.title, isLocked: false, tags: [],
-        content: '行动：完成一次访谈\n\n结果：明确了三个需求', createdAt: record.createdAt,
+  it.each(['long_term', 'past'] as const)(
+    'saves %s atomically with ordinary entries',
+    async (destination) => {
+      const action = await saveFutureAction({ title: '完成一次访谈', status: 'pending' });
+      const record = await recordActionPractice({
+        actionId: action.id,
+        expectedActionRevision: action.revision!,
+        occurredOn: '2026-10-15',
+        status: 'completed',
+        nextStep: 'end',
+        note: '明确了三个需求',
+        completionDestination: destination,
       });
-      expect(snapshot.actions[0].resultEntryId).toBe(entries[0].id);
-      expect(snapshot.actions[0].archivedToPast).toBe(true);
-      await expect(recordActionPractice({
-        actionId: action.id, expectedActionRevision: action.revision!,
-        occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
-        note: '重复提交', completionDestination: 'past',
-      })).rejects.toThrow();
-      expect(await get(K.entries)).toEqual(entries);
-      await expect(recordActionPractice({
-        actionId: action.id, expectedActionRevision: snapshot.actions[0].revision!,
-        occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
-        note: '再次转存', completionDestination: 'past',
-      })).rejects.toThrow('该行动已经结束');
-    } else {
-      expect(entries).toHaveLength(0);
-      expect(snapshot.actions[0].resultEntryId).toBeUndefined();
-      await recordActionPractice({
-        actionId: action.id, expectedActionRevision: snapshot.actions[0].revision!,
-        occurredOn: '2026-10-15', status: 'completed', nextStep: 'end',
-        note: '长期推进后的结果', completionDestination: 'past',
-      });
-      expect(await get<DiaryEntry[]>(K.entries)).toHaveLength(1);
-      expect((await readFutureSnapshot()).actions[0].archivedToPast).toBe(true);
-    }
-  });
+      const snapshot = await readFutureSnapshot();
+      expect(snapshot.actions[0].status).toBe('completed');
+      const entries = (await get<DiaryEntry[]>(K.entries)) ?? [];
+      if (destination === 'past') {
+        expect(entries).toHaveLength(1);
+        expect(entries[0]).toMatchObject({
+          id: record.pastEntryId,
+          title: action.title,
+          isLocked: false,
+          tags: [],
+          content: '行动：完成一次访谈\n\n结果：明确了三个需求',
+          createdAt: record.createdAt,
+        });
+        expect(snapshot.actions[0].resultEntryId).toBe(entries[0].id);
+        expect(snapshot.actions[0].archivedToPast).toBe(true);
+        await expect(
+          recordActionPractice({
+            actionId: action.id,
+            expectedActionRevision: action.revision!,
+            occurredOn: '2026-10-15',
+            status: 'completed',
+            nextStep: 'end',
+            note: '重复提交',
+            completionDestination: 'past',
+          }),
+        ).rejects.toThrow();
+        expect(await get(K.entries)).toEqual(entries);
+        await expect(
+          recordActionPractice({
+            actionId: action.id,
+            expectedActionRevision: snapshot.actions[0].revision!,
+            occurredOn: '2026-10-15',
+            status: 'completed',
+            nextStep: 'end',
+            note: '再次转存',
+            completionDestination: 'past',
+          }),
+        ).rejects.toThrow('该行动已经结束');
+      } else {
+        expect(entries).toHaveLength(0);
+        expect(snapshot.actions[0].resultEntryId).toBeUndefined();
+        await recordActionPractice({
+          actionId: action.id,
+          expectedActionRevision: snapshot.actions[0].revision!,
+          occurredOn: '2026-10-15',
+          status: 'completed',
+          nextStep: 'end',
+          note: '长期推进后的结果',
+          completionDestination: 'past',
+        });
+        expect(await get<DiaryEntry[]>(K.entries)).toHaveLength(1);
+        expect((await readFutureSnapshot()).actions[0].archivedToPast).toBe(true);
+      }
+    },
+  );
 });

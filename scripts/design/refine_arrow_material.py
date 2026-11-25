@@ -8,7 +8,7 @@ from math import exp
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-source = Image.open(ROOT / 'public/vector-brush-arrow-soft-join.png').convert('RGBA')
+source = Image.open(ROOT / 'design-sources/vector-brush-arrow-soft-join.png').convert('RGBA')
 assert source.size == (750, 680)
 
 def field(x, y, cx, cy, sx, sy, slope=0):
@@ -70,5 +70,5 @@ for y in range(source.height):
         density = (ink_alpha / 255) ** 1.55
         tip_release = 1 - 0.32 * field(x, y, 686, 63, 53, 77)
         light_pixels[x, y] = (255, 255, 255, round(255 * density * tip_release))
-source.save(ROOT / 'public/vector-brush-arrow-ink-depth.png', optimize=True)
+source.save(ROOT / 'design-sources/vector-brush-arrow-ink-depth.png', optimize=True)
 light_mask.save(ROOT / 'public/vector-brush-arrow-light-mask.png', optimize=True)

@@ -1,3 +1,4 @@
+import { useAvatarLanguage } from './avatarLanguage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Link as LinkIcon,
@@ -25,6 +26,7 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
   onUpdateDescription,
   onReplaceLink,
 }) => {
+  const { language, t } = useAvatarLanguage();
   const [details, setDetails] = useState<string | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -75,9 +77,9 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
                 previousFocus.current = event.currentTarget;
                 setViewing(material.id);
               }}
-              aria-label={`查看图片：${getMaterialTitle(material)}`}
+              aria-label={`${t('查看图片', 'View image')}: ${getMaterialTitle(material, language)}`}
             >
-              <img src={material.url} alt={getMaterialAlt(material)} />
+              <img src={material.url} alt={getMaterialAlt(material, language)} />
             </button>
           ) : material.type === 'audio' && material.url ? (
             <AudioPreview material={material} />
@@ -87,24 +89,24 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
           ) : (
             <Paperclip size={18} />
           )}
-          <span>{getMaterialTitle(material)}</span>
+          <span>{getMaterialTitle(material, language)}</span>
           <button
             type="button"
             onClick={() => setDetails(details === material.id ? null : material.id)}
             aria-expanded={details === material.id}
-            aria-label={`整理素材：${getMaterialTitle(material)}`}
+            aria-label={`${t('整理素材', 'Manage material')}: ${getMaterialTitle(material, language)}`}
           >
             <MoreHorizontal size={18} />
           </button>
           {details === material.id && (
             <>
               <label className="now-material__description">
-                <span className="sr-only">素材说明（选填）</span>
+                <span className="sr-only">{t('素材说明（选填）', 'Description (optional)')}</span>
                 <input
-                  aria-label={`素材说明（选填）：${getMaterialTitle(material)}`}
+                  aria-label={`${t('素材说明（选填）', 'Description (optional)')}: ${getMaterialTitle(material, language)}`}
                   value={material.description ?? ''}
                   maxLength={240}
-                  placeholder="说明（选填）"
+                  placeholder={t('说明（选填）', 'Description (optional)')}
                   onChange={(event) => onUpdateDescription(material.id, event.target.value)}
                 />
               </label>
@@ -113,31 +115,35 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
                   type="button"
                   className="now-material__replace-link"
                   onClick={() => onReplaceLink(material.id)}
-                  aria-label={`更换链接：${getMaterialTitle(material)}`}
+                  aria-label={`${t('更换链接', 'Replace link')}: ${getMaterialTitle(material, language)}`}
                 >
                   <LinkIcon size={15} />
-                  更换链接
+                  {t('更换链接', 'Replace link')}
                 </button>
               )}
               {onMove && index > 0 && (
                 <button
                   type="button"
                   onClick={() => onMove(material.id, -1)}
-                  aria-label={`上移素材：${getMaterialTitle(material)}`}
+                  aria-label={`${t('上移素材', 'Move material up')}: ${getMaterialTitle(material, language)}`}
                 >
-                  上移
+                  {t('上移', 'Move up')}
                 </button>
               )}
               {onMove && index < materials.length - 1 && (
                 <button
                   type="button"
                   onClick={() => onMove(material.id, 1)}
-                  aria-label={`下移素材：${getMaterialTitle(material)}`}
+                  aria-label={`${t('下移素材', 'Move material down')}: ${getMaterialTitle(material, language)}`}
                 >
-                  下移
+                  {t('下移', 'Move down')}
                 </button>
               )}
-              <button type="button" onClick={() => onRemove(material.id)} aria-label="删除素材">
+              <button
+                type="button"
+                onClick={() => onRemove(material.id)}
+                aria-label={t('删除素材', 'Delete material')}
+              >
                 <Trash2 size={16} />
               </button>
             </>
@@ -150,26 +156,26 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
           className="now-image-viewer"
           role="dialog"
           aria-modal="true"
-          aria-label="查看图片"
+          aria-label={t('查看图片', 'View image')}
         >
           <button type="button" autoFocus onClick={() => setViewing(null)}>
-            关闭
+            {t('关闭', 'Close')}
           </button>
           {activeIndex > 0 && (
             <button
               type="button"
               onClick={() => setViewing(images[activeIndex - 1].id)}
-              aria-label="上一张"
+              aria-label={t('上一张', 'Previous image')}
             >
               <ChevronLeft />
             </button>
           )}
-          <img src={images[activeIndex].url} alt={getMaterialAlt(images[activeIndex])} />
+          <img src={images[activeIndex].url} alt={getMaterialAlt(images[activeIndex], language)} />
           {activeIndex < images.length - 1 && (
             <button
               type="button"
               onClick={() => setViewing(images[activeIndex + 1].id)}
-              aria-label="下一张"
+              aria-label={t('下一张', 'Next image')}
             >
               <ChevronRight />
             </button>
@@ -181,6 +187,7 @@ export const MaterialPreview: React.FC<MaterialPreviewProps> = ({
 };
 
 const AudioPreview: React.FC<{ material: Material }> = ({ material }) => {
+  const { language } = useAvatarLanguage();
   const audioRef = useRef<HTMLAudioElement>(null);
   return (
     <div className="now-audio-preview">
@@ -189,7 +196,7 @@ const AudioPreview: React.FC<{ material: Material }> = ({ material }) => {
         className="now-audio-play-button"
         onClick={() => void audioRef.current?.play()}
       >
-        {getAudioPlayLabel()}
+        {getAudioPlayLabel(language)}
       </button>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-recorded audio has no caption track */}
       <audio

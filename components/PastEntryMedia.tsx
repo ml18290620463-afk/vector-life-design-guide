@@ -248,11 +248,11 @@ const MobileLinkMaterialCard: React.FC<{ title: string; url?: string; descriptio
   );
 };
 
-const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language; focusMaterialId?: string }> = ({
-  entry,
-  language,
-  focusMaterialId,
-}) => {
+const MobileEntryMedia: React.FC<{
+  entry: DiaryEntry;
+  language: Language;
+  focusMaterialId?: string;
+}> = ({ entry, language, focusMaterialId }) => {
   const { materials: rawMaterials } = splitEntryContent(entry.content);
   const materials = rawMaterials.filter((material) => !isLegacyMediaMaterial(material));
   const {
@@ -281,9 +281,10 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language; focusM
     })),
     ...(attachmentImage ? [attachmentImage] : []),
   ];
-  const visibleImages = focusMaterialId && allImages.some((image) => image.id === focusMaterialId)
-    ? allImages
-    : allImages.slice(0, 9);
+  const visibleImages =
+    focusMaterialId && allImages.some((image) => image.id === focusMaterialId)
+      ? allImages
+      : allImages.slice(0, 9);
   const hiddenImageCount = allImages.length - visibleImages.length;
   const hasMaterials =
     imageMaterials.length > 0 ||
@@ -335,7 +336,9 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language; focusM
         </figure>
       ))}
       {audioMaterials.map((material) => (
-        <div key={material.id} data-material-id={material.id}><MobileAudioPlayback src={material.url} language={language} /></div>
+        <div key={material.id} data-material-id={material.id}>
+          <MobileAudioPlayback src={material.url} language={language} />
+        </div>
       ))}
       {legacyAudioUrls.map((url) => (
         <MobileAudioPlayback key={url} src={url} language={language} />
@@ -355,11 +358,13 @@ const MobileEntryMedia: React.FC<{ entry: DiaryEntry; language: Language; focusM
         </div>
       )}
       {linkMaterials.map((material) => (
-        <div key={material.id} data-material-id={material.id}><MobileLinkMaterialCard
-          title={getMaterialTitle(material, language)}
-          url={material.url}
-          description={material.description}
-        /></div>
+        <div key={material.id} data-material-id={material.id}>
+          <MobileLinkMaterialCard
+            title={getMaterialTitle(material, language)}
+            url={material.url}
+            description={material.description}
+          />
+        </div>
       ))}
       {otherMaterials.map((material) => (
         <div key={material.id} data-material-id={material.id} className="mobile-past-material">

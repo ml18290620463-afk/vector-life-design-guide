@@ -51,8 +51,14 @@ export const useVaultAuthActions = ({
   wipeData,
 }: UseVaultAuthActionsOptions) => {
   const handleStartFromCover = useCallback(() => {
-    setAppState(passwordHash ? AppState.LOGIN : AppState.ONBOARDING);
-  }, [passwordHash, setAppState]);
+    if (passwordHash) {
+      setAppState(AppState.LOGIN);
+      return;
+    }
+    setMasterPassword(null);
+    setIsUnlocked(true);
+    enterPendingOrPastMain('/now');
+  }, [passwordHash, setAppState, setMasterPassword, setIsUnlocked, enterPendingOrPastMain]);
 
   const handleSetPassword = useCallback(
     async (password: string) => {

@@ -20,7 +20,10 @@ const makeEntries = (): SyntheticEntry[] => {
     title: `合成经历 ${index}`,
     content: `合成经历 ${index}：这是用于稳定性验收的完整事实记录，关键词-${String(index % 20).padStart(2, '0')}。${'细节与上下文。'.repeat(30)}`,
     createdAt: start + index * 60_000,
-    tags: [`事件:主题-${String(index % 20).padStart(2, '0')}`, index % 2 === 0 ? '工作事业' : '人际交往'],
+    tags: [
+      `事件:主题-${String(index % 20).padStart(2, '0')}`,
+      index % 2 === 0 ? '工作事业' : '人际交往',
+    ],
     isLocked: false,
   }));
 };
@@ -38,23 +41,26 @@ test('千条历史记录在浏览器中可稳定加载、检索、切换、展�
 
   await seedOnboardedApp(page);
   const entries = makeEntries();
-  await page.evaluate(async ({ key, values }) => {
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open('keyval-store');
-      request.onerror = () => reject(request.error ?? new Error('无法打开 IndexedDB'));
-      request.onsuccess = () => {
-        const database = request.result;
-        const transaction = database.transaction('keyval', 'readwrite');
-        transaction.objectStore('keyval').put(values, key);
-        transaction.oncomplete = () => {
-          database.close();
-          resolve();
+  await page.evaluate(
+    async ({ key, values }) => {
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('keyval-store');
+        request.onerror = () => reject(request.error ?? new Error('无法打开 IndexedDB'));
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('keyval', 'readwrite');
+          transaction.objectStore('keyval').put(values, key);
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => reject(transaction.error ?? new Error('无法写入记录'));
+          transaction.onabort = () => reject(transaction.error ?? new Error('写入记录已中止'));
         };
-        transaction.onerror = () => reject(transaction.error ?? new Error('无法写入记录'));
-        transaction.onabort = () => reject(transaction.error ?? new Error('写入记录已中止'));
-      };
-    });
-  }, { key: ENTRY_KEY, values: entries });
+      });
+    },
+    { key: ENTRY_KEY, values: entries },
+  );
 
   await page.reload();
   const password = page.locator('input[type="password"]:visible');
@@ -62,7 +68,10 @@ test('千条历史记录在浏览器中可稳定加载、检索、切换、展�
   await password.fill('VectorVisual123!');
   await password.press('Enter');
   await page.getByRole('navigation', { name: '主页面导航' }).waitFor({ state: 'visible' });
-  await page.getByRole('navigation', { name: '主页面导航' }).getByRole('button', { name: /^过去/ }).click();
+  await page
+    .getByRole('navigation', { name: '主页面导航' })
+    .getByRole('button', { name: /^过去/ })
+    .click();
   await expect(page.getByTestId('past-page')).toBeVisible();
 
   const records = page.locator('.past-record');
@@ -102,7 +111,9 @@ test('千条历史记录在浏览器中可稳定加载、检索、切换、展�
   }
   await expect(records).toHaveCount(500);
   await expect(records.nth(499)).toContainText('合成经历 500');
-  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
+  await expect(
+    page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+  ).resolves.toBe(true);
   expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });

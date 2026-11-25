@@ -48,6 +48,7 @@ export const AppEntryGateScreens: FC<AppEntryGateScreensProps> = ({
     {!loading && appState === AppState.COVER && (
       <Suspense fallback={<ScreenLoader language={language} />}>
         <CoverScreen
+          onSetLanguage={onSetLanguage}
           onStart={onStartFromCover}
           language={language}
           principles={homePrinciples}

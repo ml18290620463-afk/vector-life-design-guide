@@ -477,8 +477,8 @@ html.light.light .onboarding-requirements .pointer-events-none {
 
 /* Past page: explicit light-mode control contrast at every viewport. */
 html.light.light .mobile-past-page {
-  --past-control-ink: #375562;
-  --past-secondary-ink: #526873;
+  --past-control-ink: var(--ds-accent);
+  --past-secondary-ink: var(--ds-text-muted);
 }
 html.light.light .mobile-past-page__segments {
   border-color: var(--ds-border) !important;
@@ -590,10 +590,10 @@ html.light body .mobile-principles-view__result-header strong {
   color: var(--ds-text);
 }
 html.light body .mobile-principles-view__result-header small {
-  color: #526873;
+  color: var(--ds-text-muted);
 }
 html.light body .mobile-principles-view__manage-button {
-  color: #375562;
+  color: var(--ds-accent);
 }
 @media (max-width: 767px) {
   html:root

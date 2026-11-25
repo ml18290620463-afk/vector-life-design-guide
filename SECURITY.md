@@ -1,67 +1,22 @@
-# Security Policy / 安全策略
+# Security policy / 安全说明
 
-## Reporting a vulnerability / 报告漏洞
+The current release protects selected local stores and encrypted backup/sync envelopes. It does not promise encryption of the entire browser profile or complete protection from malware, browser extensions, XSS, an unlocked device, or a compromised deployment. Read [PRIVACY.md](PRIVACY.md) for the data matrix.
 
-If you believe you have found a security issue in VECTOR, please **do not**
-open a public GitHub issue, post on social media, or share details in a
-public chat. Instead:
+当前版本提供指定本地数据的可选加密及备份/同步加密，不承诺整库静态加密，也不能抵御已控制设备或浏览器的攻击者。详见隐私矩阵。
 
-1. Email a description (and ideally a proof-of-concept) to the maintainer
-   listed in `package.json` `author` field. Use PGP if you can.
-2. Allow up to **14 days** for an acknowledgement, and up to **90 days**
-   for a coordinated disclosure window.
-3. We will credit you in `CHANGELOG.md` once a fix is shipped, unless you
-   request anonymity.
+## Cryptography
 
-请**不要**在公开 issue / 社交媒体 / 群聊里直接披露。请通过 `package.json`
-中 `author` 字段邮箱（条件允许请使用 PGP 加密）告知我们，承诺 14 天内
-确认、90 天内协同披露。
+- Password verification uses the configured Argon2id implementation, with legacy verification/migration where supported.
+- Data encryption uses AES-256-GCM; the current PBKDF2-SHA256 derivation uses 600,000 iterations. Argon2 password verification is separate from encryption key derivation.
+- Backup envelopes use random salts and IVs and authenticated metadata. Wrong-password and tamper cases have automated tests. These tests are not an independent cryptographic audit.
+- Forgotten encryption passwords cannot be bypassed by a UI reset. Verify restore using a test backup before relying on a new deployment.
 
----
+## Reporting / 报告问题
 
-## In scope / 漏洞范围
+Repository: <https://github.com/ml18290620463-afk/vector-life-design-guide>.
 
-- The Express backend (`server.ts`, `server/aiProxyAuth.ts`) including
-  origin allow-listing, bearer-token protection, avatar summary,
-  model listing, and billing routes.
-- Cryptographic primitives in `services/securityService.ts`.
-- Browser storage and legacy-entry import logic in `hooks/useDiaryData.ts`
-  and `services/diaryStorage.ts`, `services/diaryMigration.ts`.
-- The default Dockerfile / docker-compose / nginx sample under `deploy/`.
-- Markdown / attachment rendering surface (`components/viewerMarkdown.tsx`,
-  `components/ViewerAttachmentPanel.tsx`, `components/PdfAttachmentViewer.tsx`).
+If GitHub's **Report a vulnerability** private advisory feature is enabled in this repository, use it for sensitive reports. Its availability has not been verified. Otherwise request a private contact from the maintainer without posting exploit details or private data publicly. There is no verified security email or guaranteed response/disclosure timeline in this release; do not infer one from package metadata.
 
-## Out of scope / 不在范围
+如仓库已启用 GitHub 私密漏洞报告，请使用该入口（本次未验证是否启用）。否则先向维护者索取私密联络方式，不公开漏洞利用细节或隐私数据。本版本未提供经核实的安全邮箱，也未承诺固定响应或披露时限。
 
-- Vulnerabilities in third-party services we proxy to (OpenRouter, Google
-  Gemini) — please report to those providers directly.
-- Issues that require physical access to an unlocked device.
-- Self-XSS where the user is also the attacker (typing `javascript:` URLs
-  in the address bar).
-- DoS that requires sustained network amplification beyond a single user
-  account.
-
----
-
-## Hardening references / 加固参考
-
-- `EVALUATION.md` §8 for the rolling threat-model summary.
-- `ROADMAP.md` "Phase 1 — Public Beta Readiness" §1.1 for the security
-  invariants we intend to keep green; `scripts/check-beta.sh` enforces
-  them in CI.
-- For dependency vulnerabilities: `npm audit --omit=dev` should be run
-  before any release.
-
----
-
-## Disclosure timeline / 披露时间线
-
-| Day             | Action                                                 |
-| --------------- | ------------------------------------------------------ |
-| 0               | Vulnerability received; triage starts.                 |
-| ≤ 14            | Acknowledged with severity assessment.                 |
-| 14 – 90         | Patch developed, tested, and shipped (`CHANGELOG.md`). |
-| 90 (or earlier) | Coordinated public disclosure.                         |
-
-If you are an active user of a self-hosted instance, you may also receive
-a notice through the same channel you used to report.
+Include affected version, minimal synthetic reproduction, impact, and environment. Never attach passwords, tokens, real diaries, database dumps, or unredacted backups. Operators should keep dependencies current, configure HTTPS and server secrets, and verify deployment-specific security controls.

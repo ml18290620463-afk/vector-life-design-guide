@@ -33,11 +33,19 @@ vi.mock('./hooks/useToast', () => ({
 }));
 
 vi.mock('./components/NowPage', () => ({
-  NowPage: ({ onSend, privacyControl }: { onSend: () => void; privacyControl: React.ReactNode }) => (
-    <>{privacyControl}
-    <button type="button" onClick={onSend}>
-      save-result
-    </button></>
+  NowPage: ({
+    onSend,
+    privacyControl,
+  }: {
+    onSend: () => void;
+    privacyControl: React.ReactNode;
+  }) => (
+    <>
+      {privacyControl}
+      <button type="button" onClick={onSend}>
+        save-result
+      </button>
+    </>
   ),
 }));
 
@@ -69,8 +77,12 @@ vi.mock('../../services/neuralSemanticRecall', () => ({
 
 describe('NowFlow pure capture', () => {
   beforeEach(() => {
-    vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function () { this.open = true; });
-    vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function () { this.open = false; });
+    vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function () {
+      this.open = true;
+    });
+    vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function () {
+      this.open = false;
+    });
     draftControls.submissionId = undefined;
     draftControls.reset.mockReset().mockResolvedValue(true);
   });

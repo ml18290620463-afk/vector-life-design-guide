@@ -1,574 +1,187 @@
-import { clear } from 'idb-keyval';
-import { readFutureSnapshot } from '../../../services/futureRepository';
-import { afterEach, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { useState } from 'react';
+import { clear, get, set } from 'idb-keyval';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AvatarMemoryLibrary } from './AvatarMemoryLibrary';
-import type { AvatarAtomicMemory } from '../../avatar/types';
-import {
-  atomicMemoryFromUnderstanding,
-  writeAvatarUnderstanding,
-  readAvatarUnderstandings,
-  readAvatarAtomicMemories,
-  writeAvatarAtomicMemory,
-} from '../../../services/avatarMemory';
-import * as storage from '../../../services/browserStorage';
+import { cognition, evidenceGraph } from '../../../tests/fixtures/avatarOntology';
+import { AVATAR_ONTOLOGY_KEY } from '../../../services/avatarOntologyKey';
+import { DiaryStorageKeys as K } from '../../../services/diaryStorage';
+import { initializeAvatarOntology, readAvatarOntology, type AvatarOntologySnapshot } from '../../../services/avatarOntologyStore';
+import { useAppStore } from '../../../stores/appStore';
+import type { CognitiveObject } from '../../avatar/types';
+import type { DiaryEntry } from '../../../types';
+import * as archive from '../../../services/avatarOntologyArchive';
 
-const choosePrivate = () =>
-  fireEvent.click(within(screen.getByRole('dialog', { name: '是否允许 AI 可见？' })).getByRole('button', { name: /仅自己可见/ }));
-
-afterEach(() => {
-  localStorage.clear();
-  vi.restoreAllMocks();
+const entries: DiaryEntry[] = [1, 2].map(day => ({
+  id: `e${day}`, title: '', content: '我喜欢安静，也会提前准备', tags: [],
+  createdAt: Date.UTC(2026, 0, day), aiVisibility: 'allowed', isLocked: false,
+}));
+const pending = (id = 'p', statement = '我喜欢安静') => cognition({
+  id, lineageId: id, domain: 'about_me', category: 'preferences_boundaries',
+  status: 'candidate', confirmedAt: undefined, statement,
+  evidenceGate: { requiresMultiSourceGate: false, independentExperienceCount: 0, distinctUserMessageCount: 0, distinctDateCount: 0, distinctSessionCount: 0, isReadyForConfirmation: false },
 });
-it('keeps pending interpretations out of confirmed results and retains the dialog when saving fails', async () => {
-  const pattern = {
-    id: 'pending',
-    statement: '可能更喜欢独立工作',
-    status: 'pending' as const,
-    sourceEntryIds: ['locked'],
-    createdAt: 1,
-  };
-  writeAvatarUnderstanding(pattern);
-  const memory = atomicMemoryFromUnderstanding(pattern);
-  memory.sourceRefs.push(
-    { source: 'entry', id: 'locked', excerpt: '不可展示的旧原文' },
-    { source: 'message', id: 'pattern-1', createdAt: Date.parse('2026-09-20T08:00:00Z') },
-    { source: 'message', id: 'pattern-2', createdAt: Date.parse('2026-09-20T10:00:00Z') },
-    { source: 'message', id: 'pattern-3', createdAt: Date.parse('2026-09-21T08:00:00Z') },
-  );
-  const refresh = vi.fn();
-  const toast = vi.fn();
-  const unready: AvatarAtomicMemory = {
-    ...memory,
-    id: 'unready-observation',
-    statement: '一次观察不能成为稳定模式',
-    facets: ['cognitive_pattern'],
-    sourceRefs: [],
-  };
-  render(
-    <AvatarMemoryLibrary
-      memories={[]}
-      pendingMemories={[memory, unready]}
-      onRefresh={refresh}
-      showToast={toast}
-      onAdd={vi.fn()}
-    />,
-  );
-  expect(screen.queryByText(pattern.statement)).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
-  expect(screen.queryByText(unready.statement)).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(pattern.statement) }));
-  expect(screen.queryByText(/不可展示的旧原文/)).toBeNull();
-  fireEvent.change(screen.getByRole('textbox', { name: '记忆内容' }), {
-    target: { value: '我喜欢协作' },
-  });
-  const failed = vi.spyOn(storage, 'setStoredJson').mockReturnValue(false);
-  fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
-  choosePrivate();
+const confirmed = (overrides: Partial<CognitiveObject> = {}) => cognition({
+  ...pending(overrides.id ?? 'p'), status: 'confirmed', confirmedAt: new Date(0).toISOString(),
+  evidenceGate: { requiresMultiSourceGate: false, independentExperienceCount: 2,
+    distinctUserMessageCount: 0, distinctDateCount: 2, distinctSessionCount: 0,
+    isReadyForConfirmation: true }, ...overrides,
+});
+const choosePrivate = () => fireEvent.click(within(screen.getByRole('dialog', {
+  name: '是否允许 AI 可见？',
+})).getByRole('button', { name: /仅自己可见/ }));
+const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
+const openPending = (count = 1) => click(`待确认 · ${count}`);
+const search = (value: string) => fireEvent.change(screen.getByRole('searchbox'), { target: { value } });
+
+beforeEach(async () => {
+  await clear(); localStorage.clear();
+  useAppStore.setState({ masterPassword: null, isUnlocked: true });
+  await initializeAvatarOntology();
+});
+afterEach(() => vi.restoreAllMocks());
+async function setup(objects: CognitiveObject[], customize?: (graph: AvatarOntologySnapshot) => void) {
+  const graph = evidenceGraph(objects, entries);
+  for (const object of graph.objects) object.evidenceGate.requiresMultiSourceGate = object.domain === 'my_understanding';
+  customize?.(graph);
+  await set(K.entries, entries);
+  await set(AVATAR_ONTOLOGY_KEY, graph);
+  const toast = vi.fn(); const revise = vi.fn().mockResolvedValue(undefined); const refresh = vi.fn();
+  function Harness() {
+    const [current, update] = useState(graph);
+    return <AvatarMemoryLibrary graph={current} entries={entries} showToast={toast}
+      onAdd={vi.fn()} onRevise={revise} onRefresh={() => {
+        refresh(); void readAvatarOntology().then(update);
+      }} />;
+  }
+  render(<Harness />);
+  return { graph, toast, revise, refresh };
+}
+
+it('excludes candidates from confirmed search and keeps failed reviews retryable', async () => {
+  const { toast, refresh } = await setup([pending()]);
+  search('安静'); expect(screen.queryByText('我喜欢安静')).toBeNull(); search('');
+  openPending(); click('我喜欢安静');
+  const failed = vi.spyOn(archive, 'reviewArchiveCognition').mockRejectedValueOnce(new Error('write failed'));
+  click('确认记住'); choosePrivate();
   await waitFor(() => expect(toast).toHaveBeenCalledWith('保存失败，请重试'));
   expect(refresh).not.toHaveBeenCalled();
-  failed.mockRestore();
-  fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
+  expect(screen.getByRole('textbox', { name: '记忆内容' })).toHaveValue('我喜欢安静');
+  failed.mockRestore(); click('确认记住'); choosePrivate();
+  await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
+  expect((await readAvatarOntology()).objects[0]).toMatchObject({ status: 'confirmed', privacy: { aiVisible: false } });
+});
+it('confirms cognition without mirroring it into Future or principles', async () => {
+  await setup([pending()]);
+  const future = await get(K.future); const principles = await get(K.principles);
+  openPending(); click('确认记住'); choosePrivate();
+  await waitFor(async () => expect((await readAvatarOntology()).objects[0].status).toBe('confirmed'));
+  expect(await get(K.future)).toEqual(future); expect(await get(K.principles)).toEqual(principles);
+});
+it('filters native about-me categories without duplicating or hiding pending items', async () => {
+  await setup([confirmed(), confirmed({ id: 'role', category: 'foundation_situation', statement: '我是一名设计师' }), pending('waiting', '待确认的偏好')]);
+  click(/偏好与边界/);
+  expect(screen.getByRole('button', { name: /我喜欢安静/ })).toBeInTheDocument();
+  expect(screen.queryByText('我是一名设计师')).toBeNull();
+  click('返回'); click(/基础与处境/);
+  expect(screen.getByRole('button', { name: /我是一名设计师/ })).toBeInTheDocument();
+  openPending(); expect(screen.getByText('待确认的偏好')).toBeInTheDocument();
+});
+it('searches across the whole library and keeps the query while switching scopes', async () => {
+  await setup([confirmed(), confirmed({ id: 'pattern', domain: 'my_understanding', category: 'understanding_judgment', statement: '我会提前准备' })]);
+  search('准备'); expect(screen.getByRole('button', { name: /我会提前准备/ })).toBeInTheDocument();
+  click('我的认识'); expect(screen.getByRole('searchbox')).toHaveValue('准备');
+  expect(screen.getByRole('button', { name: /我会提前准备/ })).toBeInTheDocument();
+  click('返回'); click(/理解与判断/); search('准备'); click('返回');
+  expect(screen.getByRole('searchbox')).toHaveValue('');
+});
+it('filters confirmed cognition across domains by record tag', async () => {
+  await setup([confirmed({ id: 'self' }), confirmed({ id: 'pattern', domain: 'my_understanding', category: 'understanding_judgment', statement: '我会提前准备' })], graph => {
+    graph.edges.push({ id: 'tag-self', schemaVersion: 2, type: 'SCOPED_IN', fromId: 'self', toId: 'tag:工作', tagLabel: '工作', bindingSource: 'inherited_from_evidence', evidenceWeight: 1, createdAt: new Date().toISOString() });
+    graph.edges.push({ id: 'tag-pattern', schemaVersion: 2, type: 'SCOPED_IN', fromId: 'pattern', toId: 'tag:工作', tagLabel: '工作', bindingSource: 'inherited_from_evidence', evidenceWeight: 1, createdAt: new Date().toISOString() });
+  });
+  click('#工作');
+  expect(screen.getByRole('button', { name: /我喜欢安静/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /我会提前准备/ })).toBeInTheDocument();
+});
+it('does not offer reconfirmation or inflate evidence on confirmed cognition', async () => {
+  const { graph } = await setup([confirmed()]);
+  click(/偏好与边界/); click(/我喜欢安静/);
+  expect(screen.queryByRole('button', { name: /准确|仍适用|确认记住/ })).toBeNull();
+  click('关闭'); expect(await readAvatarOntology()).toEqual(graph);
+});
+it('rejects cognition while preserving original records and evidence', async () => {
+  const { graph } = await setup([confirmed()]);
+  click(/偏好与边界/); click(/我喜欢安静/); click('暂不采用'); click('暂不采用');
+  await waitFor(async () => expect((await readAvatarOntology()).objects[0].status).toBe('rejected'));
+  expect((await readAvatarOntology()).edges).toEqual(graph.edges);
+  expect(await get(K.entries)).toEqual(entries);
+});
+it('routes confirmed edits through fresh extraction rather than direct mutation', async () => {
+  const { graph, revise } = await setup([confirmed()]);
+  click(/偏好与边界/); click(/我喜欢安静/); click('调整表述');
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: '我偏好独处' } });
+  click('保存修改'); await waitFor(() => expect(revise).toHaveBeenCalledWith(graph.objects[0], '我偏好独处'));
+  expect(await readAvatarOntology()).toEqual(graph);
+});
+it('routes candidate edits through re-verification and keeps failed edits available', async () => {
+  const { graph, revise, toast } = await setup([pending()]);
+  revise.mockRejectedValueOnce(new Error('verification failed'));
+  openPending(); click('我喜欢安静');
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: '我偏好独处' } });
+  click('确认记住'); await waitFor(() => expect(toast).toHaveBeenCalledWith('保存失败，请重试'));
+  expect(screen.getByRole('textbox')).toHaveValue('我偏好独处');
+  expect(await readAvatarOntology()).toEqual(graph);
+});
+it('shows confirmed revisions as revisions, never proof of growth or manual additions', async () => {
+  await setup([confirmed({ id: 'before', lineageId: 'before', status: 'superseded', statement: '以前偏好独处' }),
+    confirmed({ id: 'after', statement: '现在偏好协作', version: 2, lineageId: 'before' })], graph => {
+    graph.edges.push({ id: 'revision', schemaVersion: 2, type: 'SUPERSEDES', fromId: 'after', toId: 'before', confirmedByUserAt: new Date().toISOString(), createdAt: new Date().toISOString() });
+  });
+  click('我的变化');
+  expect(screen.getByText(/不代表已经证明的成长/)).toBeInTheDocument();
+  expect(screen.getByText('此前看法')).toBeInTheDocument();
+  expect(screen.getByText('以前偏好独处')).toBeInTheDocument();
+  expect(screen.getByText('最新认识')).toBeInTheDocument();
+  expect(screen.getByText('现在偏好协作')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '新增记忆' })).toBeNull();
+});
+it('retains deleted-source cognition without displaying unavailable evidence', async () => {
+  await setup([confirmed({ status: 'retained_after_source_delete', privacy: { sensitivity: 'normal', aiVisible: false, traceabilityDegraded: true } })], graph => { graph.edges = []; });
+  click(/偏好与边界/); click(/我喜欢安静/);
+  expect(screen.getByText(/因此不再显示经历依据/)).toBeInTheDocument();
+  expect(screen.queryByText('出处摘录')).toBeNull();
+});
+it('supports inline rejection with no consent dialog and no source deletion', async () => {
+  await setup([pending()]); openPending(); click('忽略');
+  await waitFor(async () => expect((await readAvatarOntology()).objects[0].status).toBe('rejected'));
+  expect(screen.queryByRole('dialog')).toBeNull(); expect(await get(K.entries)).toEqual(entries);
+});
+it('does not silently expire old candidates', async () => {
+  const { graph } = await setup([pending()]); openPending();
+  expect(screen.getByText('我喜欢安静')).toBeInTheDocument();
+  expect(await readAvatarOntology()).toEqual(graph);
+});
+it('confirms the visible pending batch only after one explicit privacy choice', async () => {
+  await setup([pending('first'), pending('second', '我会提前准备')]);
+  openPending(2);
+  click('一键确认');
+  expect((await readAvatarOntology()).objects.every(object => object.status === 'candidate')).toBe(true);
   choosePrivate();
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  expect(readAvatarUnderstandings()[0]).toMatchObject({
-    id: 'pending',
-    statement: '我喜欢协作',
-    status: 'confirmed',
-  });
-  expect(refresh).toHaveBeenCalledOnce();
+  await waitFor(async () => expect((await readAvatarOntology()).objects.map(object => object.status))
+    .toEqual(['confirmed', 'confirmed']));
+  expect((await readAvatarOntology()).objects.every(object => !object.privacy.aiVisible)).toBe(true);
 });
-
-it('confirms one direction candidate into the canonical action store', async () => {
-  await clear();
-  const memory = {
-    id: 'direction-candidate',
-    statement: '明天散步',
-    nature: 'commitment' as const,
-    facets: [],
-    tags: [],
-    contexts: [],
-    sourceRefs: [{ source: 'message' as const, id: 'chat-1' }],
-    confidence: 0.7,
-    status: 'candidate' as const,
-    sensitivity: 'normal' as const,
-    createdAt: 1,
-  };
-  const refresh = vi.fn();
-  render(
-    <AvatarMemoryLibrary
-      memories={[memory]}
-      pendingMemories={[memory]}
-      onRefresh={refresh}
-      showToast={vi.fn()}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(memory.statement) }));
-  fireEvent.change(screen.getByRole('combobox', { name: '保存类型' }), {
-    target: { value: 'action' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
-  choosePrivate();
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  const snapshot = await readFutureSnapshot();
-  expect(snapshot.actions).toHaveLength(1);
-  expect(snapshot.actions[0].title).toBe(memory.statement);
-  expect(snapshot.state.archiveOrigins?.[memory.id]?.sourceRefs).toEqual(memory.sourceRefs);
-  expect(refresh).toHaveBeenCalledOnce();
-  expect(screen.queryByRole('button', { name: '待确认 · 1' })).toBeNull();
-  await clear();
-});
-
-it('filters about-me categories without duplicating multi-facet memories or hiding pending items', () => {
-  const base = atomicMemoryFromUnderstanding({
-    id: 'self-index',
-    statement: '我偏好安静，也重视独立空间',
-    status: 'confirmed',
-    sourceEntryIds: [],
-    createdAt: 1,
-  });
-  const preference = {
-    ...base,
-    id: 'self-preference',
-    facets: ['preference', 'boundary'] as const,
-  };
-  const memory = { ...preference, facets: [...preference.facets] };
-  const profile = {
-    ...base,
-    id: 'self-profile',
-    statement: '我是一名设计师',
-    nature: 'explicit' as const,
-    category: 'profile' as const,
-    facets: [],
-  };
-  const pending = {
-    ...memory,
-    id: 'pending-self',
-    status: 'candidate' as const,
-    statement: '待确认的偏好',
-  };
-  render(
-    <AvatarMemoryLibrary
-      memories={[memory, profile]}
-      pendingMemories={[pending]}
-      onRefresh={vi.fn()}
-      showToast={vi.fn()}
-      onAdd={vi.fn()}
-    />,
-  );
-  expect(screen.queryByRole('button', { name: new RegExp(`^${memory.statement}$`) })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: /偏好与边界/ }));
-  expect(screen.getByRole('button', { name: new RegExp(memory.statement) })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: new RegExp(profile.statement) })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: '返回' }));
-  fireEvent.click(screen.getByRole('button', { name: /基础与处境/ }));
-  expect(screen.queryByRole('button', { name: new RegExp(memory.statement) })).toBeNull();
-  expect(screen.getByRole('button', { name: new RegExp(profile.statement) })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
-  expect(screen.getByRole('button', { name: new RegExp(pending.statement) })).toBeTruthy();
-  expect(screen.queryByRole('navigation', { name: '关于我分类' })).toBeNull();
-});
-
-it('shows editable patterns without mirroring principles or future plans', () => {
-  const makeMemory = (
-    id: string,
-    statement: string,
-    source: 'pattern' | 'principle' | 'future' | 'action',
-  ): AvatarAtomicMemory => ({
-    id,
-    statement,
-    nature: 'explicit' as const,
-    category: 'profile' as const,
-    facets: [],
-    tags: [],
-    contexts: [],
-    sourceRefs: [{ source, id: `${id}-source` }],
-    confidence: 0.8,
-    status: 'confirmed' as const,
-    sensitivity: 'normal' as const,
-    createdAt: 1,
-  });
-  const pattern = makeMemory('atomic_pattern_1', '我会在压力下先独自梳理问题', 'pattern');
-  const principle = makeMemory('avatar_principle_1', '重要选择先留出一天思考', 'principle');
-  const vision = makeMemory('avatar_vision_1', '愿景：建立稳定而自由的生活', 'future');
-  const action = makeMemory('avatar_action_1', '本周完成作品集首页', 'action');
-  render(
-    <AvatarMemoryLibrary
-      memories={[pattern, principle, vision, action]}
-      onRefresh={vi.fn()}
-      showToast={vi.fn()}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
-  fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  expect(screen.getByRole('button', { name: new RegExp(pattern.statement) })).toBeTruthy();
-  expect(screen.queryByText(principle.statement)).toBeNull();
-  expect(screen.queryByText(vision.statement)).toBeNull();
-  expect(screen.queryByText(action.statement)).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(pattern.statement) }));
-  expect(screen.getByRole('button', { name: '调整表述' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: '关闭' }));
-  fireEvent.click(screen.getByRole('button', { name: '我的变化' }));
-  expect(screen.getByText('尚无足够的前后经历可确认变化。')).toBeTruthy();
-  expect(screen.queryByText(pattern.statement)).toBeNull();
-});
-
-it('searches confirmed facts across drawers, excludes candidates and clears search on return and scope change', () => {
-  const base = atomicMemoryFromUnderstanding({
-    id: 'search-base',
-    statement: '我喜欢安静工作',
-    status: 'confirmed',
-    sourceEntryIds: [],
-    createdAt: 1,
-  });
-  const preference: AvatarAtomicMemory = {
-    ...base,
-    id: 'search-preference',
-    nature: 'explicit',
-    facets: ['preference'],
-  };
-  const profile: AvatarAtomicMemory = {
-    ...base,
-    id: 'search-profile',
-    nature: 'explicit',
-    category: 'profile',
-    facets: [],
-    statement: '我的工作是设计师',
-  };
-  const pending: AvatarAtomicMemory = {
-    ...preference,
-    id: 'search-pending',
-    status: 'candidate',
-    statement: '我喜欢远程工作',
-  };
-  render(
-    <AvatarMemoryLibrary
-      memories={[preference, profile]}
-      pendingMemories={[pending]}
-      onRefresh={vi.fn()}
-      showToast={vi.fn()}
-      onAdd={vi.fn()}
-    />,
-  );
-  expect(screen.getByRole('button', { name: /偏好与边界/ }).textContent).toContain(
-    preference.statement,
-  );
-  fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
-    target: { value: '工作' },
-  });
-  expect(screen.getByRole('button', { name: new RegExp(preference.statement) })).toBeTruthy();
-  expect(screen.getByRole('button', { name: new RegExp(profile.statement) })).toBeTruthy();
-  expect(screen.queryByText(pending.statement)).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: '返回' }));
-  expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
-  expect(screen.getByRole('button', { name: /偏好与边界/ })).toBeTruthy();
-  fireEvent.change(screen.getByRole('searchbox'), { target: { value: '工作' } });
-  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
-  expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
-  expect(screen.queryByRole('button', { name: new RegExp(preference.statement) })).toBeNull();
-});
-
-it('shows concise evidence counts and lets a person confirm or set aside an interpretation', async () => {
-  const memory: AvatarAtomicMemory = {
-    id: 'traceable-memory',
-    statement: '我在复杂选择前会先独处整理判断',
-    nature: 'inferred',
-    category: 'judgment',
-    facets: ['cognitive_pattern'],
-    tags: [],
-    contexts: [],
-    sourceRefs: [
-      { source: 'entry', id: 'entry-1', excerpt: '一次复杂的选择' },
-      { source: 'message', id: 'message-1', excerpt: '我需要一点时间想清楚' },
-    ],
-    confidence: 0.8,
-    status: 'confirmed',
-    sensitivity: 'normal',
-    createdAt: 1,
-  };
-  expect(writeAvatarAtomicMemory(memory)).toBe(true);
-  const toast = vi.fn();
-  render(
-    <AvatarMemoryLibrary
-      memories={[memory]}
-      onRefresh={vi.fn()}
-      showToast={toast}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
-  fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  expect(screen.queryByText('基于 2 条依据')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(memory.statement) }));
-  expect(screen.queryByText('基于 2 条依据')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: '准确' }));
-  choosePrivate();
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  expect(readAvatarAtomicMemories()[0]).toMatchObject({
-    id: memory.id,
-    status: 'confirmed',
-    confirmedBy: 'user',
-  });
-  expect(toast).toHaveBeenCalledWith('记忆已更新');
-});
-
-it('sets aside an interpretation without deleting the original evidence', () => {
-  const memory: AvatarAtomicMemory = {
-    id: 'set-aside-memory',
-    statement: '我总是在压力下拖延',
-    nature: 'inferred',
-    category: 'judgment',
-    facets: ['cognitive_pattern'],
-    tags: [],
-    contexts: [],
-    sourceRefs: [{ source: 'entry', id: 'entry-2', excerpt: '一次压力很大的项目' }],
-    confidence: 0.6,
-    status: 'confirmed',
-    sensitivity: 'normal',
-    createdAt: 1,
-  };
-  expect(writeAvatarAtomicMemory(memory)).toBe(true);
-  render(
-    <AvatarMemoryLibrary
-      memories={[memory]}
-      onRefresh={vi.fn()}
-      showToast={vi.fn()}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
-  fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(memory.statement) }));
-  fireEvent.click(screen.getByRole('button', { name: '暂不采用' }));
-  expect(screen.getByText('分身将不再使用这条理解，原始记录和经历不会删除。')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: '暂不采用' }));
-  expect(readAvatarAtomicMemories()[0]).toMatchObject({
-    id: memory.id,
-    status: 'rejected',
-    sourceRefs: memory.sourceRefs,
-  });
-});
-
-it('lets a person update a current state and then compare the dated prior wording in my changes', async () => {
-  const state: AvatarAtomicMemory = {
-    id: 'state-role-before',
-    statement: '我目前在杭州从事产品设计',
-    nature: 'state',
-    category: 'recent_state',
-    facets: ['domain_background'],
-    tags: [],
-    contexts: [],
-    sourceRefs: [{ source: 'message', id: 'state-chat-1' }],
-    confidence: 1,
-    status: 'confirmed',
-    sensitivity: 'normal',
-    createdAt: Date.parse('2026-09-01T08:00:00Z'),
-    confirmedAt: Date.parse('2026-09-01T08:00:00Z'),
-    confirmedBy: 'user',
-  };
-  expect(writeAvatarAtomicMemory(state)).toBe(true);
-  const toast = vi.fn();
-  const refresh = vi.fn();
-  const { rerender } = render(
-    <AvatarMemoryLibrary
-      memories={[state]}
-      historyMemories={[state]}
-      onRefresh={refresh}
-      showToast={toast}
-      onAdd={vi.fn()}
-    />,
-  );
-
-  fireEvent.click(screen.getByRole('button', { name: /基础与处境/ }));
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(state.statement) }));
-  expect(screen.getByText(/当前状态 · 最近更新于/)).toBeTruthy();
-  expect(screen.getByRole('button', { name: '仍适用' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: '已经变化' }));
-  fireEvent.change(screen.getByRole('textbox', { name: '记忆内容' }), {
-    target: { value: '我目前在上海从事产品策略' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: '确认更新' }));
-  choosePrivate();
-  await waitFor(() => expect(toast).toHaveBeenCalledWith('已更新记忆'));
-
-  const history = readAvatarAtomicMemories();
-  rerender(
-    <AvatarMemoryLibrary
-      memories={history}
-      historyMemories={history}
-      onRefresh={refresh}
-      showToast={toast}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '我的变化' }));
-  expect(screen.getByText('尚无足够的前后经历可确认变化。')).toBeTruthy();
-  expect(screen.queryByText('我目前在上海从事产品策略')).toBeNull();
-});
-
-it('revises a confirmed pattern cautiously without presenting the revision as a change', async () => {
-  const pattern = {
-    id: 'pattern-version-ui',
-    statement: '面对压力时我会先独自整理',
-    status: 'confirmed' as const,
-    sourceEntryIds: ['entry-1', 'entry-2'],
-    createdAt: Date.parse('2026-09-01T08:00:00Z'),
-    confirmedAt: Date.parse('2026-09-01T08:00:00Z'),
-    confirmedBy: 'user' as const,
-    patternDomain: 'cognitive' as const,
-  };
-  expect(writeAvatarUnderstanding(pattern)).toBe(true);
-  const toast = vi.fn();
-  const refresh = vi.fn();
-  const toPatternMemories = () =>
-    readAvatarUnderstandings()
-      .filter((item) => item.status === 'confirmed')
-      .map(atomicMemoryFromUnderstanding);
-  const { rerender } = render(
-    <AvatarMemoryLibrary
-      memories={toPatternMemories()}
-      patterns={readAvatarUnderstandings()}
-      onRefresh={refresh}
-      showToast={toast}
-      onAdd={vi.fn()}
-    />,
-  );
-
-  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
-  fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(pattern.statement) }));
-  fireEvent.click(screen.getByRole('button', { name: '调整表述' }));
-  expect(
-    screen.getByText('只有当这个规律持续变化时再修订；一次情绪或事件更适合留在记录中。'),
-  ).toBeTruthy();
-  fireEvent.change(screen.getByRole('textbox', { name: '记忆内容' }), {
-    target: { value: '面对持续压力时我会先判断是否需要支持' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
-  choosePrivate();
-  await waitFor(() => expect(toast).toHaveBeenCalledWith('已更新模式'));
-  expect(refresh).toHaveBeenCalledOnce();
-
-  rerender(
-    <AvatarMemoryLibrary
-      memories={toPatternMemories()}
-      patterns={readAvatarUnderstandings()}
-      onRefresh={refresh}
-      showToast={toast}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '我的变化' }));
-  expect(screen.getByText('尚无足够的前后经历可确认变化。')).toBeTruthy();
-  expect(screen.queryByText('面对持续压力时我会先判断是否需要支持')).toBeNull();
-});
-
-it('explains a retained pattern after its original experience was deleted without exposing unavailable evidence', () => {
-  const retainedPattern = atomicMemoryFromUnderstanding({
-    id: 'retained-pattern',
-    statement: '我会在复杂选择前先留出独处时间',
-    status: 'confirmed',
-    sourceEntryIds: [],
-    retainedAfterSourceDeletion: true,
-    createdAt: 1,
-    patternDomain: 'cognitive',
-  });
-  render(
-    <AvatarMemoryLibrary
-      memories={[retainedPattern]}
-      onRefresh={vi.fn()}
-      showToast={vi.fn()}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '我的认识' }));
-  fireEvent.click(screen.getByRole('button', { name: /理解与判断/ }));
-  expect(screen.getByText('已保留 · 原始经历已删除')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(retainedPattern.statement) }));
-  expect(
-    screen.getByText('这条理解由你选择保留；原始经历已删除，因此不再显示经历依据。'),
-  ).toBeTruthy();
-  expect(screen.queryByText(/基于 \d+ 条依据/)).toBeNull();
-  expect(screen.queryByText('查看依据')).toBeNull();
-  expect(screen.getByRole('button', { name: '调整表述' })).toBeTruthy();
-});
-
-it.each(['confirmed', 'rejected'] as const)(
-  'reviews a candidate inline as %s without opening a form',
-  async (status) => {
-    const memory: AvatarAtomicMemory = {
-      id: 'inline-candidate',
-      statement: '我偏好安静的工作环境',
-      nature: 'explicit',
-      facets: ['preference'],
-      tags: [],
-      contexts: [],
-      sourceRefs: [],
-      confidence: 0.8,
-      status: 'candidate',
-      sensitivity: 'normal',
-      createdAt: Date.now(),
-      proposedAt: Date.now(),
-    };
-    writeAvatarAtomicMemory(memory);
-    const refresh = vi.fn();
-    render(
-      <AvatarMemoryLibrary
-        memories={[]}
-        pendingMemories={[memory]}
-        onRefresh={refresh}
-        showToast={vi.fn()}
-        onAdd={vi.fn()}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
-    expect(screen.getByText('待确认 · 24 小时后清除')).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole('button', { name: status === 'confirmed' ? '确认记住' : '忽略' }),
-    );
-    if (status === 'confirmed') choosePrivate();
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(readAvatarAtomicMemories().find((item) => item.id === memory.id)?.status).toBe(status);
-    expect(refresh).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('button', { name: '待确认 · 1' })).toBeNull();
-  },
-);
-
-it('keeps a failed inline review available and excludes expired candidates', async () => {
-  const memory: AvatarAtomicMemory = {
-    id: 'retry-candidate',
-    statement: '我偏好安静的工作环境',
-    nature: 'explicit',
-    facets: ['preference'],
-    tags: [],
-    contexts: [],
-    sourceRefs: [],
-    confidence: 0.8,
-    status: 'candidate',
-    sensitivity: 'normal',
-    createdAt: Date.now(),
-    proposedAt: Date.now(),
-  };
-  writeAvatarAtomicMemory(memory);
-  const refresh = vi.fn();
-  const toast = vi.fn();
-  render(
-    <AvatarMemoryLibrary
-      memories={[]}
-      pendingMemories={[memory, { ...memory, id: 'expired', proposedAt: Date.now() - 86400001 }]}
-      onRefresh={refresh}
-      showToast={toast}
-      onAdd={vi.fn()}
-    />,
-  );
-  fireEvent.click(screen.getByRole('button', { name: '待确认 · 1' }));
-  vi.spyOn(storage, 'setStoredJson').mockReturnValue(false);
-  fireEvent.click(screen.getByRole('button', { name: '确认记住' }));
-  choosePrivate();
-  await waitFor(() => expect(toast).toHaveBeenCalledWith('保存失败，请重试'));
-  expect(refresh).not.toHaveBeenCalled();
-  expect(screen.getByRole('button', { name: '确认记住' })).toBeTruthy();
+it('reviews one candidate at a time, preserves cancelled consent, and never adopts the remaining queue', async () => {
+  await setup([pending('first'), pending('second', '我会提前准备')]);
+  openPending(2); click('逐条审核 (2)'); click('确认记住');
+  const consent = screen.getByRole('dialog', { name: '是否允许 AI 可见？' });
+  fireEvent.click(within(consent).getByRole('button', { name: '返回编辑' }));
+  await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('我喜欢安静'));
+  expect((await readAvatarOntology()).objects.every(object => object.status === 'candidate')).toBe(true);
+  click('确认记住'); choosePrivate();
+  await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('我会提前准备'));
+  click('关闭');
+  expect((await readAvatarOntology()).objects.map(object => object.status)).toEqual(['confirmed', 'candidate']);
 });

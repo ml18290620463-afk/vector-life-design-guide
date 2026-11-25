@@ -63,7 +63,10 @@ export const callOpenRouter = async (
 ): Promise<string> => {
   const body: Record<string, unknown> = {
     model: cfg.openrouterModel,
-    messages: [...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []), { role: 'user', content: prompt }],
+    messages: [
+      ...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []),
+      { role: 'user', content: prompt },
+    ],
   };
   if (cfg.openrouterJsonMode) {
     body.response_format = { type: 'json_object' };
@@ -110,7 +113,10 @@ export const callGemini = async (
   const generation = client.models.generateContent({
     model: cfg.geminiModel,
     contents: prompt,
-    config: { responseMimeType: 'application/json', ...(systemInstruction ? { systemInstruction } : {}) },
+    config: {
+      responseMimeType: 'application/json',
+      ...(systemInstruction ? { systemInstruction } : {}),
+    },
   });
 
   if (!signal) {

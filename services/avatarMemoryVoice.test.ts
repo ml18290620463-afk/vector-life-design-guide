@@ -11,9 +11,19 @@ it('uses the owner’s voice without rewriting product terms', () => {
 
 it('normalizes generated memories while preserving source evidence', () => {
   const content = '我偏好安静的环境';
-  const [fact] = parseAvatarFacts(JSON.stringify({ candidates: [{
-    statement: '用户偏好安静的环境', kind: 'preference', sourceIndexes: [0], evidences: [content],
-  }] }), [{ role: 'user', content }]);
+  const [fact] = parseAvatarFacts(
+    JSON.stringify({
+      candidates: [
+        {
+          statement: '用户偏好安静的环境',
+          kind: 'preference',
+          sourceIndexes: [0],
+          evidences: [content],
+        },
+      ],
+    }),
+    [{ role: 'user', content }],
+  );
   expect(fact.statement).toBe(content);
   expect(fact.evidences).toEqual([content]);
 });

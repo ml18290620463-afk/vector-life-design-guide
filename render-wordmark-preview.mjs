@@ -1,7 +1,9 @@
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 
-const require = createRequire('/Users/leeyto/.codex/worktrees/24d1/T0 -vector（矢量人生经验进化系统）/package.json');
+const require = createRequire(
+  '/Users/leeyto/.codex/worktrees/24d1/T0 -vector（矢量人生经验进化系统）/package.json',
+);
 const { chromium } = require('playwright');
 
 const out = '/private/tmp/vector-word-flow';
@@ -40,8 +42,15 @@ function wordmark(variant) {
   if (variant === 'd') return wordmarkD();
   const glyphs = variant === 'c' ? glyphsC : variant === 'b' ? glyphsB : glyphsA;
   const placements = [
-    ['v', 0], ['e', 117], ['c', 202], ['t', 315], ['o', 421], ['r', 543],
-  ].map(([id, x]) => `<use href="#${id}" transform="translate(${x} 0)"/>`).join('');
+    ['v', 0],
+    ['e', 117],
+    ['c', 202],
+    ['t', 315],
+    ['o', 421],
+    ['r', 543],
+  ]
+    .map(([id, x]) => `<use href="#${id}" transform="translate(${x} 0)"/>`)
+    .join('');
   return `<svg class="flow-mark flow-mark--${variant}" viewBox="0 0 650 116" role="img" aria-label="VECTOR" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="flow-${variant}" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="${palette.flow}" stop-opacity="0"/><stop offset=".17" stop-color="${palette.flow}" stop-opacity=".22"/><stop offset=".52" stop-color="${palette.flow}" stop-opacity=".82"/><stop offset=".83" stop-color="${palette.flow}" stop-opacity=".2"/><stop offset="1" stop-color="${palette.flow}" stop-opacity="0"/></linearGradient>
@@ -105,8 +114,15 @@ function wordmarkG2() {
 // 低饱和雾蓝灰材质；每个字母只是自然地截取同一片连续色彩场。
 function wordmarkE() {
   const placements = [
-    ['v', 0], ['e', 117], ['c', 202], ['t', 315], ['o', 421], ['r', 543],
-  ].map(([id, x]) => `<use href="#${id}" transform="translate(${x} 0)"/>`).join('');
+    ['v', 0],
+    ['e', 117],
+    ['c', 202],
+    ['t', 315],
+    ['o', 421],
+    ['r', 543],
+  ]
+    .map(([id, x]) => `<use href="#${id}" transform="translate(${x} 0)"/>`)
+    .join('');
 
   return `<svg class="flow-mark flow-mark--e" viewBox="0 0 650 116" role="img" aria-label="VECTOR" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -166,7 +182,9 @@ async function capture(variant, width, height, file) {
   await page.goto('http://127.0.0.1:3000/', { waitUntil: 'networkidle' });
   await page.waitForSelector('.vector-brush-cover__wordmark');
   await page.addStyleTag({ content: css });
-  await page.locator('.vector-brush-cover__wordmark').evaluate((el, html) => { el.innerHTML = html; }, wordmark(variant));
+  await page.locator('.vector-brush-cover__wordmark').evaluate((el, html) => {
+    el.innerHTML = html;
+  }, wordmark(variant));
   await page.screenshot({ path: `${out}/${file}`, fullPage: false });
   await browser.close();
 }
@@ -192,7 +210,10 @@ const board = `<!doctype html><html><head><meta charset="utf-8"><style>
   </style></head><body><h1>VECTOR / 全字标流动感</h1><p>标准字形；以一条连续、低饱和的雾蓝灰渐变建立整体材质。</p><div class="grid"><div class="card"><div class="label">E / 连续雾潮 · 标准字形</div>${wordmark('e')}</div></div></body></html>`;
 await writeFile(`${out}/comparison.html`, board);
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1440, height: 560 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({
+  viewport: { width: 1440, height: 560 },
+  deviceScaleFactor: 1,
+});
 await page.goto(`file://${out}/comparison.html`);
 await page.screenshot({ path: `${out}/vector-flow-comparison.png`, fullPage: true });
 await browser.close();

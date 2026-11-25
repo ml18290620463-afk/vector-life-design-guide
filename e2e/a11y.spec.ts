@@ -20,23 +20,14 @@ const summarise = (violations: Awaited<ReturnType<AxeBuilder['analyze']>>['viola
     }));
 
 test.describe('axe accessibility', () => {
-  test('cover screen has no serious or critical violations', async ({ page }) => {
+  test('first-run NOW has no serious or critical violations', async ({ page }) => {
     await resetPersistentAppState(page);
-    // Wait for the cover entry button so we know React has hydrated.
-    await page.getByTestId('cover-initialize').waitFor({ state: 'visible' });
-
-    const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
-    const blockers = summarise(result.violations);
-    expect(blockers, JSON.stringify(blockers, null, 2)).toEqual([]);
-  });
-
-  test('onboarding intro has no serious or critical violations', async ({ page }) => {
-    await resetPersistentAppState(page);
-    // Use a real user interaction: the cover transition is deliberately
-    // guarded by the component's pointer/click flow rather than a raw event.
     await page.getByTestId('cover-initialize').click();
-    await page.getByTestId('onboarding-skip').waitFor({ state: 'visible' });
-
+    await page
+      .getByRole('navigation', { name: '主页面导航' })
+      .getByRole('button', { name: /^现在/ })
+      .click();
+    await page.getByTestId('now-page').waitFor({ state: 'visible' });
     const result = await new AxeBuilder({ page }).withTags(RULES_TAGS).analyze();
     const blockers = summarise(result.violations);
     expect(blockers, JSON.stringify(blockers, null, 2)).toEqual([]);

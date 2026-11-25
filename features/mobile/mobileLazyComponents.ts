@@ -10,11 +10,17 @@ let pastRepositoryModule: LazyModule<typeof import('./PastRepository').PastRepos
 let mobileShellModule: LazyModule<typeof import('./MobileShell').MobileShell> | undefined;
 
 const loadFuturePage = () =>
-  (futurePageModule ??= import('../future/FuturePage').then((module) => ({ default: module.FuturePage })));
+  (futurePageModule ??= import('../future/FuturePage').then((module) => ({
+    default: module.FuturePage,
+  })));
 const loadPastRepository = () =>
-  (pastRepositoryModule ??= import('./PastRepository').then((module) => ({ default: module.PastRepository })));
+  (pastRepositoryModule ??= import('./PastRepository').then((module) => ({
+    default: module.PastRepository,
+  })));
 const loadMobileShell = () =>
-  (mobileShellModule ??= import('./MobileShell').then((module) => ({ default: module.MobileShell })));
+  (mobileShellModule ??= import('./MobileShell').then((module) => ({
+    default: module.MobileShell,
+  })));
 
 /** Start fetching a module before a navigation commits. Import caching makes this idempotent. */
 export const preloadFuturePage = () => loadFuturePage();

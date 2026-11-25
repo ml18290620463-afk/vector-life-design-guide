@@ -56,3 +56,39 @@ export const eventTagForLookup = (tag: string): string =>
       娱乐休闲: '兴趣休闲',
     }) as Record<string, string>
   )[tag] ?? tag;
+
+// Translate presentation only: stored tag identities stay compatible.
+const EN_TAGS: Record<string, string> = {
+  平静: 'Calm',
+  开心: 'Happy',
+  兴奋: 'Excited',
+  焦虑: 'Anxious',
+  疲惫: 'Tired',
+  迷茫: 'Uncertain',
+  难过: 'Sad',
+  愤怒: 'Angry',
+  感动: 'Moved',
+  工作事业: 'Work and career',
+  学习探索: 'Learning',
+  财务收支: 'Finances',
+  身心健康: 'Health',
+  人际交往: 'Social life',
+  家庭亲密: 'Family and intimacy',
+  生活起居: 'Daily life',
+  兴趣休闲: 'Leisure',
+  自定义锚点: 'Custom tag',
+};
+const EN_HINTS: Record<string, string> = {
+  工作事业: 'Work · Jobs · Career',
+  学习探索: 'Study · Skills · Curiosity',
+  财务收支: 'Income · Spending · Planning',
+  身心健康: 'Body · Emotions · Rest',
+  人际交往: 'Friends · Colleagues · Community',
+  家庭亲密: 'Family · Partner · Children',
+  生活起居: 'Home · Chores · Travel',
+  兴趣休闲: 'Hobbies · Entertainment · Play',
+};
+export const tagLabel = (tag: string, language: string) =>
+  language === 'en' ? (EN_TAGS[tag] ?? tag) : tag;
+export const tagHint = (tag: string, language: string) =>
+  language === 'en' ? EN_HINTS[tag] : EVENT_TAG_HINTS[tag];

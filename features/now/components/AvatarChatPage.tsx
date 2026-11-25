@@ -1,17 +1,19 @@
+import { resolveGuidanceBudget } from '../../../services/avatarGuidancePolicy';
+import { useAvatarLanguage } from './avatarLanguage';
 import { aiPrivacyToken, isAIMessageAllowed } from '../../../services/aiPrivacy';
 /* eslint-disable max-lines -- This page composes the complete chat flow; focused logic lives in state and hooks. */
 import {
-  selectAvatarGuidanceContext,
+  retrieveAvatarGuidanceContext,
   detectAvatarRetrievalIntent,
   getFocusText,
   resolveAvatarQueryScope,
 } from '../state/avatarGuidanceContext';
-import { PatternReviewDialog } from '../../../components/PatternReviewDialog';
+import { AvatarMemoryDetail } from './AvatarMemoryDetail';
+import { reviewArchiveCognition } from '../../../services/avatarOntologyArchive';
 import {
   answerAvatarEvidence,
   resolvePatternCorrection,
 } from '../../../services/avatarEvidenceDialogue';
-import { resolveAvatarKnowledge } from '../../../services/avatarKnowledgeProjection';
 import { modelError } from '../api/avatarModel';
 import {
   buildDeterministicEntryCountReply,
@@ -57,18 +59,18 @@ import type { ChatMessage, NowDraft, NowRoute, RecordPreviewPayload } from '../t
 import type {
   AvatarLaunchContext,
   AvatarSourceReference,
-  AvatarUnderstandingStatus,
+  CognitiveObject,
 } from '../../avatar/types';
 import {
-  atomicMemoryFromUnderstanding,
-  isPatternMemoryReadyForConfirmation,
-  readAvatarAtomicMemories,
-  readAvatarConversation,
-  readAvatarMemoryRelations,
-  readAvatarUnderstandings,
-  writeAvatarSession,
-  writeAvatarUnderstanding,
-} from '../../../services/avatarMemory';
+  initializeAvatarOntology,
+  settleExpiredAvatarOntology,
+  readAvatarOntology,
+  type AvatarOntologySnapshot,
+} from '../../../services/avatarOntologyStore';
+import {
+  createAvatarSessionWriter,
+  selectAvatarConversation,
+} from '../../../services/avatarOntologySessions';
 import { subscribeVault } from '../../../services/vaultTransaction';
 import { AvatarChatSurface } from './AvatarChatSurface';
 import { detectAvatarReliabilityTask, reliabilityReply } from '../state/avatarReliabilityTasks';
@@ -93,7 +95,40 @@ interface AvatarChatPageProps {
   onSelectEntry?: (entryId: string) => void;
 }
 
-export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
+export const AvatarChatPage: React.FC<AvatarChatPageProps> = (props) => {
+  const { t } = useAvatarLanguage();
+  const [graph, setGraph] = useState<AvatarOntologySnapshot | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    void initializeAvatarOntology()
+      .then(() => settleExpiredAvatarOntology())
+      .then(
+        (value) => {
+          if (active) setGraph(value);
+        },
+        (reason: unknown) => {
+          if (active)
+            setError(
+              reason instanceof Error
+                ? reason.message
+                : t('分身资料读取失败', 'Could not read avatar data.'),
+            );
+        },
+      );
+    return () => {
+      active = false;
+    };
+  }, [t]);
+  if (error) return <div role="alert">{error}</div>;
+  if (!graph) return <div role="status">{t('正在核验分身资料…', 'Verifying avatar data…')}</div>;
+  return <AvatarChatRuntime {...props} initialGraph={graph} />;
+};
+
+const AvatarChatRuntime: React.FC<
+  AvatarChatPageProps & { initialGraph: AvatarOntologySnapshot }
+> = ({
+  initialGraph,
   draft,
   setDraft,
   pastEntries,
@@ -110,8 +145,9 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   launchContext = { mode: 'capture', source: 'now' },
   onSelectEntry,
 }) => {
-  const [storedAvatarMemories, setAvatarMemories] = useState(readAvatarAtomicMemories);
-  const privacyToken = aiPrivacyToken(pastEntries, future, actions, principles, storedAvatarMemories);
+  const { language, t } = useAvatarLanguage();
+  const [liveGraph, setLiveGraph] = useState(initialGraph);
+  const privacyToken = aiPrivacyToken(pastEntries, future, actions, principles, liveGraph);
   const buildAssistantTextMessage = (...args: Parameters<typeof rawbuildAssistantTextMessage>) => ({
     ...rawbuildAssistantTextMessage(...args),
     aiPrivacyToken: privacyToken,
@@ -127,12 +163,14 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const launchAllowed =
     !launchContext.entryId ||
     pastEntries.some((e) => e.id === launchContext.entryId && isAccessibleDiaryEntry(e));
-  const [restoredSession] = useState(() => readAvatarConversation(launchContext));
+  const [restoredSession] = useState(() => selectAvatarConversation(initialGraph, launchContext));
   const [sessionId] = useState(() => restoredSession?.id ?? generateSecureId('avatar-session'));
   const [sessionCreatedAt] = useState(() => restoredSession?.createdAt ?? Date.now());
   const [input, setInput] = useState('');
   const [chatPending, setChatPending] = useState(false);
-  const [modelSettingsOpen, setModelSettingsOpen] = useState(false);
+  const [expandedScope, setExpandedScope] = useState(false);
+  const [smallWindow, setSmallWindow] = useState(false);
+  const [excludedSources, setExcludedSources] = useState<string[]>([]);
   const [libraryView, setLibraryView] = useState<'chat' | 'library'>('chat');
   const [chatError, setChatError] = useState('');
   const [reliabilityTask, setReliabilityTask] = useState<
@@ -142,41 +180,48 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
   const failedChat = useRef<ChatMessage[] | null>(null);
   useEffect(() => () => chatController.current?.abort(), [privacyToken]);
   const general = launchContext.mode === 'general';
-  const [patterns, setPatterns] = useState(readAvatarUnderstandings);
-
   const refreshAvatarKnowledge = () => {
-    setPatterns(readAvatarUnderstandings());
-    setAvatarMemories(readAvatarAtomicMemories());
+    void readAvatarOntology()
+      .then(setLiveGraph)
+      .catch(() => {
+        chatController.current?.abort();
+        setChatError(
+          t('分身资料核验失败，请重新进入。', 'Avatar verification failed. Please reopen it.'),
+        );
+      });
   };
   useEffect(() => {
-    const unsubscribe = subscribeVault(refreshAvatarKnowledge);
-    const expiryTimer = window.setInterval(refreshAvatarKnowledge, 30_000);
-    window.addEventListener('focus', refreshAvatarKnowledge);
-    window.addEventListener('storage', refreshAvatarKnowledge);
-    refreshAvatarKnowledge();
-    return () => {
-      unsubscribe();
-      window.clearInterval(expiryTimer);
-      window.removeEventListener('focus', refreshAvatarKnowledge);
-      window.removeEventListener('storage', refreshAvatarKnowledge);
+    let active = true;
+    let generation = 0;
+    const refresh = async () => {
+      const request = ++generation;
+      try {
+        const graph = await readAvatarOntology();
+        if (active && request === generation) setLiveGraph(graph);
+      } catch {
+        if (active && request === generation) {
+          chatController.current?.abort();
+          setChatError(
+            t('分身资料核验失败，请重新进入。', 'Avatar verification failed. Please reopen it.'),
+          );
+        }
+      }
     };
-  }, [pastEntries]);
-  const { memories: avatarMemories } = resolveAvatarKnowledge({
-    memories: storedAvatarMemories,
-    principles,
-    actions,
-    future,
-    patterns,
-    entries: pastEntries,
-    relations: readAvatarMemoryRelations(),
-  });
+    const unsubscribe = subscribeVault(() => {
+      void refresh();
+    });
+    void refresh();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [t]);
   const guidanceSources = buildGuidanceSources({
     entries: pastEntries,
-    patterns,
     principles,
     actions,
     future,
-    avatarMemories,
+    graph: liveGraph,
   });
   const inputRef = useRef<HTMLInputElement>(null);
   const chatListRef = useRef<HTMLElement>(null);
@@ -195,11 +240,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       ...recalled.filter((memory) => memory.sourceEntryId !== focusedEntry.id),
     ];
   });
-  const [understanding, setUnderstanding] = useState<{
-    id: string;
-    statement: string;
-    status: AvatarUnderstandingStatus;
-  } | null>(null);
+  const [understanding, setUnderstanding] = useState<CognitiveObject | null>(null);
   const [choosingCorrection, setChoosingCorrection] = useState(false);
   const correctionIds = useRef<string[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -212,8 +253,13 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     setUnderstanding(null);
     setChoosingCorrection(false);
     correctionIds.current = [];
-    setChatError('记录权限已变化，历史对话保留在本机，后续回答将使用新的授权范围。');
-  }, [privacyToken]);
+    setChatError(
+      t(
+        '记录权限已变化，历史对话保留在本机，后续回答将使用新的授权范围。',
+        'Record permissions changed. Local chat history is retained; future replies use the new permissions.',
+      ),
+    );
+  }, [privacyToken, t]);
   const [storedMessages, setMessages] = useState<ChatMessage[]>(() => {
     const seed = launchAllowed ? launchContext.prompt || launchContext.query : undefined;
     if (launchContext.mode === 'general') {
@@ -233,6 +279,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       createdAt: new Date().toISOString(),
       createId: () => generateSecureId('msg'),
       mode: launchContext.mode,
+      language,
     });
     if (!seed) return intro;
     const options = {
@@ -270,39 +317,49 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       })),
     [validRecallMemories],
   );
-  useEffect(() => {
-    if (!storedMessages.some((message) => message.role === 'user')) return;
-    const saved = writeAvatarSession({
+  const [saveSession] = useState(createAvatarSessionWriter);
+  const persistConversation = () =>
+    saveSession({
       id: sessionId,
       mode: launchContext.mode,
-      context: launchContext,
+      context: restoredSession?.context ?? launchContext,
       messages: storedMessages,
       references,
       createdAt: sessionCreatedAt,
       updatedAt: Date.now(),
     });
-    if (!saved) setChatError('聊天记录未能保存，请检查浏览器存储空间后重试。');
-  }, [launchContext, storedMessages, references, sessionCreatedAt, sessionId]);
-  const formUnderstanding = () => {
-    const statement =
-      liveInsight.thought || liveInsight.result || liveInsight.action || liveInsight.fact;
-    if (!statement) {
-      showToast('请先补充一个具体事实或想法');
-      return;
-    }
-    const next = { id: generateSecureId('understanding'), statement, status: 'pending' as const };
-    const saved = writeAvatarUnderstanding({
-      ...next,
-      sourceEntryIds: liveInsight.evidenceEntryIds,
-      createdAt: Date.now(),
+  // Vault refreshes recreate prop arrays. Save only semantic conversation changes,
+  // otherwise each write triggers a refresh and queues another identical write.
+  const conversationSnapshot = JSON.stringify({
+    id: sessionId,
+    mode: launchContext.mode,
+    context: restoredSession?.context ?? launchContext,
+    messages: storedMessages,
+    references,
+    createdAt: sessionCreatedAt,
+  });
+  useEffect(() => {
+    const conversation = JSON.parse(conversationSnapshot) as Omit<
+      import('../../avatar/types').AvatarSession,
+      'updatedAt'
+    >;
+    if (!conversation.messages.some((message) => message.role === 'user')) return;
+    let active = true;
+    void saveSession({ ...conversation, updatedAt: Date.now() }).catch(() => {
+      if (active)
+        setChatError(t('聊天记录未能保存，请重试。', 'Could not save the chat. Please retry.'));
     });
-    if (saved) setUnderstanding(next);
-    else showToast('提炼尚未保存，请重试');
+    return () => {
+      active = false;
+    };
+  }, [conversationSnapshot, t, saveSession]);
+  const formUnderstanding = () => {
+    void memoryCapture.generateCompanionSummary(storedMessages);
   };
   const continueRecall = () => {
     const query = input.trim();
     if (!query) {
-      showToast('请输入想从过去查找的问题');
+      showToast(t('请输入想从过去查找的问题', 'Enter a question to search your past records.'));
       return;
     }
     setRecallMemories(selectAvatarRecallMemories(pastEntries, query));
@@ -313,13 +370,16 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     conversationMessages = messages,
   ) => {
     if (conversationUserMessages.length === 0) {
-      showToast('请先说说想记下什么');
+      showToast(t('请先说说想记下什么', 'Tell me what you would like to record first.'));
       return;
     }
     const recordableMessages = getRecordableInformation(conversationUserMessages);
     if (recordableMessages.length === 0) {
       const question =
-        buildAdaptiveFollowup(conversationUserMessages, followupRound) ?? '补充一件具体事实。';
+        (language === 'en'
+          ? null
+          : buildAdaptiveFollowup(conversationUserMessages, followupRound)) ??
+        t('补充一件具体事实。', 'Please add one specific fact.');
       if (followupRound < CONFIG.MAX_FOLLOWUP_ROUNDS) setFollowupRound((value) => value + 1);
       setMessages((current) => [
         ...current,
@@ -338,8 +398,12 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       followupRound < CONFIG.MAX_FOLLOWUP_ROUNDS
     ) {
       const question =
-        buildAdaptiveFollowup(conversationUserMessages, followupRound) ??
-        (followupRound === 0 ? '补充事实和想法。' : '补充感受。');
+        (language === 'en'
+          ? null
+          : buildAdaptiveFollowup(conversationUserMessages, followupRound)) ??
+        (followupRound === 0
+          ? t('补充事实和想法。', 'Please add the facts and your thoughts.')
+          : t('补充感受。', 'How did you feel?'));
       setFollowupRound((value) => value + 1);
       setMessages((current) => [
         ...current,
@@ -366,7 +430,9 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         setMessages((current) => [
           ...current,
           buildAssistantTextMessage(
-            result.followup_question || result.reason || '补充一件具体事实。',
+            result.followup_question ||
+              result.reason ||
+              t('补充一件具体事实。', 'Please add one specific fact.'),
             { id: generateSecureId('msg'), createdAt: new Date().toISOString() },
           ),
         ]);
@@ -404,12 +470,12 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         }),
       ]);
     } catch {
-      showToast('整理失败，请重试');
+      showToast(t('整理失败，请重试', 'Could not organize this record. Please retry.'));
     } finally {
       setGenerating(false);
     }
   };
-  const requestReply = async (conversation: ChatMessage[]) => {
+  const requestReply = async (conversation: ChatMessage[], expand = expandedScope) => {
     if (chatController.current) return;
     const controller = new AbortController();
     chatController.current = controller;
@@ -438,11 +504,29 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
               3,
             ).catch(() => [])
           : [];
-      const context = selectAvatarGuidanceContext(
+      const freshGraph = await settleExpiredAvatarOntology();
+      if (controller.signal.aborted) return;
+      if (aiPrivacyToken(pastEntries, future, actions, principles, freshGraph) !== privacyToken) {
+        setLiveGraph(freshGraph);
+        throw new Error('privacy_changed');
+      }
+      const diagnostics = { privacyCount: 0, expiryCount: 0 };
+      const { sources: context, manifest } = retrieveAvatarGuidanceContext(
         queryConversation,
-        guidanceSources,
+        buildGuidanceSources({
+          entries: pastEntries,
+          principles,
+          actions,
+          future,
+          graph: freshGraph,
+          diagnostics,
+          includeExpiredHistory:
+            resolveGuidanceBudget(question, { mode: launchContext.mode, expanded: expand })
+              .scopeTier === 'expanded' && ['recall', 'review'].includes(launchContext.mode),
+        }),
         launchContext,
         preferredEntryIds,
+        { expanded: expand, smallWindow, excludedIds: excludedSources, ...diagnostics },
       );
       const metric = findAvatarEvidenceMetric(question, pastEntries);
       const modelConversation = metric
@@ -458,7 +542,12 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
             },
           ]
         : conversation;
-      const reply = await chatWithAvatar(modelConversation, context, controller.signal);
+      const reply = await chatWithAvatar(modelConversation, context, controller.signal, {
+        mode: launchContext.mode,
+        expanded: manifest.scopeTier === 'expanded',
+        smallWindow,
+        excludedIds: excludedSources,
+      });
       if (controller.signal.aborted) return;
       const replyReferences = context
         .flatMap((source) =>
@@ -466,10 +555,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         )
         .map(({ evidence, reason }) => {
           const entry = pastEntries.find(
-            (candidate) =>
-              isAccessibleDiaryEntry(candidate) &&
-              candidate.createdAt === evidence.occurredAt &&
-              `${candidate.title}：${candidate.content}`.includes(evidence.text),
+            (candidate) => isAccessibleDiaryEntry(candidate) && candidate.id === evidence.entryId,
           );
           return entry
             ? {
@@ -493,7 +579,8 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         createdAt: new Date().toISOString(),
         references: uniqueReplyReferences,
         modelAssistance: {
-          sourceCount: uniqueReplyReferences.length,
+          sourceCount: context.length,
+          manifest,
           ...(sourceDates.length
             ? {
                 earliestSourceDate: sourceDates[0],
@@ -507,7 +594,7 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       failedChat.current = null;
     } catch (error) {
       if (controller.signal.aborted) return;
-      setChatError(modelError(error instanceof Error ? error.message : ''));
+      setChatError(modelError(error instanceof Error ? error.message : '', language));
     } finally {
       if (!controller.signal.aborted) setChatPending(false);
       chatController.current = null;
@@ -520,19 +607,22 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       id: generateSecureId('msg'),
       createdAt: new Date().toISOString(),
     });
-    const activePatterns = readAvatarUnderstandings().filter(
-      (item) => item.status === 'confirmed' && guidanceSources.some((s) => s.id === item.id),
+    const activePatterns = liveGraph.objects.filter(
+      (item) =>
+        item.domain === 'my_understanding' &&
+        item.status === 'confirmed' &&
+        guidanceSources.some((s) => s.id === item.id),
     );
     const requestedReliabilityTask = general ? detectAvatarReliabilityTask(content) : null;
     const correcting =
-      /(?:修正|修改|不认可|不认同|纠正|不符合).*(?:模式|理解)|(?:模式|理解).*(?:不对|错了|不符合)/.test(
+      /(?:修正|修改|不认可|不认同|纠正|不符合).*(?:模式|理解)|(?:模式|理解).*(?:不对|错了|不符合)|(?:correct|edit|change|reject).*(?:pattern|understanding)/i.test(
         content,
       );
     let localAnswer: string | null = null;
     let localReferences: ChatMessage['references'];
     if (requestedReliabilityTask) {
       setReliabilityTask(requestedReliabilityTask);
-      localAnswer = reliabilityReply(requestedReliabilityTask);
+      localAnswer = reliabilityReply(requestedReliabilityTask, language);
     } else if (correcting || choosingCorrection) {
       const { target, ordinal } = resolvePatternCorrection(
         content,
@@ -542,20 +632,27 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
       if (target) {
         setUnderstanding(target);
         setChoosingCorrection(false);
-        localAnswer = '请在弹窗中修正这条理解，或选择不认可。你的决定保存后会生效。';
+        localAnswer = t(
+          '请在弹窗中修正这条理解，或选择不认可。你的决定保存后会生效。',
+          'Edit this understanding in the dialog or reject it. Your choice takes effect when saved.',
+        );
       } else if (!activePatterns.length) {
         setChoosingCorrection(false);
-        localAnswer =
-          '目前还没有你认可的模式。继续告诉我具体经历、反应和结果；我会在分身档案中形成候选理解，并请你通过弹窗确认或修正。';
+        localAnswer = t(
+          '目前还没有你认可的模式。继续告诉我具体经历、反应和结果；我会在分身档案中形成候选理解，并请你通过弹窗确认或修正。',
+          'No confirmed patterns yet. Share specific experiences, reactions, and outcomes. Candidate understandings require your review.',
+        );
       } else if (correcting || ordinal) {
         setChoosingCorrection(true);
         correctionIds.current = activePatterns.map((item) => item.id);
         localAnswer =
-          '你想修正哪一条？请回复完整描述或下面的编号：\n' +
-          activePatterns.map((item, i) => `${i + 1}. ${item.statement}`).join('\n');
+          t(
+            '你想修正哪一条？请回复完整描述或下面的编号：\n',
+            'Which pattern would you like to edit? Reply with the full statement or its number:\n',
+          ) + activePatterns.map((item, i) => `${i + 1}. ${item.statement}`).join('\n');
       } else setChoosingCorrection(false);
     }
-    const metric = findAvatarEvidenceMetric(content, pastEntries);
+    const metric = language === 'zh' ? findAvatarEvidenceMetric(content, pastEntries) : null;
     if (metric) {
       localAnswer = buildAvatarEvidenceMetricReply(metric);
       localReferences = metric.matches.flatMap((match) => {
@@ -564,10 +661,13 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         return [
           {
             entryId: entry.id,
-            title: entry.title || '未命名记录',
+            title: entry.title || t('未命名记录', 'Untitled record'),
             date: entry.createdAt,
             excerpt: entry.content.replace(/\s+/g, ' ').trim().slice(0, 120),
-            reason: match.reason === 'tag' ? '明确标签' : '原文明确表达',
+            reason:
+              match.reason === 'tag'
+                ? t('明确标签', 'Explicit tag')
+                : t('原文明确表达', 'Explicit statement in the record'),
           },
         ];
       });
@@ -575,12 +675,13 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     if (detectAvatarRetrievalIntent(content) !== 'decision_support') {
       localAnswer ??= answerAvatarEvidence(
         content,
-        activePatterns,
+        liveGraph,
         principles.filter((p) => guidanceSources.some((s) => s.kind === '原则' && s.id === p.id)),
         pastEntries,
+        language,
       );
     }
-    localAnswer ??= buildDeterministicEntryCountReply(content, pastEntries);
+    if (language === 'zh') localAnswer ??= buildDeterministicEntryCountReply(content, pastEntries);
     if (localAnswer) {
       const answeredMessages = [
         ...messages,
@@ -588,12 +689,32 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         buildAssistantTextMessage(localAnswer, {
           id: generateSecureId('msg'),
           createdAt: new Date().toISOString(),
+          modelAssistance: {
+            sourceCount: 0,
+            manifest: {
+              mode: launchContext.mode,
+              scopeTier: 'local_deterministic',
+              appliedLimit: 0,
+              matchedCount: 0,
+              filteredOutByPrivacyCount: 0,
+              filteredOutByExpiryCount: 0,
+              excludedByUserCount: 0,
+              searchedTags: [],
+              breakdown: { aboutMeCount: 0, understandingCount: 0, rawRecordCount: 0 },
+              triggeredGuardrailIds: [],
+              canExpandScope: false,
+            },
+          },
           ...(localReferences?.length ? { references: localReferences } : {}),
         }),
       ];
       setMessages((current) => [...current, ...answeredMessages.slice(-2)]);
       setInput('');
-      if (metric && general && /(为什么|为何|怎么|建议|分析|总结)/.test(content)) {
+      if (
+        metric &&
+        general &&
+        /(为什么|为何|怎么|建议|分析|总结|why|how|advice|analy[sz]e|summari[sz]e)/i.test(content)
+      ) {
         void requestReply(answeredMessages);
       }
       return;
@@ -602,11 +723,12 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     const nextUserMessages = [...userMessages, userMessage];
     const nextMessages = [...messages, userMessage];
     const avatarName = general ? extractAvatarName(content) : null;
-    const acknowledgement = general
-      ? null
-      : buildCompanionAcknowledgement(nextUserMessages, assistantTurns, nextRecallMemories);
+    const acknowledgement =
+      general || language === 'en'
+        ? null
+        : buildCompanionAcknowledgement(nextUserMessages, assistantTurns, nextRecallMemories);
     if (avatarName) {
-      memoryCapture.considerAvatarName(avatarName, userMessage);
+      memoryCapture.considerAvatarName(avatarName, nextMessages);
     }
     setRecallMemories(nextRecallMemories);
     setMessages((current) => {
@@ -629,30 +751,161 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
     draft,
     sessionId,
     avatarMemoryReferences: buildAvatarMemoryReferences(
-      avatarMemories.filter((m) => guidanceSources.some((s) => s.id === m.id)),
+      liveGraph.objects.filter((m) => guidanceSources.some((s) => s.id === m.id)),
     ).map((ref) => ({ ...ref, aiPrivacyToken: privacyToken })),
     showToast,
-    refreshAvatarMemories: () => setAvatarMemories(readAvatarAtomicMemories()),
+    refreshAvatarMemories: () => {
+      void readAvatarOntology().then(setLiveGraph);
+    },
+    appendReviewMessage: (statement) => {
+      const next = [
+        ...storedMessages,
+        buildUserTextMessage(statement, {
+          id: generateSecureId('msg'),
+          createdAt: new Date().toISOString(),
+        }),
+      ];
+      setMessages(next);
+      return next;
+    },
+    prepareExtraction: (sourceMessages) =>
+      saveSession({
+        id: sessionId,
+        mode: launchContext.mode,
+        context: restoredSession?.context ?? launchContext,
+        messages: sourceMessages,
+        references,
+        createdAt: sessionCreatedAt,
+        updatedAt: Date.now(),
+      }),
   });
+
+  const reviseMemory = async (object: CognitiveObject, statement: string) => {
+    const message = buildUserTextMessage(statement, {
+      id: generateSecureId('msg'),
+      createdAt: new Date().toISOString(),
+    });
+    const next = [...storedMessages, message];
+    setMessages(next);
+    setLibraryView('chat');
+    await memoryCapture.generateCompanionSummary(next, false, object);
+  };
 
   return (
     <>
       {memoryCapture.dialog}
       {understanding && (
-        <PatternReviewDialog
+        <AvatarMemoryDetail
           key={understanding.id}
-          pattern={understanding}
-          onDefer={() => setUnderstanding(null)}
-          onDone={() => {
-            setUnderstanding(null);
-            refreshAvatarKnowledge();
-            showToast('已保存你的判断');
+          memory={understanding}
+          entries={pastEntries}
+          onClose={() => setUnderstanding(null)}
+          onSave={(_statement, status) => {
+            if (status !== 'rejected') return;
+            void reviewArchiveCognition(liveGraph, understanding, status, false)
+              .then(() => {
+                setUnderstanding(null);
+                refreshAvatarKnowledge();
+              })
+              .catch((error) => showToast(error.message));
+          }}
+          onSupersede={(statement) => {
+            void reviseMemory(understanding, statement)
+              .then(() => setUnderstanding(null))
+              .catch((error) => showToast(error.message));
           }}
         />
       )}
       <AvatarChatSurface
+        sourceReview={
+          libraryView === 'chat' && (
+            <details className="avatar-message-references">
+              <summary>{t('本次携带资料快检', 'Review request sources')}</summary>
+              <p>
+                {t(
+                  '资料将发往当前配置的服务商，发出后中止无法撤回。取消勾选可从本次请求中剔除来源。',
+                  'Data is sent to the configured provider. Aborting cannot retract data already sent. Uncheck a source to exclude it.',
+                )}
+              </p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={smallWindow}
+                  onChange={(event) => setSmallWindow(event.target.checked)}
+                />
+                {t('小窗口模型：最多参考两条', 'Small context model: up to two sources')}
+              </label>
+              {retrieveAvatarGuidanceContext(
+                [
+                  ...messages,
+                  ...(input.trim()
+                    ? [
+                        buildUserTextMessage(input, {
+                          id: 'preview-query',
+                          createdAt: new Date().toISOString(),
+                        }),
+                      ]
+                    : []),
+                ],
+                buildGuidanceSources({
+                  entries: pastEntries,
+                  principles,
+                  actions,
+                  future,
+                  graph: liveGraph,
+                  includeExpiredHistory:
+                    ['recall', 'review'].includes(launchContext.mode) &&
+                    resolveGuidanceBudget(
+                      input.trim() || resolveAvatarQueryScope(messages).scopedQuestion,
+                      { mode: launchContext.mode, expanded: expandedScope },
+                    ).scopeTier === 'expanded',
+                }),
+                launchContext,
+                [],
+                { expanded: expandedScope, smallWindow },
+              ).sources.map((source) => (
+                <label key={source.id} style={{ display: 'block' }}>
+                  <input
+                    type="checkbox"
+                    checked={!excludedSources.includes(source.id)}
+                    onChange={(event) =>
+                      setExcludedSources((ids) =>
+                        event.target.checked
+                          ? ids.filter((id) => id !== source.id)
+                          : [...ids, source.id],
+                      )
+                    }
+                  />
+                  {source.kind} · {source.text}
+                </label>
+              ))}
+              <button
+                type="button"
+                disabled={!input.trim() || chatPending}
+                onClick={sendMessage}
+              >
+                {t('确认资料并发送', 'Confirm sources and send')}
+              </button>
+              <button
+                type="button"
+                disabled={
+                  launchContext.mode === 'capture' ||
+                  chatPending ||
+                  !messages.some((message) => message.role === 'user')
+                }
+                onClick={() => {
+                  setExpandedScope(true);
+                  void requestReply(messages, true);
+                }}
+              >
+                {t('扩大范围重新参考', 'Expand scope and retry')}
+              </button>
+            </details>
+          )
+        }
         pastEntries={pastEntries}
-        avatarMemories={avatarMemories}
+        graph={liveGraph}
+        onReviseMemory={reviseMemory}
         candidateSummary={memoryCapture.companionSummary}
         chatError={chatError}
         chatListRef={chatListRef}
@@ -690,11 +943,13 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
         replacementStatement={memoryCapture.replacementStatement}
         visibleMessages={chatViewport.visibleMessages}
         mobileShell={mobileShell}
-        modelSettingsOpen={modelSettingsOpen}
-        onAddMemory={memoryCapture.addMemory}
+        onAddMemory={() => {
+          setLibraryView('chat');
+          inputRef.current?.focus();
+          memoryCapture.addMemory();
+        }}
         onBack={onBack}
         onChangeInput={setInput}
-        onCloseModelSettings={() => setModelSettingsOpen(false)}
         onConfirmMemory={memoryCapture.confirmMemory}
         onDismissMemory={memoryCapture.dismissMemory}
         onEditTags={() => {
@@ -706,13 +961,25 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
             }));
           onRouteChange('tags');
         }}
-        onGenerateMemory={() => void memoryCapture.generateCompanionSummary(messages)}
+        onGenerateMemory={() => {
+          void persistConversation()
+            .then(() => memoryCapture.generateCompanionSummary(storedMessages))
+            .catch(() =>
+              setChatError(
+                t(
+                  '请先成功保存会话，再提炼认知。',
+                  'Save the conversation before extracting cognition.',
+                ),
+              ),
+            );
+        }}
         onMemoryTextChange={(text) =>
           memoryCapture.companionSummary &&
           memoryCapture.setCompanionSummary({ ...memoryCapture.companionSummary, text })
         }
         onSetLibraryView={setLibraryView}
-        onOpenModelSettings={() => setModelSettingsOpen(true)}
+        onOpenSettings={() => onRouteChange('avatar-settings')}
+        onOpenFuture={() => onNavigateModule?.('future')}
         onShowEarlierMessages={chatViewport.showEarlier}
         onJumpToLatest={chatViewport.jumpToLatest}
         onRefreshKnowledge={refreshAvatarKnowledge}
@@ -728,19 +995,11 @@ export const AvatarChatPage: React.FC<AvatarChatPageProps> = ({
           else if (launchContext.mode === 'recall') continueRecall();
           else formUnderstanding();
         }}
-        patterns={patterns}
-        pendingMemories={[
-          ...patterns
-            .filter((pattern) => pattern.status === 'pending')
-            .map(atomicMemoryFromUnderstanding),
-          ...storedAvatarMemories.filter(isPatternMemoryReadyForConfirmation),
-        ]}
         preview={preview}
         sending={sending}
         setChatError={setChatError}
         showToast={showToast}
         showJumpToLatest={chatViewport.showJumpToLatest}
-        storedAvatarMemories={storedAvatarMemories}
         userMessageCount={userMessages.length}
         validRecallMemories={validRecallMemories}
         liveInsight={liveInsight}

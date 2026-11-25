@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
-import { seedOnboardedApp } from './seedHelpers';
+import { seedOnboardedApp, choosePrivateVisibility } from './seedHelpers';
 
 for (const width of [1440, 390]) {
   test(`过去回看可搜索并安全进入批量删除 ${width}`, async ({ page }) => {
@@ -18,6 +18,7 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: '工作事业', exact: true }).click();
     await page.getByRole('button', { name: '返回', exact: true }).click();
     await page.getByLabel('保存到过去').click();
+    await choosePrivateVisibility(page);
     await expect(page.getByTestId('past-page')).toBeVisible();
     await expect(page.getByText(content, { exact: false }).first()).toBeVisible();
 
@@ -151,6 +152,7 @@ for (const width of [1440, 390]) {
       await page.getByRole('button', { name: '工作事业', exact: true }).click();
       await page.getByRole('button', { name: '返回', exact: true }).click();
       await page.getByLabel('保存到过去').click();
+      await choosePrivateVisibility(page);
       await expect(page.getByTestId('past-page')).toBeVisible();
     }
     await page.getByRole('button', { name: '选择', exact: true }).click();

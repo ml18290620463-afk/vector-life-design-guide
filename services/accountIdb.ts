@@ -7,7 +7,7 @@ export function accountStore() {
   return stores.get(name)!;
 }
 // Preserve the default store for local-only installations and existing migrations.
-const selectedStore = () => currentAccountId() ? accountStore() : undefined;
+const selectedStore = () => (currentAccountId() ? accountStore() : undefined);
 export const get = <T = unknown>(key: IDBValidKey) => idb.get<T>(key, selectedStore());
 export const set = (key: IDBValidKey, value: unknown) => idb.set(key, value, selectedStore());
 export const del = (key: IDBValidKey) => idb.del(key, selectedStore());

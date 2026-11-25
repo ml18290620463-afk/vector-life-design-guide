@@ -6,7 +6,9 @@ import {
   type LocalSemanticIndexItem,
 } from './localSemanticIndex';
 import { previewAvatarGrowth } from '../features/now/api/avatar';
-import { readAvatarUnderstandings, upsertAvatarAtomicMemories } from './avatarMemory';
+import { initializeAvatarOntology } from './avatarOntologyStore';
+import { withAvatarSession } from './avatarOntologySessionGuard';
+import { stageExperienceCandidates } from './avatarExperienceCandidates';
 
 /** Avatar owns interpretation and candidate persistence; Past only supplies evidence. */
 export async function proposeExperienceMemories(
@@ -15,95 +17,70 @@ export async function proposeExperienceMemories(
   entries: DiaryEntry[],
   cancelled: () => boolean,
   index: LocalSemanticIndexItem[] = buildLocalSemanticIndex(
-    entries.filter(item => isAccessibleDiaryEntry(item)).map((item) => ({ ...item, title: '', tags: [], supplements: undefined })),
+    entries
+      .filter((item) => isAccessibleDiaryEntry(item))
+      .map((item) => ({ ...item, title: '', tags: [], supplements: undefined })),
   ),
 ): Promise<boolean> {
-  if (!isAccessibleDiaryEntry(entry) || cancelled()) return false;
-  const evidenceSources: {
-    entryId: string;
-    supplementId?: string;
-    content: string;
-    createdAt: number;
-  }[] = [
-    {
-      entryId: entry.id,
-      supplementId: unit.supplementId,
-      content: unit.content,
-      createdAt: unit.createdAt,
-    },
-    ...searchLocalSemanticIndex(
-      { title: '', content: unit.content, tags: [] },
-      index.filter(
-        ({ entry: candidate }) => candidate.id !== entry.id && isAccessibleDiaryEntry(candidate),
-      ),
-      3,
-      0.45,
-    )
-      .map((match) => match.entry)
-      .map((candidate) => ({
-        entryId: candidate.id,
-        content: candidate.content,
-        createdAt: candidate.createdAt,
-      })),
-  ];
-  const evidenceMessages = evidenceSources.map((source) => ({
-    role: 'user',
-    content: source.content,
-    createdAt: source.createdAt,
-  }));
-  const preview = await previewAvatarGrowth({
-    messages: evidenceMessages,
-    source: 'past',
-    sourceEntryId: entry.id,
-    sourceSupplementId: unit.supplementId,
-    occurredAt: unit.createdAt,
-    evidenceSources,
-    // Keep downstream recall bounded to the same evidence set sent to the model.
-    entries: evidenceSources.map((source) => ({
-      id: source.entryId,
-      title: '',
+  return withAvatarSession(async (assertCurrent) => {
+    if (!isAccessibleDiaryEntry(entry) || cancelled()) return false;
+    const graph = await initializeAvatarOntology();
+    assertCurrent();
+    const evidenceSources: {
+      entryId: string;
+      supplementId?: string;
+      content: string;
+      createdAt: number;
+    }[] = [
+      {
+        entryId: entry.id,
+        supplementId: unit.supplementId,
+        content: unit.content,
+        createdAt: unit.createdAt,
+      },
+      ...searchLocalSemanticIndex(
+        { title: '', content: unit.content, tags: [] },
+        index.filter(
+          ({ entry: candidate }) => candidate.id !== entry.id && isAccessibleDiaryEntry(candidate),
+        ),
+        3,
+        0.45,
+      )
+        .map((match) => match.entry)
+        .map((candidate) => ({
+          entryId: candidate.id,
+          content: candidate.content,
+          createdAt: candidate.createdAt,
+        })),
+    ];
+    const evidenceMessages = evidenceSources.map((source) => ({
+      role: 'user',
       content: source.content,
-      tags: [],
       createdAt: source.createdAt,
-    })),
-    understandings: readAvatarUnderstandings().filter((item) => item.status === 'confirmed' && item.sourceEntryIds.length > 0 && item.sourceEntryIds.every(id => entries.some(e => e.id === id && isAccessibleDiaryEntry(e)))),
-  });
-  if (cancelled()) return false;
-  // Only evidence actually supplied in this request can support a proposal.
-  // Reject the whole proposal on an invalid ref rather than laundering it by
-  // silently discarding the unsupported part of its evidence.
-  const hasVerifiedEvidence = (memory: (typeof preview.atomicMemoryCandidates)[number]) =>
-    memory.sourceRefs.length > 0 &&
-    memory.sourceRefs.every((reference) => {
-      const source = evidenceSources.find(
-        (candidate) =>
-          reference.source === 'entry' &&
-          candidate.entryId === reference.id &&
-          candidate.supplementId === reference.supplementId,
-      );
-      return !!source && (!reference.excerpt || source.content.includes(reference.excerpt));
+    }));
+    const preview = await previewAvatarGrowth({
+      messages: evidenceMessages,
+      source: 'past',
+      sourceEntryId: entry.id,
+      sourceSupplementId: unit.supplementId,
+      occurredAt: unit.createdAt,
+      evidenceSources,
+      // Keep downstream recall bounded to the same evidence set sent to the model.
+      entries: evidenceSources.map((source) => ({
+        id: source.entryId,
+        title: '',
+        content: source.content,
+        tags: [],
+        createdAt: source.createdAt,
+      })),
+      understandings: graph.objects.map(({ id }) => ({ id })),
     });
-  const hasIndependentEntryEvidence = (memory: (typeof preview.atomicMemoryCandidates)[number]) =>
-    new Set(
-      memory.sourceRefs
-        .filter((reference) => reference.source === 'entry')
-        .map((reference) => reference.id),
-    ).size >= 2;
-  const isLongLivedSelfStatement = (memory: (typeof preview.atomicMemoryCandidates)[number]) =>
-    memory.facets.includes('preference') || memory.facets.includes('boundary');
-  if (
-    !upsertAvatarAtomicMemories(
-      preview.atomicMemoryCandidates.filter(
-        (memory) =>
-          memory.status === 'candidate' &&
-          hasVerifiedEvidence(memory) &&
-          // A past entry remains a fact even when it contains “I like…” or
-          // “I will not…”.  One occurrence must not become a long-lived self
-          // conclusion.  A second independent experience can propose it.
-          (!isLongLivedSelfStatement(memory) || hasIndependentEntryEvidence(memory)),
-      ),
-    )
-  )
-    throw new Error('提炼未完成');
-  return true;
+    if (cancelled()) return false;
+    assertCurrent();
+    await stageExperienceCandidates(preview.atomicMemoryCandidates, graph.revision, () => {
+      assertCurrent();
+      if (cancelled()) throw new Error('提炼已取消');
+    });
+    return true;
+  });
 }
