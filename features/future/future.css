@@ -1,13 +1,13 @@
 .future-page,
 .future-dialog {
   /* Use the same semantic palette as Past; never override the shell's tokens. */
-  --color-archive-text-main: var(--mobile-ink, #edfafd);
-  --color-archive-text-muted: var(--mobile-ink-soft, #c8e0e6);
-  --color-archive-bg: var(--mobile-paper, #071824);
-  --color-archive-surface: var(--mobile-surface, #0f2b39);
-  --color-archive-border: var(--mobile-line, rgba(151, 216, 227, 0.2));
-  --color-archive-border-strong: var(--mobile-line-strong, rgba(151, 216, 227, 0.36));
-  --color-archive-accent: var(--mobile-accent, #91dce8);
+  --color-archive-text-main: var(--ink-1, #182236);
+  --color-archive-text-muted: var(--ink-3, #667487);
+  --color-archive-bg: var(--silk-bg, #F7FAFD);
+  --color-archive-surface: var(--surface-primary, #fff);
+  --color-archive-border: var(--line-subtle, #D8E2EE);
+  --color-archive-border-strong: var(--line-strong, #C8DCF0);
+  --color-archive-accent: var(--accent-link, #426EAA);
   color: var(--color-archive-text-main, #0f172a);
   background: var(--color-archive-bg, #f4f7f9);
   font-size: 1rem;
@@ -89,12 +89,6 @@
 }
 .future-action-tabs {
   margin-bottom: 0.75rem;
-}
-.future-page button[aria-pressed='true'],
-.future-primary {
-  background: var(--color-archive-border, rgb(15 23 42 / 0.08));
-  color: var(--color-archive-text-main, #0f172a);
-  font-weight: 600;
 }
 .future-section-header {
   display: grid;
@@ -238,7 +232,8 @@
   overscroll-behavior: contain;
 }
 .future-dialog::backdrop {
-  background: rgb(15 23 42 / 0.5);
+  background: rgba(232, 238, 247, 0.56);
+  backdrop-filter: blur(10px);
 }
 .future-dialog header {
   display: flex;
@@ -255,8 +250,9 @@
   min-height: 2.75rem;
   padding: 0;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--color-archive-border-strong) 72%, transparent);
-  background: color-mix(in srgb, var(--color-archive-surface) 68%, transparent);
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: #fff;
   color: var(--color-archive-text-main);
   font-size: 1.5rem;
   font-weight: 400;
@@ -496,48 +492,35 @@ html .future-dialog textarea {
 }
 
 /* Two clear workspaces; planning types stay subordinate to the workspace switch. */
-.future-primary-tabs {
+.future-silk-toolbar {
   display: flex;
-  gap: 1.6rem;
-  margin-inline: calc(-1 * var(--mobile-page-gutter, 1rem));
-  margin-bottom: 0.875rem;
-  padding: 0.5rem var(--mobile-page-gutter, 1rem) 0.875rem;
-  border-bottom: 1px solid var(--color-archive-border);
-}
-.future-primary-tabs button {
-  position: relative;
-  min-height: 2rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--color-archive-text-muted);
-  font-size: 0.9rem;
-}
-.future-primary-tabs button[aria-selected='true'] {
-  color: var(--color-archive-accent);
-  font-weight: 650;
-}
-.future-primary-tabs button[aria-selected='true']::after {
-  position: absolute;
-  right: 0;
-  bottom: -0.9rem;
-  left: 0;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
-  content: '';
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(100%, 980px);
+  margin: 0 auto 24px;
 }
 .future-design-content {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
-  gap: 1.5rem;
-  width: 100%;
+  gap: 16px;
+  width: min(100%, 980px);
+  margin-inline: auto;
+}
+.future-page > :is(.future-next-action, .future-design-content, .future-silk-toolbar) {
+  width: min(100%, 980px);
+  margin-inline: auto;
+}
+@media (max-width: 700px) {
+  .future-silk-toolbar { flex-wrap: wrap; }
+  .future-silk-toolbar > .silk-button { margin-left: auto; }
+  .future-design-content { grid-template-columns: minmax(0, 1fr); }
 }
 .future-next-action {
+  width: 100%;
   overflow: hidden;
-  border-bottom: 1px solid var(--color-archive-border);
+  border-bottom: 1px solid var(--line-subtle);
   background: transparent;
 }
 .future-next-action > header {
@@ -564,9 +547,9 @@ html .future-dialog textarea {
   gap: 0.875rem;
   width: 100%;
   min-height: 4.5rem;
-  padding: 0.75rem 0 !important;
+  padding: 0.75rem 16px 0.75rem 0 !important;
   border: 0;
-  border-top: 1px solid var(--color-archive-border);
+  border-top: 1px solid var(--line-subtle);
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--color-archive-text-main);
@@ -706,7 +689,7 @@ html .future-dialog textarea {
   width: 100%;
   margin: 0;
   padding: 0.75rem 0;
-  border-top: 1px solid var(--color-archive-border);
+  border-top: 1px solid var(--line-subtle);
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
@@ -1578,13 +1561,45 @@ html .future-dialog textarea {
   gap: 0.875rem;
   padding-bottom: 1rem;
 }
+.future-dialog.growth-loop-completion {
+  position: fixed;
+  inset: 0;
+  width: min(560px, calc(100vw - 32px));
+  max-width: min(560px, calc(100vw - 32px));
+  height: max-content;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--line-island);
+  border-radius: 20px;
+  background: var(--surface-island);
+  color: var(--ink-1);
+  box-shadow: var(--shadow-float);
+}
+.future-dialog.growth-loop-completion::backdrop {
+  background: rgba(232,238,247,.56);
+  backdrop-filter: blur(10px);
+}
+.future-pearl-spark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #fff, #D8EDFA 62%, #B5D2EC);
+  color: #426EAA;
+  font-size: 16px;
+  vertical-align: middle;
+}
 .growth-loop-completion__summary {
   display: grid;
   gap: 0.375rem;
-  padding: 0.875rem;
-  border: 1px solid var(--color-archive-border);
-  border-radius: 0.875rem;
-  background: var(--color-archive-surface);
+  padding: 0.875rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-subtle);
+  border-radius: 0;
+  background: transparent;
 }
 .growth-loop-completion__summary small,
 .growth-loop-completion__summary span,
@@ -1704,7 +1719,8 @@ html .future-dialog textarea {
 }
 .future-practice-panel::backdrop,
 .future-editor-screen::backdrop {
-  background: var(--color-archive-bg);
+  background: rgba(232, 238, 247, 0.56);
+  backdrop-filter: blur(10px);
 }
 @media (max-width: 719px) {
   .future-editor-screen,

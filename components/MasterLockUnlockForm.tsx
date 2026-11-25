@@ -2,6 +2,7 @@ import React from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
+import { SilkButton } from './silk/SilkButton';
 
 interface MasterLockUnlockFormProps {
   theme: Theme;
@@ -111,7 +112,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
           </p>
         )}
       </div>
-      <button
+      <SilkButton
         type="button"
         className="master-connect-button"
         onClick={onSubmit}
@@ -119,15 +120,16 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
         aria-label={submitText}
       >
         {submitText}
-      </button>
-      <button
+      </SilkButton>
+      <SilkButton
+        variant="ghost"
         type="button"
         className="master-forgot-password"
         onClick={onForgotPassword}
         disabled={isBusy}
       >
         {forgotPasswordLabel}
-      </button>
+      </SilkButton>
     </div>
   );
 };

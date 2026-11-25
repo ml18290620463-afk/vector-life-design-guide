@@ -442,7 +442,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
             className={
               displayFirst
                 ? 'principle-editor-composer'
-                : `mobile-principles-view__composer border p-6 rounded-sm mb-12 relative overflow-hidden group ${theme === 'light' ? 'bg-white/60 border-vector-cyan-brand/5 shadow-sm' : 'bg-green-950/10 border-green-900/50'}`
+                : 'mobile-principles-view__composer border p-6 rounded-sm mb-12 relative overflow-hidden group bg-white/80 border-slate-200 shadow-sm'
             }
           >
             <div className="principle-editor-layout">
@@ -744,13 +744,13 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
           (displayFirst || selectedSection !== 'extract') &&
           (visiblePrinciples.length === 0 ? (
             <div
-              className={`principles-library__empty flex flex-col items-center justify-center py-12 border border-dashed rounded-lg ${theme === 'light' ? 'border-vector-cyan-brand/10 bg-white/40' : 'border-green-900/30'}`}
+              className="principles-library__empty flex flex-col items-center justify-center py-12 rounded-xl bg-white/70"
             >
               <Shield
-                className={`principles-library__empty-icon w-12 h-12 mb-4 ${theme === 'light' ? 'text-vector-slate-soft/20' : 'text-green-900'}`}
+                className="principles-library__empty-icon w-12 h-12 mb-4 text-slate-300"
               />
               <p
-                className={`principles-library__empty-copy text-sm ${theme === 'light' ? 'text-vector-slate-soft' : 'text-green-800'}`}
+                className="principles-library__empty-copy text-sm text-slate-500"
               >
                 {emptyReason === 'source-deletion'
                   ? language === 'zh'
@@ -785,33 +785,18 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className={`mobile-principle-card principle-card group relative border p-5 transition-all overflow-hidden ${theme === 'light' ? 'bg-white/60 border-vector-cyan-brand/5 hover:border-vector-cyan-brand/30 hover:bg-white' : 'bg-green-950/5 border-green-900/30 hover:border-green-500/50 hover:bg-green-950/10'}`}
+                            className="mobile-principle-card principle-card group relative border p-5 transition-all overflow-hidden"
                           >
-                            {!displayFirst && (
-                              <>
-                                <div
-                                  className={`absolute inset-[2px] border pointer-events-none transition-all duration-500 opacity-20 ${theme === 'light' ? 'border-slate-200 group-hover:border-cyan-200' : 'border-green-900/30 group-hover:border-green-500/30'}`}
-                                />
-                                <motion.div
-                                  className="absolute top-0 bottom-0 w-1 pointer-events-none z-10 opacity-0 group-hover:opacity-100 bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_color-mix(in_srgb,var(--color-cyan-400)_40%,transparent)]"
-                                  initial={{ left: '-5%' }}
-                                  whileHover={{
-                                    left: ['-5%', '105%'],
-                                    transition: { duration: 1.5, repeat: Infinity, ease: 'linear' },
-                                  }}
-                                />
-                              </>
-                            )}
                             <div className="mobile-principle-card__layout flex justify-between items-start gap-4">
                               <div className="mobile-principle-card__content flex gap-4">
                                 {!displayFirst && (
                                   <div
-                                    className={`mt-1 w-1.5 h-1.5 rounded-full ${theme === 'light' ? 'bg-vector-cyan-brand' : 'bg-green-500'}`}
+                                    className="mt-1 w-1.5 h-1.5 rounded-full bg-[var(--accent-link)]"
                                   />
                                 )}
                                 <div>
                                   <p
-                                    className={`text-sm leading-relaxed tracking-wide ${theme === 'light' ? 'text-vector-slate-mid' : 'text-green-300'}`}
+                                    className="text-sm leading-relaxed tracking-wide text-[var(--ink)]"
                                   >
                                     {principle.text}
                                   </p>
@@ -823,13 +808,6 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                       ? '允许 AI 可见 · 仍受来源权限限制'
                                       : '仅自己可见'}
                                   </small>
-                                  {displayFirst && (
-                                    <time className="principle-card__formed-year">
-                                      {language === 'zh'
-                                        ? `形成于 ${principle.year}`
-                                        : `Formed in ${principle.year}`}
-                                    </time>
-                                  )}
                                   {!displayFirst && principle.application && (
                                     <dl className="principle-application">
                                       <div>
@@ -872,6 +850,7 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                   )}
                                   <button
                                     type="button"
+                                    className="principle-card__icon-action"
                                     disabled={busy}
                                     onClick={() => {
                                       if (displayFirst) {
@@ -916,11 +895,11 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                     disabled={busy}
                                     aria-label={t.showOnHome}
                                     aria-pressed={principle.showOnHome}
-                                    className={`p-1 rounded border transition-all ${principle.showOnHome ? (theme === 'light' ? 'bg-vector-cyan-brand/5 border-vector-cyan-brand text-vector-cyan-brand' : 'bg-green-500/10 border-green-500/50 text-green-400') : theme === 'light' ? 'bg-white border-vector-cyan-brand/10 text-vector-slate-soft/40 hover:border-vector-cyan-brand' : 'bg-black border-green-900 text-green-900 hover:border-green-700'}`}
+                                    className="principle-card__icon-action"
                                     title={t.showOnHome}
                                   >
                                     <Star
-                                      className={`w-3 h-3 ${principle.showOnHome ? (theme === 'light' ? 'fill-vector-cyan-brand/20' : 'fill-green-400/20') : ''}`}
+                                      className={`w-4 h-4 ${principle.showOnHome ? 'fill-[var(--accent-link)]/20' : ''}`}
                                     />
                                   </button>
                                   <button
@@ -943,6 +922,10 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
                                 </div>
                               )}
                             </div>
+                            {displayFirst && <div className="principle-card__meta-row">
+                              <time className="principle-card__formed-year">{language === 'zh' ? `形成于 ${principle.year}` : `Formed in ${principle.year}`}</time>
+                              <span className="principle-card__basis">{language === 'zh' ? '作为行动依据' : 'Use as an action basis'}</span>
+                            </div>}
                           </motion.div>
                         );
                       })}

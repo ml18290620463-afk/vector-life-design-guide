@@ -1,3 +1,4 @@
+import { SilkButton } from '../../../components/silk/SilkButton';
 import { useAvatarLanguage } from './avatarLanguage';
 import { PrivateVisibilityIcon } from '../../../components/PrivateVisibilityIcon';
 import { resolveOntologyEvidence } from '../../../services/avatarSourceEvidence';
@@ -232,9 +233,8 @@ export function AvatarMemoryDetail({
                     {t('暂不采用')}
                   </button>
                 )}
-                <button
+                <SilkButton
                   type="button"
-                  className="is-primary"
                   disabled={busy || !text.trim()}
                   onClick={() =>
                     pending
@@ -243,7 +243,7 @@ export function AvatarMemoryDetail({
                   }
                 >
                   {pending ? t('确认记住') : updateLabel}
-                </button>
+                </SilkButton>
               </>
             ) : (
               <>

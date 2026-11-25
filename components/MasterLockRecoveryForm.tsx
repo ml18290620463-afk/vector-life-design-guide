@@ -3,6 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import type { Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import type { RecoveryFlowState } from '../hooks/useRecoveryFlow';
+import { SilkButton } from './silk/SilkButton';
 
 interface MasterLockRecoveryFormProps {
   theme: Theme;
@@ -54,14 +55,14 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({ 
           {recovery.resetError}
         </p>
       )}
-      <button
+      <SilkButton
         type="button"
         className="master-recovery-submit"
         onClick={recovery.submitRecovery}
         disabled={recovery.isSubmitting}
       >
         {recovery.isSubmitting ? '处理中…' : t.resetPassword}
-      </button>
+      </SilkButton>
     </div>
   );
 };

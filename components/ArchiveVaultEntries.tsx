@@ -44,7 +44,7 @@ export const ArchiveVaultEntries: React.FC<ArchiveVaultEntriesProps> = ({
   if (groupKeys.length === 0) {
     return (
       <div
-        className={`flex flex-col items-center justify-center py-20 border border-dashed rounded-lg ${theme === 'light' ? 'bg-white/40 border-vector-cyan-brand/10 shadow-inner' : 'bg-green-950/5 border-green-900/30'}`}
+        className="flex flex-col items-center justify-center py-20 rounded-xl bg-white/70"
       >
         <Binary
           className={`w-16 h-16 mb-4 ${theme === 'light' ? 'text-vector-slate-soft/20' : 'text-green-900'}`}

@@ -1,0 +1,457 @@
+/* Cloud White & Pearl Silk: shared desktop and mobile shell. */
+@media (min-width: 860px) {
+  html.vector-force-web .desktop-main-module-frame.desktop-main-module-frame.v-shell {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    gap: var(--shell-gap);
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    padding: var(--shell-pad);
+    background: transparent;
+  }
+  .v-shell > .v-sidebar {
+    grid-column: 1;
+    grid-row: 1;
+    position: relative;
+    z-index: 1;
+    inset: auto;
+    top: auto;
+    left: auto;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    gap: 24px;
+    width: auto;
+    height: auto;
+    min-height: calc(100dvh - 48px);
+    align-self: stretch;
+    padding: 22px 12px;
+    background: var(--surface-nav);
+    border: 1px solid rgba(255,255,255,.82);
+    border-radius: var(--radius-shell);
+    box-shadow: var(--shadow-shell);
+    backdrop-filter: blur(22px);
+  }
+  .v-shell .desktop-main-nav__links { gap: var(--space-2); }
+  .v-shell .desktop-main-nav__links { display: flex; flex-direction: column; width: 100%; }
+  .v-shell .desktop-main-nav__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: 42px;
+    padding: 0 14px;
+    color: var(--ink-2);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-control);
+    font-size: var(--text-body);
+    font-weight: 500;
+  }
+  .v-shell .desktop-main-nav__item svg { width: 16px; height: 16px; stroke-width: 1.3; }
+  .v-shell .desktop-main-nav__item:hover { background: var(--state-hover); color: var(--ink-1); }
+  .v-shell .desktop-main-nav__item--active {
+    color: var(--ink-1);
+    background: linear-gradient(90deg,var(--state-selected-start),var(--state-selected-end));
+  }
+  .v-shell .desktop-main-nav__item:focus-visible,
+  .m-dock button:focus-visible { outline: 2px solid var(--line-focus); outline-offset: 2px; }
+  .v-shell > .v-stage,
+  .v-shell--avatar > .v-stage,
+  .desktop-main-module-frame--now.v-shell > .v-stage {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    z-index: 1;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    margin: 0;
+    padding: 0;
+    background: var(--surface-stage);
+    border: 1px solid rgba(255,255,255,.9);
+    border-radius: var(--radius-shell);
+    box-shadow: var(--shadow-shell);
+  }
+  .v-shell > .v-stage .desktop-workspace__body { position: relative; z-index: 1; }
+  /* Keep the avatar's message list inside the stage instead of letting a long
+     conversation expand the grid item beyond the viewport. */
+  .desktop-main-module-frame--avatar.v-shell > .v-stage {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 859px) {
+  .mobile-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    padding: 10px 10px 0;
+    background: transparent;
+  }
+  .mobile-shell__content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: var(--surface-stage);
+    border-radius: var(--radius-shell) var(--radius-shell) 0 0;
+    box-shadow: var(--shadow-shell);
+    padding: 16px 16px calc(80px + env(safe-area-inset-bottom));
+  }
+  .mobile-main-nav.m-dock {
+    position: fixed;
+    z-index: 50;
+    left: 16px;
+    right: 16px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    min-height: 58px;
+    transform: none;
+    height: 58px;
+    padding: 4px;
+    background: rgba(242,245,251,.86);
+    border: 1px solid rgba(255,255,255,.95);
+    border-radius: 29px;
+    box-shadow: var(--shadow-island);
+    backdrop-filter: blur(24px);
+  }
+  .m-dock .mobile-main-nav__item { min-width: 44px; min-height: 44px; color: var(--ink-2); }
+  .m-dock .mobile-main-nav__item--active { color: var(--ink-1); background: linear-gradient(90deg,var(--state-selected-start),var(--state-selected-end)); }
+  .mobile-shell:has(.future-editor-screen[open], .principle-editor-screen[open], .past-bulk-editor-screen[open], .avatar-model-settings, .avatar-memory-detail) .m-dock { display: none; }
+  .mobile-shell:has(.future-editor-screen[open], .principle-editor-screen[open], .past-bulk-editor-screen[open], .avatar-model-settings, .avatar-memory-detail) .mobile-shell__content { padding-bottom: 16px; }
+  input, textarea, select { font-size: 16px; }
+}
+
+/* Writing surfaces share one quiet porcelain treatment across Now and Future. */
+.now-editor .silk-focus-island,
+.future-editor-screen .future-editor-form--single-writing > fieldset {
+  border: 1px solid var(--line-island);
+  border-radius: var(--radius-card);
+  background: var(--surface-island);
+  box-shadow: none;
+}
+.now-editor .silk-focus-island:focus-within,
+.future-editor-screen .future-editor-form--single-writing > fieldset:focus-within {
+  border-color: var(--line-focus);
+  box-shadow: 0 0 0 3px var(--state-focus-ring);
+}
+.now-editor .silk-focus-island textarea,
+.future-editor-screen .future-editor-form--single-writing textarea {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  resize: none !important;
+  background: transparent;
+  color: var(--ink-1);
+}
+.now-bottom-bar .silk-button--primary,
+.future-editor-screen .silk-button--primary {
+  color: var(--ink-1);
+  background: linear-gradient(180deg,var(--accent-silk-top),var(--accent-silk-bottom));
+  border: 1px solid var(--accent-silk-border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.72),var(--shadow-btn-silk);
+}
+.now-header .now-tool-button { min-width: 44px; min-height: 44px; padding: 0 12px; }
+@media (max-width: 859px) {
+  .mobile-shell:has(.past-bulk-editor-screen) .m-dock { display: none; }
+  .mobile-shell:has(.past-bulk-editor-screen) .mobile-shell__content { padding-bottom: 16px; }
+}
+
+/* Second pass: shared silk controls on the safety, Past, and Future surfaces. */
+html:is(.vector-force-web,.vector-force-mobile) .onboarding-simple-card {
+  background: var(--surface-island);
+  border: 1px solid var(--line-island);
+  box-shadow: var(--shadow-island);
+}
+html:is(.vector-force-web,.vector-force-mobile) .master-recovery-field input {
+  background: #f0f5fb;
+  border: 1px solid #c8dcf0;
+  color: #182236;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .08em;
+}
+html:is(.vector-force-web,.vector-force-mobile) .past-search-filters__fields :is(input,select) {
+  height: 36px;
+  min-height: 36px;
+  border: 1px solid var(--line-control);
+  color: var(--ink-1);
+  background: var(--surface-island);
+  color-scheme: light;
+}
+html:is(.vector-force-web,.vector-force-mobile) .past-bulk-editor-screen__footer {
+  width: min(calc(100% - 32px), 800px);
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-island);
+  border-radius: 14px;
+  background: var(--surface-island);
+  box-shadow: var(--shadow-float);
+}
+html:is(.vector-force-web,.vector-force-mobile) .past-bulk-editor-screen__footer .silk-button--danger {
+  background: var(--danger-bg);
+  color: #9e3a3a;
+  border: 1px solid var(--danger-border);
+}
+html:is(.vector-force-web,.vector-force-mobile) .silk-modal.past-action-dialog {
+  position: relative;
+  inset: auto;
+  margin: 0;
+  max-width: var(--col-modal);
+  height: auto;
+  background: var(--surface-island);
+  color: var(--ink-1);
+}
+html:is(.vector-force-web,.vector-force-mobile) .future-page {
+  max-width: 980px;
+  margin-inline: auto;
+}
+
+/* Final light-surface guardrails: legacy experience rules must not recolor
+   protected pages, writing islands, or modal editing surfaces. */
+html:is(.vector-force-web,.vector-force-mobile) body:has(:is(.master-lock-card,.onboarding-screen,.mobile-shell,.v-shell,.avatar-memory-dialog,.avatar-model-dialog)) {
+  color-scheme: light;
+  background: var(--silk-canvas);
+  color: var(--ink-1);
+}
+html:is(.vector-force-web,.vector-force-mobile) :is(.master-lock-screen,.master-lock-overlay,.onboarding-screen) {
+  background: var(--silk-canvas);
+  color: var(--ink-1);
+}
+html:is(.vector-force-web,.vector-force-mobile) .master-lock-card {
+  box-sizing: border-box;
+  width: min(400px, calc(100vw - 32px));
+  max-width: 400px;
+  height: auto;
+  min-height: 0;
+  margin: auto;
+  padding: 28px;
+  border: 1px solid var(--line-island);
+  border-radius: 20px;
+  background: var(--surface-island);
+  color: var(--ink-1);
+  box-shadow: var(--shadow-island);
+}
+html:is(.vector-force-web,.vector-force-mobile) :is(.master-lock-card,.now-editor,.avatar-memory-dialog,.avatar-model-dialog,.mobile-shell) :is(textarea,input,select) {
+  color-scheme: light;
+  color: var(--ink-1);
+  background-color: var(--surface-island);
+}
+html:is(.vector-force-web,.vector-force-mobile) .now-editor textarea,
+html:is(.vector-force-web,.vector-force-mobile) .avatar-memory-dialog textarea {
+  background: var(--surface-island) !important;
+  color: var(--ink-1) !important;
+  resize: none;
+}
+html.vector-force-mobile .mobile-shell,
+html.vector-force-mobile .mobile-shell__content {
+  min-width: 0;
+  width: 100%;
+  background-color: var(--surface-stage);
+}
+html.vector-force-mobile .mobile-shell__content > * { width: 100%; min-width: 0; max-width: 100%; }
+html:is(.vector-force-web,.vector-force-mobile) .silk-modal.past-action-dialog {
+  left: auto;
+  right: auto;
+  transform: none;
+  width: min(340px, calc(100vw - 32px));
+  max-width: min(340px, calc(100vw - 32px));
+  min-height: 0;
+}
+html:is(.vector-force-web,.vector-force-mobile) :is(.avatar-memory-dialog,.avatar-model-dialog) {
+  color-scheme: light;
+  background: var(--surface-stage);
+  color: var(--ink-1);
+}
+html:is(.vector-force-web,.vector-force-mobile) :is(.avatar-memory-dialog,.avatar-model-dialog)::backdrop {
+  background: rgba(232,238,247,.56);
+  backdrop-filter: blur(10px);
+}
+html:is(.vector-force-web,.vector-force-mobile) .avatar-memory-dialog > *,
+html:is(.vector-force-web,.vector-force-mobile) .avatar-model-dialog > form { max-width: 680px; }
+html:is(.vector-force-web,.vector-force-mobile) .avatar-memory-dialog__actions,
+html:is(.vector-force-web,.vector-force-mobile) .avatar-model-dialog footer {
+  position: static;
+  margin: 24px auto 0;
+  padding: 16px 0 0;
+  background: transparent;
+}
+html:is(.vector-force-web,.vector-force-mobile) .future-primary-tabs,
+html:is(.vector-force-web,.vector-force-mobile) .future-kind-picker {
+  display: inline-flex;
+  width: auto;
+  background: rgba(236,240,248,.82);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-track);
+}
+html:is(.vector-force-web,.vector-force-mobile) .future-primary-tabs .silk-tabs__tab,
+html:is(.vector-force-web,.vector-force-mobile) .future-kind-picker .silk-tabs__tab {
+  background: transparent;
+  color: var(--ink-2);
+  border: 0;
+}
+html:is(.vector-force-web,.vector-force-mobile) .future-primary-tabs .silk-tabs__tab--active,
+html:is(.vector-force-web,.vector-force-mobile) .future-kind-picker .silk-tabs__tab--active {
+  background: var(--surface-island);
+  color: var(--ink-1);
+  box-shadow: 0 2px 6px -1px rgba(164,182,206,.28);
+}
+
+/* The legacy mobile theme still sets dark custom properties with !important.
+   Reset them at the product shell, leaving the animated cover untouched. */
+html.mobile-product-active .mobile-shell,
+html.vector-force-mobile .mobile-shell {
+  --mobile-paper: #f7f9fc;
+  --mobile-paper-warm: #eef1f7;
+  --mobile-paper-cool: #ffffff;
+  --mobile-surface: #ffffff;
+  --mobile-surface-muted: #f4f7fb;
+  --mobile-ink: #182236;
+  --mobile-ink-soft: #526075;
+  --mobile-muted: #526075;
+  --mobile-faint: #8d99ac;
+  --mobile-line: #d8e2ee;
+  --mobile-on-accent: #182236;
+  color-scheme: light !important;
+  color: var(--ink-1) !important;
+  background: var(--silk-canvas) !important;
+}
+html.mobile-product-active .mobile-shell .mobile-shell__content,
+html.vector-force-mobile .mobile-shell .mobile-shell__content {
+  background: var(--surface-stage) !important;
+  color: var(--ink-1) !important;
+}
+html:is(.vector-force-web,.vector-force-mobile) :is(.now-page,.tag-select-page,.avatar-data-model-center,.avatar-memory-dialog) {
+  color-scheme: light !important;
+  color: var(--ink-1) !important;
+  background-color: var(--surface-stage) !important;
+  background-image: none !important;
+}
+html:is(.vector-force-web,.vector-force-mobile) :is(.now-page,.tag-select-page,.avatar-data-model-center,.avatar-memory-dialog) textarea {
+  color-scheme: light !important;
+  background: #fff !important;
+  color: #182236 !important;
+  -webkit-text-fill-color: #182236 !important;
+}
+html:is(.vector-force-web,.vector-force-mobile) :is(.master-lock-overlay,.master-lock-screen,.onboarding-simple) {
+  color-scheme: light !important;
+  background: var(--silk-canvas) !important;
+}
+html:is(.vector-force-web,.vector-force-mobile) .master-lock-card,
+html:is(.vector-force-web,.vector-force-mobile) .onboarding-simple-card {
+  height: auto !important;
+  min-height: 0 !important;
+  width: min(400px, calc(100vw - 32px));
+  max-width: 400px;
+  margin: auto;
+  background: #fff !important;
+  color: #182236 !important;
+}
+html:is(.vector-force-web,.vector-force-mobile) .avatar-model-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
+  background: var(--surface-stage) !important;
+}
+html:is(.vector-force-web,.vector-force-mobile) .avatar-model-dialog :is(header,footer,input,select) {
+  background: #fff !important;
+  color: var(--ink-1) !important;
+}
+html.vector-force-web .v-sidebar { align-self: stretch; min-height: calc(100dvh - 48px); }
+html.vector-force-mobile :is(.mobile-past-page,.mobile-principles-view,.mobile-shell__content > *) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+html.vector-force-mobile .mobile-shell__content :is(.mobile-past-page,.mobile-past-page__body,.mobile-past-timeline,.mobile-principles-view,.mobile-principles-view--result-first,.principles-library) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin-inline: 0;
+}
+
+/* The former mobile ocean theme used double-class selectors and !important.
+   Keep security screens and native form controls on the same light surface. */
+html.vector-force-mobile.vector-force-mobile .master-lock-backdrop__base,
+html.vector-force-mobile.vector-force-mobile .master-lock-backdrop__footer,
+html.vector-force-mobile.vector-force-mobile .master-lock-backdrop__nebula {
+  background: var(--silk-canvas) !important;
+}
+html.vector-force-mobile.vector-force-mobile .master-lock-card input,
+html.vector-force-mobile.vector-force-mobile .master-unlock-panel input,
+html.vector-force-mobile.vector-force-mobile .onboarding-simple-card input {
+  box-sizing: border-box;
+  max-width: 100%;
+  border: 1px solid var(--line-control) !important;
+  background: #fff !important;
+  color: #182236 !important;
+  -webkit-text-fill-color: #182236 !important;
+  color-scheme: light !important;
+}
+html.vector-force-mobile.vector-force-mobile .master-lock-card *,
+html.vector-force-mobile.vector-force-mobile .onboarding-simple-card * { min-width: 0; }
+html.vector-force-mobile.vector-force-mobile .master-lock-card,
+html.vector-force-mobile.vector-force-mobile .onboarding-simple-card { box-sizing: border-box; max-width: calc(100vw - 32px); }
+html:is(.vector-force-web,.vector-force-mobile) .now-page .silk-button--primary {
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
+  min-width: max-content;
+}
+
+/* The mobile product previously left body transparent over the dark ocean
+   backdrop. Give every inner route an opaque pearl canvas. */
+html.mobile-product-active body,
+html.vector-force-mobile body,
+html.vector-force-web body {
+  color-scheme: light;
+  background-color: var(--silk-canvas);
+  color: var(--ink-1);
+}
+/* The real mobile router does not add the capture fixture's force class. */
+html:has(.mobile-shell) body,
+html:has(.v-shell) body {
+  background: var(--silk-canvas) !important;
+  color: var(--ink-1);
+  color-scheme: light;
+}
+html.vector-force-mobile.mobile-product-active:has(.mobile-shell) body {
+  background-color: #eef1f7 !important;
+  background-image: none !important;
+}
+html.mobile-product-active:has(.mobile-shell) textarea,
+html.vector-force-mobile:has(.mobile-shell) textarea {
+  color-scheme: light !important;
+  background: #fff !important;
+  color: #182236 !important;
+  -webkit-text-fill-color: #182236 !important;
+  resize: none;
+}
+
+/* Old mobile sheet and page-dialog rules set left:0/width:100% after the
+   shared styles. Keep the actual dialog card centered in both viewports. */
+html:is(.vector-force-web,.vector-force-mobile) dialog:is(.avatar-memory-dialog,.avatar-model-dialog,.growth-loop-completion) {
+  position: fixed !important;
+  inset: 0 !important;
+  box-sizing: border-box;
+  width: min(680px, calc(100vw - 32px)) !important;
+  max-width: calc(100vw - 32px) !important;
+  height: max-content !important;
+  max-height: calc(100dvh - 32px);
+  margin: auto !important;
+  overflow: auto;
+  border-radius: 20px;
+}
+html:is(.vector-force-web,.vector-force-mobile) dialog.avatar-model-dialog,
+html:is(.vector-force-web,.vector-force-mobile) dialog.growth-loop-completion {
+  width: min(560px, calc(100vw - 32px)) !important;
+}

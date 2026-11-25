@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Language } from '../../types';
+import { SilkButton } from '../silk/SilkButton';
 
 export function ProtectionStep({
   language,
@@ -94,7 +95,7 @@ export function ProtectionStep({
         />
       </label>
       {error && <p role="alert">{error}</p>}
-      <button type="submit" data-testid="onboarding-protect" disabled={busy}>
+      <SilkButton type="submit" data-testid="onboarding-protect" disabled={busy}>
         {busy
           ? zh
             ? '正在加密…'
@@ -106,10 +107,10 @@ export function ProtectionStep({
             : zh
               ? '加密保存草稿'
               : 'Save encrypted draft'}
-      </button>
-      <button type="button" className="onboarding-secondary" disabled={busy} onClick={onBack}>
+      </SilkButton>
+      <SilkButton variant="secondary" className="onboarding-secondary" disabled={busy} onClick={onBack}>
         {upgrade ? (zh ? '暂不升级' : 'Not now') : zh ? '返回编辑' : 'Back to writing'}
-      </button>
+      </SilkButton>
     </form>
   );
 }

@@ -27,6 +27,7 @@ lighthouse-reports/
 output/
 test-results-layout/
 test-results-wide-layout/
+artifacts/ui-final/
 
 # Editor directories and files
 .vscode/*

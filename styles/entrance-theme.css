@@ -196,19 +196,19 @@ html body .master-lock-screen.master-lock-refined {
 }
 html body .master-lock-refined .master-lock-frame {
   width: 100%;
-  max-width: 480px;
+  max-width: 400px;
   margin: auto;
 }
 html body .master-lock-refined .master-lock-card {
-  width: 100% !important;
+  width: min(400px, calc(100vw - 32px)) !important;
   min-height: 0;
   height: auto;
-  margin: 0;
-  padding: 32px !important;
+  margin: auto;
+  padding: 28px !important;
   border-radius: 20px !important;
   background: var(--ds-surface) !important;
   border: 1px solid var(--ds-border) !important;
-  box-shadow: none !important;
+  box-shadow: 0 18px 48px rgba(24, 34, 54, 0.08) !important;
   backdrop-filter: none;
 }
 .master-lock-toolbar {
@@ -326,12 +326,13 @@ html.light.light body .master-lock-refined input::placeholder {
   -webkit-text-fill-color: #607681 !important;
   opacity: 1;
 }
-html.light.light body .master-lock-refined .master-connect-button {
-  background: #4d7889 !important;
-  color: #fff !important;
-  box-shadow: none !important;
+html body .master-lock-refined .master-connect-button {
+  background: linear-gradient(180deg, #B5D2EC, #9EC3E4) !important;
+  border-color: var(--accent-silk-border) !important;
+  color: #182236 !important;
+  box-shadow: var(--shadow-btn-silk) !important;
 }
-html.light.light body .master-lock-refined .master-connect-button:disabled {
+html body .master-lock-refined .master-connect-button:disabled {
   background: #e2e9ec !important;
   color: #607681 !important;
 }

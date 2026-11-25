@@ -31,7 +31,7 @@ layer(`<defs>
 <filter id="silkSoft"><feGaussianBlur stdDeviation="1.2"/></filter>
 <filter id="silkShadow"><feGaussianBlur stdDeviation="15"/></filter>
 </defs>
-<path d="M240 ${b+82} C380 ${b+51} 459 ${b-32} 564 ${b-17} C678 ${b-1} 724 ${b+57} 925 ${b+53}" stroke="#C6CCE2" stroke-opacity=".12" stroke-width="18" filter="url(#silkShadow)"/>
+<path d="M240 ${b+82} C380 ${b+51} 459 ${b-32} 564 ${b-17} C678 ${b-1} 724 ${b+57} 925 ${b+53}" stroke="#C8DCF0" stroke-opacity=".12" stroke-width="18" filter="url(#silkShadow)"/>
 <path d="M224 ${b+110} C346 ${b+75} 431 ${b-32} 552 ${b-34} C681 ${b-35} 742 ${b+48} 963 ${b+35} C802 ${b+101} 664 ${b+26} 554 ${b+9} C438 ${b-10} 355 ${b+116} 224 ${b+138}Z" fill="url(#turn)" filter="url(#silkSoft)"/>
 <path d="M245 ${b+105} C382 ${b+61} 445 ${b-23} 554 ${b-20} C677 ${b-18} 758 ${b+60} 950 ${b+40}" stroke="url(#fadeLine)" stroke-width="1.0" opacity=".55"/>
 <path d="M${r+45} ${y+80} C${r-8} ${y+200} ${r-62} ${y+280} ${r-37} ${y+390} C${r-10} ${y+487} ${r+39} ${y+535} ${r+40} ${b+10} L1460 ${b+65} C${r+61} ${y+496} ${r+6} ${y+440} ${r-4} ${y+368} C${r-22} ${y+256} ${r+45} ${y+173} 1460 ${y+90}Z" fill="url(#edgeTurn)" filter="url(#silkSoft)"/>

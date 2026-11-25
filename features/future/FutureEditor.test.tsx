@@ -61,7 +61,7 @@ describe('Future editor content protection', () => {
     fireEvent.change(field, { target: { value: '想要留下的愿景' } });
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }));
-    fireEvent.click(screen.getByRole('button', { name: '目标' }));
+    fireEvent.click(screen.getByRole('tab', { name: '目标' }));
     expect(close).not.toHaveBeenCalled();
     expect(change).not.toHaveBeenCalled();
     expect((field as HTMLTextAreaElement).value).toBe('想要留下的愿景');

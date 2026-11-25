@@ -101,7 +101,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
     <div className="master-lock-screen master-lock-refined fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 md:p-8">
       <MasterLockBackdrop theme={theme} />
 
-      <div className="master-lock-frame relative z-10 my-auto w-full max-w-[560px]">
+      <div className="master-lock-frame relative z-10 my-auto w-full max-w-[400px]">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={

@@ -6,6 +6,7 @@ import {
   actionExecutionStatusLabel,
   actionNextStepLabel,
 } from '../../services/actionPracticeSemantics';
+import { SilkButton } from '../../components/silk/SilkButton';
 
 interface GrowthLoopCompletionDialogProps {
   action: ActionItem;
@@ -62,7 +63,7 @@ export function GrowthLoopCompletionDialog({
       }}
     >
       <header>
-        <h2>{actionCompleted ? '行动已完成' : '本次践行已记录'}</h2>
+        <h2><span className="future-pearl-spark" aria-hidden="true">✦</span>{actionCompleted ? '行动已完成' : '本次践行已记录'}</h2>
         <button type="button" onClick={onClose} aria-label="关闭完成结果">
           关闭
         </button>
@@ -84,9 +85,8 @@ export function GrowthLoopCompletionDialog({
         {actionCompleted ? (
           <>
             <div className="growth-loop-completion__actions">
-              <button
+              <SilkButton
                 type="button"
-                className="future-primary"
                 onClick={() => {
                   // This legacy dialog has no stable practice-record ID, so it can only
                   // take the person to Past for an intentional, unlinked principle.
@@ -94,17 +94,17 @@ export function GrowthLoopCompletionDialog({
                 }}
               >
                 去沉淀这次行动
-              </button>
-              <button type="button" onClick={onClose}>
+              </SilkButton>
+              <SilkButton variant="secondary" onClick={onClose}>
                 返回践行
-              </button>
+              </SilkButton>
             </div>
           </>
         ) : (
           <div className="growth-loop-completion__actions">
-            <button type="button" className="future-primary" onClick={onClose}>
+            <SilkButton onClick={onClose}>
               返回践行
-            </button>
+            </SilkButton>
           </div>
         )}
       </div>

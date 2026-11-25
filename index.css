@@ -113,7 +113,7 @@
   --color-archive-accent-light: #22d3ee;
   --color-archive-electric: #4f46e5;
   --color-archive-danger: #f43f5e;
-  --color-archive-success: #10b981;
+  --color-archive-success: #6086aa;
   --color-tech-indigo: #7b6dff;
   --color-vector-magenta: #c85f72;
   --color-vector-alert: #c85f72;
@@ -1273,7 +1273,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  color: #2563eb;
+  color: #416e99;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -8291,8 +8291,8 @@ html.vector-force-mobile .mobile-shell__bottom-nav {
 
 .mobile-shell .now-flow--mobile-shell .now-send-button {
   border: 0;
-  background: var(--mobile-accent);
-  color: var(--mobile-on-accent);
+  background: linear-gradient(180deg, #B5D2EC, #9EC3E4);
+  color: #182236;
   box-shadow: none;
 }
 
@@ -8662,8 +8662,8 @@ html.vector-force-mobile .master-unlock-subtitle {
 
 html.vector-force-mobile .master-connect-button {
   border-color: color-mix(in srgb, var(--color-tech-primary) 46%, transparent) !important;
-  background: var(--color-space-layer) !important;
-  color: var(--color-space-text-secondary) !important;
+  background: linear-gradient(180deg, #B5D2EC, #9EC3E4) !important;
+  color: #182236 !important;
   box-shadow: 0 0 28px color-mix(in srgb, var(--color-tech-primary) 20%, transparent) !important;
 }
 
@@ -10334,18 +10334,7 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
 /* Independent desktop and mobile presentation; shared feature data. */
 
 /* Now: compact draft exit choices, shared by desktop and mobile. */
-.now-exit-dialog {
-  width: min(400px, calc(100vw - 32px));
-  margin: auto;
-  padding: 24px;
-  border: 1px solid var(--now-border-strong);
-  border-radius: 20px;
-  background: var(--now-page);
-  color: var(--now-text);
-}
-.now-exit-dialog::backdrop {
-  background: rgb(0 0 0 / 60%);
-}
+.now-exit-dialog { width: min(400px, calc(100vw - 32px)); margin: auto; }
 .now-exit-dialog h2 {
   margin: 0 0 20px;
   font-size: 18px;
@@ -10355,17 +10344,7 @@ html.vector-force-mobile .mobile-shell .mobile-main-nav {
   display: grid;
   gap: 10px;
 }
-.now-exit-dialog__actions button {
-  min-height: 48px;
-  border: 1px solid var(--now-border);
-  border-radius: 12px;
-  background: var(--now-surface);
-  color: var(--now-text);
-}
-.now-exit-dialog__actions .now-exit-dialog__save {
-  background: var(--now-accent);
-  color: var(--now-page);
-}
+.now-exit-dialog__actions button { min-height: 48px; }
 .now-exit-dialog__actions button:focus-visible {
   outline: 2px solid var(--now-accent);
   outline-offset: 3px;
@@ -11065,3 +11044,12 @@ html.light .past-search-filters__fields select {
   color: inherit;
   background: transparent;
 }
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration { display: none; }
+textarea { resize: none; }
+
+/* Static silk normal map; only the translucent light layer is composited. */
+.charmeuse-backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.charmeuse-backdrop__breath { position: absolute; inset: -8%; opacity: .22; background: radial-gradient(ellipse at 62% 40%, rgba(255,255,255,.65), transparent 55%); animation: charmeuse-breathe 36s ease-in-out infinite alternate; will-change: transform, opacity; }
+@keyframes charmeuse-breathe { from { transform: translate3d(-1%,0,0) scale(1); opacity: .14; } to { transform: translate3d(1%,1%,0) scale(1.025); opacity: .28; } }
+@media (prefers-reduced-motion: reduce) { .charmeuse-backdrop__breath { animation: none; will-change: auto; } }

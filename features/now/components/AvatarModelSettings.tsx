@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { SilkButton } from '../../../components/silk/SilkButton';
 import {
   readAvatarModel,
   readAvatarModelPreference,
@@ -580,9 +581,9 @@ export function AvatarModelSettings({
         )}
         {status && <p role="status">{status}</p>}
         <footer>
-          <button type="submit" disabled={busy} className="avatar-model-primary">
+          <SilkButton type="submit" disabled={busy} className="avatar-model-primary">
             {busy ? '正在验证…' : '验证并保存'}
-          </button>
+          </SilkButton>
         </footer>
         {savedConfig && (
           <button type="button" disabled={busy} onClick={() => save(null)}>

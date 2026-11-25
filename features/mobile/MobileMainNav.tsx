@@ -2,6 +2,7 @@ import React from 'react';
 import { getMainModules } from './mainModules';
 import type { Language } from '../../types';
 import type { MobileMainTab } from './types';
+import { SilkNavIcon } from '../../components/silk/SilkNavIcons';
 
 interface MobileMainNavProps {
   activeTab: MobileMainTab;
@@ -17,10 +18,10 @@ export const MobileMainNav: React.FC<MobileMainNavProps> = ({
   onTabIntent,
 }) => (
   <nav
-    className="mobile-main-nav"
+    className="mobile-main-nav m-dock"
     aria-label={language === 'zh' ? '主页面导航' : 'Main page navigation'}
   >
-    {getMainModules(language).map(({ id, title, Icon }) => {
+    {getMainModules(language).map(({ id, title }) => {
       const isActive = activeTab === id;
       return (
         <button
@@ -33,7 +34,7 @@ export const MobileMainNav: React.FC<MobileMainNavProps> = ({
           onTouchStart={() => onTabIntent?.(id)}
           onFocus={() => onTabIntent?.(id)}
         >
-          <Icon className="mobile-main-nav__icon" aria-hidden="true" />
+          <SilkNavIcon name={id} className="mobile-main-nav__icon" />
           <span className="mobile-main-nav__label">{title}</span>
         </button>
       );

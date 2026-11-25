@@ -1,5 +1,6 @@
 import type { ComponentProps, FormEventHandler, ReactNode } from 'react';
 import { PracticeFeedbackFields } from './PracticeFeedbackFields';
+import { SilkButton } from '../../components/silk/SilkButton';
 
 export function FeedbackEditor({
   busy,
@@ -23,9 +24,9 @@ export function FeedbackEditor({
         {children}
         {notice && <p role="alert">{notice}</p>}
         <div className="future-feedback-submit">
-          <button type="submit" className="future-primary" disabled={saveDisabled}>
+          <SilkButton type="submit" variant="primary" disabled={saveDisabled}>
             {busy ? '保存中…' : '保存'}
-          </button>
+          </SilkButton>
         </div>
       </fieldset>
     </form>

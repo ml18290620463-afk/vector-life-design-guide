@@ -4,6 +4,9 @@ import { GoalExecutionResults, goalExecutionRecords } from './GoalExecutionResul
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { ActionItem, DiaryEntry, Principle } from '../../types';
 import type { ActionDraftContext, Goal, Vision, FutureState } from '../../types/future';
+import { SilkButton } from '../../components/silk/SilkButton';
+import { SilkSegmentedTabs } from '../../components/silk/SilkSegmentedTabs';
+import { SilkFocusIsland } from '../../components/silk/SilkFocusIsland';
 
 export type Editor =
   | { kind: 'vision'; value?: Vision }
@@ -247,15 +250,16 @@ export function FutureEditor({
       opener={opener}
       saveAction={
         !duplicateVision && (
-          <button
+          <SilkButton
             type="submit"
             form={formId}
-            className="future-primary future-editor-save"
+            variant="primary"
+            className="future-editor-save"
             disabled={busy || !draft.ready}
             aria-busy={busy}
           >
             {busy ? '保存中…' : '保存'}
-          </button>
+          </SilkButton>
         )
       }
     >
@@ -311,34 +315,21 @@ export function FutureEditor({
             </>
           )}
           {isNewDesign && onKindChange && (
-            <div className="future-kind-picker" role="group" aria-label="规划类型">
-              {(
-                [
-                  ['vision', '愿景'],
-                  ['goal', '目标'],
-                  ['action', '行动规划'],
-                ] as const
-              ).map(([kind, label]) => (
-                <button
-                  type="button"
-                  key={kind}
-                  aria-pressed={editor.kind === kind}
-                  onClick={() => {
-                    if (kind !== editor.kind) leave(() => onKindChange(kind));
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <SilkSegmentedTabs
+              className="future-kind-picker"
+              label="规划类型"
+              tabs={[{ id: 'vision', label: '愿景' }, { id: 'goal', label: '目标' }, { id: 'action', label: '行动规划' }]}
+              value={editor.kind}
+              onChange={(kind) => { if (kind !== editor.kind) leave(() => onKindChange(kind)); }}
+            />
           )}
 
           {editor.kind === 'vision' && (
             <>
-              <label>
+              <SilkFocusIsland><label>
                 愿景内容
                 <textarea name="text" required defaultValue={editor.value?.text} autoFocus />
-              </label>
+              </label></SilkFocusIsland>
               {editor.value && (
                 <label>
                   状态
@@ -444,9 +435,9 @@ export function FutureEditor({
               <strong>发现相似愿景</strong>
               <p>“{duplicateVision.text}”已经存在，是否继续推进？</p>
               <div className="future-toolbar">
-                <button type="button" className="future-primary" onClick={onContinueExisting}>
+                <SilkButton type="button" variant="primary" onClick={onContinueExisting}>
                   继续已有愿景
-                </button>
+                </SilkButton>
                 <button
                   type="button"
                   onClick={() =>

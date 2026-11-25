@@ -3,11 +3,17 @@
   padding: clamp(20px, 5vw, 64px) 20px;
 }
 .onboarding-simple-card {
-  width: min(100%, 440px);
+  box-sizing: border-box;
+  width: min(400px, calc(100% - 32px));
   margin: 8vh auto;
   display: grid;
-  gap: 24px;
-  color: var(--text-main, inherit);
+  gap: 20px;
+  padding: 28px;
+  border: 1px solid #D8E2EE;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgb(38 72 113 / 8%);
+  color: #182236;
 }
 .onboarding-simple-card h1 {
   font-size: clamp(24px, 4vw, 34px);
@@ -23,26 +29,30 @@
 .onboarding-simple-card input,
 .onboarding-simple-card select {
   padding: 12px;
-  border: 1px solid currentColor;
+  border: 1px solid #C8DCF0;
   border-radius: 8px;
-  background: transparent;
+  background: #F0F5FB;
   color: inherit;
+}
+.onboarding-simple-card input {
+  font-variant-numeric: tabular-nums;
 }
 .onboarding-simple-card option {
   color: #172029;
   background: #fff;
 }
-.onboarding-simple-card button {
+.onboarding-simple-card .silk-button {
+  width: 100%;
   min-height: 44px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: #277266;
-  color: #fff;
 }
-.onboarding-simple-card button.onboarding-secondary {
-  background: transparent;
-  color: inherit;
-  text-decoration: underline;
+.onboarding-simple-card .silk-button--primary {
+  background: linear-gradient(90deg, #B5D2EC, #9EC3E4);
+  color: #182236;
+}
+.onboarding-simple-card .silk-button--secondary {
+  background: #fff;
+  border: 1px solid #D8E2EE;
+  color: #182236;
 }
 .onboarding-simple-card button:disabled {
   opacity: 0.6;

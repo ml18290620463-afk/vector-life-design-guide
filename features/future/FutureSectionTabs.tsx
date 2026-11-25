@@ -1,3 +1,4 @@
+import { SilkSegmentedTabs } from '../../components/silk/SilkSegmentedTabs';
 type Section = 'design' | 'practice' | 'history';
 export function FutureSectionTabs({
   section,
@@ -6,19 +7,11 @@ export function FutureSectionTabs({
   section: Section;
   onChange: (section: Section) => void;
 }) {
-  return (
-    <div className="future-primary-tabs" role="tablist" aria-label="未来分区">
-      {(['design', 'practice', 'history'] as const).map((value) => (
-        <button
-          type="button"
-          role="tab"
-          key={value}
-          aria-selected={section === value}
-          onClick={() => onChange(value)}
-        >
-          {value === 'design' ? '设计' : value === 'practice' ? '反馈' : '历史'}
-        </button>
-      ))}
-    </div>
-  );
+  return <SilkSegmentedTabs
+    className="future-primary-tabs"
+    label="未来分区"
+    tabs={[{ id: 'design', label: '设计' }, { id: 'practice', label: '践行' }, { id: 'history', label: '历史' }]}
+    value={section}
+    onChange={onChange}
+  />;
 }

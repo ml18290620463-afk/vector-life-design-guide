@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import { getMainModules } from '../features/mobile/mainModules';
 import type { MobileMainTab } from '../features/mobile/types';
 import type { Language } from '../types';
+import { SilkNavIcon } from './silk/SilkNavIcons';
 
 type DesktopMainNavProps = {
   activeTab: MobileMainTab;
@@ -17,14 +18,14 @@ export const DesktopMainNav: FC<DesktopMainNavProps> = ({
   onNavigateIntent,
 }) => (
   <nav
-    className="desktop-main-nav"
+    className="desktop-main-nav v-sidebar"
     aria-label={language === 'zh' ? '主页面导航' : 'Main page navigation'}
   >
     <div className="desktop-main-nav__brand" aria-label="VECTOR">
       V<span>VECTOR</span>
     </div>
     <div className="desktop-main-nav__links">
-      {getMainModules(language).map(({ id, title, Icon }) => {
+      {getMainModules(language).map(({ id, title }) => {
         const isActive = activeTab === id;
         return (
           <button
@@ -37,7 +38,7 @@ export const DesktopMainNav: FC<DesktopMainNavProps> = ({
             onFocus={() => onNavigateIntent?.(id)}
             onTouchStart={() => onNavigateIntent?.(id)}
           >
-            <Icon aria-hidden="true" />
+            <SilkNavIcon name={id} />
             <span>{title}</span>
           </button>
         );

@@ -531,7 +531,7 @@ describe('AvatarChatPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '打开数据与模型设置' }));
+    expect(screen.getByRole('tab', { name: '设置与备份' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '陪聊' })).toBeNull();
     expect(screen.queryByRole('button', { name: '工具' })).toBeNull();
 
@@ -610,7 +610,7 @@ describe('AvatarChatPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '记忆库' }));
+    fireEvent.click(screen.getByRole('tab', { name: '记忆档案' }));
     expect(screen.queryByText('管理标签')).toBeNull();
     expect(screen.queryByText('工具与记录')).toBeNull();
     fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
@@ -649,7 +649,7 @@ describe('AvatarChatPage', () => {
       (await readAvatarOntology()).objects.find((memory) => memory.id === 'memory-ui-tag-2')
         ?.status,
     ).toBe('superseded');
-    fireEvent.click(screen.getByRole('button', { name: '记忆库' }));
+    fireEvent.click(screen.getByRole('tab', { name: '记忆档案' }));
     fireEvent.change(screen.getByRole('searchbox', { name: '搜索记忆' }), {
       target: { value: '职业发展' },
     });
@@ -876,7 +876,7 @@ describe('AvatarChatPage', () => {
         launchContext={{ mode: 'general', source: 'global' }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '记忆库' }));
+    fireEvent.click(screen.getByRole('tab', { name: '记忆档案' }));
     fireEvent.click(screen.getByRole('button', { name: '新增记忆' }));
     expect(showToast).toHaveBeenCalledWith('请先在对话中表达要保存的信息，再提炼并确认');
     expect(screen.queryByRole('dialog')).toBeNull();

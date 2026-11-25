@@ -1,6 +1,9 @@
 import type { DiaryEntry } from '../../../types';
 import React, { type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { ArrowLeft, Settings2, X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
+import { SilkSegmentedTabs } from '../../../components/silk/SilkSegmentedTabs';
+import { SilkFocusIsland } from '../../../components/silk/SilkFocusIsland';
+import { SilkButton } from '../../../components/silk/SilkButton';
 import type {
   AvatarLaunchContext,
   AvatarMemoryFacet,
@@ -163,35 +166,18 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             >
               <ArrowLeft size={20} />
             </button>
-            <nav className="avatar-section-tabs" aria-label={t('记忆分身导航')}>
-              <button
-                type="button"
-                className={libraryView === 'chat' ? 'is-active' : ''}
-                aria-pressed={libraryView === 'chat'}
-                onClick={() => onSetLibraryView('chat')}
-              >
-                {t('聊天')}
-              </button>
-              <button
-                type="button"
-                className={libraryView === 'library' ? 'is-active' : ''}
-                aria-pressed={libraryView === 'library'}
-                onClick={() => onSetLibraryView('library')}
-              >
-                {t('记忆库')}
-              </button>
-            </nav>
+            <SilkSegmentedTabs
+              className="avatar-section-tabs"
+              label={t('记忆分身导航')}
+              value={libraryView}
+              tabs={[
+                { id: 'chat', label: t('对话') },
+                { id: 'library', label: t('记忆档案') },
+                { id: 'settings', label: t('设置与备份') },
+              ] as const}
+              onChange={(view) => view === 'settings' ? onOpenSettings() : onSetLibraryView(view)}
+            />
           </div>
-          <button
-            type="button"
-            className="avatar-settings-entry"
-            disabled={chatPending}
-            onClick={onOpenSettings}
-            aria-label={t('打开数据与模型设置', 'Open data and model settings')}
-          >
-            <Settings2 size={18} aria-hidden="true" />
-            <span>{t('数据与模型', 'Data and model')}</span>
-          </button>
         </header>
       ) : (
         <header className="now-header">
@@ -300,7 +286,7 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             </button>
           </div>
         )}
-        <footer className="now-chat-input">
+        <SilkFocusIsland className="now-chat-input">
           <input
             ref={inputRef}
             value={input}
@@ -311,24 +297,25 @@ export const AvatarChatSurface: React.FC<AvatarChatSurfaceProps> = ({
             }
             placeholder={general ? t('直接说，我在听') : modeCopy.placeholder}
           />
-          <button type="button" onClick={onSend} disabled={!input.trim() || chatPending}>
+          <SilkButton type="button" onClick={onSend} disabled={!input.trim() || chatPending}>
             {t('发送')}
-          </button>
+          </SilkButton>
           {general && (
-            <button
+            <SilkButton
+              variant="secondary"
               type="button"
               onClick={onGenerateMemory}
               disabled={generating || chatPending || userMessageCount === 0}
             >
               {t('提炼记忆')}
-            </button>
+            </SilkButton>
           )}
           {!general && (
-            <button type="button" onClick={onSubmitModeAction} disabled={generating}>
+            <SilkButton type="button" variant="secondary" onClick={onSubmitModeAction} disabled={generating}>
               {modeCopy.action}
-            </button>
+            </SilkButton>
           )}
-        </footer>
+        </SilkFocusIsland>
       </div>
       {general && candidateSummary && (
         <AvatarMemoryConfirm

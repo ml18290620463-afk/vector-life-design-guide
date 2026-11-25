@@ -71,7 +71,7 @@ describe('PastRepository', () => {
     renderRepository();
 
     expect(screen.getByRole('tab', { name: '回看' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: '沉淀' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: '我的原则' })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: '模式' })).toBeNull();
     expect(screen.queryByText('提炼模式')).toBeNull();
     expect(screen.queryByText('萃取原则')).toBeNull();
@@ -85,7 +85,7 @@ describe('PastRepository', () => {
         makeEntry({ id: 'other', title: '其他记录', content: '无关内容' }),
       ],
     });
-    const search = screen.getByRole('searchbox', { name: '搜索记录' });
+    const search = screen.getByRole('textbox', { name: '搜索记录' });
 
     fireEvent.change(search, { target: { value: '关键决策' } });
     expect(screen.getByText('长期项目')).toBeTruthy();
@@ -108,7 +108,7 @@ describe('PastRepository', () => {
     );
     renderRepository({ entries });
 
-    expect(screen.getByRole('tab', { name: '回看' }).textContent).toContain('101');
+    expect(screen.getByRole('tab', { name: '回看' }).textContent).toBe('回看');
     expect(screen.getByText('记录 100')).toBeTruthy();
     expect(screen.queryByText('记录 0')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '加载更多（剩余 1 条）' }));
@@ -134,7 +134,7 @@ describe('PastRepository', () => {
       ],
     });
 
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记录' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '搜索记录' }), {
       target: { value: '确认事实' },
     });
 
@@ -152,7 +152,7 @@ describe('PastRepository', () => {
         makeEntry({ id: 'third-direct', title: '周六整理', content: '项目复盘记录' }),
       ],
     });
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记录' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '搜索记录' }), {
       target: { value: '项目复盘' },
     });
     expect(screen.queryByLabelText('关联依据')).toBeNull();
@@ -179,7 +179,7 @@ describe('PastRepository', () => {
       ],
     });
 
-    expect(screen.getByRole('tab', { name: '沉淀' }).textContent).toContain('1');
+    expect(screen.getByRole('tab', { name: '我的原则' })).toBeTruthy();
   });
 
   it('supports bulk deleting the current search result and explains retained understanding', async () => {
@@ -192,7 +192,7 @@ describe('PastRepository', () => {
       onDeleteEntries,
     });
 
-    fireEvent.change(screen.getByRole('searchbox', { name: '搜索记录' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '搜索记录' }), {
       target: { value: '项目' },
     });
     fireEvent.click(screen.getByRole('button', { name: '选择' }));
@@ -211,7 +211,7 @@ describe('PastRepository', () => {
     const onAddPrinciple = vi.fn();
     renderRepository({ onAddPrinciple });
 
-    fireEvent.click(screen.getByRole('tab', { name: '沉淀' }));
+    fireEvent.click(screen.getByRole('tab', { name: '我的原则' }));
     fireEvent.click(screen.getByRole('button', { name: '写原则' }));
     expect(screen.getByRole('dialog', { name: '书写原则' })).toBeTruthy();
     expect(screen.queryByText('关联模式（可选）')).toBeNull();
@@ -248,7 +248,7 @@ describe('PastRepository', () => {
     };
     renderRepository({ principles: [principle], onUpdatePrinciple });
 
-    fireEvent.click(screen.getByRole('tab', { name: '沉淀' }));
+    fireEvent.click(screen.getByRole('tab', { name: '我的原则' }));
     expect(screen.getByText('先确认事实，再作判断')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '编辑原则：先确认事实，再作判断' }));
     fireEvent.change(screen.getByLabelText('编辑原则：先确认事实，再作判断'), {

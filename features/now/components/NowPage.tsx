@@ -8,6 +8,9 @@ import { getCanSend, getDisabledSendReason, isDraftEmpty } from '../state/nowRul
 import type { Material, NowDraft, NowRoute } from '../types/now';
 import { MaterialPreview } from './MaterialPreview';
 import { normalizeWebMaterialUrl } from '../../../lib/materialPersistence';
+import { SilkFocusIsland } from '../../../components/silk/SilkFocusIsland';
+import { SilkButton } from '../../../components/silk/SilkButton';
+import { SilkModal } from '../../../components/silk/SilkModal';
 
 interface NowPageProps {
   draft: NowDraft;
@@ -94,19 +97,6 @@ export const NowPage: React.FC<NowPageProps> = ({
       setExiting(false);
     }
   };
-  const exitDialog = useRef<HTMLDialogElement>(null);
-  const continueEditingButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!exitOpen) return;
-    const node = exitDialog.current;
-    const opener = document.activeElement as HTMLElement | null;
-    node?.showModal();
-    continueEditingButton.current?.focus();
-    return () => {
-      node?.close();
-      if (opener?.isConnected) opener.focus();
-    };
-  }, [exitOpen]);
   const picker = useMaterialPicker({
     materials: draft.materials,
     onAdd: (materials) => {
@@ -309,7 +299,7 @@ export const NowPage: React.FC<NowPageProps> = ({
 
       <div className={`now-card${isDraftEmpty(draft) ? ' now-card--empty' : ''}`}>
         <section className="now-editor">
-          <div className="now-editor__surface">
+          <SilkFocusIsland className="now-editor__surface">
             <label htmlFor="now-record-text" className="sr-only">
               {t('此刻发生了什么？', 'What is happening now?')}
             </label>
@@ -333,7 +323,7 @@ export const NowPage: React.FC<NowPageProps> = ({
                 </span>
               </div>
             )}
-          </div>
+          </SilkFocusIsland>
         </section>
 
         {pastedUrl && (
@@ -481,8 +471,9 @@ export const NowPage: React.FC<NowPageProps> = ({
         </div>
 
         <footer className="now-bottom-bar">
-          <button
+          <SilkButton
             type="button"
+            variant="primary"
             className="now-send-button"
             data-state={sending ? 'loading' : canSend ? 'enabled' : 'disabled'}
             onClick={() => {
@@ -509,35 +500,23 @@ export const NowPage: React.FC<NowPageProps> = ({
                   ? t('保存中…', 'Saving…')
                   : t('保存', 'Save')}
             </span>
-          </button>
+          </SilkButton>
         </footer>
       </div>
-      {exitOpen && (
-        <dialog
-          ref={exitDialog}
-          className="now-exit-dialog"
-          aria-labelledby="now-exit-title"
-          onCancel={(event) => {
-            event.preventDefault();
-            if (!exiting) setExitOpen(false);
-          }}
-        >
-          <h2 id="now-exit-title">{t('清空草稿？', 'Clear draft?')}</h2>
+      <SilkModal open={exitOpen} title={t('清空草稿？', 'Clear draft?')} onClose={() => { if (!exiting) setExitOpen(false); }} className="now-exit-dialog">
           <div className="now-exit-dialog__actions">
-            <button type="button" disabled={exiting} onClick={() => void finishExit(true)}>
+            <SilkButton variant="danger" disabled={exiting} onClick={() => void finishExit(true)}>
               {t('确认清空', 'Confirm clear')}
-            </button>
-            <button
+            </SilkButton>
+            <SilkButton variant="secondary"
               disabled={exiting}
-              ref={continueEditingButton}
               type="button"
               onClick={() => setExitOpen(false)}
             >
               {t('继续编辑', 'Keep editing')}
-            </button>
+            </SilkButton>
           </div>
-        </dialog>
-      )}
+      </SilkModal>
       <input
         ref={picker.imageInputRef}
         hidden

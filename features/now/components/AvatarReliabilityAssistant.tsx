@@ -1,5 +1,6 @@
 import { accountLocalStorage } from '../../../services/accountScope';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { SilkButton } from '../../../components/silk/SilkButton';
 import type { NowDraft } from '../types/now';
 import type { AvatarReliabilityTask } from '../state/avatarReliabilityTasks';
 import { useAppStore } from '../../../stores/appStore';
@@ -304,14 +305,15 @@ export function AvatarReliabilityAssistant({ task, draft, onOpenDraft, showToast
         </p>
       </details>
       <div className="avatar-reliability-card__actions">
-        <button
+        <SilkButton
           type="button"
+          variant="primary"
           className="avatar-reliability-card__primary-action"
           onClick={() => void exportBackup()}
           disabled={busy}
         >
           生成备份
-        </button>
+        </SilkButton>
         <button
           type="button"
           className="avatar-reliability-card__secondary-action"

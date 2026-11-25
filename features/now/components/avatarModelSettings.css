@@ -67,7 +67,7 @@
   background: var(--mobile-surface, rgba(15, 43, 57, 0.86));
   font-size: 16px;
 }
-.avatar-model-dialog button,
+.avatar-model-dialog button:not(.silk-button),
 .avatar-model-entry {
   min-height: 42px;
   padding: 8px 12px;
@@ -197,13 +197,9 @@
 }
 .avatar-model-primary {
   width: 100%;
-  border-color: color-mix(in srgb, var(--mobile-accent, #7dd3fc), transparent 42%);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--mobile-accent, #7dd3fc), transparent 76%),
-    color-mix(in srgb, var(--mobile-surface, rgba(15, 43, 57, 0.86)), transparent 4%)
-  );
-  color: var(--mobile-ink, #eef7fb);
+  border-color: var(--accent-silk-border);
+  background: linear-gradient(180deg, #B5D2EC, #9EC3E4);
+  color: #182236;
 }
 @media (max-width: 430px) {
   .avatar-model-model-row {
@@ -248,13 +244,9 @@
   color: var(--mobile-ink, #eef7fb);
 }
 .avatar-model-dialog .avatar-model-primary {
-  border-color: color-mix(in srgb, var(--mobile-accent, #7dd3fc), transparent 42%);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--mobile-accent, #7dd3fc), transparent 76%),
-    color-mix(in srgb, var(--mobile-surface, rgba(15, 43, 57, 0.86)), transparent 4%)
-  );
-  color: var(--mobile-ink, #eef7fb);
+  border-color: var(--accent-silk-border);
+  background: linear-gradient(180deg, #B5D2EC, #9EC3E4);
+  color: #182236;
 }
 
 .avatar-model-goal,
@@ -288,8 +280,11 @@
 
 /* Desktop dialog and mobile sheet share the same form and saved settings. */
 .avatar-model-dialog {
-  width: min(480px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
 }
+.avatar-model-dialog .avatar-model-hint { font-size: 12px; color: var(--ink-3); background: transparent; border: 0; box-shadow: none; }
+.avatar-model-dialog .avatar-model-primary { min-height: 36px; width: auto; }
 .avatar-model-dialog button,
 .avatar-model-dialog input,
 .avatar-model-dialog select {

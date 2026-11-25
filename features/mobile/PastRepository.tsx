@@ -13,6 +13,8 @@ import type {
   Theme,
 } from '../../types';
 import { PastActionDialog } from '../../components/PastActionDialog';
+import { SilkButton } from '../../components/silk/SilkButton';
+import { SilkSegmentedTabs } from '../../components/silk/SilkSegmentedTabs';
 import { ArchivePrinciplesView } from '../../components/ArchivePrinciplesView';
 import { MobilePastTimelineEntry } from './MobilePastTimelineEntry';
 import type { PastRepositorySection } from './types';
@@ -232,16 +234,14 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
       };
     }
   }, [selectionMode]);
-  const sections = [
+  const sections: { id: PastRepositorySection; label: string }[] = [
     {
       id: 'timeline' as const,
       label: language === 'zh' ? '回看' : 'Review',
-      detail: timelineResults.length,
     },
     {
       id: 'principle' as const,
-      label: language === 'zh' ? '沉淀' : 'Insights',
-      detail: activePrinciples.length,
+      label: language === 'zh' ? '我的原则' : 'My principles',
     },
   ];
 
@@ -317,26 +317,13 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
           </button>
         </div>
       )}
-      <div
+      <SilkSegmentedTabs<PastRepositorySection>
         className="mobile-past-page__segments"
-        role="tablist"
-        aria-label={language === 'zh' ? '过去分区' : 'Past sections'}
-      >
-        {sections.map(({ id, label, detail }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-label={label}
-            aria-selected={section === id}
-            className={section === id ? 'mobile-past-page__segment--active' : ''}
-            onClick={() => setSection(id)}
-          >
-            <span>{label}</span>
-            <small aria-label={`${detail}`}>{detail}</small>
-          </button>
-        ))}
-      </div>
+        label={language === 'zh' ? '过去分区' : 'Past sections'}
+        tabs={sections}
+        value={section}
+        onChange={setSection}
+      />
 
       <section className="mobile-past-page__body">
         {section === 'timeline' && (
@@ -345,7 +332,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               <div className="mobile-past-search">
                 <Search className="h-4 w-4" aria-hidden="true" />
                 <input
-                  type="search"
+                  type="text"
                   aria-label={language === 'zh' ? '搜索记录' : 'Search records'}
                   value={timelineQuery}
                   onChange={(event) => {
@@ -381,7 +368,7 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
             </div>
             <details className="past-search-filters">
               <summary>
-                {language === 'zh' ? '筛选记录' : 'Filter records'}
+                {language === 'zh' ? '筛选' : 'Filter'}
                 {hasFilters ? ' · 已启用' : ''}
               </summary>
               <div className="past-search-filters__fields">
@@ -463,7 +450,6 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
             ref={bulkManagerRef}
             className="past-bulk-editor-screen"
             aria-label={language === 'zh' ? '管理记录' : 'Manage records'}
-            aria-hidden={deleteOpen || undefined}
             onCancel={(event) => {
               event.preventDefault();
               if (!deleting && !deleteOpen) exitSelectionMode();
@@ -504,7 +490,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
               {renderTimelineRows(true)}
             </div>
             <footer className="past-bulk-editor-screen__footer">
-              <button
+              <SilkButton
+                variant="danger"
                 type="button"
                 disabled={deleting || selectedEntryIds.size === 0}
                 onClick={() => {
@@ -517,11 +504,8 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
                 {language === 'zh'
                   ? `删除 ${selectedEntryIds.size} 条`
                   : `Delete ${selectedEntryIds.size}`}
-              </button>
+              </SilkButton>
             </footer>
-          </dialog>
-        )}
-
         {deleteOpen && (
           <PastActionDialog
             title={
@@ -553,15 +537,19 @@ export const PastRepository: React.FC<PastRepositoryProps> = ({
             )}
             {deleteStatus && <p role="alert">{deleteStatus}</p>}
             <div className="past-action-dialog__actions">
-              <button data-cancel disabled={deleting} onClick={() => setDeleteOpen(false)}>
+              <SilkButton variant="secondary" data-cancel disabled={deleting} onClick={() => setDeleteOpen(false)}>
                 {language === 'zh' ? '取消' : 'Cancel'}
-              </button>
-              <button disabled={deleting} onClick={handleDeleteSelected}>
+              </SilkButton>
+              <SilkButton variant="danger" disabled={deleting} onClick={handleDeleteSelected}>
                 {language === 'zh' ? (deleting ? '删除中…' : '确认删除') : 'Delete'}
-              </button>
+              </SilkButton>
             </div>
           </PastActionDialog>
         )}
+
+          </dialog>
+        )}
+
 
         {section === 'principle' && (
           <div className="mobile-past-experience">

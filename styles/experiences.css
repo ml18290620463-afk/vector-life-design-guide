@@ -1,11 +1,11 @@
 /* Layout is selected by experience, not viewport alone. */
 :root {
-  --experience-bg: #071824;
-  --experience-surface: #0d2330;
-  --experience-line: #233d49;
-  --experience-ink: #e4eef1;
-  --experience-muted: #a3b6be;
-  --experience-accent: #a9dacb;
+  --experience-bg: var(--silk-bg, #f7f9fc);
+  --experience-surface: var(--silk-surface, #ffffff);
+  --experience-line: var(--line-subtle, #d8e2ee);
+  --experience-ink: var(--ink-1, #182236);
+  --experience-muted: var(--ink-3, #718198);
+  --experience-accent: var(--accent-link, #4f759b);
 }
 :is(.desktop-main-module-frame, .mobile-shell)
   :is(button, a, input, textarea, select):focus-visible {
@@ -35,7 +35,7 @@
   border: 0;
   border-right: 1px solid var(--experience-line);
   border-radius: 0;
-  background: #091d28;
+  background: var(--experience-surface);
   box-shadow: none;
 }
 .desktop-main-nav__brand {
@@ -77,9 +77,9 @@
   letter-spacing: 0;
 }
 .desktop-main-module-frame .desktop-main-nav__item--active {
-  background: #173731;
-  color: #c4f0df;
-  border-color: #395e53;
+  background: var(--state-hover, #eaf2fa);
+  color: var(--experience-ink);
+  border-color: var(--experience-line);
 }
 .desktop-workspace {
   max-width: 1480px;
@@ -338,7 +338,7 @@ html.vector-force-mobile .mobile-main-nav.mobile-main-nav {
   transform: translateX(-50%);
   border-radius: 0;
   border-top: 1px solid var(--experience-line);
-  background: #0b202c;
+  background: var(--experience-surface);
 }
 html.vector-force-mobile .mobile-shell .future-page {
   padding: 16px 16px 28px;
@@ -848,7 +848,7 @@ html.vector-force-web .desktop-main-module-frame .desktop-main-nav {
   gap: 44px;
   padding: 42px 18px;
   border-right-color: var(--experience-line);
-  background: #091d28;
+  background: var(--experience-surface);
   box-shadow: none;
   backdrop-filter: none;
 }
@@ -872,9 +872,9 @@ html.vector-force-web .desktop-main-module-frame .desktop-main-nav__item:hover {
   border-color: var(--experience-line);
 }
 html.vector-force-web .desktop-main-module-frame .desktop-main-nav__item--active {
-  color: #c4f0df;
-  border-color: #395e53;
-  background: #173731;
+  color: var(--experience-ink);
+  border-color: var(--experience-line);
+  background: var(--state-hover, #eaf2fa);
   box-shadow: none;
 }
 
@@ -1277,7 +1277,7 @@ html.vector-force-web
   width: 16px;
   height: 16px;
   stroke-width: 3;
-  color: #071824;
+  color: var(--experience-ink);
 }
 :is(.desktop-workspace, .mobile-shell) .mobile-past-bulk-action {
   position: relative;
@@ -1334,35 +1334,35 @@ html.light.vector-force-mobile,
 html.light.vector-force-mobile .mobile-shell,
 html.light.vector-force-mobile .mobile-shell .now-shell {
   color-scheme: light;
-  --experience-bg: #e6f1f6;
-  --experience-surface: rgba(247, 252, 255, 0.28);
-  --experience-line: rgba(64, 111, 136, 0.1);
-  --experience-ink: #263f50;
-  --experience-muted: #486373;
-  --experience-accent: #246780;
-  --mobile-paper: #edf5fa;
-  --mobile-paper-warm: #edf5fa;
-  --mobile-paper-cool: #dceef4;
-  --mobile-surface: rgba(247, 252, 255, 0.36);
-  --mobile-surface-muted: rgba(202, 230, 240, 0.2);
-  --mobile-ink: #263f50;
-  --mobile-ink-soft: #425f72;
-  --mobile-muted: #486373;
-  --mobile-faint: #486373;
-  --mobile-line: rgba(64, 111, 136, 0.1);
-  --mobile-line-strong: rgba(64, 111, 136, 0.32);
-  --mobile-accent: #246780;
-  --mobile-accent-strong: #205e76;
-  --mobile-accent-soft: rgba(71, 149, 179, 0.08);
-  --mobile-accent-line: rgba(40, 126, 157, 0.32);
-  --mobile-mint: #28685f;
-  --mobile-mint-soft: rgba(101, 170, 161, 0.12);
-  --mobile-violet: #585d78;
-  --mobile-violet-soft: rgba(115, 135, 174, 0.1);
-  --mobile-on-accent: #f4fbff;
+  --experience-bg: #f7f9fc;
+  --experience-surface: #ffffff;
+  --experience-line: #e6ecf4;
+  --experience-ink: #182236;
+  --experience-muted: #718198;
+  --experience-accent: #4f759b;
+  --mobile-paper: #f7f9fc;
+  --mobile-paper-warm: #f7f9fc;
+  --mobile-paper-cool: #eaf2fa;
+  --mobile-surface: #ffffff;
+  --mobile-surface-muted: #f0f5fb;
+  --mobile-ink: #182236;
+  --mobile-ink-soft: #52637a;
+  --mobile-muted: #718198;
+  --mobile-faint: #718198;
+  --mobile-line: #e6ecf4;
+  --mobile-line-strong: #c8dcf0;
+  --mobile-accent: #4f759b;
+  --mobile-accent-strong: #3f6d97;
+  --mobile-accent-soft: #eaf2fa;
+  --mobile-accent-line: #c8dcf0;
+  --mobile-mint: #4f759b;
+  --mobile-mint-soft: #eaf2fa;
+  --mobile-violet: #61768e;
+  --mobile-violet-soft: #f0f5fb;
+  --mobile-on-accent: #ffffff;
   --mobile-danger: #a33e49;
-  --mobile-focus: rgba(40, 126, 157, 0.35);
-  --mobile-disabled: rgba(86, 111, 128, 0.1);
+  --mobile-focus: #9ec3e4;
+  --mobile-disabled: #e6ecf4;
   --mobile-shadow: 0 6px 24px rgba(54, 99, 126, 0.025), inset 0 1px rgba(255, 255, 255, 0.6);
   --now-page: transparent;
   --now-surface: var(--mobile-surface);
@@ -2088,18 +2088,20 @@ html:is(.vector-force-mobile, .vector-force-web) .avatar-model-dialog :is(input,
   background: color-mix(in srgb, var(--experience-bg), var(--experience-line) 20%);
 }
 html.vector-force-mobile :is(.avatar-memory-dialog, .avatar-model-dialog) {
-  left: 50%;
-  right: auto;
-  width: min(100vw, 440px);
-  max-width: 440px;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  width: min(440px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  transform: none;
+  margin: auto;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   color: var(--mobile-ink);
-  background: linear-gradient(155deg, #f0f8fc, #deedf5);
+  background: var(--surface-stage);
 }
 html.vector-force-mobile :is(.avatar-memory-dialog, .avatar-model-dialog)::backdrop {
-  background: var(--experience-bg);
+  background: rgba(232, 238, 247, 0.56);
+  backdrop-filter: blur(10px);
 }
 html.vector-force-mobile .avatar-memory-dialog__header,
 html.vector-force-mobile .avatar-model-dialog > form > header {
@@ -2429,11 +2431,36 @@ html.vector-force-web .desktop-main-module-frame--now .now-actions {
 /* Avatar is a desktop workspace with an index and a content column, not a
    centred device-sized canvas.  Its cards keep their own boundaries. */
 html.vector-force-web .desktop-main-module-frame--avatar .now-page.avatar-guide-page {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+  grid-template-rows: none;
+  gap: 14px;
+  height: auto;
+  min-height: 0;
   width: min(100%, 1320px);
   max-width: 1320px;
   background: transparent !important;
   background-image: none !important;
   box-shadow: none;
+}
+
+html.vector-force-web .desktop-main-module-frame--avatar .avatar-page-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+html.vector-force-web .desktop-main-module-frame--avatar .avatar-page-controls__left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: min(100%, 740px);
 }
 
 html.vector-force-web
@@ -3413,7 +3440,7 @@ html:is(.vector-force-mobile, .vector-force-web)
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--experience-line) 92%, transparent);
   border-radius: 6px;
-  color: white;
+  color: var(--ink-1);
   background: transparent;
 }
 
@@ -3421,8 +3448,9 @@ html:is(.vector-force-mobile, .vector-force-web)
   .principle-editor-screen
   .mobile-principles-view__home-toggle
   button[aria-checked='true'] {
-  border-color: var(--experience-accent);
-  background: var(--experience-accent);
+  border-color: var(--line-focus);
+  background: #eaf2fa;
+  color: var(--ink-1);
 }
 
 html:is(.vector-force-mobile, .vector-force-web)
@@ -3503,15 +3531,65 @@ html:is(.vector-force-mobile, .vector-force-web)
   }
 }
 
-/* Future summaries: one card per planning type, stacked on every device. */
+/* Future summaries: three equal planning columns on desktop. */
+.mobile-principle-card.principle-card {
+  background: var(--experience-surface, #fff);
+  border-color: var(--line-subtle, #D8E2EE);
+}
+.principle-card__meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.principle-card__meta-row .principle-card__formed-year {
+  margin: 0;
+  color: var(--ink-3, #667487);
+}
+.principle-card__basis { color: var(--accent-link, #426EAA); font-size: 12px; }
+.mobile-principle-card__actions .principle-card__icon-action {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3, #667487);
+}
+.mobile-past-page .mobile-principle-card__actions .principle-card__icon-action {
+  min-width: 28px;
+  min-height: 28px;
+}
+.mobile-principle-card__actions .principle-card__icon-action:hover {
+  background: var(--state-hover, #F0F5FB);
+}
+@media (max-width: 700px) {
+  .mobile-principle-card__actions .principle-card__icon-action {
+    width: 36px; min-width: 36px; height: 36px; min-height: 36px;
+  }
+  .mobile-past-page .mobile-principle-card__actions .principle-card__icon-action {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
 :is(.future-page, html.vector-force-web .desktop-workspace .future-page)
   .future-design-content.future-planning-stack {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  width: 100%;
-  max-width: none;
-  margin-inline: 0;
+  width: min(100%, 980px);
+  max-width: 980px;
+  margin-inline: auto;
+}
+@media (max-width: 700px) {
+  :is(.future-page, html.vector-force-web .desktop-workspace .future-page)
+    .future-design-content.future-planning-stack { grid-template-columns: minmax(0, 1fr); }
 }
 :is(.future-page, html.vector-force-web .desktop-workspace .future-page)
   .future-planning-stack
@@ -3520,9 +3598,9 @@ html:is(.vector-force-mobile, .vector-force-web)
   min-height: 0;
   margin: 0;
   padding: 12px 20px;
-  border: 1px solid var(--color-archive-border);
+  border: 1px solid var(--line-subtle, #d8e2ee);
   border-radius: 16px;
-  background: var(--color-archive-surface, var(--color-surface));
+  background: var(--silk-surface, #ffffff);
   box-shadow: none;
 }
 :is(.future-page, html.vector-force-web .desktop-workspace .future-page)
@@ -3543,7 +3621,7 @@ html:is(.vector-force-mobile, .vector-force-web)
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--color-archive-accent);
+  color: var(--accent-link, #4f759b);
   font-size: 24px;
 }
 :is(.future-page, html.vector-force-web .desktop-workspace .future-page)
@@ -3557,7 +3635,7 @@ html:is(.vector-force-mobile, .vector-force-web)
 :is(.future-page, html.vector-force-web .desktop-workspace .future-page)
   .future-planning-stack
   .future-summary-add:focus-visible {
-  outline: 2px solid var(--color-archive-accent);
+  outline: 2px solid var(--accent-link, #4f759b);
   outline-offset: 2px;
 }
 @media (max-width: 639px) {
@@ -3575,7 +3653,7 @@ html:is(.vector-force-mobile, .vector-force-web)
   padding: 8px 0;
   border: 0;
   background: transparent;
-  color: var(--color-archive-accent);
+  color: var(--accent-link, #4f759b);
   font-size: 13px;
 }
 
@@ -3603,19 +3681,19 @@ html:is(.vector-force-mobile, .vector-force-web) dialog.principle-editor-screen 
   overflow: auto;
   border: 0;
   border-radius: 0;
-  background: var(--experience-bg, #142124);
-  color: var(--experience-ink, #e6edf0);
+  background: var(--experience-bg, #f7f9fc);
+  color: var(--experience-ink, #182236);
 }
 
 dialog.principle-editor-screen::backdrop {
-  background: var(--experience-bg, #142124);
+  background: var(--experience-bg, #f7f9fc);
 }
 
 .principle-editor-canvas {
   box-sizing: border-box;
   min-height: 100dvh;
   padding: clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 7vw, 4.5rem) 2rem;
-  background: var(--experience-bg, #142124);
+  background: var(--experience-bg, #f7f9fc);
 }
 
 .principle-editor-canvas .principle-editor-composer {
@@ -3658,7 +3736,7 @@ dialog.principle-editor-screen::backdrop {
   place-items: center;
   border: 0;
   border-radius: 999px;
-  color: var(--experience-muted, #a9c8d0);
+  color: var(--experience-muted, #718198);
   background: transparent;
 }
 
@@ -3671,7 +3749,7 @@ dialog.principle-editor-screen::backdrop {
 
 .principle-editor-canvas .principle-editor__heading h2 {
   margin: 0;
-  color: var(--experience-ink, #e6edf0);
+  color: var(--experience-ink, #182236);
   font-size: clamp(1.5rem, 4vw, 1.9rem);
   font-weight: 620;
   letter-spacing: -0.035em;
@@ -3680,7 +3758,7 @@ dialog.principle-editor-screen::backdrop {
 
 .principle-editor-canvas .principle-editor__heading > p:last-child {
   margin: 0.55rem 0 0;
-  color: var(--experience-muted, #a9c8d0);
+  color: var(--experience-muted, #718198);
   font-size: 0.92rem;
   line-height: 1.65;
 }
@@ -3694,7 +3772,7 @@ dialog.principle-editor-screen::backdrop {
 }
 
 .principle-editor-canvas .principle-editor__field-label {
-  color: var(--experience-muted, #a9c8d0) !important;
+  color: var(--experience-muted, #718198) !important;
   font-size: 0.78rem !important;
   letter-spacing: 0.08em;
 }
@@ -3706,8 +3784,8 @@ dialog.principle-editor-screen::backdrop {
   padding: 0.9rem 0;
   border-width: 0 0 1px;
   border-radius: 0;
-  border-color: color-mix(in srgb, var(--experience-line, #49616c) 72%, transparent);
-  color: var(--experience-ink, #e6edf0);
+  border-color: color-mix(in srgb, var(--experience-line, #d8e2ee) 72%, transparent);
+  color: var(--experience-ink, #182236);
   background: transparent;
   font-size: 1.08rem;
   line-height: 1.85;
@@ -3731,7 +3809,7 @@ dialog.principle-editor-screen::backdrop {
 }
 
 .principles-library__empty-copy {
-  color: var(--experience-muted, #a9c8d0) !important;
+  color: var(--experience-muted, #718198) !important;
   font-weight: 500;
   letter-spacing: 0.01em;
 }
@@ -3739,8 +3817,8 @@ dialog.principle-editor-screen::backdrop {
 .principles-library__empty-icon {
   color: color-mix(
     in srgb,
-    var(--experience-accent, #79cfc7) 58%,
-    var(--experience-muted, #a9c8d0)
+    var(--experience-accent, #4f759b) 58%,
+    var(--experience-muted, #718198)
   ) !important;
   opacity: 0.72;
 }
@@ -3760,7 +3838,7 @@ dialog.principle-editor-screen::backdrop {
    making one short sentence look like a long form. */
 .mobile-past-search-result-count {
   margin: 0.45rem 0 0;
-  color: var(--experience-muted, #a9c8d0);
+  color: var(--experience-muted, #718198);
   font-size: 0.78rem;
   line-height: 1.4;
 }

@@ -1,3 +1,4 @@
+import { SilkButton } from '../../../components/silk/SilkButton';
 import { useAvatarLanguage } from './avatarLanguage';
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
@@ -178,9 +179,8 @@ export function AvatarMemoryConfirm({
         <button type="button" disabled={sending} onClick={onCancel}>
           {t('暂不记住')}
         </button>
-        <button
+        <SilkButton
           type="button"
-          className="is-primary"
           disabled={sending || !text.trim()}
           onClick={() =>
             onConfirm(tags, category, resolvedNature, isDirection ? directionKind : undefined)
@@ -191,7 +191,7 @@ export function AvatarMemoryConfirm({
             : candidateKind === 'pattern_candidate'
               ? t('保留观察')
               : t('确认记住')}
-        </button>
+        </SilkButton>
       </div>
       </UnifiedArtifactCard>
     </dialog>

@@ -56,7 +56,7 @@ const mountain = () =>
 
 const switchToPractice = () =>
   fireEvent.click(
-    within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', { name: '反馈' }),
+    within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', { name: '践行' }),
   );
 
 const openActionFeedback = (title: string) => {
@@ -152,7 +152,7 @@ describe('Future page', () => {
     const navigation = screen.getByRole('tablist', { name: '未来分区' });
     expect(within(navigation).getAllByRole('tab')).toHaveLength(3);
     expect(within(navigation).getByRole('tab', { name: '设计', selected: true })).toBeTruthy();
-    expect(within(navigation).getByRole('tab', { name: '反馈' })).toBeTruthy();
+    expect(within(navigation).getByRole('tab', { name: '践行' })).toBeTruthy();
   });
 
   it('restores the reading position for each primary section', async () => {
@@ -171,7 +171,7 @@ describe('Future page', () => {
     await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 260));
 
     fireEvent.click(
-      within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', { name: '反馈' }),
+      within(screen.getByRole('tablist', { name: '未来分区' })).getByRole('tab', { name: '践行' }),
     );
     await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 480));
     scrollTo.mockRestore();
@@ -187,12 +187,12 @@ describe('Future page', () => {
 
     fireEvent.click(planningEntry);
     const dialog = screen.getByRole('dialog', { name: '行动规划' });
-    expect(within(dialog).getByRole('button', { name: '行动规划', pressed: true })).toBeTruthy();
+    expect(within(dialog).getByRole('tab', { name: '行动规划', selected: true })).toBeTruthy();
     expect(within(dialog).getByText('可选设置').closest('details')?.open).toBe(false);
-    fireEvent.click(within(dialog).getByRole('button', { name: '目标' }));
+    fireEvent.click(within(dialog).getByRole('tab', { name: '目标' }));
     expect(screen.getByRole('dialog', { name: '目标' })).toBeTruthy();
     fireEvent.click(
-      within(screen.getByRole('dialog', { name: '目标' })).getByRole('button', {
+      within(screen.getByRole('dialog', { name: '目标' })).getByRole('tab', {
         name: '行动规划',
       }),
     );

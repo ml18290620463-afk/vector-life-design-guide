@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 
+async function captureStablePage(page: import('@playwright/test').Page, path: string) {
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+  });
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => Promise.all(
+    document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+      .map((animation) => animation.finished.catch(() => undefined)),
+  ));
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path });
+}
+
 // Chromium treats route.fulfill HTML as a synthetic/public response. Grant
 // this local fixture origin access to Vite HMR; retain all pageerror checks.
 test.beforeEach(async ({ context, baseURL }) => {
@@ -17,7 +30,7 @@ for (const mode of ['web', 'mobile']) {
       await page.route('**/__layout*', (route) =>
         route.fulfill({
           contentType: 'text/html',
-          body: `<!doctype html><html class="light vector-force-${mode} ${mode === 'mobile' ? 'mobile-product-active' : ''}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/index.css"><link rel="stylesheet" href="/styles/experiences.css"><link rel="stylesheet" href="/styles/theme-v1.css"><link rel="stylesheet" href="/styles/entrance-theme.css"><link rel="stylesheet" href="/styles/design-tokens.css"><link rel="stylesheet" href="/styles/global-type.css"></head><body><div id="root"></div><script type="module">
+          body: `<!doctype html><html class="light vector-force-${mode} ${mode === 'mobile' ? 'mobile-product-active' : ''}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/index.css"><link rel="stylesheet" href="/styles/experiences.css"><link rel="stylesheet" href="/styles/theme-v1.css"><link rel="stylesheet" href="/styles/entrance-theme.css"><link rel="stylesheet" href="/styles/design-tokens.css"><link rel="stylesheet" href="/styles/global-type.css"><link rel="stylesheet" href="/styles/vector-silk-tokens.css"><link rel="stylesheet" href="/styles/vector-silk-shell.css"></head><body><div id="root"></div><script type="module">
         import RefreshRuntime from '/@react-refresh';
         RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true;
         const {default:React}=await import('/node_modules/.vite/deps/react.js');
@@ -26,7 +39,7 @@ for (const mode of ['web', 'mobile']) {
         const {AppPageFrame}=await import('/components/AppPageFrame.tsx');
         const {${{ past: 'PastRepository', now: 'NowPage', future: 'FuturePage', avatar: 'AvatarChatPage' }[module]}:Module}=await import('${{ past: '/features/mobile/PastRepository.tsx', now: '/features/now/components/NowPage.tsx', future: '/features/future/FuturePage.tsx', avatar: '/features/now/components/AvatarChatPage.tsx' }[module]}');
         const noop=()=>{};
-        const common={language:'zh',theme:'light',entries:[],pastEntries:[],principles:[],actions:[],onSelectEntry:noop,onAddPrinciple:noop,onDeletePrinciple:noop,onUpdatePrinciple:noop,onDeleteEntries:noop,draft:{text:'${module === 'now' ? '一段尚未完成的想法，留在这里继续写下去。' : ''}',materials:[],mood_tags:[],event_tags:[],record_time:'2026-09-22',display_time:'2026年9月22日',updated_at:'2026-09-22'},setDraft:noop,sending:false,onSend:async()=>true,onSaveDraft:noop,onDiscardDraft:noop,onExit:noop,onBack:noop,onRouteChange:noop,showToast:noop,mobileShell:${mode === 'mobile'},onNavigateModule:noop,launchContext:{mode:'general',source:'global'}};
+        const common={language:'zh',theme:'light',entries:[],pastEntries:[],principles:[],actions:[],onSelectEntry:noop,onAddPrinciple:noop,onDeletePrinciple:noop,onUpdatePrinciple:noop,onDeleteEntries:noop,draft:{text:'${module === 'now' ? '一段尚未完成的想法，留在这里继续写下去。' : ''}',materials:[],mood_tags:[],event_tags:[],record_time:'2026-09-22',display_time:'2026年9月22日',updated_at:'2026-09-22'},setDraft:noop,sending:false,onSend:async()=>true,onSaveDraft:noop,onDiscardDraft:noop,onExit:noop,onBack:noop,onRouteChange:(route)=>{window.__layoutRoute=route},showToast:noop,mobileShell:${mode === 'mobile'},onNavigateModule:noop,launchContext:{mode:'general',source:'global'}};
         if ('${module}' === 'past') {
           common.entries = [
             {id:'past-one',title:'把注意力放回真正重要的事情',content:'今天重新安排了工作顺序，先完成最重要的一件事。'+ '减少切换后，我更能专注，也留出了休息时间。'.repeat(8),tags:['心情:平静','事件:个人成长'],createdAt:Date.parse('2026-09-22T09:30:00+08:00'),updatedAt:Date.now(),isLocked:false},
@@ -43,7 +56,8 @@ for (const mode of ['web', 'mobile']) {
         }
         const content=React.createElement(Module,common);
         const child='${module}' === 'avatar' ? React.createElement('div',{className:'now-shell ${mode === 'mobile' ? 'now-flow--mobile-shell' : ''}'},content) : content;
-        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(${mode === 'mobile' ? 'MobileShell' : 'AppPageFrame'},{variant:'${module}' === 'avatar' ? 'avatar' : ('${module}' === 'now' ? 'now' : 'default'),activeTab:'${module}',language:'zh',onNavigate:noop,onTabChange:noop},child));
+        const frame=React.createElement(${mode === 'mobile' ? 'MobileShell' : 'AppPageFrame'},{variant:'${module}' === 'avatar' ? 'avatar' : ('${module}' === 'now' ? 'now' : 'default'),activeTab:'${module}',language:'zh',onNavigate:noop,onTabChange:noop},child);
+        ReactDOM.createRoot(document.getElementById('root')).render(frame);
       </script></body></html>`,
         }),
       );
@@ -82,7 +96,14 @@ for (const mode of ['web', 'mobile']) {
         expect(wideCard.x).toBeGreaterThanOrEqual(320);
         expect(wideCard.x + wideCard.width).toBeLessThanOrEqual(2049);
       }
-      await page.screenshot({ path: info.outputPath(`${mode}-${module}.png`) });
+      if (module === 'now') await expect(page.locator('.now-card')).toBeVisible();
+      if (module === 'future') {
+        await expect(page.locator('.future-design-summary-list')).toHaveCount(3);
+        await expect(page.getByRole('button', { name: /^(添加愿景|编辑愿景)$/ })).toBeVisible();
+      }
+      if (module === 'avatar') await expect(page.locator('.now-chat-list')).toBeVisible();
+      if (module === 'past') await expect(page.locator('.past-record')).toHaveCount(2);
+      await captureStablePage(page, info.outputPath(`${mode}-${module}.png`));
       if (module === 'past') {
         if (mode === 'web') {
           const body = page.locator('.mobile-past-page__body');
@@ -123,6 +144,9 @@ for (const mode of ['web', 'mobile']) {
         await expect(cards).toHaveCount(2);
         await expect(page.locator('.past-record time')).toHaveCount(2);
         await expect(page.getByText('最新写入')).toHaveCount(0);
+        await page.locator('.past-search-filters summary').click();
+        await page.screenshot({ path: info.outputPath(`${mode}-past-filters.png`) });
+        await page.locator('.past-search-filters summary').click();
         const search = page.locator('.mobile-past-search-row');
         expect((await search.boundingBox())!.y).toBeLessThan(
           (await cards.first().boundingBox())!.y,
@@ -133,6 +157,12 @@ for (const mode of ['web', 'mobile']) {
         await page.getByRole('button', { name: '选择', exact: true }).click();
         const management = page.getByRole('dialog', { name: '管理记录' });
         await expect(management.getByRole('checkbox').first()).toBeVisible();
+        await page.screenshot({ path: info.outputPath(`${mode}-past-bulk.png`) });
+        await management.getByRole('checkbox').first().check();
+        await management.getByRole('button', { name: /删除 1 条/ }).click();
+        await expect(page.getByRole('dialog', { name: /删除 1 条记录/ })).toBeVisible();
+        await page.screenshot({ path: info.outputPath(`${mode}-past-delete.png`) });
+        await page.getByRole('button', { name: '取消', exact: true }).click();
         await management.getByRole('button', { name: '返回回看', exact: true }).click();
         await expect(management).not.toBeVisible();
         for (const width of mode === 'mobile' ? [320, 390, 430, 768] : [1280, 1440]) {
@@ -142,7 +172,9 @@ for (const mode of ['web', 'mobile']) {
           ).toBe(true);
         }
         await page.screenshot({ path: info.outputPath(mode + '-past-compact.png') });
-        await page.getByRole('tab', { name: '沉淀', exact: true }).click();
+        await page.getByRole('tab', { name: '我的原则', exact: true }).click();
+        await expect(page.getByRole('button', { name: '写原则', exact: true })).toBeVisible();
+        await captureStablePage(page, info.outputPath(`${mode}-principles.png`));
         await page.getByRole('button', { name: '写原则', exact: true }).click();
         const editor = page.getByRole('dialog', { name: '书写原则' });
         await expect(editor).toBeVisible();
@@ -170,13 +202,10 @@ for (const mode of ['web', 'mobile']) {
           expect(baseline.width).toBeGreaterThanOrEqual(900);
           expect(baseline.x).toBeGreaterThanOrEqual(200);
           expect(baseline.x + baseline.width).toBeLessThanOrEqual(1441);
-          expect(await content.evaluate((element) => getComputedStyle(element).flexDirection)).toBe(
-            'column',
-          );
-          expect(baselineLists[0].y).toBeLessThan(baselineLists[1].y);
-          expect(baselineLists[1].y).toBeLessThan(baselineLists[2].y);
+          // The new design shows three equal planning columns.
+          expect(Math.max(...baselineLists.map((item) => item.y)) - Math.min(...baselineLists.map((item) => item.y))).toBeLessThan(2);
           for (const list of baselineLists) {
-            expect(list.width).toBeGreaterThanOrEqual(800);
+            expect(list.width).toBeGreaterThanOrEqual(200);
             expect(list.x).toBeGreaterThanOrEqual(baseline.x);
             expect(list.x + list.width).toBeLessThanOrEqual(baseline.x + baseline.width + 1);
           }
@@ -187,14 +216,12 @@ for (const mode of ['web', 'mobile']) {
           const wideLists = await Promise.all(
             [0, 1, 2].map(async (index) => (await lists.nth(index).boundingBox())!),
           );
-          // Keep planning as one readable vertical list on wide screens.
-          expect(wide.width).toBeGreaterThanOrEqual(1080);
+          expect(wide.width).toBeGreaterThanOrEqual(900);
           expect(wide.width).toBeLessThanOrEqual(1200);
-          expect(wideLists[0].y).toBeLessThan(wideLists[1].y);
-          expect(wideLists[1].y).toBeLessThan(wideLists[2].y);
+          expect(Math.max(...wideLists.map((item) => item.y)) - Math.min(...wideLists.map((item) => item.y))).toBeLessThan(2);
           for (const list of wideLists) {
-            expect(list.width).toBeGreaterThanOrEqual(900);
-            expect(list.width).toBeLessThanOrEqual(1200);
+            expect(list.width).toBeGreaterThanOrEqual(200);
+            expect(list.x + list.width).toBeLessThanOrEqual(wide.x + wide.width + 1);
           }
           expect(
             await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -214,6 +241,20 @@ for (const mode of ['web', 'mobile']) {
           await page.getByRole('dialog').evaluate((el) => el.scrollWidth <= el.clientWidth),
         ).toBe(true);
         await page.screenshot({ path: info.outputPath(`${mode}-future-editor.png`) });
+        await page.getByRole('dialog').getByRole('tab', { name: '目标', exact: true }).click();
+        await page.screenshot({ path: info.outputPath(`${mode}-future-goal-editor.png`) });
+        await page.getByRole('dialog').getByRole('tab', { name: '行动规划', exact: true }).click();
+        await page.screenshot({ path: info.outputPath(`${mode}-future-action-editor.png`) });
+        await page.getByRole('dialog').getByRole('button', { name: '返回', exact: true }).click();
+        await page.getByRole('tab', { name: '践行', exact: true }).click();
+        await expect(page.getByRole('tab', { name: '践行', exact: true })).toHaveAttribute('aria-selected', 'true');
+        await captureStablePage(page, info.outputPath(`${mode}-future-practice.png`));
+      }
+      if (module === 'now') {
+        await page.getByRole('button', { name: '清空草稿' }).click();
+        await expect(page.getByRole('dialog', { name: '清空草稿？' })).toBeVisible();
+        await page.screenshot({ path: info.outputPath(`${mode}-now-clear.png`) });
+        await page.getByRole('button', { name: '继续编辑' }).click();
       }
       if (module === 'avatar') {
         if (mode === 'web') {
@@ -225,12 +266,16 @@ for (const mode of ['web', 'mobile']) {
           const baselineControls = (await controls.boundingBox())!;
           const baselineContent = (await content.boundingBox())!;
           const baselineComposer = (await composer.boundingBox())!;
-          // The chat shell keeps a readable two-column measure.  Do not pin
-          // this to an exact browser rounding outcome at 1440px.
-          expect(baselineShell.width).toBeGreaterThanOrEqual(1060);
+          // The controls form a horizontal header above the chat content.
+          // Allow one pixel for browser rounding at 1440px.
+          expect(baselineShell.width).toBeGreaterThanOrEqual(1000);
           expect(baselineShell.width).toBeLessThanOrEqual(1320);
+          expect(baselineControls.y + baselineControls.height).toBeLessThanOrEqual(
+            baselineContent.y + 1,
+          );
+          expect(baselineControls.x).toBeGreaterThanOrEqual(baselineShell.x - 1);
           expect(baselineControls.x + baselineControls.width).toBeLessThanOrEqual(
-            baselineContent.x + 1,
+            baselineShell.x + baselineShell.width + 1,
           );
           expect(baselineContent.width).toBeGreaterThanOrEqual(700);
           expect(baselineComposer.width).toBeGreaterThanOrEqual(600);
@@ -321,19 +366,19 @@ for (const mode of ['web', 'mobile']) {
           mode === 'web' ? { width: 1440, height: 1000 } : { width: 390, height: 844 },
         );
 
-        await page.getByRole('button', { name: '记忆库', exact: true }).click();
+        await page.getByRole('tab', { name: '记忆档案', exact: true }).click();
         const cards = page.locator('.avatar-library__dimension-card');
         await expect(cards.first()).toBeVisible();
         const first = await cards.nth(0).boundingBox();
         const second = await cards.nth(1).boundingBox();
         expect(second!.y).toBeGreaterThanOrEqual(first!.y + first!.height);
         await page.screenshot({ path: info.outputPath(`${mode}-archive.png`) });
-        await page.getByRole('button', { name: '打开分身设置', exact: true }).click();
-        await expect(page.getByRole('dialog')).toBeVisible();
-        expect(
-          await page.getByRole('dialog').evaluate((el) => el.scrollWidth <= el.clientWidth),
-        ).toBe(true);
-        await page.screenshot({ path: info.outputPath(`${mode}-settings.png`) });
+        await page.getByRole('button', { name: '我的认识', exact: true }).click();
+        await page.screenshot({ path: info.outputPath(`${mode}-archive-patterns.png`) });
+        await page.getByRole('button', { name: '我的变化', exact: true }).click();
+        await page.screenshot({ path: info.outputPath(`${mode}-archive-changes.png`) });
+        await page.getByRole('tab', { name: '设置与备份', exact: true }).click();
+        await expect.poll(() => page.evaluate(() => (window as Window & { __layoutRoute?: string }).__layoutRoute)).toBe('avatar-settings');
       }
       expect(errors).toEqual([]);
     });

@@ -1,4 +1,6 @@
 import { FutureSectionTabs } from './FutureSectionTabs';
+import { SilkButton } from '../../components/silk/SilkButton';
+import { SilkToast } from '../../components/silk/SilkToast';
 import { GoalFeedbackFields, GoalFeedbackHeading } from './GoalFeedbackFields';
 import { useAIVisibilityChoice } from '../../components/AIVisibilityDialog';
 import { ActionFeedbackList } from './ActionFeedbackList';
@@ -469,7 +471,10 @@ export function FuturePage({
   return (
     <main className="future-page">
       {visibility.dialog}
-      <FutureSectionTabs section={section} onChange={switchSection} />
+      <div className="future-silk-toolbar">
+        <FutureSectionTabs section={section} onChange={switchSection} />
+        {section === 'design' && ready && !protectedVault && !error && <SilkButton onClick={() => openEditor({ kind: 'vision' })}>编辑未来规划</SilkButton>}
+      </div>
       {content}
       {practicePanelOpen && selectedFeedbackAction && (
         <dialog
@@ -564,7 +569,7 @@ export function FuturePage({
           )}
         </dialog>
       )}
-      {!practicePanelOpen && !editor && notice && <p role="status">{notice}</p>}
+      <SilkToast message={!practicePanelOpen && !editor ? notice : null} onDismiss={() => setNotice('')} />
       {editor && !protectedVault && (
         <FutureEditor
           actions={allActions}

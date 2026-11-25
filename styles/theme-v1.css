@@ -198,25 +198,6 @@ html:not(.light) body :is(button, a, input, textarea, select, [tabindex]):focus-
   outline: 2px solid var(--vector-accent);
   outline-offset: 3px;
 }
-html:not(.light) body :is(.now-send-button, .future-primary, .principle-editor__save-button) {
-  background: var(--vector-accent);
-  color: var(--vector-page);
-  border-color: var(--vector-accent);
-}
-html:not(.light)
-  body
-  :is(.now-send-button, .future-primary, .principle-editor__save-button):hover:not(:disabled):not(
-    [data-state='disabled']
-  ) {
-  background: var(--vector-accent-hover);
-}
-html:not(.light)
-  body
-  :is(.now-send-button, .future-primary, .principle-editor__save-button):active:not(:disabled):not(
-    [data-state='disabled']
-  ) {
-  background: var(--vector-accent-pressed);
-}
 html:not(.light)
   body
   :is(.now-send-button, .future-primary, .principle-editor__save-button):is(
